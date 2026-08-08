@@ -1,0 +1,716 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * デザイントークン
+ *
+ * 緑はモックの実測値（#2F6B3D 前後）を基準にした。
+ * UI は sans、原稿本文は serif（明朝）。
+ * 日本語の小説は明朝で読むものだという前提に合わせている。
+ * ============================================================
+ */
+
+/*
+ * 緑はロゴの #4d804c を基準に、画面用は一段落とした値を使う。
+ * ロゴは小さく単体で置かれるので明るくてよいが、
+ * 面や文字に使うと軽く見えるため。
+ */
+:root {
+
+    /*
+     * ------------------------------------------------------------
+     * GENSEKIKORO から移したページ用の色
+     *
+     * about / guide / faq などは、あちらの呼び名で書かれている。
+     * 中身は変えたくないので、名前だけこちらの色に繋ぐ。
+     * ------------------------------------------------------------
+     */
+    --color-brand: #1f4e6b;
+    --color-brand-light: #e6eef4;
+    --color-brand-border: #b4cede;
+
+    --color-bg: #ffffff;
+    --color-bg-card: #ffffff;
+
+    --color-text: #1a211d;
+    --color-text-muted: #55605a;
+    --color-text-faint: #7d867f;
+    --color-text-inverse: #ffffff;
+
+    --color-tag-border: #dcdfda;
+
+    /* 白。色を混ぜるときの土台に使われている */
+    --base-color-1: #ffffff;
+
+    --color-logo: #2f6b8f;
+
+    /*
+     * 主となる色。航路の青。
+     *
+     * 名前は forest のまま残す。
+     * 475 か所で使われているので、名前を変えると
+     * 直すだけで一日終わる。中身だけを入れ替える。
+     *
+     * 濃さは緑のときと揃えてある。
+     * 文字の読みやすさ（白抜きで 7:1 以上）を保つため。
+     */
+    --color-forest: #1f4e6b;
+    --color-forest-dark: #14384e;
+    --color-forest-tint: #e6eef4;
+    --color-forest-line: #b4cede;
+
+    --color-canvas: #f4f5f3;
+    --color-surface: #ffffff;
+    --color-line: #dcdfda;
+
+    /* 文字は一段濃くする。薄い灰は画面によっては読み取りにくい */
+    --color-ink: #1a211d;
+    --color-muted: #55605a;
+    --color-faint: #7d867f;
+
+    --color-amber: #99610a;
+    --color-amber-tint: #fbf0dd;
+
+    /* 消す操作にだけ使う。ほかの場所では出さない */
+    --color-danger: #b3372c;
+    --color-danger-tint: #fbeceb;
+
+    /* ============================================================
+     * 航路の色
+     *
+     * 「原石航路」の航路から取る。
+     * 夜明けの海。まだ暗い水と、明るくなりはじめた空。
+     *
+     * 緑は残す。育つもの・原石を指す色として使い分ける。
+     *   航路の青 … 進む・導く・広がり（LP、見出し、主な行き先）
+     *   森の緑   … 育つ・書く・自分のもの（作品、資料、記録）
+     * ============================================================ */
+    --color-sea: #1f4e6b;
+    --color-sea-dark: #14384e;
+    --color-sea-light: #4a7d9c;
+    --color-sea-tint: #e6eef4;
+    --color-sea-line: #b4cede;
+
+    /* 夜明けの空。海と対にして使う */
+    --color-dawn: #e8b769;
+    --color-dawn-tint: #fdf3e2;
+
+    /* 紙。航海図の余白 */
+    --color-chart: #f7f4ec;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans), sans-serif;
+    /*
+     * 細く見えすぎるのを防ぐため、既定の太さを 400 ではなく 450 相当にする。
+     * antialiased は輪郭を削るので使わない。
+     */
+    font-weight: 450;
+    -webkit-font-smoothing: auto;
+    text-rendering: optimizeLegibility;
+}
+
+/* 小さい字ほど細く見えるので、そこだけ太さを足す */
+.text-xs,
+.text-\[11px\],
+.text-\[10px\] {
+    font-weight: 500;
+}
+
+/*
+ * ------------------------------------------------------------
+ * フォーカス表示
+ * キーボード操作でも現在位置が分かるようにする
+ * ------------------------------------------------------------
+ */
+
+:focus-visible {
+    outline: 2px solid var(--color-forest);
+    outline-offset: 2px;
+}
+
+/*
+ * ------------------------------------------------------------
+ * 原稿エディタ
+ * ------------------------------------------------------------
+ */
+
+.manuscript {
+    font-family: var(--font-serif), serif;
+    font-size: 16px;
+    line-height: 2;
+    letter-spacing: 0.02em;
+}
+
+/*
+ * 縦書き。
+ * text-orientation は指定しない。upright にすると英数字まで
+ * 1 文字ずつ立ってしまい、日本語の縦組みの慣習から外れるため。
+ */
+.manuscript-vertical {
+    writing-mode: vertical-rl;
+}
+
+/*
+ * ------------------------------------------------------------
+ * ルビと傍点
+ * ------------------------------------------------------------
+ */
+
+.manuscript ruby > rt {
+    font-size: 0.5em;
+    /* ルビは読みであって本文ではないので、少し薄くする */
+    opacity: 0.8;
+    letter-spacing: 0;
+}
+
+.manuscript-emphasis {
+    /* 縦書きでは自動で右側に付く */
+    text-emphasis: filled dot;
+    -webkit-text-emphasis: filled dot;
+    text-emphasis-position: over right;
+    -webkit-text-emphasis-position: over right;
+}
+
+/*
+ * ------------------------------------------------------------
+ * 本文の背景色テーマ
+ * 設定画面のプレビューと執筆画面の両方がここを参照する
+ * ------------------------------------------------------------
+ */
+
+.manuscript-surface {
+    background: var(--manuscript-bg);
+    color: var(--manuscript-fg);
+}
+
+.manuscript-surface .manuscript {
+    color: var(--manuscript-fg);
+    caret-color: var(--manuscript-fg);
+}
+
+[data-manuscript-theme="white"] {
+    --manuscript-bg: #ffffff;
+    --manuscript-fg: #1f2723;
+}
+
+[data-manuscript-theme="cream"] {
+    --manuscript-bg: #faf7ef;
+    --manuscript-fg: #2a2620;
+}
+
+[data-manuscript-theme="sepia"] {
+    --manuscript-bg: #f2e8d5;
+    --manuscript-fg: #4a3b28;
+}
+
+[data-manuscript-theme="night"] {
+    --manuscript-bg: #26292c;
+    --manuscript-fg: #d6d9d5;
+}
+
+[data-manuscript-theme="black"] {
+    --manuscript-bg: #101211;
+    --manuscript-fg: #c9cfc9;
+}
+
+/*
+ * ------------------------------------------------------------
+ * スクロールバー
+ * ------------------------------------------------------------
+ */
+
+.thin-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-line);
+    border-radius: 4px;
+}
+
+.thin-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/*
+ * ------------------------------------------------------------
+ * ミッションの「クリア！」ボタン
+ *
+ * 押せる状態のものだけをゆっくり光らせる。
+ * 一覧の中で、いま手を動かせるものがどれか目に留まるように。
+ * 速い点滅は目障りなので、2 秒かけて息をするくらいにする。
+ * ------------------------------------------------------------
+ */
+
+@keyframes mission-glow {
+    0%,
+    100% {
+        box-shadow: 0 2px 8px rgba(42, 92, 57, 0.35);
+    }
+    50% {
+        box-shadow:
+            0 2px 10px rgba(42, 92, 57, 0.5),
+            0 0 0 4px rgba(42, 92, 57, 0.12);
+    }
+}
+
+.mission-claim {
+    animation: mission-glow 2s ease-in-out infinite;
+}
+
+.mission-claim:hover {
+    animation: none;
+    box-shadow:
+        0 3px 12px rgba(42, 92, 57, 0.45),
+        0 0 0 4px rgba(42, 92, 57, 0.16);
+}
+
+/*
+ * ------------------------------------------------------------
+ * アニメーションを控える設定への追従
+ * ------------------------------------------------------------
+ */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/**
+ * ============================================================
+ * 木漏れ日の背景
+ *
+ * 画面いっぱいに敷き、送っても動かさない。
+ *
+ * 中身に付けると、送るたびに一緒に動いて
+ * 「窓から差している」感じが消える。
+ * 窓は動かないので、光も動かない。
+ * ============================================================
+ */
+
+.leaf-page {
+    position: relative;
+    isolation: isolate;
+    min-height: calc(100vh - 72px);
+
+    /* 完全な白ではなく、ごくわずかに温かい地の色 */
+    background: #fafbf9;
+}
+
+/* 葉の影。画面に貼り付ける */
+.leaf-page::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+
+    background-image: url("/images/bg-leaf.webp");
+    background-repeat: no-repeat;
+    /*
+     * 画面を覆う。
+     * 絵の右上に葉が寄っているので、
+     * cover で広げても葉は右上に来る。
+     */
+    background-position: center;
+    background-size: cover;
+
+    /* 濃さを変えるならここだけ触る */
+    opacity: 0.75;
+}
+
+/*
+ * 中ほどを白く抜く。
+ * 葉が文字に重なると読みにくい。
+ */
+.leaf-page::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+
+    background: radial-gradient(
+        ellipse 62% 58% at 38% 42%,
+        rgba(250, 251, 249, 0.96) 0%,
+        rgba(250, 251, 249, 0.7) 42%,
+        rgba(250, 251, 249, 0.15) 72%,
+        transparent 90%
+    );
+}
+
+/**
+ * ============================================================
+ * 木漏れ日の上に置く中身
+ *
+ * 横長の画面に合わせて、上下の余白を詰める。
+ * 縦に広く取ると、下の箱が画面から押し出される。
+ * ============================================================
+ */
+
+.leaf-page__content {
+    width: min(1200px, calc(100% - 48px));
+    margin-inline: auto;
+    padding-top: 58px;
+    padding-bottom: 64px;
+}
+
+.leaf-page__hero {
+    margin-bottom: 52px;
+    text-align: center;
+}
+
+.leaf-page__hero-icon {
+    margin-bottom: 24px;
+}
+
+.leaf-page__hero h1 {
+    margin: 0 0 18px;
+}
+
+.leaf-page__hero p {
+    margin: 0;
+}
+
+/**
+ * ============================================================
+ * 原稿用紙
+ *
+ * マス目は背景として描く。
+ * 1 文字ずつ枠に入れると、変換・貼り付け・取り消し・
+ * 範囲の選択が軒並み壊れる。
+ *
+ * 紙は画面に広げず、中央に 1 枚だけ置く。
+ * 全面に敷くと、どこまでが 1 枚なのか分からなくなる。
+ * ============================================================
+ */
+
+.manuscript-workspace {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: auto;
+    padding: 40px 32px 56px;
+    background: #f1f2ee;
+}
+
+.manuscript-paper {
+    /* 画面が狭いときは縮める。ただし小さくしすぎない */
+    --cell: clamp(22px, 1.9vw, 30px);
+    /* 升と升のあいだの空き。本物の原稿用紙も繋がっていない */
+    --gap: calc(var(--cell) * 0.16);
+    /* 行（列）の送り */
+    --col: calc(var(--cell) + var(--gap));
+    /* 中央の折り目。ここだけ広く空ける */
+    --fold: calc(var(--cell) * 0.9);
+
+    --grid-color: rgba(186, 92, 82, 0.55);
+    --frame-color: rgba(186, 92, 82, 0.75);
+
+    position: relative;
+    flex: 0 0 auto;
+
+    /* 20 行ぶん ＋ 折り目 */
+    width: calc(var(--col) * 20 + var(--fold));
+    /* 20 字ぶん */
+    height: calc(var(--cell) * 20);
+
+    padding: 0;
+    background-color: #fffefb;
+
+    /*
+     * 升を描く。
+     *
+     * 行に沿って升が連なり、行と行のあいだは空ける。
+     * 縦書きなので「列」が行にあたる。
+     */
+    background-image:
+        /* 升の仕切り（1 列の中を 20 に区切る） */
+        repeating-linear-gradient(
+            to bottom,
+            var(--grid-color) 0 1px,
+            transparent 1px var(--cell)
+        ),
+        /* 列の枠（左右の縦線） */
+        linear-gradient(
+            to right,
+            var(--grid-color) 0 1px,
+            transparent 1px calc(var(--cell) - 1px),
+            var(--grid-color) calc(var(--cell) - 1px) var(--cell),
+            transparent var(--cell)
+        );
+    background-size:
+        var(--col) 100%,
+        var(--col) 100%;
+    background-position: right top;
+    background-repeat: repeat-x;
+
+    border: 1.5px solid var(--frame-color);
+    box-shadow: 0 8px 30px rgba(32, 50, 45, 0.08);
+}
+
+/*
+ * 中央の折り目。
+ * 10 行目と 11 行目のあいだに、白い帯を置く。
+ */
+.manuscript-paper::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: calc(var(--col) * 10);
+    width: var(--fold);
+    background: #fffefb;
+    border-left: 1px solid var(--frame-color);
+    border-right: 1px solid var(--frame-color);
+    pointer-events: none;
+}
+
+/* 折り目の中ほどに置く印 */
+.manuscript-paper::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: calc(var(--col) * 10 + var(--fold) / 2 - 6px);
+    width: 12px;
+    height: 2px;
+    background: var(--frame-color);
+    pointer-events: none;
+}
+
+/*
+ * 紙の上に重ねる入力欄。
+ *
+ * 折り目を避けて、右半分と左半分に分ける。
+ * 1 つの入力欄だと、文字が折り目を跨いでしまう。
+ */
+.manuscript-paper textarea {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    /* 右半分。10 行ぶん */
+    width: calc(var(--col) * 10);
+    box-sizing: border-box;
+
+    padding: 0;
+    margin: 0;
+    border: 0;
+    outline: 0;
+    resize: none;
+    background: transparent;
+
+    writing-mode: vertical-rl;
+    /*
+     * 1 文字ずつ立てる。
+     * 原稿用紙では英数字も 1 マスに 1 字入る。
+     */
+    text-orientation: upright;
+
+    font-family: var(--font-serif), "Yu Mincho", serif;
+    font-size: calc(var(--cell) * 0.76);
+    /* 行の送りを列の幅に合わせる */
+    line-height: var(--col);
+    /* 字送りを升に合わせる */
+    letter-spacing: calc(var(--cell) * 0.24);
+
+    color: #252b29;
+    caret-color: var(--color-forest);
+
+    /* 升の中央に来るよう、わずかに下げる */
+    padding-top: calc(var(--cell) * 0.12);
+    /* 右端の升から始める */
+    padding-right: calc(var(--gap) / 2);
+}
+
+/* 左半分 */
+.manuscript-paper textarea.is-left {
+    right: auto;
+    left: 0;
+    padding-right: 0;
+    padding-left: calc(var(--gap) / 2);
+}
+
+.manuscript-paper textarea::placeholder {
+    color: rgba(37, 43, 41, 0.28);
+}
+
+/*
+ * ============================================================
+ * 歩く動き
+ *
+ * 足と腕を交互に上げ下げして、歩いているように見せる。
+ *
+ * 滑らかに動かさず、steps で 2 枚の絵を切り替える。
+ * ドット絵は中間の姿勢を持たないので、
+ * なめらかに補間すると絵だけが浮いて別物に見える。
+ *
+ * translate の 1px は、人形の座標系（20 × 29）での 1 マス。
+ * 画面上の 1 ピクセルではないので、
+ * 人形を大きく出しても揺れ幅の比率は変わらない。
+ * ============================================================
+ */
+
+@keyframes avatar-step-a {
+    0%,
+    49.9% {
+        transform: translateY(0);
+    }
+    50%,
+    100% {
+        transform: translateY(-1.4px);
+    }
+}
+
+@keyframes avatar-step-b {
+    0%,
+    49.9% {
+        transform: translateY(-1.4px);
+    }
+    50%,
+    100% {
+        transform: translateY(0);
+    }
+}
+
+/* 体全体の上下。足の動きより浅くする */
+@keyframes avatar-bob {
+    0%,
+    49.9% {
+        transform: translateY(0);
+    }
+    50%,
+    100% {
+        transform: translateY(-0.6px);
+    }
+}
+
+.avatar-walking .avatar-step-a {
+    animation: avatar-step-a 0.46s infinite;
+}
+
+.avatar-walking .avatar-step-b {
+    animation: avatar-step-b 0.46s infinite;
+}
+
+.avatar-walking .avatar-bob {
+    animation: avatar-bob 0.46s infinite;
+}
+
+/* 動きを減らす設定の人には出さない */
+@media (prefers-reduced-motion: reduce) {
+    .avatar-walking .avatar-step-a,
+    .avatar-walking .avatar-step-b,
+    .avatar-walking .avatar-bob {
+        animation: none;
+    }
+}
+
+/**
+ * ============================================================
+ * 画面幅による出し分け
+ *
+ * GENSEKIKORO から移した画面が使っている。
+ * これが無いと、広い版と狭い版が両方出て二重になる。
+ * ============================================================
+ */
+
+.desktop-only {
+    display: block;
+}
+
+.mobile-only {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .desktop-only {
+        display: none !important;
+    }
+
+    .mobile-only {
+        display: block !important;
+    }
+}
+
+/**
+ * ============================================================
+ * フッターは最初の画面に入れない
+ *
+ * 中身が短いページだと、開いた瞬間に黒い帯が目に入る。
+ * 読む前に終わりが見えると、そのページが空っぽに感じられる。
+ *
+ * 上に余白を足すのではなく、
+ * 「少なくとも画面の高さぶんは下」から始まるようにする。
+ *
+ * margin-top に画面の高さを使うと、
+ * 中身が長いときも同じだけ空いてしまう。
+ * そこで、上の要素との間を空けるのではなく、
+ * フッター自身を画面の外へ押し出す。
+ * ============================================================
+ */
+
+.footer-below-fold {
+    margin-top: 4rem;
+}
+
+/*
+ * 画面より中身が短いとき、フッターを下へ送る。
+ *
+ * 中身を包む箱が画面の高さを持ち、
+ * その中で中身が伸びれば、フッターは必ず下に来る。
+ */
+.page-with-footer {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+}
+
+/*
+ * ヘッダーとフッターは、もとの高さのまま。
+ *
+ * 縦に積むと、指定が無いものは縮められる。
+ * ヘッダーが潰れて細くなるのはこれが理由。
+ */
+.page-with-footer > * {
+    flex: 0 0 auto;
+}
+
+.page-with-footer > main,
+.page-with-footer > .page-body {
+    /*
+     * 画面の高さぶんは、中身が占める。
+     * 送らないとフッターにたどり着かない。
+     */
+    /* ヘッダー 72px と、下の余りぶんを引く */
+    min-height: calc(100vh - 136px);
+    flex: 1 0 auto;
+}
+
+/*
+ * フッターは必ず最後に。
+ * 中身が短くても、上の余りに押し下げられる。
+ */
+.page-with-footer > footer {
+    margin-top: auto;
+}

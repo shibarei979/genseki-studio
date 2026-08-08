@@ -1,0 +1,629 @@
+/**
+ * ============================================================
+ * 原石航路 Studio
+ * LoginClient — ログインと登録
+ *
+ * 登録は 2 段。
+ *   1. ペンネーム・メール・合言葉
+ *   2. 生年月日・同意
+ *
+ * 分けるのは、最初の画面で並ぶ入力欄を減らすため。
+ * 全部を一度に見せると、多さで手が止まる。
+ *
+ * Google でも入れる。その場合は生年月日を聞かない。
+ * あとから設定で入れてもらう。
+ * ============================================================
+ */
+
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+import { hasSupabase } from "@/config/env.client";
+import { createClient } from "@/lib/supabase/client";
+
+type Mode = "signin" | "signup";
+
+export default function LoginClient() {
+    const router = useRouter();
+
+    const [mode, setMode] = useState<Mode>("signin");
+    const [step, setStep] = useState<1 | 2>(1);
+
+    const [displayName, setDisplayName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirm, setConfirm] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+
+    const [birthYear, setBirthYear] = useState("");
+    const [birthMonth, setBirthMonth] = useState("");
+    const [birthDay, setBirthDay] = useState("");
+    const [agreeTerms, setAgreeTerms] = useState(false);
+    const [agreeAge, setAgreeAge] = useState(false);
+
+    const [isBusy, setIsBusy] = useState(false);
+    const [error, setError] = useState("");
+    const [notice, setNotice] = useState("");
+
+    if (!hasSupabase()) return <NotConnected />;
+
+    /** 生年月日から歳を出す。選び終えていなければ -1 */
+    function calcAge(): number {
+        if (!birthYear || !birthMonth || !birthDay) return -1;
+
+        const birth = new Date(
+            Number(birthYear),
+            Number(birthMonth) - 1,
+            Number(birthDay),
+        );
+        const today = new Date();
+
+        let age = today.getFullYear() - birth.getFullYear();
+        // 誕生日がまだ来ていなければ 1 つ引く
+        if (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate())) {
+            age -= 1;
+        }
+        return age;
+    }
+
+    async function signInWithGoogle() {
+        setIsBusy(true);
+        setError("");
+
+        const { error: caught } = await createClient().auth.signInWithOAuth({
+            provider: "google",
+            options: {
+                redirectTo: `${window.location.origin}/auth/callback?next=/`,
+                queryParams: { access_type: "offline", prompt: "consent" },
+            },
+        });
+
+        if (caught) {
+            setError("Google での登録に進めませんでした。");
+            setIsBusy(false);
+        }
+    }
+
+    /** 1 段目。入力を確かめて 2 段目へ */
+    function goToStep2() {
+        setError("");
+
+        if (!displayName.trim()) {
+            setError("ペンネームを入れてください。");
+            return;
+        }
+        if (!email.trim()) {
+            setError("メールアドレスを入れてください。");
+            return;
+        }
+        if (password.length < 6) {
+            setError("合言葉は6文字以上にしてください。");
+            return;
+        }
+        if (password !== confirm) {
+            setError("合言葉が一致しません。");
+            return;
+        }
+
+        setStep(2);
+    }
+
+    async function submitSignUp() {
+        setError("");
+
+        const age = calcAge();
+        if (age < 0) {
+            setError("生年月日を選んでください。");
+            return;
+        }
+        if (age < 13) {
+            setError("13歳未満の方は登録できません。");
+            return;
+        }
+        if (!agreeTerms) {
+            setError("利用規約への同意が必要です。");
+            return;
+        }
+        if (!agreeAge) {
+            setError("年齢についての確認に同意してください。");
+            return;
+        }
+
+        setIsBusy(true);
+
+        const birthdate = `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`;
+
+        const { error: caught } = await createClient().auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+                /*
+                 * ここに預けたものが、登録の引き金から profiles へ入る。
+                 * 画面から別途書き込むと、作られる前後で取り合いになる。
+                 */
+                data: {
+                    display_name: displayName.trim(),
+                    birthdate,
+                    age_verified: age >= 18,
+                    agreed: true,
+                },
+            },
+        });
+
+        setIsBusy(false);
+
+        if (caught) {
+            setError(describe(caught.message));
+            return;
+        }
+
+        const { data: session } = await createClient().auth.getSession();
+        if (session.session) {
+            router.push("/");
+            router.refresh();
+            return;
+        }
+
+        setNotice("確かめのメールを送りました。届いた道筋を開くと、登録が終わります。");
+    }
+
+    async function submitSignIn() {
+        setError("");
+
+        if (!email.trim() || !password) {
+            setError("メールと合言葉を入れてください。");
+            return;
+        }
+
+        setIsBusy(true);
+
+        const { error: caught } = await createClient().auth.signInWithPassword({
+            email: email.trim(),
+            password,
+        });
+
+        setIsBusy(false);
+
+        if (caught) {
+            setError(describe(caught.message));
+            return;
+        }
+
+        router.push("/");
+        router.refresh();
+    }
+
+    return (
+        <div
+            className="flex min-h-screen items-center justify-center px-6 py-12"
+            style={{ background: "var(--color-canvas)" }}
+        >
+            <div className="w-full max-w-md rounded-2xl bg-surface px-7 py-9 shadow-sm">
+                {/* ロゴ */}
+                <Link href="/lp" className="mx-auto block w-fit">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/logo.svg" alt="原石航路" className="h-16 w-auto" />
+                </Link>
+
+                <h1 className="mt-5 text-center text-[22px] font-semibold text-ink">
+                    {mode === "signin" ? "ログイン" : "アカウント登録"}
+                </h1>
+                <p className="mt-1.5 text-center text-xs text-muted">
+                    {mode === "signin"
+                        ? "書いたものを、どの端末からでも"
+                        : "書く、調べる、集まる"}
+                </p>
+
+                {/* 段の目印 */}
+                {mode === "signup" && (
+                    <div className="mt-6 flex">
+                        {(
+                            [
+                                { no: 1, label: "アカウント情報" },
+                                { no: 2, label: "年齢・同意" },
+                            ] as const
+                        ).map((row) => (
+                            <div
+                                key={row.no}
+                                className="flex-1 border-b-2 pb-2.5 text-center"
+                                style={{
+                                    borderColor:
+                                        step === row.no
+                                            ? "var(--color-forest)"
+                                            : "var(--color-line)",
+                                }}
+                            >
+                                <span
+                                    className="text-[13px]"
+                                    style={{
+                                        color:
+                                            step === row.no
+                                                ? "var(--color-forest)"
+                                                : "var(--color-faint)",
+                                        fontWeight: step === row.no ? 600 : 400,
+                                    }}
+                                >
+                                    {row.no} {row.label}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Google */}
+                {step === 1 && (
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => void signInWithGoogle()}
+                            disabled={isBusy}
+                            className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg border border-line py-3 text-sm text-ink hover:border-forest-line disabled:opacity-50"
+                        >
+                            <GoogleMark />
+                            Google で{mode === "signin" ? "ログイン" : "登録"}
+                        </button>
+
+                        <div className="my-5 flex items-center gap-3">
+                            <span className="h-px flex-1 bg-[var(--color-line)]" />
+                            <span className="text-[11px] text-faint">
+                                またはメールアドレスで
+                            </span>
+                            <span className="h-px flex-1 bg-[var(--color-line)]" />
+                        </div>
+                    </>
+                )}
+
+                {/* 1 段目 */}
+                {step === 1 && (
+                    <div className="space-y-4">
+                        {mode === "signup" && (
+                            <Field label="ペンネーム" note="作者名として公開されます">
+                                <input
+                                    type="text"
+                                    value={displayName}
+                                    maxLength={30}
+                                    onChange={(e) => setDisplayName(e.target.value)}
+                                    placeholder="例：月詠零"
+                                    className={inputClass}
+                                />
+                            </Field>
+                        )}
+
+                        <Field label="メールアドレス">
+                            <input
+                                type="email"
+                                value={email}
+                                autoComplete="email"
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="your@email.com"
+                                className={inputClass}
+                            />
+                        </Field>
+
+                        <Field
+                            label={
+                                mode === "signup" ? "合言葉（6文字以上）" : "合言葉"
+                            }
+                        >
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    autoComplete={
+                                        mode === "signin"
+                                            ? "current-password"
+                                            : "new-password"
+                                    }
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && mode === "signin") {
+                                            void submitSignIn();
+                                        }
+                                    }}
+                                    placeholder={
+                                        mode === "signup" ? "6文字以上" : undefined
+                                    }
+                                    className={`${inputClass} pr-14`}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((open) => !open)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-faint hover:text-ink"
+                                >
+                                    {showPassword ? "隠す" : "表示"}
+                                </button>
+                            </div>
+                        </Field>
+
+                        {mode === "signup" && (
+                            <Field label="合言葉（確認）">
+                                <input
+                                    type="password"
+                                    value={confirm}
+                                    autoComplete="new-password"
+                                    onChange={(e) => setConfirm(e.target.value)}
+                                    placeholder="もう一度入力"
+                                    className={inputClass}
+                                />
+                            </Field>
+                        )}
+                    </div>
+                )}
+
+                {/* 2 段目 */}
+                {step === 2 && (
+                    <div className="mt-6 space-y-5">
+                        <div>
+                            <p className="text-xs font-medium text-ink">生年月日</p>
+                            <p className="mt-0.5 text-[10px] text-faint">
+                                年齢の確認に使います。ほかの人には見えません。
+                            </p>
+
+                            <div className="mt-2 flex gap-2">
+                                <Select
+                                    value={birthYear}
+                                    onChange={setBirthYear}
+                                    placeholder="年"
+                                    options={years()}
+                                    suffix="年"
+                                />
+                                <Select
+                                    value={birthMonth}
+                                    onChange={setBirthMonth}
+                                    placeholder="月"
+                                    options={range(1, 12)}
+                                    suffix="月"
+                                />
+                                <Select
+                                    value={birthDay}
+                                    onChange={setBirthDay}
+                                    placeholder="日"
+                                    options={range(1, 31)}
+                                    suffix="日"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2.5">
+                            <Check
+                                checked={agreeTerms}
+                                onChange={setAgreeTerms}
+                                label="利用規約とプライバシーポリシーに同意します"
+                            />
+                            <Check
+                                checked={agreeAge}
+                                onChange={setAgreeAge}
+                                label="13歳以上であることを確認しました"
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {error && (
+                    <p className="mt-4 rounded-md bg-[var(--color-danger-tint)] px-3 py-2 text-[11px] leading-relaxed text-[var(--color-danger)]">
+                        {error}
+                    </p>
+                )}
+
+                {notice && (
+                    <p className="mt-4 rounded-md bg-forest-tint px-3 py-2 text-[11px] leading-relaxed text-ink">
+                        {notice}
+                    </p>
+                )}
+
+                {/* 進む */}
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (mode === "signin") return void submitSignIn();
+                        if (step === 1) return goToStep2();
+                        void submitSignUp();
+                    }}
+                    disabled={isBusy}
+                    className="mt-6 w-full rounded-lg bg-forest py-3 text-sm font-medium text-white hover:bg-forest-dark disabled:opacity-40"
+                >
+                    {isBusy
+                        ? "少し待ってください"
+                        : mode === "signin"
+                          ? "ログイン"
+                          : step === 1
+                            ? "次へ →"
+                            : "登録する"}
+                </button>
+
+                {/* 戻る */}
+                {mode === "signup" && step === 2 && (
+                    <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        className="mt-2 w-full py-2 text-xs text-muted hover:text-ink"
+                    >
+                        ← 戻る
+                    </button>
+                )}
+
+                <p className="mt-5 text-center text-xs text-muted">
+                    {mode === "signin" ? "はじめての方は" : "すでにお持ちの方は"}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setMode(mode === "signin" ? "signup" : "signin");
+                            setStep(1);
+                            setError("");
+                            setNotice("");
+                        }}
+                        className="ml-1.5 font-medium text-forest hover:underline"
+                    >
+                        {mode === "signin" ? "アカウント登録" : "ログインはこちら"}
+                    </button>
+                </p>
+
+                <Link
+                    href="/lp"
+                    className="mt-3 block text-center text-[11px] text-faint hover:text-forest"
+                >
+                    原石航路 Studio について
+                </Link>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * ============================================================
+ * 部品
+ * ============================================================
+ */
+
+const inputClass =
+    "mt-1 w-full rounded-lg border border-line px-3.5 py-2.5 text-sm outline-none focus:border-forest";
+
+function Field({
+    label,
+    note,
+    children,
+}: {
+    label: string;
+    note?: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <label className="block">
+            <span className="text-xs font-medium text-ink">
+                {label}
+                <span className="ml-1 text-[var(--color-danger)]">*</span>
+            </span>
+            {children}
+            {note && <span className="mt-1 block text-[10px] text-faint">{note}</span>}
+        </label>
+    );
+}
+
+function Select({
+    value,
+    onChange,
+    placeholder,
+    options,
+    suffix,
+}: {
+    value: string;
+    onChange: (next: string) => void;
+    placeholder: string;
+    options: number[];
+    suffix: string;
+}) {
+    return (
+        <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            aria-label={placeholder}
+            className="min-w-0 flex-1 rounded-lg border border-line px-2 py-2.5 text-sm outline-none focus:border-forest"
+        >
+            <option value="">{placeholder}</option>
+            {options.map((n) => (
+                <option key={n} value={String(n)}>
+                    {n}
+                    {suffix}
+                </option>
+            ))}
+        </select>
+    );
+}
+
+function Check({
+    checked,
+    onChange,
+    label,
+}: {
+    checked: boolean;
+    onChange: (next: boolean) => void;
+    label: string;
+}) {
+    return (
+        <label className="flex cursor-pointer items-start gap-2.5">
+            <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => onChange(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-forest)]"
+            />
+            <span className="text-[12px] leading-relaxed text-ink">{label}</span>
+        </label>
+    );
+}
+
+function NotConnected() {
+    return (
+        <div
+            className="flex min-h-screen items-center justify-center px-6"
+            style={{ background: "var(--color-canvas)" }}
+        >
+            <div className="max-w-md rounded-2xl bg-surface px-8 py-10 text-center shadow-sm">
+                <p className="text-sm text-ink">まだ繋がっていません</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted">
+                    保存先を用意すると、ここからログインできるようになります。
+                    いまは自分の端末の中だけで動いています。
+                </p>
+                <Link
+                    href="/"
+                    className="mt-6 inline-block rounded-lg border border-line px-5 py-2 text-xs text-muted hover:border-forest-line hover:text-forest"
+                >
+                    ホームへ戻る
+                </Link>
+            </div>
+        </div>
+    );
+}
+
+function GoogleMark() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+                fill="#4285F4"
+                d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.9Z"
+            />
+            <path
+                fill="#34A853"
+                d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.9-3a7.2 7.2 0 0 1-10.7-3.8H1.3v3.1A12 12 0 0 0 12 24Z"
+            />
+            <path
+                fill="#FBBC05"
+                d="M5.3 14.3a7.1 7.1 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1Z"
+            />
+            <path
+                fill="#EA4335"
+                d="M12 4.8c1.8 0 3.4.6 4.6 1.8l3.5-3.5A12 12 0 0 0 1.3 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8Z"
+            />
+        </svg>
+    );
+}
+
+/** 年の選択肢。100 年ぶん */
+function years(): number[] {
+    const now = new Date().getFullYear();
+    return Array.from({ length: 100 }, (_, i) => now - i);
+}
+
+function range(from: number, to: number): number[] {
+    return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+}
+
+/** Supabase の英語の返事を、対処が分かる言い方にする */
+function describe(message: string): string {
+    if (message.includes("Invalid login credentials")) {
+        return "メールか合言葉が違います。";
+    }
+    if (message.includes("already registered") || message.includes("User already")) {
+        return "このメールアドレスはすでに登録されています。ログインしてください。";
+    }
+    if (message.includes("Email not confirmed")) {
+        return "メールの確かめが済んでいません。届いた道筋を開いてください。";
+    }
+    if (message.includes("rate limit")) {
+        return "少し時間をおいてから、もう一度お試しください。";
+    }
+    return "うまくいきませんでした。しばらくしてからお試しください。";
+}

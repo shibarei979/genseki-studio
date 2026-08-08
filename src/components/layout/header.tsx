@@ -1,0 +1,516 @@
+/**
+ * ============================================================
+ * 原石航路 Studio
+ * Header — 全画面共通のヘッダー
+ *
+ * 左からロゴ、行き先、右端に通知とアイコン。
+ * 行き先はロゴから離し、右の 2 つは互いに離す。
+ * 詰めて並べると、どれが別の役目のものか分からなくなる。
+ * ============================================================
+ */
+
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+
+import EntryImage from "@/components/common/entry-image";
+import AccountMenu from "@/components/layout/account-menu";
+import RoomPresenceBar from "@/components/room/room-presence-bar";
+import { getRepository } from "@/lib/repository";
+import type { Profile } from "@/types";
+import { NOTICES } from "@/types";
+
+/** 読んだお知らせの記録。ここより新しいものに点をつける */
+const SEEN_KEY = "genseki:notices-seen-at";
+
+type IconName = "home" | "pen" | "search" | "book" | "trophy";
+
+/*
+ * 行き先。
+ *
+ * 「作品を書く」をホームの隣に置く。
+ * このサイトで真っ先にする用なので、
+ * アカウントの一覧に隠れていると毎回探すことになる。
+ *
+ * 「ランキング」は外した。
+ * 並べ方が決まっておらず、中身も無い。
+ * 押せる場所が用意だけされていると、
+ * 何度か押して空振りしたあと、二度と押されなくなる。
+ */
+const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
+    { href: "/", label: "ホーム", icon: "home" },
+    { href: "/post", label: "作品を書く", icon: "pen" },
+    /*
+     * 「作品を探す」はまだ出さない。
+     *
+     * 読めるのは執筆室で同じ部屋にいる人の作品だけ。
+     * 探す場所を出すと、何も無い一覧に行き着く。
+     */
+    { href: "/rooms", label: "執筆室", icon: "book" },
+    { href: "/contest", label: "コンテスト", icon: "trophy" },
+];
+
+interface Props {
+    /** パンくず（左から順に並べる）。最後の要素が現在地 */
+    breadcrumbs?: { label: string; href?: string }[];
+}
+
+export default function Header({ breadcrumbs = [] }: Props) {
+    const pathname = usePathname();
+    const [profile, setProfile] = useState<Profile | null>(null);
+    const [isNoticeOpen, setIsNoticeOpen] = useState(false);
+    const [seenAt, setSeenAt] = useState<string | null>(null);
+    /** 運営が立てたお知らせ。無ければ既定のものを出す */
+    const [notices, setNotices] = useState<
+        {
+            id: string;
+            date: string;
+            label: string;
+            kind: string;
+            body?: string;
+            image?: string | null;
+            link?: string;
+        }[]
+    >([]);
+    const noticeRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        void (async () => {
+            const repository = getRepository();
+            setProfile(await repository.getProfile());
+
+            /*
+             * 運営が立てたお知らせを読む。
+             * 公開されていて、表に出す日が来たものだけ。
+             */
+            const today = new Date().toISOString().slice(0, 10);
+            const rows = (await repository.listNotices()).filter(
+                (row) => row.is_published && row.published_at <= today,
+            );
+            setNotices(
+                rows.map((row) => ({
+                    id: row.id,
+                    date: row.published_at,
+                    label: row.title,
+                    kind:
+                        row.type === "release"
+                            ? "release"
+                            : row.type === "maintenance"
+                              ? "maintenance"
+                              : "info",
+                    body: row.body,
+                    image: row.image_url,
+                    link: row.link,
+                })),
+            );
+        })();
+        setSeenAt(window.localStorage.getItem(SEEN_KEY));
+    }, []);
+
+    // 外側を押したら閉じる
+    useEffect(() => {
+        if (!isNoticeOpen) return;
+        function handleOutside(event: MouseEvent) {
+            if (!noticeRef.current?.contains(event.target as Node)) setIsNoticeOpen(false);
+        }
+        document.addEventListener("mousedown", handleOutside);
+        return () => document.removeEventListener("mousedown", handleOutside);
+    }, [isNoticeOpen]);
+
+    useEffect(() => {
+        setIsNoticeOpen(false);
+    }, [pathname]);
+
+    /** 読んでいないお知らせ。日付が記録より新しいもの */
+    /*
+     * 運営のものが無ければ、組み込みの案内を出す。
+     * どちらも同じ形にして扱う。
+     */
+    const shown: {
+        id: string;
+        date: string;
+        label: string;
+        kind: string;
+        body?: string;
+        image?: string | null;
+        link?: string;
+    }[] =
+        notices.length > 0
+            ? notices
+            : NOTICES.map((row) => ({
+                  id: row.id,
+                  date: row.date,
+                  label: row.label,
+                  kind: row.kind,
+              }));
+    const unread = shown.filter((notice) => !seenAt || notice.date > seenAt);
+
+    function handleOpenNotice() {
+        const next = !isNoticeOpen;
+        setIsNoticeOpen(next);
+        if (next && shown.length > 0) {
+            // 開いた時点で読んだことにする
+            window.localStorage.setItem(SEEN_KEY, shown[0].date);
+            setSeenAt(shown[0].date);
+        }
+    }
+
+    /** 「/」だけは完全一致で見る。前方一致だと常に現在地になってしまう */
+    const isCurrent = (href: string) =>
+        href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+    return (
+        <header className="sticky top-0 z-30 border-b border-line bg-surface">
+            <div className="relative flex h-[72px] items-center px-6 sm:px-10">
+                {/*
+                 * ロゴはヘッダーの高さより少し大きく見せたいので、
+                 * 高さを固定したまま overflow を許して外へはみ出させる。
+                 * ヘッダー自体の高さ（72px）は変えない。
+                 */}
+                <Link
+                    href="/"
+                    className="relative z-10 shrink-0"
+                    aria-label="原石航路 ホームへ"
+                >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src="/logo.svg"
+                        alt="原石航路"
+                        className="h-[64px] w-auto"
+                    />
+                </Link>
+
+                {/*
+                 * 行き先はヘッダーの中央に置く。
+                 * ロゴの隣に寄せると、右上の通知やアカウントとの間が
+                 * 大きく空いて、ヘッダーが左に傾いて見える。
+                 *
+                 * 中央に固定するため absolute にしてある。
+                 * flex で寄せるとロゴの幅で中心がずれる。
+                 *
+                 * lg 未満では下段の横送りに渡す。
+                 * ロゴ・5 項目・右上の 3 つは、それより狭いと重なる。
+                 */}
+                <nav
+                    aria-label="主なページ"
+                    className="absolute inset-y-0 left-1/2 hidden -translate-x-1/2 items-stretch gap-0.5 lg:flex"
+                >
+                    {NAV_ITEMS.map((item) => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            aria-current={isCurrent(item.href) ? "page" : undefined}
+                            className={[
+                                "relative flex items-center gap-2 px-4 text-[15px]",
+                                isCurrent(item.href)
+                                    ? "font-semibold text-forest"
+                                    : "text-muted hover:text-ink",
+                            ].join(" ")}
+                        >
+                            <NavIcon name={item.icon} />
+                            {item.label}
+                            {isCurrent(item.href) && (
+                                <span className="absolute inset-x-2 bottom-0 h-[3px] rounded-t bg-forest" />
+                            )}
+                        </Link>
+                    ))}
+                </nav>
+
+                {/* 右端。通知とアイコンのあいだを空ける */}
+                <div className="ml-auto flex shrink-0 items-center gap-3.5">
+                    {/*
+                     * メッセージ。中身はまだ無いので押せないままにする。
+                     * 置き場所だけ先に決めておかないと、
+                     * 後から足したときに右上の並びが変わってしまう。
+                     */}
+                    <button
+                        type="button"
+                        disabled
+                        title="メッセージ（準備中）"
+                        aria-label="メッセージ（準備中）"
+                        className="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-full border border-line text-faint opacity-60"
+                    >
+                        <MailIcon />
+                    </button>
+
+                    <div ref={noticeRef} className="relative">
+                        <button
+                            type="button"
+                            onClick={handleOpenNotice}
+                            aria-label={`通知${unread.length > 0 ? `（未読${unread.length}件）` : ""}`}
+                            aria-expanded={isNoticeOpen}
+                            className={[
+                                "relative flex h-8 w-8 items-center justify-center rounded-full border",
+                                isNoticeOpen
+                                    ? "border-forest bg-forest-tint text-forest"
+                                    : "border-line text-muted hover:border-forest-line hover:text-forest",
+                            ].join(" ")}
+                        >
+                            <BellIcon />
+                            {unread.length > 0 && (
+                                <span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full bg-forest ring-2 ring-[var(--color-surface)]" />
+                            )}
+                        </button>
+
+                        {isNoticeOpen && (
+                            <div className="absolute right-0 top-full z-40 mt-2 w-[360px] overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
+                                <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                                    <p className="text-sm font-semibold text-ink">お知らせ</p>
+                                    <span className="text-xs text-faint">
+                                        {shown.length}件
+                                    </span>
+                                </div>
+
+                                <ul className="thin-scroll max-h-80 divide-y divide-line overflow-y-auto">
+                                    {shown.slice(0, 5).map((notice) => {
+                                        const isUnread = unread.some(
+                                            (row) => row.id === notice.id,
+                                        );
+                                        const inner = (
+                                            <>
+                                                <span
+                                                    className={[
+                                                        "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
+                                                        notice.kind === "release"
+                                                            ? "bg-forest"
+                                                            : notice.kind === "maintenance"
+                                                              ? "bg-[var(--color-amber)]"
+                                                              : "bg-[var(--color-faint)]",
+                                                    ].join(" ")}
+                                                />
+
+                                                <span className="min-w-0 flex-1">
+                                                    <span className="block text-[11px] text-faint">
+                                                        {notice.date}
+                                                    </span>
+                                                    <span className="mt-0.5 block text-[13px] leading-relaxed text-ink">
+                                                        {notice.label}
+                                                    </span>
+                                                    {notice.body && (
+                                                        <span className="mt-0.5 line-clamp-2 block text-[11px] leading-relaxed text-muted">
+                                                            {notice.body}
+                                                        </span>
+                                                    )}
+                                                </span>
+
+                                                {/* 画像があれば右に小さく添える */}
+                                                {notice.image && (
+                                                    <EntryImage
+                                                        src={notice.image}
+                                                        className="aspect-video w-16 shrink-0 rounded border border-line object-cover"
+                                                    />
+                                                )}
+                                            </>
+                                        );
+
+                                        return (
+                                            <li
+                                                key={notice.id}
+                                                className={
+                                                    isUnread ? "bg-forest-tint/40" : ""
+                                                }
+                                            >
+                                                {notice.link ? (
+                                                    <Link
+                                                        href={notice.link}
+                                                        className="flex gap-2.5 px-4 py-3 hover:bg-canvas"
+                                                    >
+                                                        {inner}
+                                                    </Link>
+                                                ) : (
+                                                    <span className="flex gap-2.5 px-4 py-3">
+                                                        {inner}
+                                                    </span>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+
+                                {/* すべて読む場所へ */}
+                                <Link
+                                    href="/notices"
+                                    className="flex items-center justify-center gap-1 border-t border-line px-4 py-2.5 text-xs text-forest hover:bg-canvas"
+                                >
+                                    もっと見る
+                                    <span aria-hidden="true">›</span>
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+
+                    <AccountMenu isCurrent={isCurrent("/mypage")} />
+                </div>
+            </div>
+
+            {/* 幅が狭いときは行き先を下の段に出す */}
+            <nav
+                aria-label="主なページ"
+                className="thin-scroll flex items-center gap-1 overflow-x-auto border-t border-line px-8 py-1.5 lg:hidden"
+            >
+                {NAV_ITEMS.map((item) => (
+                    <Link
+                        key={item.href}
+                        href={item.href}
+                        aria-current={isCurrent(item.href) ? "page" : undefined}
+                        className={[
+                            "flex shrink-0 items-center gap-1.5 rounded-md px-3.5 py-2 text-[13px]",
+                            isCurrent(item.href)
+                                ? "bg-forest-tint font-semibold text-forest"
+                                : "text-muted hover:text-ink",
+                        ].join(" ")}
+                    >
+                        <NavIcon name={item.icon} />
+                        {item.label}
+                    </Link>
+                ))}
+            </nav>
+
+            {/*
+             * 入室中の帯。
+             * 部屋を離れても、原石航路にいるあいだは出し続ける。
+             */}
+            <RoomPresenceBar />
+
+            {breadcrumbs.length > 0 && (
+                <nav
+                    aria-label="パンくず"
+                    className="flex items-center gap-2 border-t border-line px-8 py-2 text-sm sm:px-12"
+                >
+                    {breadcrumbs.map((crumb, index) => (
+                        <span key={crumb.label} className="flex items-center gap-2">
+                            {index > 0 && <span className="text-faint">›</span>}
+                            {crumb.href ? (
+                                <Link href={crumb.href} className="text-forest hover:underline">
+                                    {crumb.label}
+                                </Link>
+                            ) : (
+                                <span className="text-muted">{crumb.label}</span>
+                            )}
+                        </span>
+                    ))}
+                </nav>
+            )}
+        </header>
+    );
+}
+
+/**
+ * ============================================================
+ * 図案
+ * ============================================================
+ */
+
+function NavIcon({ name }: { name: IconName }) {
+    const common = {
+        /* 文字より少し大きく。並べたとき絵が沈まない */
+        width: 18,
+        height: 18,
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: 1.9,
+        strokeLinecap: "round" as const,
+        strokeLinejoin: "round" as const,
+        "aria-hidden": true,
+    };
+
+    if (name === "home") {
+        return (
+            <svg {...common}>
+                <path d="M3 10.5 12 3l9 7.5V20a1.5 1.5 0 0 1-1.5 1.5h-4V14h-7v7.5h-4A1.5 1.5 0 0 1 3 20Z" />
+            </svg>
+        );
+    }
+    if (name === "search") {
+        return (
+            <svg {...common}>
+                <circle cx="10.8" cy="10.8" r="6.3" />
+                <path d="m15.5 15.5 4 4" />
+            </svg>
+        );
+    }
+    if (name === "pen") {
+        return (
+            <svg {...common}>
+                <path d="M4.5 19.5h3.6L19.4 8.2a2.6 2.6 0 0 0-3.6-3.6L4.5 15.9Z" />
+                <path d="m14.6 5.8 3.6 3.6" />
+            </svg>
+        );
+    }
+    if (name === "book") {
+        /* 机と椅子。本より「書く場所」であることが伝わる */
+        return (
+            <svg {...common}>
+                <path d="M3 12h18" />
+                <path d="M5.5 12v7M18.5 12v7" />
+                <path d="M8 12V6.5a1.5 1.5 0 0 1 1.5-1.5h5A1.5 1.5 0 0 1 16 6.5V12" />
+            </svg>
+        );
+    }
+    return (
+        <svg {...common}>
+            <path d="M7 4h10v5a5 5 0 0 1-10 0Z" />
+            <path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3" />
+            <path d="M12 14v3M9 21h6l-.5-4h-5Z" />
+        </svg>
+    );
+}
+
+function MailIcon() {
+    return (
+        <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <rect x="3" y="5.5" width="18" height="13" rx="2" />
+            <path d="m3.8 7 8.2 6 8.2-6" />
+        </svg>
+    );
+}
+
+function BellIcon() {
+    return (
+        <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M18 8a6 6 0 1 0-12 0c0 6-3 7-3 7h18s-3-1-3-7" />
+            <path d="M13.7 20a2 2 0 0 1-3.4 0" />
+        </svg>
+    );
+}
+
+function UserIcon() {
+    return (
+        <svg
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            aria-hidden="true"
+        >
+            <circle cx="12" cy="8.5" r="3.5" />
+            <path d="M5 20c0-3.4 3.1-5.5 7-5.5s7 2.1 7 5.5" />
+        </svg>
+    );
+}

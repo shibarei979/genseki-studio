@@ -1,0 +1,140 @@
+
+> genseki-studio@0.1.0 prebuild
+> node scripts/copy-pdf-worker.mjs
+
+PDF を読む部品を public に写しました。
+
+> genseki-studio@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+./src/app/author/[id]/page.tsx
+214:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+255:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/novel/[id]/episode/[epId]/page.tsx
+196:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+271:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/novel/[id]/page.tsx
+369:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+455:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/admin/announcements/announcement-manager.tsx
+145:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+185:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/admin/messages/message-sender.tsx
+95:23  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/mypage/chapter-edit-modal.tsx
+27:6  Warning: React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/mypage/mypage-client.tsx
+456:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+528:31  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+763:6  Warning: React Hook useEffect has missing dependencies: 'profile.user_id' and 'supabase'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+1091:23  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+1163:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/novel/chapter-accordion.tsx
+64:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/novel/episode/comment-section.tsx
+80:6  Warning: React Hook useEffect has missing dependencies: 'comments' and 'supabase'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+307:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+379:27  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/novel/episode/reading-settings.tsx
+52:6  Warning: React Hook useEffect has a missing dependency: 'onChange'. Either include it or remove the dependency array. If 'onChange' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./src/components/novel/novel-actions.tsx
+53:6  Warning: React Hook useEffect has a missing dependency: 'supabase'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/series-manager.tsx
+26:6  Warning: React Hook useEffect has a missing dependency: 'loadSeries'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/tweet-section.tsx
+49:23  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+84:6  Warning: React Hook useEffect has a missing dependency: 'loadTweets'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+264:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+319:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/42) ...
+   Generating static pages (10/42) 
+   Generating static pages (20/42) 
+   Generating static pages (31/42) 
+ ✓ Generating static pages (42/42)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    8.54 kB         204 kB
+├ ○ /_not-found                          148 B          87.8 kB
+├ ○ /about                               1.05 kB         197 kB
+├ ƒ /admin                               12.7 kB         317 kB
+├ ƒ /admin/analytics                     11.4 kB         316 kB
+├ ƒ /admin/announcements                 5.74 kB         202 kB
+├ ƒ /admin/banners                       3.91 kB         200 kB
+├ ƒ /admin/contacts                      4.56 kB         200 kB
+├ ƒ /admin/contest                       7.96 kB         204 kB
+├ ƒ /admin/discovers                     3.44 kB         199 kB
+├ ƒ /admin/features                      3.19 kB         199 kB
+├ ƒ /admin/messages                      4.53 kB         200 kB
+├ ƒ /admin/ng-words                      3.54 kB         199 kB
+├ ƒ /admin/notices                       4.28 kB         200 kB
+├ ƒ /admin/novels                        4.83 kB         201 kB
+├ ƒ /admin/reports                       4.08 kB         200 kB
+├ ƒ /admin/rooms                         3.67 kB         202 kB
+├ ƒ /admin/users                         4.64 kB         200 kB
+├ ƒ /api/ai/extract                      0 B                0 B
+├ ƒ /api/ai/image                        0 B                0 B
+├ ○ /api/ai/status                       0 B                0 B
+├ ƒ /auth/callback                       0 B                0 B
+├ ƒ /author/[id]                         1.6 kB          202 kB
+├ ○ /contact                             3.56 kB         199 kB
+├ ○ /contest                             3.46 kB         199 kB
+├ ƒ /contest/[contestId]                 4.07 kB         200 kB
+├ ○ /faq                                 1.05 kB         197 kB
+├ ○ /feedback                            1.05 kB         197 kB
+├ ○ /guide                               1.05 kB         197 kB
+├ ○ /guidelines                          1.05 kB         197 kB
+├ ○ /help                                1.05 kB         197 kB
+├ ○ /login                               4.55 kB         167 kB
+├ ○ /lp                                  233 B           101 kB
+├ ƒ /mypage                              27.7 kB         228 kB
+├ ○ /notices                             2.69 kB         198 kB
+├ ƒ /novel/[id]                          10.6 kB         206 kB
+├ ƒ /novel/[id]/episode/[epId]           12.4 kB         208 kB
+├ ○ /post                                4.53 kB         200 kB
+├ ○ /privacy                             1.05 kB         197 kB
+├ ○ /rooms                               4.97 kB         203 kB
+├ ƒ /rooms/[roomId]                      14.3 kB         213 kB
+├ ○ /rooms/new                           5.28 kB         195 kB
+├ ○ /search                              1.37 kB         197 kB
+├ ○ /terms                               1.05 kB         197 kB
+├ ○ /works                               6.6 kB          202 kB
+├ ƒ /workspace/[workId]                  15.8 kB         212 kB
+├ ƒ /workspace/[workId]/post             6.19 kB         202 kB
+├ ƒ /workspace/[workId]/preview          3.39 kB         199 kB
+├ ƒ /workspace/[workId]/resource         44.1 kB         240 kB
+└ ƒ /workspace/[workId]/settings         21 kB           217 kB
++ First Load JS shared by all            87.6 kB
+  ├ chunks/2117-1409c46b546556f8.js      31.9 kB
+  ├ chunks/fd9d1056-925430c5a4767c0e.js  53.6 kB
+  └ other shared chunks (total)          2.09 kB
+
+
+ƒ Middleware                             84.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

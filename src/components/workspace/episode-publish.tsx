@@ -1,0 +1,153 @@
+/**
+ * ============================================================
+ * 原石航路 Studio
+ * EpisodePublish — 話の公開
+ *
+ * 作品全体の公開範囲とは別に、話ごとに決める。
+ *
+ * 「作品は公開しているが、第5話はまだ下書き」
+ * ということが普通にある。
+ * 予約もここに置く。作品ごとではなく話ごとのもの。
+ * ============================================================
+ */
+
+"use client";
+
+import { useState } from "react";
+
+import type { Episode } from "@/types";
+
+interface Props {
+    episode: Episode;
+    onChange: (patch: {
+        is_published?: boolean;
+        publish_at?: string | null;
+    }) => void;
+    onClose: () => void;
+}
+
+export default function EpisodePublish({ episode, onChange, onClose }: Props) {
+    const [at, setAt] = useState(episode.publish_at?.slice(0, 16) ?? "");
+    const [error, setError] = useState("");
+
+    const isScheduled = Boolean(episode.publish_at) && !episode.is_published;
+
+    function schedule() {
+        if (!at) {
+            setError("公開する日時を選んでください。");
+            return;
+        }
+
+        const when = new Date(at);
+        if (Number.isNaN(when.getTime())) {
+            setError("日時の形が正しくありません。");
+            return;
+        }
+        if (when.getTime() < Date.now()) {
+            setError("過ぎた時刻は選べません。");
+            return;
+        }
+
+        setError("");
+        onChange({ is_published: false, publish_at: when.toISOString() });
+    }
+
+    return (
+        <div className="absolute right-0 top-full z-30 mt-1.5 w-72 rounded-xl border border-line bg-surface p-4 shadow-lg">
+            <div className="flex items-baseline justify-between">
+                <p className="text-[13px] font-medium text-ink">この話の公開</p>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="閉じる"
+                    className="text-xs text-faint hover:text-ink"
+                >
+                    ✕
+                </button>
+            </div>
+
+            {/* いまの状態 */}
+            <p className="mt-2 rounded-md bg-canvas px-3 py-2 text-[11px] text-muted">
+                {episode.is_published
+                    ? "この話は公開されています。"
+                    : isScheduled
+                      ? `${formatAt(episode.publish_at)}に公開されます。`
+                      : "この話はまだ下書きです。"}
+            </p>
+
+            <div className="mt-3 space-y-2">
+                {episode.is_published ? (
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onChange({ is_published: false, publish_at: null })
+                        }
+                        className="w-full rounded-lg border border-line py-2.5 text-xs text-muted hover:border-forest-line hover:text-ink"
+                    >
+                        下書きに戻す
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onChange({ is_published: true, publish_at: null })
+                        }
+                        className="w-full rounded-lg bg-forest py-2.5 text-xs font-medium text-white hover:bg-forest-dark"
+                    >
+                        いま公開する
+                    </button>
+                )}
+
+                {/* 予約 */}
+                <div className="rounded-lg border border-line px-3 py-2.5">
+                    <p className="text-[11px] text-ink">時刻を決めて公開</p>
+
+                    <input
+                        type="datetime-local"
+                        value={at}
+                        onChange={(e) => setAt(e.target.value)}
+                        className="mt-1.5 w-full rounded-md border border-line px-2.5 py-1.5 text-xs outline-none focus:border-forest"
+                    />
+
+                    {error && (
+                        <p className="mt-1.5 text-[10px] text-[var(--color-danger)]">
+                            {error}
+                        </p>
+                    )}
+
+                    <div className="mt-2 flex gap-1.5">
+                        <button
+                            type="button"
+                            onClick={schedule}
+                            className="flex-1 rounded-md border border-forest-line py-1.5 text-[11px] text-forest hover:bg-forest-tint"
+                        >
+                            予約する
+                        </button>
+
+                        {isScheduled && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAt("");
+                                    onChange({ publish_at: null });
+                                }}
+                                className="rounded-md border border-line px-3 py-1.5 text-[11px] text-muted hover:text-ink"
+                            >
+                                取り消す
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function formatAt(iso: string | null | undefined): string {
+    if (!iso) return "";
+    const at = new Date(iso);
+    if (Number.isNaN(at.getTime())) return "";
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${at.getMonth() + 1}月${at.getDate()}日 ${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}

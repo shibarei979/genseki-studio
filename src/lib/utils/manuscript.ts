@@ -1,0 +1,193 @@
+/**
+ * ============================================================
+ * 原石航路 Studio
+ * 原稿の一括取り込み
+ *
+ * 長い原稿を貼り付けて話に分ける。
+ * 見出しの書き方は人によって違うので、
+ * 「検出できたら使い、できなければ諦める」方針にしている。
+ * 誤って 1 話に混ぜるより、分けすぎて手で直すほうが被害が小さい。
+ * ============================================================
+ */
+
+import { stripHighlight } from "@/lib/manuscript/notation";
+
+export interface SplitOptions {
+    /** 章見出し・シーン区切りを検出する */
+    detectHeadings: boolean;
+}
+
+export interface SplitResult {
+    title: string;
+    body: string;
+    charCount: number;
+}
+
+/**
+ * 見出しとみなす行。
+ *   第1話 / 第一話 / 第1章 / #1 / ◆ / ***
+ * 行全体が短く、これらの形に合うものだけを拾う。
+ */
+const HEADING_PATTERNS: RegExp[] = [
+    /^\s*第[0-9０-９一二三四五六七八九十百]+[話章節部幕]\s*[　\s].*$/,
+    /^\s*第[0-9０-９一二三四五六七八九十百]+[話章節部幕]\s*$/,
+    /^\s*[#＃]{1,3}\s*.+$/,
+    /^\s*[◆◇■□●○※＊*]{1,3}\s*.*$/,
+    /^\s*[-–—―ー=＝]{3,}\s*$/,
+];
+
+function isHeading(line: string): boolean {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) return false;
+    // 長い行は本文とみなす。見出しがこれ以上長いことは稀
+    if (trimmed.length > 40) return false;
+    return HEADING_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+/** 見出し行から装飾を外してタイトルにする */
+function toTitle(line: string): string {
+    return line
+        .trim()
+        .replace(/^[#＃◆◇■□●○※＊*\s]+/, "")
+        .replace(/[-–—―ー=＝\s]+$/, "")
+        .trim();
+}
+
+function countChars(text: string): number {
+    return Array.from(text.replace(/\r?\n/g, "")).length;
+}
+
+/**
+ * 原稿を話に分ける。
+ *
+ * detectHeadings が false のとき、または見出しが 1 つも見つからないときは
+ * 3 行以上の空行を区切りとして扱う。それも無ければ全体を 1 話にする。
+ */
+/**
+ * 手で入れた切れ目の印。
+ *
+ * 本文に紛れないよう、まず使われない並びにする。
+ * 取り込むときに外す。
+ */
+export const SPLIT_MARK = "──── ここで切る ────";
+
+export function splitManuscript(raw: string, options: SplitOptions): SplitResult[] {
+    const text = raw.replace(/\r\n/g, "\n").trim();
+    if (text.length === 0) return [];
+
+    /*
+     * 手で入れた切れ目があれば、それを最優先にする。
+     *
+     * 自動の見立てより、書き手が指したところが正しい。
+     */
+    if (text.includes(SPLIT_MARK)) {
+        return text
+            .split(SPLIT_MARK)
+            .map((part) => part.trim())
+            .filter((part) => part.length > 0)
+            .map((part) => {
+                /* 1 行目が見出しらしければ、題名として取る */
+                const lines = part.split("\n");
+                const head = lines[0]?.trim() ?? "";
+
+                if (isHeading(head) && lines.length > 1) {
+                    const body = lines.slice(1).join("\n").trim();
+                    return {
+                        title: toTitle(head),
+                        body,
+                        charCount: countChars(body),
+                    };
+                }
+
+                return { title: "", body: part, charCount: countChars(part) };
+            });
+    }
+
+    if (options.detectHeadings) {
+        const byHeading = splitByHeading(text);
+        if (byHeading.length > 0) return byHeading;
+    }
+
+    const byBlank = splitByBlankLines(text);
+    if (byBlank.length > 1) return byBlank;
+
+    return [{ title: "", body: text, charCount: countChars(text) }];
+}
+
+function splitByHeading(text: string): SplitResult[] {
+    const lines = text.split("\n");
+    const chunks: { title: string; lines: string[] }[] = [];
+
+    for (const line of lines) {
+        if (isHeading(line)) {
+            chunks.push({ title: toTitle(line), lines: [] });
+            continue;
+        }
+        // 最初の見出しより前の本文は、見出しなしの 1 話として拾う
+        if (chunks.length === 0) {
+            if (line.trim().length === 0) continue;
+            chunks.push({ title: "", lines: [] });
+        }
+        chunks[chunks.length - 1].lines.push(line);
+    }
+
+    // 見出しが 1 つも無かった、または全体が 1 かたまりなら失敗扱い
+    if (chunks.length <= 1) return [];
+
+    return chunks
+        .map((chunk) => {
+            const body = chunk.lines.join("\n").trim();
+            return { title: chunk.title, body, charCount: countChars(body) };
+        })
+        .filter((chunk) => chunk.body.length > 0 || chunk.title.length > 0);
+}
+
+function splitByBlankLines(text: string): SplitResult[] {
+    return text
+        .split(/\n{3,}/)
+        .map((block) => block.trim())
+        .filter((block) => block.length > 0)
+        .map((body) => ({ title: "", body, charCount: countChars(body) }));
+}
+
+/**
+ * ============================================================
+ * 書き出し
+ * ============================================================
+ */
+
+export interface ExportEpisode {
+    ep_number: number;
+    title: string;
+    body: string;
+}
+
+/**
+ * 全話を 1 つのプレーンテキストにまとめる。
+ *
+ * ルビの記法はそのまま残す。
+ * 投稿サイトへ貼るときに必要だし、外すと読みの情報が消えてしまう。
+ */
+export function buildTxt(workTitle: string, episodes: ExportEpisode[]): string {
+    /*
+     * 蛍光ペンの印は外す。
+     * 自分のための目印なので、書き出したものに残らないようにする。
+     */
+    const header = `${workTitle}\n\n`;
+    const chapters = episodes.map((ep) => {
+        const heading = ep.title.trim() ? `第${ep.ep_number}話　${ep.title}` : `第${ep.ep_number}話`;
+        return `${heading}\n\n${stripHighlight(ep.body)}`;
+    });
+    return header + chapters.join("\n\n\n");
+}
+
+/** ブラウザにファイルを保存させる */
+export function downloadTextFile(filename: string, content: string): void {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+}
