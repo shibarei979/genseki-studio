@@ -1831,7 +1831,17 @@ export const supabaseRepository: Repository = {
             .insert({
                 contest_id: contestId,
                 novel_id: input.work_id,
+
+                /*
+                 * 出した人。
+                 *
+                 * 古い版の表は user_id、いまの版は author_id。
+                 * どちらの列があっても通るよう、両方に入れる。
+                 * 無い列は、送っても捨てられる。
+                 */
+                user_id: userId,
                 author_id: userId,
+
                 author_name: input.author_name,
                 work_title: input.work_title,
                 char_count: input.char_count,
