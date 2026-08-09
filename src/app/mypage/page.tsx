@@ -8,6 +8,7 @@ export default async function MypagePage() {
 
   if (!user) redirect('/auth/login?redirectTo=/mypage')
 
+  /* 自分の情報は 1 行なので、そのまま */
   const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single()
 
   if (!profile) {
@@ -46,7 +47,15 @@ export default async function MypagePage() {
       .limit(20),
 
     supabase
-      .from('novels').select('*').eq('author_id', user.id).order('created_at', { ascending: false }),
+      /*
+       * 使う列だけ。
+       *
+       * select('*') は、あとで足した列も全部運ぶ。
+       * 運んでも画面では使わないので、そのぶんが待ち時間になる。
+       */
+      .from('novels')
+      .select('id, author_id, title, summary, genre, tags, is_serial, published, novel_type, created_at, updated_at, views')
+      .eq('author_id', user.id).order('created_at', { ascending: false }),
 
     supabase
       .from('bookmarks')
@@ -214,8 +223,18 @@ export default async function MypagePage() {
   const historyNovelIds = historyItems.map((i:any) => i.novelId)
   const firstEpMap: Record<string,string> = {}
   if (historyNovelIds.length > 0) {
+    /*
+     * 第 1 話だけ欲しい。
+     *
+     * 全話を運んで最初だけ使っていた。
+     * 10 作品 × 50 話なら 500 行を運んで、使うのは 10 行。
+     *
+     * 5 話目までに絞る。1 話から始まらない作品もあるので、
+     * ちょうど 1 に限らず、少し幅を持たせる。
+     */
     const { data: firstEps } = await supabase.from('episodes').select('id, novel_id, ep_number')
-      .in('novel_id', historyNovelIds).eq('published', true).order('ep_number', { ascending: true })
+      .in('novel_id', historyNovelIds).eq('published', true)
+      .lte('ep_number', 5).order('ep_number', { ascending: true })
     firstEps?.forEach((ep:any) => { if (!firstEpMap[ep.novel_id]) firstEpMap[ep.novel_id] = ep.id })
   }
 
