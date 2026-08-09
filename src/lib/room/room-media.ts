@@ -176,7 +176,25 @@ export class RoomMedia {
          * 両方が申し出ると、返事を受け取る番が来ない。
          */
         for (const id of others) {
-            if (this.peers.has(id)) continue;
+            const found = this.peers.get(id);
+
+            /*
+             * すでに繋いでいるつもりでも、切れていることがある。
+             *
+             * 相手が執筆へ移って戻ってくると、向こうは新しく繋ぎ直す。
+             * こちらは古いものを持ったままなので、
+             * 「もう繋がっている」と見なして何もしない。
+             * その結果、どちらの声も届かなくなる。
+             *
+             * 死んでいる繋ぎは捨てて、作り直す。
+             */
+            if (found) {
+                const state = found.connection.connectionState;
+                if (state !== "failed" && state !== "closed") continue;
+
+                found.connection.close();
+                this.peers.delete(id);
+            }
 
             this.ensurePeer(id);
             if (this.selfId < id) void this.offer(id);

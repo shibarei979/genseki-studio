@@ -290,7 +290,15 @@ export default function RoomClient({ roomId }: Props) {
             mediaRef.current?.dispose();
             mediaRef.current = null;
         };
-    }, [room, identity.id, identity.name]);
+        /*
+         * 見るのは部屋の id だけ。
+         *
+         * room をまるごと見ていると、設定を変えるたびに
+         * ここがやり直され、部屋に入り直してしまう。
+         * 入り直すと声の繋ぎも切れ、戻らなくなる。
+         */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [room?.id, identity.id, identity.name]);
 
     /*
      * 在室者が変わったら線を張り直す。
