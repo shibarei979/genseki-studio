@@ -1808,15 +1808,25 @@ export const supabaseRepository: Repository = {
     },
 
     async listContestEntries(contestId: string): Promise<ContestEntry[]> {
+        /*
+         * 並べ替えは created_at で。
+         *
+         * 古い表には entered_at が無い。
+         * 無い列で並べ替えると、1 行も返ってこない。
+         *
+         * 出すときは entered_at という名前で渡す。
+         * 画面の側はそちらを見ている。
+         */
         const { data } = await db()
             .from("contest_entries")
             .select("*")
             .eq("contest_id", contestId)
-            .order("entered_at");
+            .order("created_at");
 
         return rows<Record<string, unknown>>(data).map((row) => ({
             ...row,
             work_id: row.novel_id,
+            entered_at: row.entered_at ?? row.created_at,
         })) as ContestEntry[];
     },
 
@@ -1854,7 +1864,13 @@ export const supabaseRepository: Repository = {
             .single();
 
         if (error) throw new Error(describeError(error.message));
-        return { ...data, work_id: data.novel_id } as ContestEntry;
+
+        return {
+            ...data,
+            work_id: data.novel_id,
+            /* 古い表は created_at。画面は entered_at を見ている */
+            entered_at: data.entered_at ?? data.created_at,
+        } as ContestEntry;
     },
 
     async updateContestEntry(
