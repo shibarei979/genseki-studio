@@ -26,7 +26,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AvatarSprite from "@/components/room/avatar-sprite";
 import {
@@ -300,11 +300,7 @@ export default function RoomFloor({
          * 道は格子をたどって探すので、そのままだと
          * 格子の中心に丸められ、押した所から少しずれる。
          */
-        const steps = seat
-            ? [...route, seat]
-            : route.length > 0
-              ? [...route.slice(0, -1), goal]
-              : [goal];
+        const steps = seat ? [...route, seat] : route;
         if (steps.length === 0) return;
 
         if (walkRef.current !== null) window.clearInterval(walkRef.current);
