@@ -37,7 +37,13 @@ export default async function MypagePage() {
   const followingAuthors = (followingData || []).map((f: any) => f.profiles).filter(Boolean)
 
   const { data: novels } = await supabase
-    .from('novels').select('*').eq('author_id', user.id).order('created_at', { ascending: false })
+    /*
+     * 作品。要る列だけ。
+     * select('*') は、あとで足した列も全部運ぶ。
+     */
+    .from('novels')
+    .select('id, author_id, title, summary, genre, tags, is_serial, published, visibility, views, created_at, updated_at, novel_type, catchphrase, cover_url, serial_status, age_rating, ai_usage, deleted_at')
+    .eq('author_id', user.id).order('created_at', { ascending: false })
 
   // 作品ごとのいいね・コメント・閲覧数
   const novelIds = (novels || []).map((n: any) => n.id)
@@ -119,7 +125,14 @@ export default async function MypagePage() {
     const [epThis, epLast, myEpsAll, viewThis, viewLast, likeThis, likeLast, tw] = await Promise.all([
       novelIds.length > 0 ? supabase.from('novels').select('id',{count:'exact',head:true}).eq('author_id',user.id).gte('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
       novelIds.length > 0 ? supabase.from('novels').select('id',{count:'exact',head:true}).eq('author_id',user.id).gte('created_at',lastMonthStart).lt('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
-      novelIds.length > 0 ? supabase.from('episodes').select('body, created_at').in('novel_id',novelIds) : Promise.resolve({ data: [] } as any),
+      /*
+       * 文字数は char_count を使う。
+       *
+       * body を読むと、全話の本文が丸ごと流れる。
+       * 5 万字の作品が 10 本あれば 50 万字。
+       * 数えるだけのために、それを毎回運ぶ理由が無い。
+       */
+      novelIds.length > 0 ? supabase.from('episodes').select('char_count, created_at').in('novel_id',novelIds) : Promise.resolve({ data: [] } as any),
       novelIds.length > 0 ? supabase.from('page_views').select('id',{count:'exact',head:true}).in('novel_id',novelIds).gte('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
       novelIds.length > 0 ? supabase.from('page_views').select('id',{count:'exact',head:true}).in('novel_id',novelIds).gte('created_at',lastMonthStart).lt('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
       novelIds.length > 0 ? supabase.from('likes').select('id',{count:'exact',head:true}).in('novel_id',novelIds).gte('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
@@ -128,7 +141,7 @@ export default async function MypagePage() {
     ])
     let charsThis = 0, charsPrev = 0
     ;(myEpsAll.data || []).forEach((e: any) => {
-      const len = (e.body || '').length
+      const len = e.char_count || 0
       if (e.created_at >= thisMonthStart) charsThis += len
       else if (e.created_at >= lastMonthStart && e.created_at < thisMonthStart) charsPrev += len
     })
@@ -193,10 +206,11 @@ export default async function MypagePage() {
   const likeMap2: Record<string,number> = {}
   if (historyNovelIds.length > 0) {
     const [epData, likeData] = await Promise.all([
-      supabase.from('episodes').select('novel_id, body').in('novel_id', historyNovelIds),
+      /* ここも char_count で足りる。本文は運ばない */
+      supabase.from('episodes').select('novel_id, char_count').in('novel_id', historyNovelIds),
       supabase.from('likes').select('novel_id').in('novel_id', historyNovelIds),
     ])
-    epData.data?.forEach((ep:any) => { charCountMap[ep.novel_id] = (charCountMap[ep.novel_id]||0)+(ep.body?.length||0) })
+    epData.data?.forEach((ep:any) => { charCountMap[ep.novel_id] = (charCountMap[ep.novel_id]||0)+(ep.char_count||0) })
     likeData.data?.forEach((l:any) => { likeMap2[l.novel_id] = (likeMap2[l.novel_id]||0)+1 })
   }
 
