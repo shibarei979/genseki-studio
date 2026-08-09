@@ -52,6 +52,12 @@ export default function ContestEntryClient({
     const [isSending, setIsSending] = useState(false);
     const [error, setError] = useState("");
 
+    /* 出し終えたときに出す窓。空なら出さない */
+    const [doneTitle, setDoneTitle] = useState("");
+
+    /* 取り消しを尋ねている相手 */
+    const [cancelling, setCancelling] = useState<ContestEntry | null>(null);
+
     const load = useCallback(async () => {
         const repository = getRepository();
 
@@ -124,6 +130,20 @@ export default function ContestEntryClient({
 
     const selected = candidates.find((row) => row.work.id === selectedId);
 
+    /**
+     * 応募を取り消す。
+     *
+     * 締切までなら、また出せる。
+     * 出したあとで直したくなることはよくある。
+     */
+    async function cancelEntry() {
+        if (!cancelling) return;
+
+        await getRepository().deleteContestEntry(cancelling.id);
+        setCancelling(null);
+        await load();
+    }
+
     async function submit() {
         if (!selected || isSending) return;
 
@@ -143,7 +163,18 @@ export default function ContestEntryClient({
                 note: "",
             });
 
-            router.push(`/contest/${contestId}?entered=1`);
+            /*
+             * その場で知らせる。
+             *
+             * 画面を移すと「出せたのか」が分からないまま終わる。
+             * ここで確かめてから、次をどうするか選んでもらう。
+             */
+            setDoneTitle(selected.work.title || "名前のない作品");
+            setSelectedId(null);
+            setIsAgreed(false);
+
+            await load();
+            setIsSending(false);
         } catch (caught) {
             setError(
                 caught instanceof Error
@@ -179,6 +210,63 @@ export default function ContestEntryClient({
                     <p className="mt-3 text-[12px]" style={{ color: C.dim }}>
                         あと {rest} 作品出せます
                     </p>
+                )}
+
+                {/*
+                 * すでに出したもの。
+                 *
+                 * 何を出したか分からないまま、また選ぶことになる。
+                 * 取り消しもここから。
+                 */}
+                {entries.length > 0 && (
+                    <section className="mt-8">
+                        <h2
+                            className="text-[14px] font-medium"
+                            style={{ color: C.navy }}
+                        >
+                            応募している作品
+                        </h2>
+
+                        <ul className="mt-3 space-y-2">
+                            {entries.map((entry) => (
+                                <li
+                                    key={entry.id}
+                                    className="flex items-center gap-3 rounded-xl border px-4 py-3"
+                                    style={{ borderColor: C.line }}
+                                >
+                                    <span className="min-w-0 flex-1">
+                                        <span
+                                            className="block truncate text-[13px]"
+                                            style={{ color: C.navy }}
+                                        >
+                                            {entry.work_title}
+                                        </span>
+                                        <span
+                                            className="mt-0.5 block text-[11px]"
+                                            style={{ color: C.dim }}
+                                        >
+                                            {entry.entered_at
+                                                .slice(0, 10)
+                                                .replace(/-/g, "/")}
+                                            に応募
+                                        </span>
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setCancelling(entry)}
+                                        className="shrink-0 rounded-md border px-3 py-1.5 text-[11px] hover:bg-[#fef2f2]"
+                                        style={{
+                                            borderColor: "#fca5a5",
+                                            color: "#dc2626",
+                                        }}
+                                    >
+                                        取り消す
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
                 )}
 
                 {/* 作品を選ぶ */}
@@ -384,7 +472,148 @@ export default function ContestEntryClient({
                 )}
             </main>
 
+            {/*
+             * 出し終えたとき。
+             *
+             * 紙吹雪を散らす。
+             * 出すのは勇気の要ることなので、ひとこと祝う。
+             */}
+            {doneTitle && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+                    <Confetti />
+
+                    <div className="relative w-full max-w-sm rounded-2xl bg-white px-7 py-8 text-center shadow-2xl">
+                        <p className="text-[32px]" aria-hidden="true">
+                            🎉
+                        </p>
+
+                        <p
+                            className="mt-2 text-[17px] font-semibold"
+                            style={{ color: C.navy }}
+                        >
+                            応募が完了しました
+                        </p>
+
+                        <p
+                            className="mt-2 text-[12px] leading-relaxed"
+                            style={{ color: C.body }}
+                        >
+                            「{doneTitle}」を出しました。
+                            <br />
+                            結果は {formatWhen(contest.result_at)} に出ます。
+                        </p>
+
+                        <div className="mt-6 space-y-2">
+                            {rest !== null && rest > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setDoneTitle("")}
+                                    className="w-full rounded-lg py-3 text-[13px] font-medium text-white"
+                                    style={{ background: C.teal }}
+                                >
+                                    ほかの作品も応募する
+                                </button>
+                            )}
+
+                            <Link
+                                href={`/contest/${contestId}`}
+                                className="block w-full rounded-lg border py-3 text-[13px]"
+                                style={{ borderColor: C.line, color: C.body }}
+                            >
+                                コンテストのページへ戻る
+                            </Link>
+                        </div>
+
+                        {rest !== null && (
+                            <p
+                                className="mt-4 text-[11px]"
+                                style={{ color: C.dim }}
+                            >
+                                あと {rest} 作品出せます
+                            </p>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* 取り消しを尋ねる */}
+            {cancelling && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+                    <div className="w-full max-w-sm rounded-2xl bg-white px-6 py-6 shadow-2xl">
+                        <p
+                            className="text-[15px] font-medium"
+                            style={{ color: C.navy }}
+                        >
+                            応募を取り消しますか
+                        </p>
+
+                        <p
+                            className="mt-2 text-[12px] leading-relaxed"
+                            style={{ color: C.body }}
+                        >
+                            「{cancelling.work_title}」の応募を取り消します。
+                            <br />
+                            締切までなら、また出せます。
+                        </p>
+
+                        <div className="mt-5 flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setCancelling(null)}
+                                className="flex-1 rounded-lg border py-2.5 text-[12px]"
+                                style={{ borderColor: C.line, color: C.body }}
+                            >
+                                やめる
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => void cancelEntry()}
+                                className="flex-1 rounded-lg py-2.5 text-[12px] font-medium text-white"
+                                style={{ background: "#dc2626" }}
+                            >
+                                取り消す
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <Footer />
+        </div>
+    );
+}
+
+/**
+ * 紙吹雪。
+ *
+ * 絵や動く仕掛けを足さず、小さな四角を降らせるだけ。
+ * 出し終えた一瞬に、少しだけ華やぐ。
+ */
+function Confetti() {
+    const pieces = Array.from({ length: 40 }, (_, index) => index);
+
+    const colors = ["#2b7e91", "#e8b769", "#1e3a5f", "#8fbcd4", "#f0d9a8"];
+
+    return (
+        <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+            {pieces.map((index) => (
+                <span
+                    key={index}
+                    className="confetti-piece absolute top-[-10%] block"
+                    style={{
+                        left: `${(index * 37) % 100}%`,
+                        width: index % 3 === 0 ? 6 : 8,
+                        height: index % 3 === 0 ? 10 : 6,
+                        background: colors[index % colors.length],
+                        animationDelay: `${(index % 10) * 0.12}s`,
+                        animationDuration: `${2.4 + (index % 5) * 0.3}s`,
+                    }}
+                />
+            ))}
         </div>
     );
 }

@@ -731,3 +731,38 @@ body {
 .page-with-footer > footer {
     margin-top: auto;
 }
+
+/**
+ * ============================================================
+ * 紙吹雪
+ *
+ * コンテストに出し終えたときに降らせる。
+ *
+ * 絵も動く仕掛けも使わず、小さな四角を落とすだけ。
+ * 重くならず、どの端末でも同じように見える。
+ * ============================================================
+ */
+
+@keyframes confetti-fall {
+    from {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(110vh) rotate(540deg);
+        opacity: 0;
+    }
+}
+
+.confetti-piece {
+    animation-name: confetti-fall;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+}
+
+/* 動きを減らす設定の人には出さない */
+@media (prefers-reduced-motion: reduce) {
+    .confetti-piece {
+        display: none;
+    }
+}
