@@ -22,6 +22,15 @@ import type { MemberStatus, RoomMember, RoomMessage } from "@/types";
 
 import type { Presence, RoomState } from "@/lib/room/presence-types";
 
+/**
+ * 自分の状態を送る間隔。
+ *
+ * Supabase Realtime の上限は毎秒 10 回。
+ * 人が増えると、その人数ぶん飛び交う。
+ * 20 人いても届くよう、1 人あたり毎秒 1 回に抑える。
+ */
+const SEND_INTERVAL_MS = 1000;
+
 /** 発言はこの数だけ手元に残す */
 const MESSAGE_LIMIT = 60;
 
@@ -218,24 +227,55 @@ export class SupabasePresence implements Presence {
      * 歩くたびに送ると、1 秒に何十回も飛ぶ。
      * 間引いて、最後の 1 回は必ず届くようにする。
      */
+    /**
+     * 自分の状態を送る。
+     *
+     * ------------------------------------------------------------
+     * 送りすぎない
+     *
+     * Supabase Realtime には、送れる回数の上限がある。
+     * 既定は毎秒 10 回。超えたぶんは黙って捨てられ、
+     * それ以降しばらく何も届かなくなる。
+     *
+     * 歩くと 1 歩ごとに位置が変わる。
+     * 人が増えれば、その人数ぶん飛び交う。
+     * 4 歩ほどで止まって見えたのは、これに当たっていた。
+     *
+     * そこで、送るのは 1 秒に 1 回までにする。
+     * 送れなかったぶんは、最後の 1 つだけを後で送る。
+     * 途中の位置は捨ててよい。行き先さえ合っていればよい。
+     * ------------------------------------------------------------
+     */
     private push(immediate = false): void {
         if (this.isLeaving || !this.me) return;
 
         const now = Date.now();
 
-        if (immediate || now - this.lastSentAt > 200) {
+        /* 前に送ってから十分に空いていれば、すぐ送る */
+        if (immediate || now - this.lastSentAt > SEND_INTERVAL_MS) {
             this.lastSentAt = now;
+
+            if (this.pending !== null) {
+                window.clearTimeout(this.pending);
+                this.pending = null;
+            }
+
             void this.channel?.track({ ...this.me });
             return;
         }
 
+        /* すでに待たせているものがあれば、それに任せる */
         if (this.pending !== null) return;
+
+        const wait = SEND_INTERVAL_MS - (now - this.lastSentAt);
 
         this.pending = window.setTimeout(() => {
             this.pending = null;
             this.lastSentAt = Date.now();
+
+            /* そのときの最新の位置を送る。途中のものは捨てる */
             if (this.me) void this.channel?.track({ ...this.me });
-        }, 200);
+        }, wait);
     }
 
     private readMembers(): void {

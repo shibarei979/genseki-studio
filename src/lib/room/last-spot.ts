@@ -50,9 +50,29 @@ export function loadLastSpot(roomId: string): { x: number; y: number } | null {
     return { x: spot.x, y: spot.y };
 }
 
-/** いまの場所を覚える */
+/**
+ * いまの場所を覚える。
+ *
+ * 歩いている間は 1 歩ごとに呼ばれる。
+ * 毎回書くと、そのたびに読んで組み直して書き戻すことになる。
+ *
+ * 少し待ってから、最後の 1 つだけを書く。
+ * 途中の場所は覚えなくてよい。
+ */
+let saveTimer: number | null = null;
+
 export function saveLastSpot(roomId: string, x: number, y: number): void {
     if (typeof window === "undefined") return;
+
+    if (saveTimer !== null) window.clearTimeout(saveTimer);
+
+    saveTimer = window.setTimeout(() => {
+        saveTimer = null;
+        writeSpot(roomId, x, y);
+    }, 600);
+}
+
+function writeSpot(roomId: string, x: number, y: number): void {
 
     const all = read();
     all[roomId] = { x, y, at: Date.now() };

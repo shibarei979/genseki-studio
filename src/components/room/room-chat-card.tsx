@@ -176,6 +176,7 @@ export default function RoomChatCard({
                         )}
 
                         <input
+                            name="room-chat"
                             type="text"
                             value={draft}
                             maxLength={120}
