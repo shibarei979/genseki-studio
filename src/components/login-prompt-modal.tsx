@@ -31,7 +31,7 @@ export default function LoginPromptModal({ show, onClose, message = 'この機�
           borderRadius:16,
           padding:'32px 28px',
           width:340,
-          maxWidth:'95vw',
+          maxWidth:'calc(100vw - 32px)',
           textAlign:'center',
           boxShadow:'0 8px 32px rgba(0,0,0,0.15)',
           animation:'modalIn .2s ease',

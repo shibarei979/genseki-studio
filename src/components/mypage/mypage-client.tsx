@@ -511,13 +511,13 @@ export default function MypageClient({
           }
           <div style={{position:'absolute',bottom:2,right:2,width:22,height:22,background:'var(--color-bg-card)',borderRadius:'50%',border:'2px solid var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11}}>{iconUploading?'⟳':'📷'}</div>
         </div>
-        <div style={{flex:'1 1 200px',minWidth:180}}>
+        <div style={{flex:'1 1 200px',minWidth:'min(180px, 100%)'}}>
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
             {editingName ? (
               <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <input value={nameInput} onChange={e=>setNameInput(e.target.value)}
                   onKeyDown={e=>{if(e.key==='Enter')handleSaveName();if(e.key==='Escape')setEditingName(false)}}
-                  style={{fontSize:18,fontWeight:700,border:'1.5px solid var(--color-brand)',borderRadius:6,padding:'3px 10px',outline:'none',width:160}} autoFocus/>
+                  style={{fontSize:18,fontWeight:700,border:'1.5px solid var(--color-brand)',borderRadius:6,padding:'3px 10px',outline:'none',width:160, maxWidth:'100%'}} autoFocus/>
                 <button onClick={handleSaveName} disabled={nameSaving} style={{fontSize:12,background:'var(--color-brand)',color:'var(--color-text-inverse)',border:'none',borderRadius:6,padding:'5px 12px',cursor:'pointer'}}>{nameSaving?'保存中':'保存'}</button>
                 <button onClick={()=>{setEditingName(false);setNameInput(profile.display_name);setNameError('')}} style={{fontSize:12,background:'none',color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',borderRadius:6,padding:'5px 10px',cursor:'pointer'}}>×</button>
                 {nameError && <span style={{fontSize:11,color:'var(--color-danger)'}}>{nameError}</span>}
@@ -546,7 +546,7 @@ export default function MypageClient({
             </div>
           </div>
         </div>
-        <div style={{flex:'1 1 240px',minWidth:220,display:'flex',flexDirection:'column',gap:12,alignItems:'flex-end'}}>
+        <div style={{flex:'1 1 240px',minWidth:'min(220px, 100%)',display:'flex',flexDirection:'column',gap:12,alignItems:'flex-end'}}>
           {profile.bio && <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.8,paddingRight:60}}>{profile.bio}</div>}
           <div style={{display:'flex',gap:8,flexWrap:'wrap',marginLeft:'auto',justifyContent:'flex-end',paddingRight:200,marginTop:10}}>
             <button onClick={()=>setEditingName(true)} style={{fontSize:12.5,border:'1px solid var(--color-brand-border)',padding:'8px 16px',borderRadius:8,background:'var(--color-bg-card)',color:'var(--color-text-muted)',cursor:'pointer'}}>名前を変更</button>
@@ -870,7 +870,7 @@ export default function MypageClient({
 
       <div style={{display:'flex',gap:24,alignItems:'flex-start',flexWrap:'wrap'}}>
         {/* 左：リストパネル */}
-        <div style={{flex:'0 1 260px',minWidth:220,background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px 8px',boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
+        <div style={{flex:'0 1 260px',minWidth:'min(220px, 100%)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px 8px',boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
           <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',padding:'0 14px',marginBottom:12}}>リスト</div>
           {[
             {id:'all', name:'すべての保存済み', count:myBookmarks.length, deletable:false},
@@ -902,7 +902,7 @@ export default function MypageClient({
         </div>
 
         {/* 右：作品一覧 */}
-        <div style={{flex:'1 1 520px',minWidth:300}}>
+        <div style={{flex:'1 1 520px',minWidth:'min(300px, 100%)'}}>
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16}}>
             <span style={{fontSize:16,fontWeight:700,color:'var(--color-text)'}}>{currentName}</span>
             <span style={{fontSize:13,color:'var(--color-text-muted)'}}>（{listed.length}）</span>
@@ -921,7 +921,7 @@ export default function MypageClient({
                 return (
                   <div key={bm.novel_id}
                     style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:20,padding:'24px 28px',
-                      boxShadow:'0 1px 3px rgba(0,0,0,0.02)',display:'grid',gridTemplateColumns:'minmax(0,1fr) 180px',gap:28,alignItems:'center'}}>
+                      boxShadow:'0 1px 3px rgba(0,0,0,0.02)',display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',gap:28,alignItems:'center'}}>
                     <div style={{minWidth:0,cursor:'pointer'}} onClick={()=>router.push(`/novel/${n.id}`)}>
                       <div style={{fontSize:19,fontWeight:700,color:'var(--color-text)',lineHeight:1.4,marginBottom:6,overflowWrap:'anywhere' as any}}>{n.title}</div>
                       <div style={{fontSize:13,color:'var(--color-text-muted)',marginBottom:12}}>{authorName}</div>
@@ -1043,7 +1043,7 @@ export default function MypageClient({
           return (
           <div key={item.novelId}
             style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'18px 22px',
-              boxShadow:'0 1px 3px rgba(0,0,0,0.03)',display:'grid',gridTemplateColumns:'minmax(0,1fr) 200px',gap:24,alignItems:'center'}}>
+              boxShadow:'0 1px 3px rgba(0,0,0,0.03)',display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',gap:24,alignItems:'center'}}>
 
             {/* 左：作品情報（サイズと色で階層をつける） */}
             <div style={{minWidth:0}}>
@@ -1126,11 +1126,11 @@ export default function MypageClient({
       </div>
       <div style={{display:'flex',gap:24,alignItems:'flex-start',flexWrap:'wrap'}}>
         {/* 左：つぶやき本体 */}
-        <div style={{flex:'1 1 480px',minWidth:300}}>
+        <div style={{flex:'1 1 480px',minWidth:'min(300px, 100%)'}}>
           <TweetSection authorId={profile.user_id ?? ''} currentUserId={profile.user_id ?? ''} currentUserName={profile.display_name} currentUserIconUrl={profile.icon_url ?? null} isOwner={true}/>
         </div>
         {/* 右：サイドパネル */}
-        <div style={{flex:'0 1 300px',minWidth:260,display:'flex',flexDirection:'column',gap:16}}>
+        <div style={{flex:'0 1 300px',minWidth:'min(260px, 100%)',display:'flex',flexDirection:'column',gap:16}}>
           {/* よく絡む作者 */}
           {followingAuthors.length > 0 ? (
             <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px 22px',boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
@@ -1443,7 +1443,7 @@ export default function MypageClient({
         ) : (
           <div style={{display:'flex',minHeight:'calc(100vh - 60px)'}}>
             {/* 左サイドナビ */}
-            <div style={{width:232,flexShrink:0,borderRight:'1px solid var(--color-brand-border)',padding:'24px 12px',position:'sticky',top:60,height:'calc(100vh - 60px)',background:'var(--color-bg-card)',overflowY:'auto'}}>
+            <div style={{width:232, maxWidth:'100%',flexShrink:0,borderRight:'1px solid var(--color-brand-border)',padding:'24px 12px',position:'sticky',top:60,height:'calc(100vh - 60px)',background:'var(--color-bg-card)',overflowY:'auto'}}>
               {visibleTabs.map(tab => {
                 const on = activeTab===tab.id
                 return (

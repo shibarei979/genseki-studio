@@ -66,7 +66,7 @@ export default function MessageSender({ users, sentMessages: initialMessages }: 
   }
 
   return (
-    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,alignItems:'start'}}>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))',gap:16,alignItems:'start'}}>
       {/* 左：送信フォーム */}
       <div>
         <div style={{background:'var(--color-bg-card)',border:'1px solid #e2e8f0',borderRadius:12,padding:'20px',marginBottom:16}}>

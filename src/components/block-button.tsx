@@ -67,7 +67,7 @@ export default function BlockButton({ targetId, userId, initialBlocked, initialM
       {showMenu && (
         <>
           <div style={{position:'fixed',inset:0,zIndex:99}} onClick={()=>setShowMenu(false)}/>
-          <div style={{position:'absolute',right:0,top:'calc(100% + 4px)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',zIndex:100,minWidth:160,overflow:'hidden'}}>
+          <div style={{position:'absolute',right:0,top:'calc(100% + 4px)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',zIndex:100,minWidth:'min(160px, 100%)',overflow:'hidden'}}>
             <button onClick={handleMute}
               style={{width:'100%',padding:'10px 14px',border:'none',borderBottom:'1px solid var(--color-brand-border)',background:'none',fontSize:13,color:muted?'var(--color-danger)':'var(--color-text)',cursor:'pointer',textAlign:'left' as const}}>
               {muted ? 'ミュート解除' : 'ミュートする'}

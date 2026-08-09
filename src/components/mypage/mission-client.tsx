@@ -130,7 +130,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
         <div style={{ width: 76, height: 76, borderRadius: '50%', background: 'var(--color-brand-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
         </div>
-        <div style={{ flex: 1, minWidth: 200 }}>
+        <div style={{ flex: 1, minWidth:'min(200px, 100%)' }}>
           <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 2 }}>達成状況</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-text)', marginBottom: 6 }}>{doneCount} <span style={{ fontSize: 15, fontWeight: 600 }}>/ {MISSIONS.length} クリア</span></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

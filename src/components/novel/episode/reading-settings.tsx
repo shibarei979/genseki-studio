@@ -91,7 +91,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
             position:'absolute', top:'calc(100% + 8px)', right:0,
             background:'var(--color-bg-card)', border:'1px solid var(--color-brand-border)', borderRadius:12,
             boxShadow:'0 4px 20px rgba(0,0,0,0.12)',
-            padding:'16px', minWidth:260, zIndex:99,
+            padding:'16px', minWidth:'min(260px, 100%)', zIndex:99,
           }}>
             {/* 縦書き/横書き（モバイル または showWritingMode時） */}
             {(isMobile || showWritingMode) && (

@@ -71,6 +71,14 @@ export default function WorkspaceClient({ workId }: Props) {
     /** 集中モード。左の一覧を隠して本文だけにする */
     const [isFocusMode, setIsFocusMode] = useState(false);
 
+    /*
+     * 話の一覧を出しているか。
+     *
+     * 狭い画面でだけ使う。
+     * 広い画面では、いつも出ている。
+     */
+    const [isListOpen, setIsListOpen] = useState(false);
+
     const {
         episodes,
         isLoading: isEpisodesLoading,
@@ -251,14 +259,32 @@ export default function WorkspaceClient({ workId }: Props) {
                 ]}
             />
 
-            <div className="flex min-h-0 flex-1 gap-4 p-4">
+            <div className="flex min-h-0 flex-1 gap-4 p-3 sm:p-4">
+                {/*
+                 * 話の一覧。
+                 *
+                 * 狭い画面では隠す。
+                 * 本文と並べると、どちらも読めない幅になる。
+                 * 上の「話一覧」を押すと出る。
+                 */}
                 <aside
                     className={[
-                        "flex w-72 shrink-0 flex-col",
-                        isFocusMode ? "hidden" : "",
+                        "flex-col lg:flex",
+                        "w-full shrink-0 lg:w-72",
+                        isFocusMode ? "hidden lg:hidden" : "",
+                        isListOpen ? "flex" : "hidden",
                     ].join(" ")}
                 >
                     <WorkspaceNav workId={workId} current="write" />
+
+                    {/* 一覧を閉じる。狭い画面だけ */}
+                    <button
+                        type="button"
+                        onClick={() => setIsListOpen(false)}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface py-2.5 text-[13px] text-muted hover:text-ink lg:hidden"
+                    >
+                        本文にもどる
+                    </button>
 
                     <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-lg border border-line bg-surface">
                         <div className="border-b border-line px-4 py-4">
@@ -284,8 +310,28 @@ export default function WorkspaceClient({ workId }: Props) {
                     </div>
                 </aside>
 
-                <main className="flex min-w-0 flex-1 gap-4">
+                <main
+                    className={[
+                        "min-w-0 flex-1 gap-4 lg:flex",
+                        isListOpen ? "hidden lg:flex" : "flex",
+                    ].join(" ")}
+                >
                     <div className="min-w-0 flex-1">
+                    {/*
+                     * 話の一覧を出す。
+                     *
+                     * 狭い画面だけ。広い画面では常に出ているので要らない。
+                     */}
+                    {!isFocusMode && (
+                        <button
+                            type="button"
+                            onClick={() => setIsListOpen(true)}
+                            className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface py-2.5 text-[13px] text-muted hover:text-ink lg:hidden"
+                        >
+                            話一覧をひらく
+                        </button>
+                    )}
+
                     {selected ? (
                         <EpisodeEditor
                             key={selected.id}

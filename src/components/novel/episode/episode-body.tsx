@@ -260,7 +260,7 @@ function SpeechPanel({ title, body, isMobile }: { title: string; body: string; i
             {showVoice && (
               <>
                 <div style={{position:'fixed',inset:0,zIndex:98}} onClick={()=>setShowVoice(false)}/>
-                <div style={{position:'absolute',right:0,top:'calc(100% + 6px)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,boxShadow:'0 4px 20px rgba(0,0,0,0.12)',minWidth:200,maxHeight:220,overflowY:'auto',zIndex:99}}>
+                <div style={{position:'absolute',right:0,top:'calc(100% + 6px)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,boxShadow:'0 4px 20px rgba(0,0,0,0.12)',minWidth:'min(200px, 100%)',maxHeight:220,overflowY:'auto',zIndex:99}}>
                   <div style={{padding:'8px 12px',fontSize:11,color:'var(--color-text-faint)',borderBottom:'1px solid var(--color-brand-border)',fontWeight:600}}>日本語音声を選択</div>
                   {voices.map((v, i) => (
                     <button key={i} onClick={()=>{changeVoice(i);setShowVoice(false)}}

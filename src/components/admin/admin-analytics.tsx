@@ -84,7 +84,7 @@ export default function AdminAnalytics({
       {tab==='genre' && (
         <div>
           <div style={{fontSize:12,color:'#64748b',marginBottom:12}}>公開作品のジャンル分布（作品数・いいね数）</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))',gap:20}}>
             <div>
               <div style={{fontSize:11,fontWeight:600,color:'#94a3b8',marginBottom:8}}>作品数</div>
               <ResponsiveContainer width="100%" height={220}>
@@ -169,7 +169,7 @@ export default function AdminAnalytics({
       {tab==='novels' && (
         <div>
           <div style={{fontSize:12,color:'#64748b',marginBottom:12}}>閲覧数・いいね数 TOP20作品</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:16}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))',gap:20,marginBottom:16}}>
             <div>
               <div style={{fontSize:11,fontWeight:600,color:'#94a3b8',marginBottom:8}}>閲覧数TOP10</div>
               <ResponsiveContainer width="100%" height={220}>

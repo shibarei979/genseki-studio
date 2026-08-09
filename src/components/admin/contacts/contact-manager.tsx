@@ -58,7 +58,7 @@ export default function ContactManager({ initialContacts }: { initialContacts: C
   }
 
   return (
-    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,alignItems:'start'}}>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))',gap:16,alignItems:'start'}}>
       {/* 左：一覧 */}
       <div>
         {/* フィルター */}

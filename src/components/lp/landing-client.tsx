@@ -240,30 +240,43 @@ function Hero({ onStart }: { onStart?: () => void }) {
                 aria-hidden="true"
             />
 
-            <div className="relative mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
+            <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-8 sm:py-24">
+                {/*
+                 * 見出し。
+                 *
+                 * 改行は広い画面だけ。
+                 * 狭い画面で同じ所で折ると、1 行に 2 文字だけ残る
+                 * ような割れ方をする。
+                 */}
                 <h1
-                    className="text-[26px] leading-[1.65] tracking-[0.02em] sm:text-[34px]"
+                    className="text-[22px] leading-[1.6] tracking-[0.02em] sm:text-[34px] sm:leading-[1.65]"
                     style={{ color: NAVY.ink }}
                 >
                     物語を生み出すすべての人のための、
-                    <br />
+                    <br className="hidden sm:inline" />
                     創作活動プラットフォーム
                 </h1>
 
-                <p className="mt-7 text-[13px] leading-[2.2] text-[#4a5a6e]">
+                <p className="mt-5 text-[13px] leading-[2] text-[#4a5a6e] sm:mt-7 sm:leading-[2.2]">
                     原石航路は、あなたのアイデアを形にし、
-                    <br />
+                    <br className="hidden sm:inline" />
                     物語を深め、作品を飛躍させるための場所です。
-                    <br />
+                    <br className="hidden sm:inline" />
                     書くことに集中できる環境と、
-                    <br />
+                    <br className="hidden sm:inline" />
                     仲間やチャンスに出会える仕組みをそろえました。
                 </p>
 
-                <div className="mt-9 flex flex-wrap gap-3">
+                {/*
+                 * ボタン。
+                 *
+                 * 狭い画面では幅いっぱいに。
+                 * 指で押すものなので、小さいと外す。
+                 */}
+                <div className="mt-7 flex flex-col gap-2.5 sm:mt-9 sm:flex-row sm:flex-wrap sm:gap-3">
                     <StartButton
                         onStart={onStart}
-                        className="rounded-md px-9 py-3.5 text-[13px] font-medium text-white hover:opacity-90"
+                        className="rounded-md py-3.5 text-center text-[13px] font-medium text-white hover:opacity-90 sm:px-9"
                         style={{ background: NAVY.deep }}
                     >
                         無料で始める
@@ -271,7 +284,7 @@ function Hero({ onStart }: { onStart?: () => void }) {
                     {!onStart && (
                         <Link
                             href="/login"
-                            className="rounded-md border bg-white px-9 py-3.5 text-[13px] hover:bg-black/[0.03]"
+                            className="rounded-md border bg-white py-3.5 text-center text-[13px] hover:bg-black/[0.03] sm:px-9"
                             style={{ borderColor: NAVY.line, color: NAVY.ink }}
                         >
                             ログイン
@@ -320,29 +333,36 @@ function WhatYouCanDo() {
         <section id="about" className="scroll-mt-16 bg-white py-20">
             <SectionTitle>原石航路でできること</SectionTitle>
 
-            <ul className="mx-auto mt-12 grid max-w-6xl gap-y-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-4">
+            {/*
+             * 4 つ。
+             *
+             * 狭い画面では 2 × 2 に置く。
+             * 縦に 4 つ並べると、画面 1 つぶん送ることになり、
+             * 「何ができるか」が一目で分からない。
+             */}
+            <ul className="mx-auto mt-8 grid max-w-6xl grid-cols-2 gap-x-3 gap-y-7 px-4 sm:mt-12 sm:gap-y-10 sm:px-8 lg:grid-cols-4">
                 {items.map((item, index) => (
                     <li
                         key={item.title}
-                        className="px-6 text-center lg:border-l"
+                        className="px-1 text-center sm:px-6 lg:border-l"
                         style={{
                             /* 1 つ目の左には線を引かない */
                             borderColor: index === 0 ? "transparent" : NAVY.line,
                         }}
                     >
                         <span
-                            className="mx-auto flex h-16 w-16 items-center justify-center rounded-full"
+                            className="mx-auto flex h-12 w-12 items-center justify-center rounded-full sm:h-16 sm:w-16"
                             style={{ background: NAVY.tint, color: NAVY.base }}
                         >
                             {item.icon}
                         </span>
                         <h3
-                            className="mt-5 text-[15px] tracking-[0.08em]"
+                            className="mt-3 text-[13px] tracking-[0.06em] sm:mt-5 sm:text-[15px] sm:tracking-[0.08em]"
                             style={{ color: NAVY.ink }}
                         >
                             {item.title}
                         </h3>
-                        <p className="mt-3 text-[12px] leading-[2] text-[#5a6a7c]">
+                        <p className="mt-2 text-[11px] leading-[1.9] text-[#5a6a7c] sm:mt-3 sm:text-[12px] sm:leading-[2]">
                             {item.body}
                         </p>
                     </li>

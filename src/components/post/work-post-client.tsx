@@ -95,8 +95,12 @@ export default function WorkPostClient({ workId }: { workId: string }) {
              * 左の上にナビ、その下に中身。
              * 画面ごとに置き場所が違うと、移るたびに探すことになる。
              */}
-            <div className="flex gap-4 p-4">
-                <aside className="w-64 shrink-0">
+            {/*
+             * 狭い画面では縦に積む。
+             * 横に並べると、どちらも読めない幅になる。
+             */}
+            <div className="flex flex-col gap-4 p-3 sm:p-4 lg:flex-row">
+                <aside className="w-full shrink-0 lg:w-64">
                     <WorkspaceNav workId={workId} current="post" />
 
                     <div className="mt-4 rounded-lg border border-line bg-surface">
