@@ -37,6 +37,21 @@
  */
 
 /** 経路を探すための公共のサーバー。自前で立てるまではこれを使う */
+/**
+ * 繋ぎの様子を出す。
+ *
+ * 声が届かないとき、どこで止まったかを見るために使う。
+ * Console に [voice] で始まる行が出る。
+ *
+ * 落ち着いたら false にしてよい。
+ */
+const SHOWS_LOG = true;
+
+function log(...parts: unknown[]): void {
+    if (!SHOWS_LOG) return;
+    console.log("[voice]", ...parts);
+}
+
 const ICE_SERVERS: RTCIceServer[] = [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
@@ -120,6 +135,8 @@ export class RoomMedia {
             return;
         }
 
+        log("マイクを入れる");
+
         this.micStream = await navigator.mediaDevices.getUserMedia({
             audio: {
                 echoCancellation: true,
@@ -139,6 +156,7 @@ export class RoomMedia {
         for (const [id, peer] of Array.from(this.peers)) {
             for (const track of this.micStream.getTracks()) {
                 peer.connection.addTrack(track, this.micStream);
+                log("音を乗せた", id.slice(0, 8));
             }
 
             /*
@@ -192,6 +210,7 @@ export class RoomMedia {
                 const state = found.connection.connectionState;
                 if (state !== "failed" && state !== "closed") continue;
 
+                log("死んだ繋ぎを捨てる", id.slice(0, 8), state);
                 found.connection.close();
                 this.peers.delete(id);
             }
@@ -230,6 +249,12 @@ export class RoomMedia {
         const peer: Peer = { connection, stream };
         this.peers.set(id, peer);
 
+        log("繋ぎを作った", id.slice(0, 8));
+
+        connection.addEventListener("connectionstatechange", () => {
+            log("繋ぎの状態", id.slice(0, 8), connection.connectionState);
+        });
+
         /* いま出している声を、繋いだ相手にも送る */
         if (this.micStream) {
             for (const track of this.micStream.getTracks()) {
@@ -239,6 +264,7 @@ export class RoomMedia {
 
         connection.addEventListener("track", (event) => {
             stream.addTrack(event.track);
+            log("声が届いた", id.slice(0, 8), event.track.kind);
             this.emit();
         });
 
@@ -273,7 +299,12 @@ export class RoomMedia {
          * 同時に申し出てぶつかったら、受け取る側で譲る。
          */
         connection.addEventListener("negotiationneeded", () => {
-            if (connection.signalingState !== "stable") return;
+            if (connection.signalingState !== "stable") {
+                log("申し出を見送る（途中）", id.slice(0, 8), connection.signalingState);
+                return;
+            }
+
+            log("繋ぎ直しが要る", id.slice(0, 8));
             void this.offer(id);
         });
 
@@ -281,6 +312,8 @@ export class RoomMedia {
     }
 
     private async offer(id: string): Promise<void> {
+        log("申し出る", id.slice(0, 8));
+
         const peer = this.ensurePeer(id);
         const offer = await peer.connection.createOffer();
         await peer.connection.setLocalDescription(offer);
@@ -309,6 +342,8 @@ export class RoomMedia {
              * id の小さいほうを通す。
              * 大きいほうは、自分の申し出を取り下げてから受ける。
              */
+            log("申し出が来た", signal.from.slice(0, 8), peer.connection.signalingState);
+
             const isColliding =
                 peer.connection.signalingState === "have-local-offer";
 
@@ -341,6 +376,8 @@ export class RoomMedia {
         }
 
         if (signal.kind === "answer") {
+            log("返事が来た", signal.from.slice(0, 8), peer.connection.signalingState);
+
             /*
              * 返事を受け取る。
              *

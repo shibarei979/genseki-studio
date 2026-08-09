@@ -114,11 +114,10 @@ export default function EpisodeEditor({
          * 縦書きで打った文を横書きにしても、全角のままだと読みにくい。
          * 逆も同じ。書き方を切り替えたら、揃え直せるようにする。
          */
-        const isVertical = settings.writing_mode === "vertical";
-
-        const result = isVertical
-            ? normalizeForVertical(body)
-            : normalizeForHorizontal(body);
+        const result =
+            settings.writing_mode === "vertical"
+                ? normalizeForVertical(body)
+                : normalizeForHorizontal(body);
         if (result.changeCount === 0) {
             setNotice("直すところはありませんでした");
             window.setTimeout(() => setNotice(""), 2500);

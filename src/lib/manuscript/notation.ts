@@ -15,7 +15,6 @@
  *   ｜原石《げんせき》   親文字を指定する
  *   原石《げんせき》     直前の漢字の連なりに振る
  *   《《ここ》》          傍点
- *   ＝＝ここ＝＝          蛍光ペン（自分用の目印。投稿には出さない）
  *
  * 文字数は親文字だけを数える。ルビは読みであって本文ではない。
  * ============================================================
@@ -24,25 +23,10 @@
 export type Segment =
     | { type: "text"; text: string }
     | { type: "ruby"; base: string; ruby: string }
-    | { type: "emphasis"; text: string }
-    /** 蛍光ペン。書き手が自分のために付けた目印 */
-    | { type: "highlight"; text: string };
+    | { type: "emphasis"; text: string };
 
 /** 傍点が先。《《》》を《》より先に食べないと入れ子を誤読する */
 const EMPHASIS_PATTERN = /《《([^》]+)》》/g;
-
-/*
- * 蛍光ペン。
- *
- * 書き手が自分のために付ける印なので、
- * 投稿するときは外す。
- */
-const HIGHLIGHT_PATTERN = /＝＝([^＝]+)＝＝/g;
-
-/** 蛍光ペンの印を外す。投稿や書き出しの前に通す */
-export function stripHighlight(text: string): string {
-    return text.replace(HIGHLIGHT_PATTERN, "$1");
-}
 const EXPLICIT_RUBY_PATTERN = /｜([^《]+)《([^》]+)》/g;
 /** 親文字の指定が無いときは、直前の漢字・カタカナの連なりに振る */
 const IMPLICIT_RUBY_PATTERN = /([一-龥々〆ヶァ-ヴー]+)《([^》]+)》/g;
@@ -55,12 +39,9 @@ export function parseNotation(text: string): Segment[] {
     const segments: Segment[] = [];
     let rest = text;
 
-    /*
-     * 一度の走査で扱えるよう、記法をまとめた正規表現にする。
-     * 蛍光ペンも含める。読むときに色が付く。
-     */
+    // 一度の走査で扱えるよう、3 つの記法をまとめた正規表現にする
     const combined = new RegExp(
-        `${HIGHLIGHT_PATTERN.source}|${EMPHASIS_PATTERN.source}|${EXPLICIT_RUBY_PATTERN.source}|${IMPLICIT_RUBY_PATTERN.source}`,
+        `${EMPHASIS_PATTERN.source}|${EXPLICIT_RUBY_PATTERN.source}|${IMPLICIT_RUBY_PATTERN.source}`,
         "g",
     );
 
@@ -71,19 +52,8 @@ export function parseNotation(text: string): Segment[] {
             segments.push({ type: "text", text: rest.slice(lastIndex, match.index) });
         }
 
-        const [
-            ,
-            highlight,
-            emphasis,
-            explicitBase,
-            explicitRuby,
-            implicitBase,
-            implicitRuby,
-        ] = match;
-
-        if (highlight !== undefined) {
-            segments.push({ type: "highlight", text: highlight });
-        } else if (emphasis !== undefined) {
+        const [, emphasis, explicitBase, explicitRuby, implicitBase, implicitRuby] = match;
+        if (emphasis !== undefined) {
             segments.push({ type: "emphasis", text: emphasis });
         } else if (explicitBase !== undefined) {
             segments.push({ type: "ruby", base: explicitBase, ruby: explicitRuby });

@@ -14,14 +14,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { AUTOSAVE_DELAY_MS } from "@/config";
 
-/**
- * 保存の状態。
- *
- * error を持たせているのは、
- * 失敗したことを書き手に伝えるため。
- * 黙って戻ると、書いたものが消えたと思われる。
- */
-export type SaveState = "idle" | "pending" | "saving" | "saved" | "error";
+export type SaveState = "idle" | "pending" | "saving" | "saved";
 
 interface Options<T> {
     /** 監視する値。これが変わると保存待ちに入る */
@@ -54,13 +47,9 @@ export function useAutosave<T>({ value, onSave, enabled = true }: Options<T>) {
         setState("pending");
         const timer = window.setTimeout(async () => {
             setState("saving");
-            try {
-                await onSaveRef.current(value);
-                setSavedAt(new Date().toISOString());
-                setState("saved");
-            } catch {
-                setState("error");
-            }
+            await onSaveRef.current(value);
+            setSavedAt(new Date().toISOString());
+            setState("saved");
         }, AUTOSAVE_DELAY_MS);
 
         return () => window.clearTimeout(timer);
@@ -68,21 +57,12 @@ export function useAutosave<T>({ value, onSave, enabled = true }: Options<T>) {
 
     /** 保存待ちの内容をすぐ書き出す（画面を離れるときなど） */
     async function flush() {
-        if (state !== "pending" && state !== "error") return;
-        await save();
-    }
-
-    /** いま書き出す。失敗したら state に残す */
-    async function save() {
+        if (state !== "pending") return;
         setState("saving");
-        try {
-            await onSaveRef.current(value);
-            setSavedAt(new Date().toISOString());
-            setState("saved");
-        } catch {
-            setState("error");
-        }
+        await onSaveRef.current(value);
+        setSavedAt(new Date().toISOString());
+        setState("saved");
     }
 
-    return { state, savedAt, flush, save };
+    return { state, savedAt, flush };
 }

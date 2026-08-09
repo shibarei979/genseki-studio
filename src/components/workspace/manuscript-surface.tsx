@@ -18,14 +18,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useRef } from "react";
 
 import type { DisplaySettings } from "@/types";
-import {
-    FONT_SCALE,
-    FONT_STACK,
-    LETTER_SPACING_VALUE,
-    LETTER_SPACING_VALUE_VERTICAL,
-    LINE_HEIGHT_VALUE,
-    LINE_HEIGHT_VALUE_VERTICAL,
-} from "@/types";
+import { LINE_HEIGHT_VALUE } from "@/types";
 
 interface Props {
     settings: DisplaySettings;
@@ -75,48 +68,24 @@ export default function ManuscriptSurface({
      */
     function handleScroll() {
         const area = areaRef.current;
-        if (!area) return;
-
         const gutter = gutterRef.current;
-        if (gutter) {
-            if (isVertical) gutter.scrollLeft = area.scrollLeft;
-            else gutter.scrollTop = area.scrollTop;
-        }
-
+        if (!area || !gutter) return;
+        if (isVertical) gutter.scrollLeft = area.scrollLeft;
+        else gutter.scrollTop = area.scrollTop;
     }
 
     const lineCount = value.split("\n").length;
-
-    /*
-     * 行の高さと字間は、縦書きと横書きで別に持つ。
-     * 同じ数字でも、縦書きのほうが広く見える。
-     */
-    const lineRatio = isVertical
-        ? LINE_HEIGHT_VALUE_VERTICAL[settings.line_height]
-        : LINE_HEIGHT_VALUE[settings.line_height];
-
-    const spacingRatio = isVertical
-        ? LETTER_SPACING_VALUE_VERTICAL[settings.letter_spacing ?? "normal"]
-        : LETTER_SPACING_VALUE[settings.letter_spacing ?? "normal"];
-
-    /* 書体ごとの字面の差を埋める */
-    const scale = FONT_SCALE[settings.font_family] ?? 1;
-    const fontPx = Math.round(settings.font_size * scale);
-
-    const lineHeightPx = fontPx * lineRatio;
+    const lineHeightPx =
+        settings.font_size * LINE_HEIGHT_VALUE[settings.line_height];
 
     const style: CSSProperties = {
-        fontSize: `${fontPx}px`,
-        lineHeight: lineRatio,
-        letterSpacing: `${(fontPx * spacingRatio).toFixed(2)}px`,
+        fontSize: `${settings.font_size}px`,
+        lineHeight: LINE_HEIGHT_VALUE[settings.line_height],
         writingMode: isVertical ? "vertical-rl" : "horizontal-tb",
-        /* 書き手が選んだ書体 */
-        fontFamily: FONT_STACK[settings.font_family] ?? FONT_STACK.mincho,
         // upright は指定しない。英数字まで 1 文字ずつ立ってしまい
         // 日本語の縦組みの慣習から外れるため
         textOrientation: "mixed",
     };
-
 
     return (
         <div
@@ -137,39 +106,25 @@ export default function ManuscriptSurface({
                             : "w-10 border-r border-line/60 py-6 text-right",
                     ].join(" ")}
                 >
-                    {/*
-                     * 行の目盛り。
-                     *
-                     * 縦書きでは行が右から左へ並ぶので、
-                     * 目盛りも右端から並べる。
-                     *
-                     * 1 行ぶんの幅は、本文の行の高さと同じにする。
-                     * 揃えないと、書き進めるほど番号と行がずれる。
-                     */}
                     <div
                         style={{
-                            fontSize: `${Math.max(9, fontPx - 5)}px`,
+                            fontSize: `${Math.max(9, settings.font_size - 5)}px`,
                             lineHeight: `${lineHeightPx}px`,
-                            writingMode: "horizontal-tb",
+                            writingMode: isVertical ? "vertical-rl" : "horizontal-tb",
+                            // 縦書きは右から始まるので、目盛りも右端から
+                            direction: isVertical ? "rtl" : "ltr",
                         }}
-                        className={
-                            isVertical
-                                ? "flex h-6 flex-row-reverse"
-                                : "pr-2"
-                        }
+                        className={isVertical ? "h-6" : "pr-2"}
                     >
                         {Array.from({ length: lineCount }, (_, index) => (
                             <div
                                 key={index}
                                 style={
                                     isVertical
-                                        ? {
-                                              width: lineHeightPx,
-                                              lineHeight: "1.5rem",
-                                          }
+                                        ? { width: lineHeightPx, height: "100%" }
                                         : { height: lineHeightPx }
                                 }
-                                className={isVertical ? "shrink-0 text-center" : ""}
+                                className={isVertical ? "inline-block text-center" : ""}
                             >
                                 {/* 10 行ごとだけ。毎行出すと本文より目立つ */}
                                 {(index + 1) % 10 === 0 ? index + 1 : ""}

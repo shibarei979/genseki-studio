@@ -19,21 +19,17 @@ interface Props {
 export default function WorkspaceNav({ workId, current }: Props) {
     return (
         <div className="space-y-2">
-            {/*
-             * 執筆・設定・資料は、書いている間に行き来するもの。
-             * 3 つ並べて置く。
-             */}
             <div className="grid grid-cols-3 gap-2">
-                <NavButton
-                    href={`/workspace/${workId}`}
-                    label="執筆"
-                    isActive={current === "write"}
-                />
-                <NavButton
-                    href={`/workspace/${workId}/settings`}
-                    label="設定"
-                    isActive={current === "settings"}
-                />
+            <NavButton
+                href={`/workspace/${workId}`}
+                label="執筆"
+                isActive={current === "write"}
+            />
+            <NavButton
+                href={`/workspace/${workId}/settings`}
+                label="設定"
+                isActive={current === "settings"}
+            />
                 <NavButton
                     href={`/workspace/${workId}/resource`}
                     label="資料"

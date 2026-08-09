@@ -31,24 +31,6 @@ export default function RenderedText({ text }: Props) {
                         </ruby>
                     );
                 }
-                if (segment.type === "highlight") {
-                    /*
-                     * 蛍光ペン。
-                     * 書き手の目印なので、読者には出さない。
-                     * ここは執筆中の見え方だけを受け持つ。
-                     */
-                    return (
-                        <span
-                            key={index}
-                            style={{
-                                background: "var(--color-amber-tint)",
-                                boxShadow: "0 -0.35em 0 var(--color-amber-tint) inset",
-                            }}
-                        >
-                            {segment.text}
-                        </span>
-                    );
-                }
                 if (segment.type === "emphasis") {
                     return (
                         <span key={index} className="manuscript-emphasis">
