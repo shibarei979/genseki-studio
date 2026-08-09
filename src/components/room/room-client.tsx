@@ -1338,10 +1338,33 @@ function AudioOut({ stream }: { stream: MediaStream | null }) {
     const ref = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
-        if (ref.current && stream) ref.current.srcObject = stream;
+        const element = ref.current;
+        if (!element || !stream) return;
+
+        element.srcObject = stream;
+
+        /*
+         * 鳴らす指示を、こちらから出す。
+         *
+         * autoPlay だけでは鳴らないことがある。
+         * ブラウザは、人が触る前に音が出るのを止めている。
+         *
+         * マイクを押したあとなら触っているので通る。
+         * 通らなければ、次に画面のどこかを押したときに鳴らす。
+         */
+        void element.play().catch(() => {
+            const retry = () => {
+                void element.play().catch(() => {
+                    /* それでも鳴らなければ諦める */
+                });
+                window.removeEventListener("pointerdown", retry);
+            };
+
+            window.addEventListener("pointerdown", retry);
+        });
     }, [stream]);
 
-    return <audio ref={ref} autoPlay className="hidden" />;
+    return <audio ref={ref} autoPlay playsInline className="hidden" />;
 }
 
 /**
