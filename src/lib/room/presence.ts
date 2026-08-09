@@ -22,6 +22,8 @@
  * ============================================================
  */
 
+import type { RealtimeChannel } from "@supabase/supabase-js";
+
 import type { MemberStatus, RoomMember, RoomMessage } from "@/types";
 import { MEMBER_TIMEOUT_MS } from "@/types";
 
@@ -53,6 +55,17 @@ export interface Presence {
     /** 状態が変わるたびに呼ばれる。戻り値で購読をやめる */
     subscribe(handler: (state: RoomState) => void): () => void;
     dispose(): void;
+
+    /**
+     * 声をつなぐための通り道。
+     *
+     * 相手を見つける合図のやり取りに使う。
+     * 声そのものは通らない。
+     *
+     * 同じ端末の別タブだけで動く版には無いので、
+     * 持っていなくてよい。
+     */
+    readonly voiceChannel?: RealtimeChannel | null;
 }
 
 /**
