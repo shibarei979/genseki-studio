@@ -253,6 +253,22 @@ export class RoomMedia {
         const peer = this.ensurePeer(signal.from);
 
         if (signal.kind === "offer") {
+            /*
+             * 申し出を受ける。
+             *
+             * 自分も同時に申し出ていると、双方が待つ側になれず
+             * どちらも繋がらない。
+             *
+             * id が小さいほうが申し出る決まりなので、
+             * 自分が申し出る側なら、相手の申し出は捨てる。
+             */
+            if (
+                peer.connection.signalingState !== "stable" &&
+                this.selfId < signal.from
+            ) {
+                return;
+            }
+
             await peer.connection.setRemoteDescription({
                 type: "offer",
                 sdp: signal.sdp,
@@ -270,6 +286,18 @@ export class RoomMedia {
         }
 
         if (signal.kind === "answer") {
+            /*
+             * 返事を受け取る。
+             *
+             * 自分が申し出た直後（have-local-offer）でなければ、
+             * その返事はもう済んでいる。
+             *
+             * 同じ返事が 2 度届くことがある。
+             * 2 度目をそのまま入れると
+             * 「Called in wrong state: stable」で落ちる。
+             */
+            if (peer.connection.signalingState !== "have-local-offer") return;
+
             await peer.connection.setRemoteDescription({
                 type: "answer",
                 sdp: signal.sdp,

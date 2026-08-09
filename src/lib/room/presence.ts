@@ -328,19 +328,16 @@ export interface Identity {
     colorId?: number;
 }
 
-export function loadIdentity(): Identity {
+/**
+ * 自分の名乗り。
+ *
+ * ログインしている人は、その id を渡してもらう。
+ * 端末ごとの目印だと、作品の author_id と噛み合わず、
+ * 部屋で人を押しても作品にたどり着けない。
+ */
+export function loadIdentity(userId?: string | null): Identity {
     if (typeof window === "undefined") return { id: "anon", name: "名無し" };
 
-    /*
-     * ログインしていれば、その id を使う。
-     *
-     * 端末ごとの目印だと、作品の author_id と噛み合わない。
-     * 部屋で人を押しても、その人の作品にたどり着けない。
-     *
-     * 鍵は Supabase が localStorage に置いている。
-     * 読むだけなので、繋ぎに行かなくてよい。
-     */
-    const userId = readLoggedInId();
     if (userId) {
         const saved = readSaved();
         return { ...saved, id: userId };
@@ -369,28 +366,13 @@ export function saveIdentity(identity: Identity): void {
 /**
  * ログインしている人の id。
  *
- * Supabase は localStorage に鍵を置く。
- * その中から id だけを読む。
+ * 鍵は Cookie に入っている（@supabase/ssr の既定）。
+ * localStorage には無い。
  *
- * 読めなければ null。ログインしていないか、
- * 置き場所の名前が変わったとき。
+ * ここでは読まず、呼ぶ側が渡す。
+ * 読むには Supabase に問い合わせることになり、
+ * 部屋に入るたびに待つことになる。
  */
-function readLoggedInId(): string | null {
-    try {
-        const key = Object.keys(window.localStorage).find((name) =>
-            name.includes("auth-token"),
-        );
-        if (!key) return null;
-
-        const raw = window.localStorage.getItem(key);
-        if (!raw) return null;
-
-        const parsed = JSON.parse(raw) as { user?: { id?: string } };
-        return parsed.user?.id ?? null;
-    } catch {
-        return null;
-    }
-}
 
 /** 覚えている名前。id は使わない */
 function readSaved(): Identity {

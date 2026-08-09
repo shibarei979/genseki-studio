@@ -139,7 +139,7 @@ export default function RoomMembersCard({ members, selfId }: Props) {
                                  *
                                  * 自分のぶんは出さない。執筆から見られる。
                                  */}
-                                {!isSelf && (
+                                {!isSelf && isRegistered(member.id) && (
                                     <Link
                                         href={`/author/${member.id}`}
                                         title={`${member.display_name}さんの作品`}
@@ -166,5 +166,20 @@ export default function RoomMembersCard({ members, selfId }: Props) {
                 </button>
             )}
         </section>
+    );
+}
+
+/**
+ * その人の作品ページがあるか。
+ *
+ * ログインしている人の id は uuid の形をしている。
+ * ログインしていない人は端末ごとの目印なので、
+ * 作者ページを開いても 404 になる。
+ *
+ * 押して「ありません」と出るくらいなら、出さないほうがよい。
+ */
+function isRegistered(id: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        id,
     );
 }

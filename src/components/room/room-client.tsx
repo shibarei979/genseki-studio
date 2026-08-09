@@ -23,6 +23,7 @@ import { describeSupabaseGap, hasSupabase } from "@/config/env.client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { getRepository } from "@/lib/repository";
 import { createPresence, loadIdentity, saveIdentity } from "@/lib/room/presence";
 import { RoomMedia } from "@/lib/room/room-media";
@@ -50,7 +51,29 @@ export default function RoomClient({ roomId }: Props) {
     const [room, setRoom] = useState<WritingRoom | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [state, setState] = useState<RoomState>({ members: [], messages: [], isClosed: false });
+    /*
+     * ログインしている人の id。
+     *
+     * 鍵は Cookie にあるので、localStorage からは読めない。
+     * useAuth に読んでもらう。
+     */
+    const { user } = useAuth();
+
     const [identity, setIdentity] = useState(() => loadIdentity());
+
+    /*
+     * ログインが分かったら、その id に差し替える。
+     *
+     * 端末ごとの目印のままだと、作品の author_id と噛み合わず、
+     * 部屋で人を押しても作品にたどり着けない。
+     */
+    useEffect(() => {
+        if (!user?.id) return;
+
+        setIdentity((current) =>
+            current.id === user.id ? current : { ...current, id: user.id },
+        );
+    }, [user?.id]);
     const [isEditingName, setIsEditingName] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -223,7 +246,7 @@ export default function RoomClient({ roomId }: Props) {
              * ここは入室時の初期値だけを見る。
              * 依存に入れると、色を変えるたびに入り直しになる。
              */
-            color_id: loadIdentity().colorId,
+            color_id: loadIdentity(user?.id).colorId,
             status: "thinking",
             x: entrance.x,
             y: entrance.y,

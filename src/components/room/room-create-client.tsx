@@ -28,6 +28,7 @@ import { useState } from "react";
 
 
 import { getRepository } from "@/lib/repository";
+import { useAuth } from "@/hooks/use-auth";
 import { loadIdentity } from "@/lib/room/presence";
 import { backgroundFor } from "@/lib/room/room-backgrounds";
 import type { RoomVisibility } from "@/types";
@@ -49,6 +50,9 @@ const STEPS = ["設定", "確認", "完了"] as const;
 
 export default function RoomCreateClient() {
     const router = useRouter();
+
+    /* 部屋主。ログインしていれば、その id を使う */
+    const { user } = useAuth();
 
     const [step, setStep] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
@@ -83,7 +87,8 @@ export default function RoomCreateClient() {
                  * 一覧のアイコンにも使うので、部屋の大きさをそのまま入れる。
                  */
                 theme: "library",
-                host_id: loadIdentity().id,
+                /* ログインしていれば、その id を部屋主にする */
+                host_id: user?.id ?? loadIdentity().id,
                 capacity,
                 allow_chat: allowChat,
                 allow_host_voice: allowVoice,
