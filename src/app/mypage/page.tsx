@@ -118,13 +118,9 @@ export default async function MypagePage() {
    * カレンダー・保存済みの書き手・閲覧履歴。
    * どれも互いに関わらないので、まとめて頼む。
    */
-  const oneYearAgo = new Date(Date.now() - 365*24*60*60*1000).toISOString()
   const bmAuthorIds = Array.from(new Set((bookmarkedNovels||[]).map((b:any) => b.novels?.author_id).filter(Boolean)))
 
-  const [calendarRes, bmAuthorRes, viewRes] = await Promise.all([
-    supabase
-      .from('episodes').select('created_at').in('novel_id', novelIds.length > 0 ? novelIds : [''])
-      .eq('published', true).gte('created_at', oneYearAgo),
+  const [bmAuthorRes, viewRes] = await Promise.all([
 
     bmAuthorIds.length > 0
       ? supabase.from('profiles').select('user_id, display_name').in('user_id', bmAuthorIds as string[])
@@ -143,8 +139,8 @@ export default async function MypagePage() {
   ])
 
   mark('batch2')
-  const calendarEps = calendarRes.data
-  const postDates = (calendarEps||[]).map((e:any) => e.created_at.slice(0,10))
+  /* カレンダーはどこにも出していないので読まない */
+  const postDates: string[] = []
 
   const bmAuthorMap: Record<string,string> = {}
   bmAuthorRes.data?.forEach((a:any) => { bmAuthorMap[a.user_id] = a.display_name })
@@ -184,35 +180,16 @@ export default async function MypagePage() {
   const nowD = new Date()
   const thisMonthStart = new Date(nowD.getFullYear(), nowD.getMonth(), 1).toISOString()
   const lastMonthStart = new Date(nowD.getFullYear(), nowD.getMonth() - 1, 1).toISOString()
-  let monthlySummary = { novels: 0, novelsPrev: 0, chars: 0, charsPrev: 0, views: 0, viewsPrev: 0, likes: 0, likesPrev: 0 }
-  let recentTweet: any = null
-  {
-    const [epThis, epLast, myEpsAll, viewThis, viewLast, likeThis, likeLast, tw] = await Promise.all([
-      novelIds.length > 0 ? supabase.from('novels').select('id',{count:'exact',head:true}).eq('author_id',user.id).gte('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
-      novelIds.length > 0 ? supabase.from('novels').select('id',{count:'exact',head:true}).eq('author_id',user.id).gte('created_at',lastMonthStart).lt('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
-      novelIds.length > 0 ? supabase.from('episodes').select('char_count, created_at').in('novel_id',novelIds) : Promise.resolve({ data: [] } as any),
-      novelIds.length > 0 ? supabase.from('page_views').select('id',{count:'exact',head:true}).in('novel_id',novelIds).gte('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
-      novelIds.length > 0 ? supabase.from('page_views').select('id',{count:'exact',head:true}).in('novel_id',novelIds).gte('created_at',lastMonthStart).lt('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
-      novelIds.length > 0 ? supabase.from('likes').select('id',{count:'exact',head:true}).in('novel_id',novelIds).gte('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
-      novelIds.length > 0 ? supabase.from('likes').select('id',{count:'exact',head:true}).in('novel_id',novelIds).gte('created_at',lastMonthStart).lt('created_at',thisMonthStart) : Promise.resolve({count:0} as any),
-      supabase.from('tweets').select('id, body, created_at, like_count, reply_count').eq('user_id',user.id).order('created_at',{ascending:false}).limit(1),
-    ])
-    let charsThis = 0, charsPrev = 0
-    ;(myEpsAll.data || []).forEach((e: any) => {
-      const len = e.char_count || 0
-      if (e.created_at >= thisMonthStart) charsThis += len
-      else if (e.created_at >= lastMonthStart && e.created_at < thisMonthStart) charsPrev += len
-    })
-    monthlySummary = {
-      novels: epThis.count || 0, novelsPrev: epLast.count || 0,
-      chars: charsThis, charsPrev: charsPrev,
-      views: viewThis.count || 0, viewsPrev: viewLast.count || 0,
-      likes: likeThis.count || 0, likesPrev: likeLast.count || 0,
-    }
-    recentTweet = tw.data?.[0] || null
-  }
+  /*
+   * 活動サマリーは無くした。
+   *
+   * 今月と先月を比べるために、作品・話・閲覧・いいねを
+   * 期間ごとに 8 回数えていた。
+   * 出るのは小さな数字 4 つで、そこに 1 秒以上かかっていた。
+   */
+  const monthlySummary = null
+  const recentTweet = null
 
-  mark('unread')
   // 閲覧履歴
   const views = viewRes.data
 
