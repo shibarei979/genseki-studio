@@ -25,7 +25,8 @@ import {
     statusColor,
     statusLabel,
 } from "@/types";
-import type { Contest, WorkWithStats } from "@/types";
+import type {
+    ContestEntry, Contest, WorkWithStats } from "@/types";
 
 export default function ContestDetailClient({ contestId }: { contestId: string }) {
     const [contest, setContest] = useState<Contest | null>(null);
@@ -40,6 +41,59 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
             setIsLoading(false);
         })();
     }, [contestId]);
+
+    /*
+     * 応募の持ち物。
+     *
+     * Hook は早い戻りより前に置く。
+     * 途中に書くと、出る回と出ない回ができて壊れる。
+     */
+    const [entries, setEntries] = useState<ContestEntry[]>([]);
+    const [notice, setNotice] = useState("");
+
+    useEffect(() => {
+        if (!contest) return;
+
+        void (async () => {
+            setEntries(await getRepository().listContestEntries(contest.id));
+        })();
+    }, [contest]);
+
+    /**
+     * 作品を出す。
+     *
+     * 同じ作品は 2 度出せない。出せる数にも上限がある。
+     */
+    async function apply(workId: string, title: string) {
+        if (!contest) return;
+
+        if (entries.some((row) => row.work_id === workId)) {
+            setNotice("その作品はすでに応募しています。");
+            return;
+        }
+
+        if (contest.entry_limit > 0 && entries.length >= contest.entry_limit) {
+            setNotice(`出せるのは${contest.entry_limit}作品までです。`);
+            return;
+        }
+
+        await getRepository().createContestEntry(contest.id, {
+            work_id: workId,
+            work_title: title,
+            author_id: "",
+            author_name: "",
+            char_count: 0,
+            is_shortlisted: false,
+            is_awarded: false,
+            award_label: "",
+            note: "",
+        });
+
+        setEntries(await getRepository().listContestEntries(contest.id));
+        setNotice("応募しました。");
+        window.setTimeout(() => setNotice(""), 3000);
+    }
+
 
     if (isLoading) {
         return (
@@ -63,6 +117,7 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
 
     const tone = statusColor(contest.status);
     const remaining = daysUntil(contest.ends_at);
+
     const isOpen = contest.status === "open";
 
     const prizes = contest.prizes ?? [];
@@ -82,26 +137,39 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
             {/* ---- 見出し。画像と要点を横に並べる ---- */}
             <div className="border-b border-line bg-surface">
                 <div className="mx-auto grid max-w-5xl items-center gap-6 px-8 py-8 md:grid-cols-[300px_minmax(0,1fr)]">
-                    <div className="relative overflow-hidden rounded-lg">
+                    {/*
+                     * 絵に影を落とす。
+                     * 平らに置くと、紙に刷った絵のように沈む。
+                     */}
+                    <div className="overflow-hidden rounded-xl shadow-[0_4px_16px_rgba(31,78,107,0.14)]">
                         <ContestBanner
                             contest={contest}
                             className="aspect-video w-full"
                             fallback="画像なし"
                         />
-                        <span
-                            className="absolute left-0 top-0 px-2.5 py-1 text-[11px] font-medium text-white"
-                            style={{ background: tone.chip }}
-                        >
-                            {statusLabel(contest.status)}
-                        </span>
                     </div>
 
                     <div className="min-w-0">
-                        {contest.organizer && (
-                            <p className="text-[11px] text-muted">
-                                主催：{contest.organizer}
-                            </p>
-                        )}
+                        {/*
+                         * 募集中の札。
+                         *
+                         * 絵の上に重ねると、絵柄に紛れて読めない。
+                         * 題名の上に置けば、まず目に入る。
+                         */}
+                        <div className="mb-2 flex flex-wrap items-center gap-2.5">
+                            <span
+                                className="rounded-full px-3.5 py-1 text-[11px] font-medium text-white"
+                                style={{ background: tone.chip }}
+                            >
+                                {statusLabel(contest.status)}
+                            </span>
+
+                            {contest.organizer && (
+                                <span className="text-[11px] text-muted">
+                                    主催：{contest.organizer}
+                                </span>
+                            )}
+                        </div>
 
                         <h1 className="mt-1 text-[22px] font-semibold leading-snug text-ink">
                             {contest.title || "名前のないコンテスト"}
@@ -118,7 +186,7 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                             <div>
                                 <p className="text-[11px] text-faint">応募締切</p>
                                 <p className="text-sm font-medium text-ink">
-                                    {formatDate(contest.ends_at)} 23:59
+                                    {formatDate(contest.ends_at)}
                                 </p>
                             </div>
 
@@ -144,17 +212,25 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
 
                             <button
                                 type="button"
-                                disabled
-                                className="ml-auto rounded-lg px-6 py-2.5 text-sm font-medium text-white disabled:opacity-45"
+                                onClick={() => {
+                                    /* 下の「出せそうな作品」へ送る */
+                                    document
+                                        .getElementById("entry-works")
+                                        ?.scrollIntoView({ behavior: "smooth" });
+                                }}
+                                disabled={!isOpen}
+                                className="ml-auto rounded-lg px-6 py-2.5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(31,78,107,0.25)] hover:opacity-90 disabled:opacity-45 disabled:shadow-none"
                                 style={{ background: tone.chip }}
                             >
                                 {isOpen ? "応募する" : "受付終了"}
                             </button>
                         </div>
 
-                        <p className="mt-1.5 text-right text-[10px] text-faint">
-                            ログインの仕組みは準備中です
-                        </p>
+                        {entries.length > 0 && (
+                            <p className="mt-1.5 text-right text-[10px] text-forest">
+                                {entries.length}作品を応募しています
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -228,10 +304,10 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                     <dl className="space-y-2.5">
                         <Row label="募集期間">
                             {formatLongDate(contest.starts_at)} 〜{" "}
-                            {formatLongDate(contest.ends_at)} 23:59
+                            {formatLongDate(contest.ends_at)}
                         </Row>
                         <Row label="応募締切">
-                            {formatLongDate(contest.ends_at)} 23:59
+                            {formatLongDate(contest.ends_at)}
                         </Row>
                         <Row label="結果発表">{formatLongDate(contest.result_at)}</Row>
                     </dl>
@@ -328,10 +404,24 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                     </details>
                 )}
 
+                {notice && (
+                    <p className="mt-6 rounded-lg bg-forest-tint px-4 py-3 text-center text-xs text-forest">
+                        {notice}
+                    </p>
+                )}
+
                 {/* 出せそうな作品 */}
                 {isOpen && works.length > 0 && (
-                    <div className="mt-10 rounded-xl border border-line bg-surface px-5 py-4">
+                    <div
+                        id="entry-works"
+                        className="mt-10 rounded-xl border border-line bg-surface px-5 py-4 shadow-[0_2px_10px_rgba(31,78,107,0.06)]"
+                    >
                         <p className="text-sm font-medium text-ink">出せそうな作品</p>
+                        <p className="mt-1 text-[11px] text-muted">
+                            出したい作品の「応募する」を押してください。
+                            {contest.entry_limit > 0 &&
+                                `${contest.entry_limit}作品まで出せます。`}
+                        </p>
                         <ul className="mt-2.5 divide-y divide-line">
                             {works
                                 .filter(
@@ -342,17 +432,37 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                                 .slice(0, 5)
                                 .map((work) => (
                                     <li key={work.id}>
-                                        <Link
-                                            href={`/workspace/${work.id}`}
-                                            className="flex items-baseline gap-3 py-2 hover:text-forest"
-                                        >
-                                            <span className="min-w-0 flex-1 truncate text-xs text-ink">
+                                        <div className="flex items-center gap-3 py-2">
+                                            <Link
+                                                href={`/workspace/${work.id}`}
+                                                className="min-w-0 flex-1 truncate text-xs text-ink hover:text-forest"
+                                            >
                                                 {work.title}
-                                            </span>
+                                            </Link>
+
                                             <span className="shrink-0 text-[11px] text-faint">
                                                 {formatNumber(work.total_char_count)}字
                                             </span>
-                                        </Link>
+
+                                            {/* 出す */}
+                                            {entries.some(
+                                                (row) => row.work_id === work.id,
+                                            ) ? (
+                                                <span className="shrink-0 rounded-full bg-forest-tint px-3 py-1 text-[10px] text-forest">
+                                                    応募済み
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        void apply(work.id, work.title)
+                                                    }
+                                                    className="shrink-0 rounded-full border border-forest-line px-3.5 py-1 text-[10px] text-forest hover:bg-forest-tint"
+                                                >
+                                                    応募する
+                                                </button>
+                                            )}
+                                        </div>
                                     </li>
                                 ))}
                         </ul>
@@ -411,16 +521,48 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 /** 「2026/09/02（水）」 */
 function formatDate(text: string): string {
-    const date = new Date(`${text}T00:00:00`);
-    if (Number.isNaN(date.getTime())) return text;
+    const date = toDate(text);
+    if (!date) return text;
+
     const week = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()];
-    return `${text.replace(/-/g, "/")}（${week}）`;
+    return (
+        `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}` +
+        `（${week}）${formatTimePart(date)}`
+    );
+}
+
+/**
+ * 日どりを日付に直す。
+ *
+ * 時刻まで決めてあれば、そのまま。
+ * 日にちだけなら、その日の始まりとして読む。
+ */
+function toDate(text: string): Date | null {
+    if (!text) return null;
+
+    const date = new Date(text.includes("T") ? text : `${text}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * 時刻の部分。
+ * 0 時ちょうどなら出さない。決めていないのと区別がつかない。
+ */
+function formatTimePart(date: Date): string {
+    if (date.getHours() === 0 && date.getMinutes() === 0) return "";
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return ` ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 /** 「2026年9月2日（水）」 */
 function formatLongDate(text: string): string {
-    const date = new Date(`${text}T00:00:00`);
-    if (Number.isNaN(date.getTime())) return text;
+    const date = toDate(text);
+    if (!date) return text;
+
     const week = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()];
-    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${week}）`;
+    return (
+        `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${week}）` +
+        formatTimePart(date)
+    );
 }
