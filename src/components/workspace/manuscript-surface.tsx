@@ -21,6 +21,14 @@ import type { DisplaySettings } from "@/types";
 import { LINE_HEIGHT_VALUE } from "@/types";
 
 interface Props {
+    /**
+     * 縮尺。
+     *
+     * 1 で元の大きさ。
+     * 指でつまむ代わりに、ボタンで変える。
+     */
+    zoom?: number;
+
     settings: DisplaySettings;
     value: string;
     onChange?: (value: string) => void;
@@ -46,6 +54,7 @@ export default function ManuscriptSurface({
     onSelectionChange,
     onRangeChange,
     showLineNumbers = false,
+    zoom = 1,
 }: Props) {
     const isVertical = settings.writing_mode === "vertical";
     const areaRef = useRef<HTMLTextAreaElement>(null);
@@ -76,10 +85,19 @@ export default function ManuscriptSurface({
 
     const lineCount = value.split("\n").length;
     const lineHeightPx =
-        settings.font_size * LINE_HEIGHT_VALUE[settings.line_height];
+        settings.font_size * zoom * LINE_HEIGHT_VALUE[settings.line_height];
+
+    /*
+     * 字の大きさ。
+     *
+     * 縮尺を掛ける。
+     * transform で拡大すると、指で触った所と
+     * 文字の位置がずれて、書けなくなる。
+     */
+    const scaled = Math.round(settings.font_size * zoom);
 
     const style: CSSProperties = {
-        fontSize: `${settings.font_size}px`,
+        fontSize: `${scaled}px`,
         lineHeight: LINE_HEIGHT_VALUE[settings.line_height],
         writingMode: isVertical ? "vertical-rl" : "horizontal-tb",
         // upright は指定しない。英数字まで 1 文字ずつ立ってしまい
@@ -108,7 +126,7 @@ export default function ManuscriptSurface({
                 >
                     <div
                         style={{
-                            fontSize: `${Math.max(9, settings.font_size - 5)}px`,
+                            fontSize: `${Math.max(9, scaled - 5)}px`,
                             lineHeight: `${lineHeightPx}px`,
                             writingMode: isVertical ? "vertical-rl" : "horizontal-tb",
                             // 縦書きは右から始まるので、目盛りも右端から

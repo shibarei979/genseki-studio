@@ -74,6 +74,15 @@ export default function EpisodeEditor({
      * 全部並べると 2 段になり、書く場所がそのぶん減る。
      */
     const [isToolsOpen, setIsToolsOpen] = useState(false);
+
+    /*
+     * 縮尺。
+     *
+     * 狭い画面では、決まった大きさだと読みにくい。
+     * 全体を見渡したいときは小さく、
+     * 直したいときは大きくできるようにする。
+     */
+    const [zoom, setZoom] = useState(1);
     const [notice, setNotice] = useState("");
     /*
      * 行番号。資料の「第3話 12行目」から場所を探すときに使う。
@@ -383,8 +392,20 @@ export default function EpisodeEditor({
                 {notice && <span className="text-forest">{notice}</span>}
             </div>
 
-            <div ref={surfaceRef} className="relative min-h-0 flex-1">
+            {/*
+             * 本文。
+             *
+             * 紙のように見せる。
+             * 白い面に影を落とし、周りを少し暗くすると、
+             * どこまでが原稿なのかが分かる。
+             */}
+            <div
+                ref={surfaceRef}
+                className="relative min-h-0 flex-1 overflow-auto bg-canvas p-0 sm:p-4"
+            >
+                <div className="mx-auto h-full w-full max-w-[820px] bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:h-auto sm:min-h-full sm:rounded">
                 <ManuscriptSurface
+                    zoom={zoom}
                     settings={settings}
                     value={body}
                     onChange={setBody}
@@ -394,11 +415,59 @@ export default function EpisodeEditor({
                     placeholder="ここに本文を書きます。"
                 />
 
+                </div>
+
                 {flashLine !== null && (
-                    <p className="pointer-events-none absolute right-4 top-3 rounded-full bg-forest px-3 py-1 text-xs text-white shadow">
+                    <p className="pointer-events-none absolute right-4 top-3 rounded-full bg-forest px-3 py-1 text-[11px] text-white shadow">
                         {flashLine}行目へ移動しました
                     </p>
                 )}
+
+                {/*
+                 * 大きさを変える。
+                 *
+                 * 右下に小さく置く。
+                 * 全体を見たいときは縮め、直したいときは広げる。
+                 *
+                 * 指でつまむ形にはしない。
+                 * 書いている途中に触れて、勝手に変わってしまう。
+                 */}
+                <div className="pointer-events-none sticky bottom-3 flex justify-end pr-3">
+                    <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-line bg-surface px-1 py-0.5 shadow-sm">
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setZoom((now) => Math.max(0.7, now - 0.1))
+                            }
+                            disabled={zoom <= 0.7}
+                            aria-label="小さくする"
+                            className="h-7 w-7 rounded-full text-[13px] text-muted hover:bg-canvas disabled:opacity-35"
+                        >
+                            −
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setZoom(1)}
+                            title="元の大きさに戻す"
+                            className="min-w-[38px] px-1 text-[10px] tabular-nums text-faint hover:text-ink"
+                        >
+                            {Math.round(zoom * 100)}%
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setZoom((now) => Math.min(1.6, now + 0.1))
+                            }
+                            disabled={zoom >= 1.6}
+                            aria-label="大きくする"
+                            className="h-7 w-7 rounded-full text-[13px] text-muted hover:bg-canvas disabled:opacity-35"
+                        >
+                            ＋
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
