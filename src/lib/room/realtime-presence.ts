@@ -112,6 +112,10 @@ export class RealtimePresence implements Presence {
     private messages: RoomMessage[] = [];
     private self: RoomMember | null = null;
     private isClosed = false;
+    /** 購読が始まったか。始まる前に送っても届かない */
+    private isReady = false;
+    /** 声と画面の合図を受け取る人たち */
+    private mediaHandlers = new Set<(payload: unknown) => void>();
 
     private heartbeat: number | null = null;
     private moveTimer: number | null = null;
@@ -202,6 +206,33 @@ export class RealtimePresence implements Presence {
         this.emit();
     }
 
+    /**
+     * 声と画面の合図を送る。
+     *
+     * 購読が始まる前は捨てる。送っても誰にも届かない。
+     * 相手が増えたときに張り直すので、取りこぼしても支障はない。
+     */
+    sendMedia(payload: unknown): void {
+        if (!this.isReady || !this.channel) return;
+        void this.channel.send({
+            type: "broadcast",
+            event: "media",
+            payload,
+        });
+    }
+
+    /**
+     * 声と画面の合図を受け取る。
+     *
+     * 受け取り口はここで束ねる。
+     * 呼ぶ側にチャンネルを渡すと、購読が始まったあとに
+     * listener を足すことになって落ちる。
+     */
+    onMedia(handler: (payload: unknown) => void): () => void {
+        this.mediaHandlers.add(handler);
+        return () => this.mediaHandlers.delete(handler);
+    }
+
     send(message: Omit<RoomMessage, "id" | "created_at">): void {
         /*
          * id は表側で振る。
@@ -228,9 +259,19 @@ export class RealtimePresence implements Presence {
         if (this.heartbeat !== null) window.clearInterval(this.heartbeat);
         if (this.moveTimer !== null) window.clearTimeout(this.moveTimer);
 
+        /*
+         * 通り道を閉じる。
+         *
+         * 閉じずに残すと、次に同じ部屋へ入ったとき
+         * 同じ名前のチャンネルが二重になり、
+         * 発言が 2 度届いたり、購読済みのものに
+         * listener を足そうとして落ちたりする。
+         */
         if (this.channel) void createClient().removeChannel(this.channel);
         this.channel = null;
+        this.isReady = false;
         this.handlers.clear();
+        this.mediaHandlers.clear();
     }
 
     /**
@@ -307,7 +348,21 @@ export class RealtimePresence implements Presence {
 
     /** 表の変更を受け取る */
     private listen(): void {
-        this.channel = createClient()
+        const supabase = createClient();
+
+        /*
+         * 同じ名前の通り道が残っていたら、先に閉じる。
+         *
+         * channel(名前) は、同じ名前のものがあればそれを返す。
+         * 購読済みのものに .on() を足すと落ちる。
+         */
+        for (const opened of supabase.getChannels()) {
+            if (opened.topic === `realtime:room:${this.roomId}`) {
+                void supabase.removeChannel(opened);
+            }
+        }
+
+        this.channel = supabase
             .channel(`room:${this.roomId}`)
             .on(
                 "postgres_changes",
@@ -361,7 +416,21 @@ export class RealtimePresence implements Presence {
                     this.emit();
                 },
             )
-            .subscribe();
+            /*
+             * 声と画面の合図。
+             *
+             * 購読を始める前にここで登録しておく。
+             * 使う側（RoomMedia）が後から足すと、
+             * 「subscribe のあとに on は足せない」で落ちる。
+             */
+            .on("broadcast", { event: "media" }, ({ payload }) => {
+                for (const handler of Array.from(this.mediaHandlers)) {
+                    handler(payload);
+                }
+            })
+            .subscribe((status) => {
+                this.isReady = status === "SUBSCRIBED";
+            });
     }
 
     private pushMessage(message: RoomMessage): void {

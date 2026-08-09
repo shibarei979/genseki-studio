@@ -13,17 +13,16 @@ import Link from "next/link";
 
 interface Props {
     workId: string;
-    current: "write" | "resource" | "post" | "settings";
+    current: "write" | "settings" | "resource" | "post";
 }
 
 export default function WorkspaceNav({ workId, current }: Props) {
-    /*
-     * 執筆・設定・資料は元の並びのまま。
-     * 投稿はあとから足したので、下の段に置く。
-     * 並びを変えると、慣れた手が迷う。
-     */
     return (
         <div className="space-y-2">
+            {/*
+             * 執筆・設定・資料は、書いている間に行き来するもの。
+             * 3 つ並べて置く。
+             */}
             <div className="grid grid-cols-3 gap-2">
                 <NavButton
                     href={`/workspace/${workId}`}
@@ -42,6 +41,10 @@ export default function WorkspaceNav({ workId, current }: Props) {
                 />
             </div>
 
+            {/*
+             * 投稿は、書き終えてから外へ出すもの。
+             * 上の 3 つとは目的が違うので、段を分ける。
+             */}
             <NavButton
                 href={`/workspace/${workId}/post`}
                 label="投稿"

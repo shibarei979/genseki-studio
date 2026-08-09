@@ -132,7 +132,7 @@ export const ROOM_BACKGROUNDS: RoomBackground[] = [
             /* 右の飾り棚 */
             { left: 0.9, top: 0.3, right: 1, bottom: 1 },
             /* 中央の机と椅子。ラグの上は歩ける */
-            { left: 0.34, top: 0.42, right: 0.64, bottom: 0.78 },
+            { left: 0.35, top: 0.42, right: 0.63, bottom: 0.77 },
             /* 手前の飾り棚 */
             { left: 0.12, top: 0.86, right: 0.31, bottom: 1 },
         ],
@@ -156,9 +156,15 @@ export const ROOM_BACKGROUNDS: RoomBackground[] = [
         blocked: [
             /* 奥の壁と本棚の列 */
             { left: 0, top: 0, right: 1, bottom: 0.27 },
-            /* 左右の袖机と椅子 */
-            { left: 0, top: 0.27, right: 0.155, bottom: 0.87 },
-            { left: 0.845, top: 0.27, right: 1, bottom: 0.87 },
+            /*
+             * 左右の袖机と椅子。
+             *
+             * 椅子の右端は実測で 0.125 あたり。
+             * 以前は 0.155 まで塞いでいたので、
+             * 机のそばに立てず、離れた所で止められていた。
+             */
+            { left: 0, top: 0.27, right: 0.125, bottom: 0.87 },
+            { left: 0.875, top: 0.27, right: 1, bottom: 0.87 },
             /* 長机 2 卓。椅子の外側まで塞ぐ */
             { left: 0.22, top: 0.32, right: 0.47, bottom: 0.79 },
             { left: 0.53, top: 0.32, right: 0.76, bottom: 0.79 },
@@ -187,13 +193,16 @@ export const ROOM_BACKGROUNDS: RoomBackground[] = [
         blocked: [
             /* 奥の壁と本棚の列 */
             { left: 0, top: 0, right: 1, bottom: 0.19 },
-            /* 左右の壁ぎわに並んだ個人席 */
-            { left: 0, top: 0.19, right: 0.115, bottom: 0.82 },
-            { left: 0.885, top: 0.19, right: 1, bottom: 0.82 },
-            /* 長机 3 卓 */
-            { left: 0.185, top: 0.26, right: 0.335, bottom: 0.75 },
-            { left: 0.425, top: 0.26, right: 0.575, bottom: 0.75 },
-            { left: 0.65, top: 0.26, right: 0.815, bottom: 0.75 },
+            /*
+             * 左右の壁ぎわに並んだ個人席。
+             * 椅子の内側の端に合わせる。広く取ると机に近寄れない。
+             */
+            { left: 0, top: 0.19, right: 0.1, bottom: 0.82 },
+            { left: 0.9, top: 0.19, right: 1, bottom: 0.82 },
+            /* 長机 3 卓。椅子の外側までを塞ぐ */
+            { left: 0.19, top: 0.26, right: 0.335, bottom: 0.74 },
+            { left: 0.43, top: 0.26, right: 0.575, bottom: 0.74 },
+            { left: 0.655, top: 0.26, right: 0.81, bottom: 0.74 },
             /* 手前に並んだ棚・掲示板・給湯まわり */
             { left: 0, top: 0.85, right: 0.3, bottom: 1 },
             { left: 0.62, top: 0.85, right: 1, bottom: 1 },
@@ -322,15 +331,20 @@ export function isAtRoomDoor(
  * 押した場所へ一直線に飛ぶと、机の上を突っ切ってしまう。
  * 床を細かい格子に割って、空いている升だけを辿る。
  *
- * 升の細かさは 56 × 42。
- * これより粗いと椅子と机の隙間を通れなくなり、
- * 細かくすると通り道が増えるぶん、遠回りしても
- * まっすぐに見えて、歩いている感じが薄れる。
+ * 升の細かさは 84 × 63。1 升がおよそ 11px。
+ *
+ * 粗いと、家具のそばに立てなくなる。
+ * 塞いだ四角のすぐ外側に升の中心が無いと、
+ * ひとつ手前の升まで押し戻されるため、
+ * 実際の家具から 30px ほど離れた所で止まってしまう。
+ *
+ * 細かくすると調べる升が増えるが、
+ * 5000 升ほどなら幅優先でも一瞬で終わる。
  * ============================================================
  */
 
-const GRID_COLS = 56;
-const GRID_ROWS = 42;
+const GRID_COLS = 84;
+const GRID_ROWS = 63;
 
 /** 升の中心の座標 */
 function cellCenter(col: number, row: number): { x: number; y: number } {

@@ -29,6 +29,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useState } from "react";
 
 import ContestBanner from "@/components/common/contest-banner";
@@ -36,7 +37,7 @@ import Header from "@/components/layout/header";
 import { getRepository } from "@/lib/repository";
 import { loadIdentity } from "@/lib/room/presence";
 import { formatNumber } from "@/lib/utils/text";
-import type { Contest, ContestEntry, WorkWithStats } from "@/types";
+import type { Contest, ContestEntry } from "@/types";
 import { daysUntil, statusColor, statusLabel } from "@/types";
 
 /**
@@ -64,28 +65,16 @@ const C = {
     dim: "#8496a8",
 };
 
-/** 目次に並べる節。id は飛び先と揃える */
-const TABS = [
-    { id: "about", label: "概要" },
-    { id: "prizes", label: "各賞" },
-    { id: "schedule", label: "開催期間" },
-    { id: "rules", label: "応募条件" },
-    { id: "how", label: "応募方法" },
-    { id: "terms", label: "応募規約" },
-    { id: "entries", label: "応募作品" },
-] as const;
-
 export default function ContestDetailClient({ contestId }: { contestId: string }) {
+    const router = useRouter();
+
     const [contest, setContest] = useState<Contest | null>(null);
-    const [works, setWorks] = useState<WorkWithStats[]>([]);
     const [entries, setEntries] = useState<ContestEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [showsAllWorks, setShowsAllWorks] = useState(false);
 
     const reload = useCallback(async () => {
         const repository = getRepository();
         setContest(await repository.getContest(contestId));
-        setWorks(await repository.listWorks());
         setEntries(await repository.listContestEntries(contestId));
         setIsLoading(false);
     }, [contestId]);
@@ -96,7 +85,7 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-page">
+            <div className="min-h-screen bg-white">
                 <Header />
                 <p className="py-24 text-center text-sm text-faint">読み込んでいます</p>
             </div>
@@ -105,7 +94,7 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
 
     if (!contest || contest.status === "draft") {
         return (
-            <div className="min-h-screen bg-page">
+            <div className="min-h-screen bg-white">
                 <Header breadcrumbs={[{ label: "コンテスト", href: "/contest" }]} />
                 <p className="py-24 text-center text-sm text-faint">
                     このコンテストは見つかりませんでした。
@@ -135,14 +124,6 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
     );
 
     /** すでに出した作品 */
-    const enteredWorkIds = new Set(entries.map((row) => row.work_id));
-
-    /** 出せる作品。字数の下限だけで絞る */
-    const candidates = works.filter(
-        (work) =>
-            contest.min_chars === 0 || work.total_char_count >= contest.min_chars,
-    );
-    const shownWorks = showsAllWorks ? candidates : candidates.slice(0, 3);
 
     /** あと何作品出せるか */
     const remainingSlots =
@@ -150,23 +131,6 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
             ? Number.POSITIVE_INFINITY
             : contest.entry_limit - entries.length;
 
-    async function enter(work: WorkWithStats) {
-        if (!contest) return;
-
-        const identity = loadIdentity();
-        await getRepository().createContestEntry(contest.id, {
-            work_id: work.id,
-            author_id: identity.id,
-            author_name: identity.name,
-            work_title: work.title || "無題",
-            char_count: work.total_char_count,
-            is_shortlisted: false,
-            is_awarded: false,
-            award_label: "",
-            note: "",
-        });
-        await reload();
-    }
 
     async function withdraw(workId: string) {
         const row = entries.find((entry) => entry.work_id === workId);
@@ -176,7 +140,7 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
     }
 
     return (
-        <div className="min-h-screen bg-page pb-20">
+        <div className="min-h-screen bg-white pb-20">
             <Header
                 breadcrumbs={[
                     { label: "コンテスト", href: "/contest" },
@@ -286,8 +250,15 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                             </div>
                         </div>
 
-                        <a
-                            href="#entries"
+                        {/*
+                         * 応募のページへ。
+                         *
+                         * 同じ画面に作品を並べていたが、
+                         * 読んでいる途中に出すボタンが目に入り落ち着かない。
+                         * 読むものと出すものを分けた。
+                         */}
+                        <Link
+                            href={`/contest/${contestId}/entry`}
                             className="mt-5 flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-sm font-medium text-white hover:opacity-90"
                             style={{
                                 background: C.teal,
@@ -297,7 +268,7 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                         >
                             {isOpen ? "応募する" : "受付終了"}
                             <span aria-hidden="true">›</span>
-                        </a>
+                        </Link>
 
                         {isOpen && remaining >= 0 && (
                             <p className="mt-2 text-center text-[11px] text-muted">
@@ -309,7 +280,6 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
             </div>
 
             {/* ============ 目次 ============ */}
-            <TabBar />
 
             <main className="mx-auto max-w-5xl px-6 sm:px-8">
                 <Section id="about" icon={<QuillIcon />} title="このコンテストについて">
@@ -380,24 +350,45 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                  * いま全体のどのあたりにいるかが、線の長さで分かる。
                  */}
                 <Section id="schedule" icon={<CalendarIcon large />} title="開催期間">
-                    <ol className="relative flex justify-between gap-2 pt-1">
-                        <span
-                            className="absolute left-[16%] right-[16%] top-[6px] h-[2px]"
-                            style={{ background: C.teal, opacity: 0.35 }}
-                            aria-hidden="true"
-                        />
-
+                    {/*
+                     * 線は、点そのものから引く。
+                     *
+                     * 外から「左から 16%」のように置くと、
+                     * 3 等分した位置（16.67%）と噛み合わず、
+                     * 線の端が点からずれる。
+                     *
+                     * 各点が自分の左右へ線を伸ばせば、必ず中心で繋がる。
+                     */}
+                    <ol className="flex pt-1">
                         {[
                             { label: "募集開始", at: contest.starts_at },
                             { label: "応募締切", at: contest.ends_at },
                             { label: "結果発表", at: contest.result_at },
-                        ].map((point) => (
+                        ].map((point, index, all) => (
                             <li
                                 key={point.label}
                                 className="relative flex flex-1 flex-col items-center text-center"
                             >
+                                {/* 左へ伸ばす線。先頭には引かない */}
+                                {index > 0 && (
+                                    <span
+                                        className="absolute left-0 right-1/2 top-[6px] h-[2px]"
+                                        style={{ background: C.teal, opacity: 0.35 }}
+                                        aria-hidden="true"
+                                    />
+                                )}
+
+                                {/* 右へ伸ばす線。末尾には引かない */}
+                                {index < all.length - 1 && (
+                                    <span
+                                        className="absolute left-1/2 right-0 top-[6px] h-[2px]"
+                                        style={{ background: C.teal, opacity: 0.35 }}
+                                        aria-hidden="true"
+                                    />
+                                )}
+
                                 <span
-                                    className="h-3.5 w-3.5 rounded-full border-[3px] bg-surface"
+                                    className="relative h-3.5 w-3.5 rounded-full border-[3px] bg-surface"
                                     style={{ borderColor: C.teal }}
                                 />
                                 <span
@@ -561,12 +552,28 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                             className="overflow-hidden rounded-lg border bg-surface"
                             style={{ borderColor: C.line }}
                         >
+                            {/*
+                             * 規約は初めから開いておく。
+                             *
+                             * 畳むと読まないまま出す人が出る。
+                             * 読んでほしいものを隠す理由が無い。
+                             */}
                             {splitTerms(contest.terms).map((part) => (
-                                <Accordion key={part.title} title={part.title}>
-                                    <p className="whitespace-pre-wrap text-[12px] leading-[2] text-muted">
+                                <div
+                                    key={part.title}
+                                    className="border-b px-5 py-4 last:border-b-0"
+                                    style={{ borderColor: C.line }}
+                                >
+                                    <p
+                                        className="text-[12px] font-medium"
+                                        style={{ color: C.navy }}
+                                    >
+                                        {part.title}
+                                    </p>
+                                    <p className="mt-2 whitespace-pre-wrap text-[12px] leading-[2] text-muted">
                                         {part.body}
                                     </p>
-                                </Accordion>
+                                </div>
                             ))}
 
                             {notices.length > 0 && (
@@ -588,113 +595,6 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                     </Section>
                 )}
 
-                {/* ============ 応募作品 ============ */}
-                <Section id="entries" icon={<QuillIcon />} title="出せそうな作品">
-                    {!isOpen ? (
-                        <p className="rounded-xl border border-line bg-surface px-5 py-8 text-center text-[12px] text-muted">
-                            このコンテストの受付は終わりました。
-                        </p>
-                    ) : candidates.length === 0 ? (
-                        <p className="rounded-xl border border-dashed border-line px-5 py-8 text-center text-[12px] leading-relaxed text-muted">
-                            出せる作品がありません。
-                            <br />
-                            <Link href="/post" className="mt-2 inline-block text-forest hover:underline">
-                                作品を書く
-                            </Link>
-                        </p>
-                    ) : (
-                        <>
-                            <p className="text-[12px]" style={{ color: C.body }}>
-                                応募する作品を選ぶ
-                                {contest.entry_limit > 0 && (
-                                    <span className="ml-2 text-faint">
-                                        あと {Math.max(0, remainingSlots)} 作品出せます
-                                    </span>
-                                )}
-                            </p>
-
-                            <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                {shownWorks.map((work) => {
-                                    const isEntered = enteredWorkIds.has(work.id);
-                                    const isFull = !isEntered && remainingSlots <= 0;
-
-                                    return (
-                                        <li
-                                            key={work.id}
-                                            className="flex gap-3 rounded-lg border bg-surface p-3"
-                                            style={{ borderColor: C.line }}
-                                        >
-                                            {/*
-                                             * 表紙。
-                                             *
-                                             * 作品に絵を持たせる仕組みがまだ無いので、
-                                             * 題名から色を決めて敷く。
-                                             * 同じ作品はいつも同じ色になるので、
-                                             * 並んだときの目印になる。
-                                             */}
-                                            <span
-                                                className="h-[72px] w-[58px] shrink-0 rounded"
-                                                style={{ background: coverOf(work.title || work.id) }}
-                                                aria-hidden="true"
-                                            />
-
-                                            <div className="flex min-w-0 flex-1 flex-col">
-                                            <p
-                                                className="truncate text-[13px] font-medium"
-                                                style={{ color: C.navy }}
-                                            >
-                                                {work.title || "無題"}
-                                            </p>
-                                            <p
-                                                className="mt-1 text-[11px] tabular-nums"
-                                                style={{ color: C.dim }}
-                                            >
-                                                {formatNumber(work.total_char_count)}字
-                                            </p>
-
-                                            {isEntered ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => void withdraw(work.id)}
-                                                    className="mt-auto rounded-md border py-1.5 text-[11px] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
-                                                    style={{
-                                                        borderColor: C.line,
-                                                        color: C.body,
-                                                    }}
-                                                >
-                                                    応募済み・取り消す
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    type="button"
-                                                    disabled={isFull}
-                                                    onClick={() => void enter(work)}
-                                                    className="mt-auto rounded-md py-1.5 text-[11px] font-medium text-white disabled:opacity-40"
-                                                    style={{ background: C.teal }}
-                                                >
-                                                    {isFull ? "上限に達しました" : "応募する"}
-                                                </button>
-                                            )}
-                                            </div>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-
-                            {candidates.length > shownWorks.length && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowsAllWorks(true)}
-                                    className="mx-auto mt-4 flex items-center gap-2 rounded-md border bg-surface px-6 py-2 text-[12px]"
-                                    style={{ borderColor: C.line, color: C.body }}
-                                >
-                                    もっと見る
-                                    <ChevronIcon />
-                                </button>
-                            )}
-                        </>
-                    )}
-                </Section>
             </main>
         </div>
     );
@@ -712,24 +612,6 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
  * ============================================================
  */
 
-function TabBar() {
-    return (
-        <div className="sticky top-14 z-30 border-y border-line bg-surface">
-            <nav className="thin-scroll mx-auto flex max-w-5xl gap-1 overflow-x-auto px-6 sm:px-8">
-                {TABS.map((tab) => (
-                    <a
-                        key={tab.id}
-                        href={`#${tab.id}`}
-                        className="shrink-0 px-4 py-3 text-[12px] hover:opacity-70"
-                        style={{ color: C.body }}
-                    >
-                        {tab.label}
-                    </a>
-                ))}
-            </nav>
-        </div>
-    );
-}
 
 /**
  * ============================================================
@@ -956,18 +838,36 @@ function sumPrize(prizes: { detail?: string; label?: string }[]): string | null 
     let total = 0;
 
     for (const prize of prizes) {
-        const text = `${prize.label ?? ""} ${prize.detail ?? ""}`;
+        const label = prize.label ?? "";
+        const detail = prize.detail ?? "";
 
-        /* 「3万円」の形 */
-        const man = text.match(/([\d.]+)\s*万/);
+        /*
+         * 1 人あたりの金額。
+         *
+         * 「3万円」「¥30,000」「5000円」のどれでも拾う。
+         * 万の書き方を先に見る。「3万」を「3」と読むと桁が狂う。
+         */
+        let each = 0;
+
+        const man = detail.match(/([\d.]+)\s*万/);
         if (man) {
-            total += Number(man[1]) * 10000;
-            continue;
+            each = Number(man[1]) * 10000;
+        } else {
+            const yen = detail.match(/[¥￥]?\s*([\d,]{3,})\s*円?/);
+            if (yen) each = Number(yen[1].replace(/,/g, ""));
         }
 
-        /* 「¥30,000」「30,000円」の形 */
-        const yen = text.match(/[¥￥]?\s*([\d,]{3,})\s*円?/);
-        if (yen) total += Number(yen[1].replace(/,/g, ""));
+        if (each === 0) continue;
+
+        /*
+         * 人数。
+         *
+         * 「優秀賞（6名）」のように、賞の名前に書かれる。
+         * 掛けないと、6 人ぶんが 1 人ぶんになる。
+         * 書かれていなければ 1 人とみなす。
+         */
+        const count = label.match(/([\d]+)\s*(?:名|人)/);
+        total += each * (count ? Number(count[1]) : 1);
     }
 
     if (total === 0) return null;

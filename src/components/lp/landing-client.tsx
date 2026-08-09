@@ -681,7 +681,7 @@ function DeviceFrame() {
                     {hasDesktop ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img
-                            src="/images/lp/editor.png"
+                            src="/images/lp/desktop.jpg"
                             alt="執筆画面"
                             draggable={false}
                             onError={() => setHasDesktop(false)}
@@ -703,7 +703,7 @@ function DeviceFrame() {
                 {hasMobile ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                        src="/images/lp/plot.png"
+                        src="/images/lp/mobile.png"
                         alt="スマートフォンでの画面"
                         draggable={false}
                         onError={() => setHasMobile(false)}

@@ -382,6 +382,27 @@ create table if not exists public.contest_entries (
   unique (contest_id, novel_id)
 );
 
+/*
+ * 応募の列。
+ *
+ * 表そのものは前からあるので、create table は飛ばされる。
+ * あとで増やした列は、個別に足さないと入らない。
+ */
+do $$
+begin
+  execute $q$alter table public.contest_entries
+    add column if not exists author_id      uuid,
+    add column if not exists author_name    text not null default '',
+    add column if not exists work_title     text not null default '',
+    add column if not exists char_count     integer not null default 0,
+    add column if not exists is_shortlisted boolean not null default false,
+    add column if not exists is_awarded     boolean not null default false,
+    add column if not exists award_label    text not null default '',
+    add column if not exists note           text not null default ''$q$;
+exception when others then
+  raise notice '応募の列を飛ばしました（%）', sqlerrm;
+end $$;
+
 -- ============================================================
 -- 11. 運営が扱うもの
 -- ============================================================

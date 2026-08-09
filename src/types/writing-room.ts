@@ -31,7 +31,7 @@ export const ROOM_VISIBILITY_LABEL: Record<RoomVisibility, string> = {
 
 export const ROOM_VISIBILITY_DESCRIPTION: Record<RoomVisibility, string> = {
     link: "URLを知っている人だけが入れます。仲間内で使う部屋に。",
-    open: "誰でも入れます。いろいろな人と交流できます。",
+    open: "誰でも入れます。執筆室の一覧に並び、知らない人も入ってきます。",
 };
 
 export const SELECTABLE_VISIBILITY: RoomVisibility[] = ["link", "open"];

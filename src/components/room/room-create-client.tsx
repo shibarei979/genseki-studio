@@ -461,10 +461,19 @@ function SettingsStep({
                     ))}
                 </div>
 
-                <p className="mt-2 flex items-start gap-2 rounded-lg bg-amber-tint px-3.5 py-2.5 text-[11px] leading-relaxed text-amber">
-                    <BulbIcon />
-                    公式の部屋は運営が用意します。自分では立てられません。
-                </p>
+                {/*
+                 * オープンを選んだときだけ知らせる。
+                 *
+                 * 一覧に並ぶことを知らずに選ぶと、
+                 * 知らない人が入ってきたときに驚かせる。
+                 */}
+                {visibility === "open" && (
+                    <p className="mt-2 flex items-start gap-2 rounded-lg bg-amber-tint px-3.5 py-2.5 text-[11px] leading-relaxed text-amber">
+                        <BulbIcon />
+                        この部屋は執筆室の一覧に並びます。
+                        URL を渡していない人も入ってきます。
+                    </p>
+                )}
             </section>
 
             {/* 人数 */}

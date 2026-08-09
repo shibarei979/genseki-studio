@@ -50,6 +50,22 @@ export interface Presence {
     setStatus(status: MemberStatus): void;
     setColor(colorId: number): void;
     announceClosed(): void;
+    /**
+     * 声と画面の合図を送る。
+     *
+     * 通り道そのものは渡さない。
+     * 受け取った側が後から listener を足すと、
+     * すでに購読を始めたチャンネルに足すことになって落ちる。
+     * 送る口と受け取る口だけを開けておく。
+     */
+    sendMedia(payload: unknown): void;
+
+    /**
+     * 声と画面の合図を受け取る。
+     *
+     * 返り値を呼ぶと、受け取りをやめる。
+     */
+    onMedia(handler: (payload: unknown) => void): () => void;
     addWrittenChars(count: number): void;
     send(message: Omit<RoomMessage, "id" | "created_at">): void;
     /** 状態が変わるたびに呼ばれる。戻り値で購読をやめる */
@@ -151,6 +167,17 @@ export class LocalPresence implements Presence {
     addWrittenChars(count: number): void {
         if (!this.self) return;
         this.patchSelf({ written_chars: Math.max(0, count) });
+    }
+
+    /* 端末の中だけなので、繋ぐ相手がいない */
+    sendMedia(): void {
+        /* 送り先がない */
+    }
+
+    onMedia(): () => void {
+        return () => {
+            /* 受け取るものがない */
+        };
     }
 
     send(message: Omit<RoomMessage, "id" | "created_at">): void {

@@ -7,7 +7,7 @@
  * 立てる操作は /rooms/new が持つ。
  *
  * 上から順に、
- *   何をする場所かの説明 → 公式の部屋 → 自分が立てた部屋 → 心得
+ *   何をする場所かの説明 → オープンな部屋 → 自分の部屋 → 心得
  *
  * 説明を最初に置くのは、初めて来た人が
  * 「部屋」という言葉から何を想像すればいいか分からないため。
@@ -38,18 +38,18 @@ export default function RoomsClient() {
     }
 
     /*
-     * 公式かどうかで分ける。
+     * 誰でも入れる部屋と、自分が立てた部屋に分ける。
      *
-     * 以前は組み込みの 3 部屋を「公式」として出していたが、
-     * 運営が管理画面から立てたものと混ざっていた。
-     * 消せない部屋が並んでいると、
-     * 運営から見て「自分が立てた覚えのない部屋」になる。
+     * 「公式」ではなく「オープン」で分ける。
+     * 運営が立てたかどうかは、入る側にはどうでもいい。
+     * 知りたいのは「いま入れるか」だけ。
      *
-     * 公式の印は、管理画面で立てたものだけに付く。
+     * 運営が立てた部屋も、オープンにしてあればここに並ぶ。
+     * 公式の印はカードの中に残す。誰が用意したかは分かってよい。
      */
-    const officialRooms = rooms.filter((room) => room.is_official);
+    const openRooms = rooms.filter((room) => room.visibility === "open");
     const myRooms = rooms.filter(
-        (room) => !room.is_official && room.host_id === loadIdentity().id,
+        (room) => room.host_id === loadIdentity().id && room.visibility !== "open",
     );
 
     useEffect(() => {
@@ -148,22 +148,22 @@ export default function RoomsClient() {
                     </div>
                 </section>
 
-                {/* ===== 公式の部屋 ===== */}
+                {/* ===== オープンな部屋 ===== */}
                 <SectionHead
                     icon={<StarIcon />}
-                    title="公式の部屋"
-                    count={officialRooms.length}
+                    title="オープンな部屋"
+                    count={openRooms.length}
                 />
 
-                {officialRooms.length === 0 ? (
+                {openRooms.length === 0 ? (
                     <p className="mt-3 rounded-2xl border border-dashed border-line bg-surface px-6 py-9 text-center text-[12px] leading-relaxed text-muted">
-                        いま開いている公式の部屋はありません。
+                        いま開いている部屋はありません。
                         <br />
-                        運営が用意したら、ここに並びます。
+                        誰かが「オープン」で立てたら、ここに並びます。
                     </p>
                 ) : (
                     <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {officialRooms.map((room) => (
+                        {openRooms.map((room) => (
                             <li key={room.id}>
                                 <RoomCard room={room} />
                             </li>
@@ -174,7 +174,7 @@ export default function RoomsClient() {
                 {/* ===== 自分が立てた部屋 ===== */}
                 <SectionHead
                     icon={<CaseIcon />}
-                    title="自分が立てた部屋"
+                    title="自分の部屋"
                     count={myRooms.length}
                 />
 
@@ -250,7 +250,7 @@ export default function RoomsClient() {
 const GUIDE = [
     {
         title: "部屋に入る",
-        body: "公式の部屋は誰でも入れます。入るとすぐ、あなたの人形が部屋に現れます。",
+        body: "オープンな部屋は誰でも入れます。入るとすぐ、あなたの人形が部屋に現れます。",
     },
     {
         title: "好きな席へ座る",

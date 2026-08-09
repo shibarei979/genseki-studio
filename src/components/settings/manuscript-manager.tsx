@@ -9,6 +9,14 @@
 
 "use client";
 
+/**
+ * 本文を切る印。
+ *
+ * 取り込んだ長い文を、話ごとに分けるために使う。
+ * 本文に紛れない見た目にしておく。
+ */
+const SPLIT_MARK = "──── ここで切る ────";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getRepository } from "@/lib/repository";
@@ -18,7 +26,6 @@ import {
     buildTxt,
     downloadTextFile,
     splitManuscript,
-    SPLIT_MARK,
 } from "@/lib/utils/manuscript";
 import { openPrintView } from "@/lib/utils/pdf-export";
 import { formatNumber } from "@/lib/utils/text";

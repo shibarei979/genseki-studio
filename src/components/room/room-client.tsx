@@ -25,6 +25,8 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { getRepository } from "@/lib/repository";
 import { createPresence, loadIdentity, saveIdentity } from "@/lib/room/presence";
+import { RoomMedia } from "@/lib/room/room-media";
+import type { MediaState } from "@/lib/room/room-media";
 import { AVATAR_COLORS, assignColors, takenColors } from "@/lib/room/avatar-colors";
 import { backgroundFor, clampToFloor } from "@/lib/room/room-backgrounds";
 import type { Presence, RoomState } from "@/lib/room/presence";
@@ -75,9 +77,20 @@ export default function RoomClient({ roomId }: Props) {
     );
 
     useEffect(() => {
+        /*
+         * 途中で画面を離れたか。
+         *
+         * 部屋を読むのは待ち時間のある処理なので、
+         * 読み終える前に閉じられることがある。
+         * そのまま通り道を開くと、閉じる相手のいないものが残る。
+         */
+        let isGone = false;
+
         void (async () => {
             const repository = getRepository();
-            setRoom(await repository.getRoom(roomId));
+            const found = await repository.getRoom(roomId);
+            if (isGone) return;
+            setRoom(found);
 
             /*
              * 部屋そのものの変更を受け取る。
@@ -86,8 +99,26 @@ export default function RoomClient({ roomId }: Props) {
              * いる人全員の画面へ届く必要がある。
              * ときどき読み直す作りだと、最大で数十秒ずれる。
              */
-            if (hasSupabase()) {
+            if (hasSupabase() && !isGone) {
                 const supabase = createClient();
+
+                /*
+                 * 同じ名前の通り道が残っていたら、先に閉じる。
+                 *
+                 * supabase.channel(名前) は、同じ名前のものが
+                 * すでにあると、それをそのまま返す。
+                 * 気づかずに .on() を足すと、購読済みのものに
+                 * 足すことになって落ちる。
+                 *
+                 * 開発中は useEffect が 2 度走るので、
+                 * これが無いと画面を開くたびに起きる。
+                 */
+                for (const opened of supabase.getChannels()) {
+                    if (opened.topic === `realtime:room-row:${roomId}`) {
+                        void supabase.removeChannel(opened);
+                    }
+                }
+
                 roomChannelRef.current = supabase
                     .channel(`room-row:${roomId}`)
                     .on(
@@ -130,8 +161,13 @@ export default function RoomClient({ roomId }: Props) {
                 return next;
             });
 
+            if (isGone) return;
             setIsLoading(false);
         })();
+
+        return () => {
+            isGone = true;
+        };
     }, [roomId]);
 
     /** 部屋に入る */
@@ -141,6 +177,23 @@ export default function RoomClient({ roomId }: Props) {
         const presence = createPresence(room.id);
         presenceRef.current = presence;
         setIsNetworked(presence.isNetworked);
+
+        /*
+         * 声と画面の用意。
+         *
+         * すぐ作ってよい。
+         * 送る口と受け取る口をもらうだけなので、
+         * 通り道が開くのを待つ必要がない。
+         * 開く前に送ったものは Presence 側で捨てられる。
+         *
+         * 実際に線を張るのは、在室者が分かってから。
+         * 相手がいなければ張る先もない。
+         */
+        const media = presence.isNetworked
+            ? new RoomMedia(identity.id, presence)
+            : null;
+        mediaRef.current = media;
+        const stopMedia = media?.subscribe(setMedia);
 
         /*
          * 入る場所。
@@ -188,11 +241,29 @@ export default function RoomClient({ roomId }: Props) {
 
         return () => {
             window.removeEventListener("beforeunload", handleUnload);
+            stopMedia?.();
             unsubscribe();
             presence.dispose();
             presenceRef.current = null;
+
+            /* マイクと画面を必ず離す。掴んだままだと端末の印が消えない */
+            mediaRef.current?.dispose();
+            mediaRef.current = null;
         };
     }, [room, identity.id, identity.name]);
+
+    /*
+     * 在室者が変わったら線を張り直す。
+     *
+     * 入ってきた人へ申し出て、出ていった人との線を閉じる。
+     * 人が変わるたびに呼べばよいので、id の並びだけを見る。
+     */
+    const memberIdKey = state.members.map((member) => member.id).join(",");
+
+    useEffect(() => {
+        if (!memberIdKey) return;
+        mediaRef.current?.sync(memberIdKey.split(","));
+    }, [memberIdKey]);
 
     /** この滞在で書いた文字数。集中の時間の記録に使う */
     const [isManaging, setIsManaging] = useState(false);
@@ -215,6 +286,20 @@ export default function RoomClient({ roomId }: Props) {
      * 繋いでいなければ、同じブラウザの別タブまで。
      */
     const [isNetworked, setIsNetworked] = useState(false);
+
+    /*
+     * 声と画面。
+     *
+     * 繋がっていないときは動かさない。
+     * 相手がいないのにマイクを掴むと、
+     * 端末に「使用中」の印だけが立つ。
+     */
+    const mediaRef = useRef<RoomMedia | null>(null);
+    const [media, setMedia] = useState<MediaState>({
+        isMicOn: false,
+        remoteIds: [],
+    });
+    const [mediaError, setMediaError] = useState("");
     /* 繋がっていないとき、その理由 */
     const envGap = describeSupabaseGap();
 
@@ -347,6 +432,23 @@ export default function RoomClient({ roomId }: Props) {
 
     /** 自分以外で、いまこの部屋にいる人 */
     const others = state.members.filter((member) => member.id !== identity.id);
+
+    /**
+     * マイクの入り切り。
+     *
+     * 断られたときは、その場に理由を出す。
+     * 何も起きないと、押せていないのか繋がっていないのかが分からない。
+     */
+    async function toggleMic() {
+        setMediaError("");
+        try {
+            await mediaRef.current?.toggleMic();
+        } catch {
+            setMediaError(
+                "マイクを使えませんでした。ブラウザの設定で許可してください。",
+            );
+        }
+    }
 
     /** ただ出る */
     function justLeave() {
@@ -952,6 +1054,20 @@ export default function RoomClient({ roomId }: Props) {
 
                         {/* ===== 中央 ===== */}
                         <div className="flex min-w-0 flex-col gap-3">
+                            {/* 届いた声。姿は出さず、音だけ鳴らす */}
+                            {media.remoteIds.map((id) => (
+                                <AudioOut
+                                    key={id}
+                                    stream={mediaRef.current?.streamOf(id) ?? null}
+                                />
+                            ))}
+
+                            {mediaError && (
+                                <p className="rounded-lg bg-amber-tint px-4 py-2.5 text-[12px] leading-relaxed text-amber">
+                                    {mediaError}
+                                </p>
+                            )}
+
                             <RoomFloor
                                 maxHeight={paneHeight}
                                 /*
@@ -991,7 +1107,7 @@ export default function RoomClient({ roomId }: Props) {
                              */}
                             <div className="flex flex-wrap items-stretch justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-3">
                                 {/*
-                                 * 声と画面共有。
+                                 * 声。
                                  *
                                  * 見本にはあるが、まだ動かせない。
                                  * 端末どうしを直に繋ぐ仕組み（WebRTC）が要る。
@@ -1000,18 +1116,26 @@ export default function RoomClient({ roomId }: Props) {
                                  * 後から足すと帯の並びが変わり、
                                  * 指が覚えた位置がずれる。
                                  */}
+                                {/*
+                                 * マイク。
+                                 *
+                                 * 端末どうしを直に繋いで声を送る。
+                                 * サーバーに繋いでいないときは相手がいないので、
+                                 * 押せない状態にしておく。
+                                 */}
                                 <ActionButton
-                                    icon={<MicIcon />}
+                                    icon={<MicIcon off={!media.isMicOn} />}
                                     label="マイク"
-                                    note="準備中"
-                                    disabled
-                                />
-
-                                <ActionButton
-                                    icon={<ScreenIcon />}
-                                    label="画面共有"
-                                    note="準備中"
-                                    disabled
+                                    note={
+                                        !isNetworked
+                                            ? "繋がっていません"
+                                            : media.isMicOn
+                                              ? "ON"
+                                              : "OFF"
+                                    }
+                                    isOn={media.isMicOn}
+                                    disabled={!isNetworked || !mediaRef.current}
+                                    onClick={() => void toggleMic()}
                                 />
 
                                 {/*
@@ -1169,6 +1293,22 @@ export default function RoomClient({ roomId }: Props) {
             </div>
         </div>
     );
+}
+
+/**
+ * 届いた声。
+ *
+ * 姿は出さない。音を鳴らすためだけの要素。
+ * 自分の声は鳴らさない（自分には送っていない）。
+ */
+function AudioOut({ stream }: { stream: MediaStream | null }) {
+    const ref = useRef<HTMLAudioElement>(null);
+
+    useEffect(() => {
+        if (ref.current && stream) ref.current.srcObject = stream;
+    }, [stream]);
+
+    return <audio ref={ref} autoPlay className="hidden" />;
 }
 
 /**
@@ -1438,20 +1578,18 @@ function ClockIcon({ large = false }: { large?: boolean }) {
     );
 }
 
-function MicIcon() {
+/**
+ * マイク。
+ *
+ * 切っているときは斜線を引く。
+ * 色や文字だけで示すと、目の端では入り切りが分からない。
+ */
+function MicIcon({ off = false }: { off?: boolean }) {
     return (
         <svg width="18" height="18" viewBox="0 0 24 24" {...stroke(1.9)}>
             <rect x="9" y="3" width="6" height="11" rx="3" />
             <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
-        </svg>
-    );
-}
-
-function ScreenIcon() {
-    return (
-        <svg width="18" height="18" viewBox="0 0 24 24" {...stroke(1.9)}>
-            <rect x="3" y="4.5" width="18" height="12" rx="2" />
-            <path d="M8.5 20.5h7M12 16.5v4" />
+            {off && <path d="m4 3 16 18" />}
         </svg>
     );
 }
