@@ -142,8 +142,15 @@ export default function WorkspaceClient({ workId }: Props) {
     useEffect(() => {
         void (async () => {
             const repository = getRepository();
-            setWork(await repository.getWork(workId));
-            setSettings(await repository.getDisplaySettings(workId));
+
+            /* 互いに関わらないので、同時に頼む */
+            const [workData, settingsData] = await Promise.all([
+                repository.getWork(workId),
+                repository.getDisplaySettings(workId),
+            ]);
+
+            setWork(workData);
+            setSettings(settingsData);
             setIsWorkLoading(false);
         })();
     }, [workId]);

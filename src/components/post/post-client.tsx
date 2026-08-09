@@ -39,11 +39,12 @@ export default function PostClient() {
         setWorks(rows);
 
         /* 続きを出すために、話も読む */
-        const all: Episode[] = [];
-        for (const work of rows.slice(0, 3)) {
-            all.push(...(await repository.listEpisodes(work.id)));
-        }
-        setEpisodes(all);
+        /* まとめて頼む。1 本ずつ順に待たない */
+        const lists = await Promise.all(
+            rows.slice(0, 3).map((work) => repository.listEpisodes(work.id)),
+        );
+
+        setEpisodes(lists.flat());
         setIsLoading(false);
     }, []);
 

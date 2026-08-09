@@ -60,12 +60,26 @@ export default function SettingsClient({ workId }: Props) {
     useEffect(() => {
         void (async () => {
             const repository = getRepository();
-            setWork(await repository.getWork(workId));
-            setSettings(await repository.getDisplaySettings(workId));
-            setPublish(await repository.getPublishSettings(workId));
-            setAi(await repository.getAiSettings(workId));
-            setPreferences(await repository.getPreferences(workId));
-            setLogs(await repository.listWritingLogs(workId));
+
+            /* 互いに関わらないので、同時に頼む */
+            const [
+                workData, settingsData, publishData,
+                aiData, preferenceData, logData,
+            ] = await Promise.all([
+                repository.getWork(workId),
+                repository.getDisplaySettings(workId),
+                repository.getPublishSettings(workId),
+                repository.getAiSettings(workId),
+                repository.getPreferences(workId),
+                repository.listWritingLogs(workId),
+            ]);
+
+            setWork(workData);
+            setSettings(settingsData);
+            setPublish(publishData);
+            setAi(aiData);
+            setPreferences(preferenceData);
+            setLogs(logData);
             setIsLoading(false);
         })();
     }, [workId]);

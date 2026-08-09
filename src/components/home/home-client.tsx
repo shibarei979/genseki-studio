@@ -81,15 +81,19 @@ export default function HomeClient() {
          * 話は進み具合を出すために読む。
          * 「完成した話 ÷ 全話数」を作品ごとに出したい。
          */
-        const allEpisodes: Episode[] = [];
-        for (const work of rows) {
-            allEpisodes.push(...(await repository.listEpisodes(work.id)));
-        }
-        setEpisodes(allEpisodes);
+        /*
+         * 話とコンテストを、まとめて頼む。
+         * 作品ごとに順に待つと、そのぶん積み上がる。
+         */
+        const [lists, contestList] = await Promise.all([
+            Promise.all(rows.map((work) => repository.listEpisodes(work.id))),
+            repository.listContests(),
+        ]);
+
+        setEpisodes(lists.flat());
+
         // 準備中のものは書き手に見せない
-        setContests(
-            (await repository.listContests()).filter((row) => row.status !== "draft"),
-        );
+        setContests(contestList.filter((row) => row.status !== "draft"));
 
         /*
          * お知らせ。

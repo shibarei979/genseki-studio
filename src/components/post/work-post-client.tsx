@@ -37,11 +37,17 @@ export default function WorkPostClient({ workId }: { workId: string }) {
 
     const reload = useCallback(async () => {
         const repository = getRepository();
-        setWork(await repository.getWork(workId));
-        setPublish(await repository.getPublishSettings(workId));
-        setChapters(await repository.listChapters(workId));
+        /* 互いに関わらないので、同時に頼む */
+        const [workData, publishData, chapterData, rows] = await Promise.all([
+            repository.getWork(workId),
+            repository.getPublishSettings(workId),
+            repository.listChapters(workId),
+            repository.listEpisodes(workId),
+        ]);
 
-        const rows = await repository.listEpisodes(workId);
+        setWork(workData);
+        setPublish(publishData);
+        setChapters(chapterData);
         setEpisodes(rows);
         setSelectedId((current) => current ?? rows[0]?.id ?? null);
         setIsLoading(false);

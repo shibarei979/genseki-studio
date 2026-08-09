@@ -45,11 +45,21 @@ export default function PreviewClient({ workId }: { workId: string }) {
 
     const reload = useCallback(async () => {
         const repository = getRepository();
-        setWork(await repository.getWork(workId));
-        setEpisodes(await repository.listEpisodes(workId));
-        setPublish(await repository.getPublishSettings(workId));
-        setDisplay(await repository.getDisplaySettings(workId));
-        setProfile(await repository.getProfile());
+        /* 互いに関わらないので、同時に頼む */
+        const [workData, episodeData, publishData, displayData, profileData] =
+            await Promise.all([
+                repository.getWork(workId),
+                repository.listEpisodes(workId),
+                repository.getPublishSettings(workId),
+                repository.getDisplaySettings(workId),
+                repository.getProfile(),
+            ]);
+
+        setWork(workData);
+        setEpisodes(episodeData);
+        setPublish(publishData);
+        setDisplay(displayData);
+        setProfile(profileData);
         setIsLoading(false);
     }, [workId]);
 

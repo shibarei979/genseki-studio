@@ -29,11 +29,17 @@ export default function WorksClient() {
         const rows = await repository.listWorks();
         setWorks(rows);
 
-        const all: Episode[] = [];
-        for (const work of rows) {
-            all.push(...(await repository.listEpisodes(work.id)));
-        }
-        setEpisodes(all);
+        /*
+         * 作品ごとの話を、まとめて頼む。
+         *
+         * 1 本ずつ順に待っていた。
+         * 10 本あれば 10 回ぶんの往復が積み上がる。
+         */
+        const lists = await Promise.all(
+            rows.map((work) => repository.listEpisodes(work.id)),
+        );
+
+        setEpisodes(lists.flat());
         setIsLoading(false);
     }, []);
 

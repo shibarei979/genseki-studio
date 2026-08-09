@@ -177,7 +177,30 @@ export default function ResourceClient({ workId }: Props) {
 
     const reload = useCallback(async () => {
         const repository = getRepository();
-        setWork(await repository.getWork(workId));
+
+        /*
+         * まとめて頼む。
+         *
+         * 10 回を順に待っていた。
+         * 互いに関わらないので、同時に頼んでよい。
+         */
+        const [
+            workData, pageData, entryData, relationData,
+            stageData, sceneData, logData, episodeData, mentionData, aiData,
+        ] = await Promise.all([
+            repository.getWork(workId),
+            repository.listPages(workId),
+            repository.listEntries(workId),
+            repository.listRelations(workId),
+            repository.listPlotStages(workId),
+            repository.listPlotScenes(workId),
+            repository.listWritingLogs(workId),
+            repository.listEpisodes(workId),
+            repository.listMentions(workId),
+            repository.getAiSettings(workId),
+        ]);
+
+        setWork(workData);
 
         /*
          * ページが 1 つも無ければ、常設のものを作る。
@@ -186,19 +209,20 @@ export default function ResourceClient({ workId }: Props) {
          * 接続先に移してから抜けていた。
          * 空の資料画面を渡されても、何をすればよいか分からない。
          */
-        let pageList = await repository.listPages(workId);
-        if (pageList.length === 0) {
-            pageList = await repository.setupPages(workId, []);
-        }
-        setPages(pageList);
-        setEntries(await repository.listEntries(workId));
-        setRelations(await repository.listRelations(workId));
-        setStages(await repository.listPlotStages(workId));
-        setScenes(await repository.listPlotScenes(workId));
-        setLogs(await repository.listWritingLogs(workId));
-        setEpisodes(await repository.listEpisodes(workId));
-        setMentions(await repository.listMentions(workId));
-        setAi(await repository.getAiSettings(workId));
+        setPages(
+            pageData.length === 0
+                ? await repository.setupPages(workId, [])
+                : pageData,
+        );
+
+        setEntries(entryData);
+        setRelations(relationData);
+        setStages(stageData);
+        setScenes(sceneData);
+        setLogs(logData);
+        setEpisodes(episodeData);
+        setMentions(mentionData);
+        setAi(aiData);
         setIsLoading(false);
     }, [workId]);
 
