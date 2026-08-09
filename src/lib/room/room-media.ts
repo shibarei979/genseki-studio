@@ -142,18 +142,9 @@ export class RoomMedia {
             }
 
             /*
-             * 落ち着いているときだけ申し出る。
-             *
-             * やり取りの途中で重ねると、返事を受け取る番が
-             * 来なくなって繋ぎが止まる。
-             *
-             * id の小さいほうに限らない。
-             * 音を足したのが自分なら、自分から申し出る。
-             * 相手はマイクを入れていないかもしれない。
+             * 申し出は negotiationneeded に任せる。
+             * ここで重ねると、二重に申し出ることになる。
              */
-            if (peer.connection.signalingState === "stable") {
-                void this.offer(id);
-            }
         }
 
         this.emit();
@@ -256,9 +247,16 @@ export class RoomMedia {
         /*
          * 送るものが増えたら、繋ぎ直しの申し出をやり直す。
          * マイクを後から入れたとき、これが無いと相手に届かない。
+         *
+         * id の小さいほうに限らない。
+         * 音を足したのは自分なので、自分から申し出る。
+         * 相手はマイクを入れていないかもしれない。
+         *
+         * 同時に申し出てぶつかったら、受け取る側で譲る。
          */
         connection.addEventListener("negotiationneeded", () => {
-            if (this.selfId < id) void this.offer(id);
+            if (connection.signalingState !== "stable") return;
+            void this.offer(id);
         });
 
         return peer;
@@ -287,17 +285,25 @@ export class RoomMedia {
             /*
              * 申し出を受ける。
              *
-             * 自分も同時に申し出ていると、双方が待つ側になれず
-             * どちらも繋がらない。
+             * 自分も同時に申し出ていることがある。
+             * そのままでは双方が待つ側になれず、どちらも繋がらない。
              *
-             * id が小さいほうが申し出る決まりなので、
-             * 自分が申し出る側なら、相手の申し出は捨てる。
+             * id の小さいほうを通す。
+             * 大きいほうは、自分の申し出を取り下げてから受ける。
              */
-            if (
-                peer.connection.signalingState !== "stable" &&
-                this.selfId < signal.from
-            ) {
-                return;
+            const isColliding =
+                peer.connection.signalingState === "have-local-offer";
+
+            if (isColliding) {
+                if (this.selfId < signal.from) {
+                    /* 自分が通る側。相手の申し出は捨てる */
+                    return;
+                }
+
+                /* 自分が譲る側。申し出を取り下げる */
+                await peer.connection.setLocalDescription({
+                    type: "rollback",
+                });
             }
 
             await peer.connection.setRemoteDescription({

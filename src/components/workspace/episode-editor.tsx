@@ -20,13 +20,8 @@ import {
     normalizeForHorizontal,
     normalizeForVertical,
 } from "@/lib/utils/vertical-text";
-import type { DisplaySettings, Episode, WritingMode } from "@/types";
-import {
-    FONT_LABEL,
-    FONT_SIZES,
-    WRITING_MODE_DESCRIPTION,
-    WRITING_MODE_LABEL,
-} from "@/types";
+import type { DisplaySettings, Episode } from "@/types";
+import { WRITING_MODE_LABEL } from "@/types";
 
 interface Props {
     episode: Episode;
@@ -36,24 +31,16 @@ interface Props {
     onJumped?: () => void;
     onSave: (patch: { title: string; body: string }) => Promise<void>;
     onToggleWritingMode: () => void;
-    /** 組み方を変える */
-    onSetWritingMode?: (mode: WritingMode) => void;
-    /** 書体を変える */
-    onSetFont?: (font: DisplaySettings["font_family"]) => void;
-    /** 文字の大きさを変える */
-    onSetFontSize?: (size: number) => void;
-    /** この話の公開を変える */
     onOpenHistory: () => void;
     isHistoryOpen: boolean;
     onOpenMentions: () => void;
     isMentionsOpen: boolean;
     onSelectionChange: (selected: string) => void;
-    /** 一括置換を開く */
-    onOpenReplace: () => void;
-    isReplaceOpen: boolean;
+    onOpenProofread: () => void;
+    isProofreadOpen: boolean;
     onOpenRead: () => void;
     isReadOpen: boolean;
-    /** 置換の欄へ、いまの本文と差し替え口を渡す */
+    /** 推敲パネルからの一括修正を受け取るための橋渡し */
     onRegisterBody: (body: string, apply: (next: string) => void) => void;
 }
 
@@ -64,16 +51,13 @@ export default function EpisodeEditor({
     jumpToLine,
     onJumped,
     onToggleWritingMode,
-    onSetWritingMode,
-    onSetFont,
-    onSetFontSize,
     onOpenHistory,
     isHistoryOpen,
     onOpenMentions,
     isMentionsOpen,
     onSelectionChange,
-    onOpenReplace,
-    isReplaceOpen,
+    onOpenProofread,
+    isProofreadOpen,
     onOpenRead,
     isReadOpen,
     onRegisterBody,
@@ -101,7 +85,7 @@ export default function EpisodeEditor({
         setBeforeNormalize(null);
     }, [episode.id, episode.title, episode.body]);
 
-    const { state, savedAt, save } = useAutosave({
+    const { state, savedAt } = useAutosave({
         // 2 つの値をまとめて 1 つの文字列として監視する
         value: JSON.stringify({ title, body }),
         onSave: async (serialized) => {
@@ -123,38 +107,28 @@ export default function EpisodeEditor({
         await getRepository().createVersion(episode.id, "auto");
     }
 
-    /*
-     * 組み方を切り替えたら、自動で整える。
-     *
-     * 縦書き … 半角の英数字は寝てしまうので全角へ
-     * 横書き … 縦書きのために変えたものを戻す
-     *
-     * 押し忘れる道具にするより、切り替えたときに直す。
-     * 元に戻す道は残す。整えすぎたと思うことがある。
-     */
-    const lastModeRef = useRef(settings.writing_mode);
+    function handleNormalize() {
+        /*
+         * いまの書き方に合わせて直す。
+         *
+         * 縦書きで打った文を横書きにしても、全角のままだと読みにくい。
+         * 逆も同じ。書き方を切り替えたら、揃え直せるようにする。
+         */
+        const isVertical = settings.writing_mode === "vertical";
 
-    useEffect(() => {
-        const mode = settings.writing_mode;
-        if (mode === lastModeRef.current) return;
-
-        const result =
-            mode === "vertical"
-                ? normalizeForVertical(body)
-                : normalizeForHorizontal(body);
-
-        if (result.changeCount > 0) {
-            setBeforeNormalize(body);
-            setBody(result.text);
-            setNotice(
-                `${mode === "vertical" ? "縦書き" : "横書き"}用に${result.changeCount}行を整えました`,
-            );
-            window.setTimeout(() => setNotice(""), 6000);
+        const result = isVertical
+            ? normalizeForVertical(body)
+            : normalizeForHorizontal(body);
+        if (result.changeCount === 0) {
+            setNotice("直すところはありませんでした");
+            window.setTimeout(() => setNotice(""), 2500);
+            return;
         }
-
-        lastModeRef.current = mode;
-    }, [settings.writing_mode, body]);
-
+        setBeforeNormalize(body);
+        setBody(result.text);
+        setNotice(`${result.changeCount}行を整えました`);
+        window.setTimeout(() => setNotice(""), 6000);
+    }
 
     function handleUndoNormalize() {
         if (beforeNormalize === null) return;
@@ -164,50 +138,10 @@ export default function EpisodeEditor({
         window.setTimeout(() => setNotice(""), 2500);
     }
 
-    // 置換の欄へ、いまの本文と差し替え口を渡す
+    // 推敲パネルへ、いまの本文と差し替え口を渡す
     useEffect(() => {
         onRegisterBody(body, setBody);
     }, [body, onRegisterBody]);
-
-    /**
-     * いまの位置に文字を差し込む。
-     *
-     * 選んでいる範囲があれば、それを置き換える。
-     * 末尾に足すのではなく、書いている場所に入れる。
-     */
-    function insertAtCursor(text: string) {
-        const next =
-            body.slice(0, range.start) + text + body.slice(range.end);
-        setBody(next);
-
-        /* 差し込んだ文字の後ろへ、書き口を移す */
-        const at = range.start + text.length;
-        setRange({ start: at, end: at });
-    }
-
-    /**
-     * 会話文を除いて、行の頭に全角の空白を入れる。
-     *
-     * すでに入っている行と、鉤括弧で始まる行は触らない。
-     * 会話文は字下げしないのが日本語の組版の慣習。
-     */
-    function indentNonDialogue() {
-        const next = body
-            .split("\n")
-            .map((line) => {
-                const trimmed = line.trimStart();
-                if (trimmed === "") return line;
-                if (line.startsWith("\u3000")) return line;
-                // 「『【 で始まる行は会話や見出し
-                if (/^[「『【（]/.test(trimmed)) return line;
-                return `\u3000${line}`;
-            })
-            .join("\n");
-
-        setBody(next);
-        setNotice("字下げしました");
-        window.setTimeout(() => setNotice(""), 2000);
-    }
 
     function handleRuby() {
         if (range.start === range.end) {
@@ -272,39 +206,9 @@ export default function EpisodeEditor({
                     className="min-w-0 flex-1 border-b border-transparent bg-transparent text-base font-medium text-ink outline-none focus:border-forest-line"
                 />
 
-                <div className="flex shrink-0 items-center gap-3 text-xs text-muted">
-                    {/*
-                     * 保存の状態と文字数は別のもの。
-                     * 縦線で仕切って、見た目でも分ける。
-                     */}
-                    <SaveIndicator
-                        state={state}
-                        savedAt={savedAt}
-                        onRetry={() => void save()}
-                    />
-
-                    <span className="h-3.5 w-px bg-line" />
-
-                    {/*
-                     * 文字数。
-                     * 選んでいるあいだは、その長さも出す。
-                     * 応募の字数に収めるとき、どこを削るか見当がつく。
-                     */}
-                    <span className="tabular-nums">
-                        {formatNumber(countChars(body))}字
-                        {range.end > range.start && (
-                            <span className="text-forest">
-                                {" / "}
-                                {formatNumber(
-                                    countChars(body.slice(range.start, range.end)),
-                                )}
-                                字
-                            </span>
-                        )}
-                    </span>
-
-                    <span className="h-3.5 w-px bg-line" />
-
+                <div className="flex shrink-0 items-center gap-4 text-xs text-muted">
+                    <SaveIndicator state={state} savedAt={savedAt} />
+                    <span>{formatNumber(countChars(body))}文字</span>
                     <button
                         type="button"
                         onClick={onOpenRead}
@@ -317,6 +221,19 @@ export default function EpisodeEditor({
                         ].join(" ")}
                     >
                         通し読み
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onOpenProofread}
+                        aria-pressed={isProofreadOpen}
+                        className={[
+                            "rounded-md border px-2.5 py-1",
+                            isProofreadOpen
+                                ? "border-forest bg-forest-tint text-forest"
+                                : "border-line hover:border-forest-line hover:text-forest",
+                        ].join(" ")}
+                    >
+                        推敲
                     </button>
                     <button
                         type="button"
@@ -348,21 +265,9 @@ export default function EpisodeEditor({
             </div>
 
             <div className="flex items-center gap-2 border-b border-line bg-canvas px-6 py-2 text-xs">
-                {/*
-                 * 組み方は 3 つから選ぶ。
-                 * 原稿用紙は「縦書き＋マス目」ではなく、
-                 * 紙の大きさもページ送りも違う別の見せ方。
-                 */}
-                {/* 組み方。押すと入れ替わる */}
                 <button
                     type="button"
-                    onClick={() =>
-                        onSetWritingMode?.(
-                            settings.writing_mode === "vertical"
-                                ? "horizontal"
-                                : "vertical",
-                        )
-                    }
+                    onClick={onToggleWritingMode}
                     className="rounded-md border border-line bg-surface px-2.5 py-1 text-muted hover:border-forest-line hover:text-forest"
                 >
                     {WRITING_MODE_LABEL[otherMode]}にする
@@ -383,98 +288,6 @@ export default function EpisodeEditor({
                     行番号
                 </button>
 
-                {/* 書体。書きながら変えたくなることがある */}
-                {/* 書体 */}
-                <select
-                    value={settings.font_family}
-                    onChange={(e) =>
-                        onSetFont?.(e.target.value as typeof settings.font_family)
-                    }
-                    aria-label="書体"
-                    className={selectClass}
-                >
-                    {(Object.keys(FONT_LABEL) as (keyof typeof FONT_LABEL)[]).map(
-                        (key) => (
-                            <option key={key} value={key}>
-                                {FONT_LABEL[key]}
-                            </option>
-                        ),
-                    )}
-                </select>
-
-                {/* 文字の大きさ */}
-                <select
-                    value={settings.font_size}
-                    onChange={(e) => onSetFontSize?.(Number(e.target.value))}
-                    aria-label="文字の大きさ"
-                    className={selectClass}
-                >
-                    {FONT_SIZES.map((size) => (
-                        <option key={size} value={size}>
-                            {size}px
-                        </option>
-                    ))}
-                </select>
-
-                <span className="mx-1 h-4 w-px bg-line" />
-
-                {/* GENSEKIKORO と同じ道具 */}
-                <button
-                    type="button"
-                    onClick={() =>
-                        /*
-                         * 場面の切れ目。
-                         *
-                         * 縦書きは 1 行に入る字数が少ないので短く引く。
-                         * 横書きと同じ長さだと、線だけで何行も使う。
-                         */
-                        insertAtCursor(
-                            `\n${"─".repeat(
-                                settings.writing_mode === "vertical" ? 37 : 81,
-                            )}\n`,
-                        )
-                    }
-                    title="場面の切れ目に線を入れます"
-                    className={toolClass}
-                >
-                    区切り線
-                </button>
-
-                <button
-                    type="button"
-                    onClick={indentNonDialogue}
-                    title="会話文を除く行の頭に、全角の空白を入れます"
-                    className={toolClass}
-                >
-                    一文字下げ
-                </button>
-
-                <button
-                    type="button"
-                    onClick={() => insertAtCursor("\n\n")}
-                    title="1行あけて改行します"
-                    className={toolClass}
-                >
-                    改行
-                </button>
-
-                <span className="mx-1 h-4 w-px bg-line" />
-
-                <button
-                    type="button"
-                    onClick={onOpenReplace}
-                    aria-pressed={isReplaceOpen}
-                    title="文字をまとめて置き換えます"
-                    className={[
-                        "rounded-md border px-2.5 py-1",
-                        isReplaceOpen
-                            ? "border-forest bg-forest-tint text-forest"
-                            : "border-line bg-surface text-muted hover:border-forest-line hover:text-forest",
-                    ].join(" ")}
-                >
-                    置換
-                </button>
-
                 <button
                     type="button"
                     onClick={handleRuby}
@@ -491,6 +304,21 @@ export default function EpisodeEditor({
                     className="rounded-md border border-line bg-surface px-2.5 py-1 text-muted hover:border-forest-line hover:text-forest"
                 >
                     傍点
+                </button>
+
+                <button
+                    type="button"
+                    onClick={handleNormalize}
+                    title={
+                        settings.writing_mode === "vertical"
+                            ? "半角英数字を全角に、... を …… に直し、段落の頭を字下げします"
+                            : "全角英数字を半角に、…… を ... に直します"
+                    }
+                    className="rounded-md border border-line bg-surface px-2.5 py-1 text-muted hover:border-forest-line hover:text-forest"
+                >
+                    {settings.writing_mode === "vertical"
+                        ? "縦書き用に整える"
+                        : "横書き用に整える"}
                 </button>
 
                 {beforeNormalize !== null && (
@@ -527,103 +355,9 @@ export default function EpisodeEditor({
     );
 }
 
-/**
- * 保存の状態。
- *
- * 「自動保存」とだけ出すと、
- * それが「する仕組みがある」なのか「したところ」なのか分からない。
- * いま何が起きているかを言い切る。
- */
-function SaveIndicator({
-    state,
-    savedAt,
-    onRetry,
-}: {
-    state: string;
-    savedAt: string | null;
-    onRetry?: () => void;
-}) {
-    if (state === "saving") {
-        return (
-            <span className="flex items-center gap-1.5 text-muted">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--color-amber)]" />
-                保存中…
-            </span>
-        );
-    }
-
-    if (state === "error") {
-        return (
-            <span className="flex items-center gap-2 text-[var(--color-danger)]">
-                保存できませんでした
-                {onRetry && (
-                    <button
-                        type="button"
-                        onClick={onRetry}
-                        className="rounded border border-[var(--color-danger)] px-2 py-0.5 text-[11px] hover:bg-[var(--color-danger-tint)]"
-                    >
-                        再試行
-                    </button>
-                )}
-            </span>
-        );
-    }
-
-    if (state === "pending") {
-        return (
-            <span className="flex items-center gap-1.5 text-faint">
-                <span className="h-1.5 w-1.5 rounded-full bg-faint" />
-                未保存の変更
-            </span>
-        );
-    }
-
-    if (state === "saved" && savedAt) {
-        return (
-            <span className="flex items-center gap-1.5 text-forest">
-                <CheckIcon />
-                保存済み {formatTime(savedAt)}
-            </span>
-        );
-    }
-
-    /*
-     * 何も変えていないとき。
-     *
-     * 開いた時点で保存されているので「保存済み」と言う。
-     * 「まだ保存していません」だと、
-     * 書いたものが失われるように読める。
-     */
-    return (
-        <span className="flex items-center gap-1.5 text-forest">
-            <CheckIcon />
-            保存済み
-        </span>
-    );
+function SaveIndicator({ state, savedAt }: { state: string; savedAt: string | null }) {
+    if (state === "saving") return <span>保存中</span>;
+    if (state === "pending") return <span className="text-faint">未保存の変更</span>;
+    if (state === "saved" && savedAt) return <span>自動保存済み {formatTime(savedAt)}</span>;
+    return <span className="text-faint">自動保存</span>;
 }
-
-function CheckIcon() {
-    return (
-        <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-        >
-            <path d="m4 12.5 5.5 5.5L20 6.5" />
-        </svg>
-    );
-}
-
-/** 道具の並びに置く選択欄。見た目を揃える */
-const selectClass =
-    "rounded-md border border-line bg-surface px-2 py-1 text-muted outline-none hover:border-forest-line focus:border-forest";
-
-/** 道具の並びのボタン。見た目を揃える */
-const toolClass =
-    "rounded-md border border-line bg-surface px-2.5 py-1 text-muted hover:border-forest-line hover:text-forest";

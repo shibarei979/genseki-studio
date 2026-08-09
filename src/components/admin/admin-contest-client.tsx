@@ -20,7 +20,8 @@ import { useCallback, useEffect, useState } from "react";
 import ContestBanner from "@/components/common/contest-banner";
 import AdminShell from "@/components/admin/admin-shell";
 import { getRepository } from "@/lib/repository";
-import { deleteImage, putImage, shrinkImage } from "@/lib/storage/image-store";
+import { shrinkImage } from "@/lib/storage/image-store";
+import { removeImage, uploadImage } from "@/lib/storage/remote-image";
 import { formatNumber } from "@/lib/utils/text";
 import {
     CONTEST_STATUS_COLOR,
@@ -798,8 +799,12 @@ function BannerField({
         try {
             // 帯は幅いっぱいに出るので、大きめに残す
             const shrunk = await shrinkImage(file, true);
-            const ref = await putImage(shrunk);
-            if (contest.banner_url) await deleteImage(contest.banner_url);
+            const ref = await uploadImage(shrunk, "contest");
+            /*
+             * 前の絵を片付けてから置き換える。
+             * 残しておくと、誰も見ない絵が積もる。
+             */
+            if (contest.banner_url) await removeImage(contest.banner_url);
             onChange({ banner_url: ref });
         } catch {
             setNotice("この画像は読み込めませんでした。");
@@ -894,7 +899,7 @@ function BannerField({
                                 type="button"
                                 onClick={async () => {
                                     if (contest.banner_url) {
-                                        await deleteImage(contest.banner_url);
+                                        await removeImage(contest.banner_url);
                                     }
                                     onChange({ banner_url: null });
                                 }}
