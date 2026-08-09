@@ -127,11 +127,35 @@ export class RoomMedia {
             },
         });
 
-        for (const [, peer] of Array.from(this.peers)) {
+        /*
+         * すでに繋いでいる相手に、音を乗せる。
+         *
+         * 乗せただけでは相手に届かない。
+         * 「送るものが増えた」と申し出直す必要がある。
+         *
+         * これをしていなかったので、繋がっているのに
+         * 中身が空のまま届いていた。
+         */
+        for (const [id, peer] of Array.from(this.peers)) {
             for (const track of this.micStream.getTracks()) {
                 peer.connection.addTrack(track, this.micStream);
             }
+
+            /*
+             * 落ち着いているときだけ申し出る。
+             *
+             * やり取りの途中で重ねると、返事を受け取る番が
+             * 来なくなって繋ぎが止まる。
+             *
+             * id の小さいほうに限らない。
+             * 音を足したのが自分なら、自分から申し出る。
+             * 相手はマイクを入れていないかもしれない。
+             */
+            if (peer.connection.signalingState === "stable") {
+                void this.offer(id);
+            }
         }
+
         this.emit();
     }
 
@@ -154,9 +178,16 @@ export class RoomMedia {
             this.peers.delete(id);
         }
 
-        /* 増えた人。id が小さいほうから申し出る */
+        /*
+         * 増えた人。
+         *
+         * 申し出るのは id が小さいほうだけ。
+         * 両方が申し出ると、返事を受け取る番が来ない。
+         */
         for (const id of others) {
             if (this.peers.has(id)) continue;
+
+            this.ensurePeer(id);
             if (this.selfId < id) void this.offer(id);
         }
 
