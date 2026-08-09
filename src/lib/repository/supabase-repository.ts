@@ -158,6 +158,14 @@ async function requireUser(): Promise<string> {
  * 返ってきた行をそのまま使う。
  * 列名が同じものは、この関数を通すだけで型が合う。
  */
+/**
+ * announcements から来たお知らせに付ける印。
+ *
+ * 2 つの表が混ざるので、id だけでは
+ * どちらへ書き戻せばよいか分からない。
+ */
+const ANNOUNCE_PREFIX = "an:";
+
 function rows<T>(data: unknown): T[] {
     return Array.isArray(data) ? (data as T[]) : [];
 }
@@ -2102,7 +2110,13 @@ export const supabaseRepository: Repository = {
             published_at: String(
                 row.published_at ?? row.created_at ?? "",
             ).slice(0, 10),
-        })) as AdminNotice[];
+            /*
+             * どの表から来たかを、id に持たせる。
+             *
+             * 直す・消すときに、行き先を間違えると
+             * 「見つからない」と言われて落ちる。
+             */
+        })).map((row) => ({ ...row, id: `${ANNOUNCE_PREFIX}${row.id}` })) as AdminNotice[];
 
         /* 新しい順に混ぜる */
         return [...notices, ...announcements].sort((a, b) =>
@@ -2111,13 +2125,26 @@ export const supabaseRepository: Repository = {
     },
 
     async createNotice(): Promise<AdminNotice> {
+        /*
+         * 空のまま作ると、必須の列で弾かれることがある。
+         * 初めの値を明示しておく。
+         */
         const { data, error } = await db()
             .from("admin_notices")
-            .insert({})
+            .insert({
+                type: "info",
+                title: "",
+                body: "",
+                link: "",
+                is_published: false,
+                published_at: new Date().toISOString().slice(0, 10),
+            })
             .select()
-            .single();
+            .maybeSingle();
 
         if (error) throw new Error(describeError(error.message));
+        if (!data) throw new Error("お知らせを作れませんでした");
+
         return data as AdminNotice;
     },
 
@@ -2125,18 +2152,42 @@ export const supabaseRepository: Repository = {
         noticeId: string,
         patch: Partial<AdminNotice>,
     ): Promise<AdminNotice> {
+        /* announcements のものは、そちらへ書き戻す */
+        if (noticeId.startsWith(ANNOUNCE_PREFIX)) {
+            const realId = noticeId.slice(ANNOUNCE_PREFIX.length);
+
+            const { data, error } = await db()
+                .from("announcements")
+                .update(patch)
+                .eq("id", realId)
+                .select()
+                .maybeSingle();
+
+            if (error) throw new Error(describeError(error.message));
+            return { ...(data as AdminNotice), id: noticeId };
+        }
+
         const { data, error } = await db()
             .from("admin_notices")
             .update(patch)
             .eq("id", noticeId)
             .select()
-            .single();
+            .maybeSingle();
 
         if (error) throw new Error(describeError(error.message));
         return data as AdminNotice;
     },
 
     async deleteNotice(noticeId: string): Promise<void> {
+        /* announcements のものは、そちらから消す */
+        if (noticeId.startsWith(ANNOUNCE_PREFIX)) {
+            await db()
+                .from("announcements")
+                .delete()
+                .eq("id", noticeId.slice(ANNOUNCE_PREFIX.length));
+            return;
+        }
+
         await db().from("admin_notices").delete().eq("id", noticeId);
     },
 
