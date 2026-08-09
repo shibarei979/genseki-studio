@@ -126,10 +126,10 @@ function Nav({ onStart }: { onStart?: () => void }) {
             className="sticky top-0 z-40 bg-white/95 backdrop-blur transition-shadow"
             style={{ boxShadow: isScrolled ? "0 1px 0 rgba(0,0,0,0.07)" : "none" }}
         >
-            <div className="mx-auto flex h-16 max-w-6xl items-center px-5 sm:px-8">
+            <div className="mx-auto flex h-[72px] max-w-6xl items-center px-5 sm:px-8">
                 <Link href="/" aria-label="原石航路" className="shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/logo.svg" alt="原石航路" className="h-11 w-auto" />
+                    <img src="/logo.svg" alt="原石航路" className="h-[64px] w-auto" />
                 </Link>
 
                 <div className="ml-auto flex items-center gap-2">
@@ -210,7 +210,13 @@ function Hero({ onStart }: { onStart?: () => void }) {
              * background-image は読めなくても何も知らせてこないので、
              * 次の候補へ送れない。
              */}
-            <div className="absolute inset-y-0 right-0 hidden w-[58%] overflow-hidden md:block">
+            {/*
+             * 絵は右半分に敷く。
+             *
+             * 58% だと右へ寄りすぎて、字と絵の境目が
+             * 画面の真ん中より左に来る。
+             */}
+            <div className="absolute inset-y-0 right-0 hidden w-1/2 overflow-hidden md:block">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={HERO_IMAGES[heroIndex]}
@@ -229,7 +235,7 @@ function Hero({ onStart }: { onStart?: () => void }) {
                 className="absolute inset-0 hidden md:block"
                 style={{
                     background:
-                        "linear-gradient(90deg, #ffffff 0%, #ffffff 40%, rgba(255,255,255,0.88) 52%, rgba(255,255,255,0) 74%)",
+                        "linear-gradient(90deg, #ffffff 0%, #ffffff 42%, rgba(255,255,255,0.85) 54%, rgba(255,255,255,0) 78%)",
                 }}
                 aria-hidden="true"
             />
@@ -360,13 +366,13 @@ function Features() {
             icon: <PenIcon />,
             title: "執筆エディター",
             body: "見やすく、書きやすいエディターで思考を止めずに執筆できます。",
-            figure: <Figure name="editor" fallback={<PaneMock rows={9} />} />,
+            figure: <Figure name="editor" label="執筆エディター" fallback={<PaneMock rows={9} />} />,
         },
         {
             icon: <GridIcon />,
             title: "プロット機能",
             body: "物語の流れや構成を整理し、視点を俯瞰も管理できます。",
-            figure: <Figure name="plot" fallback={<CardsMock />} />,
+            figure: <Figure name="plot" label="プロット機能" fallback={<CardsMock />} />,
         },
         {
             icon: <PeopleIcon small />,
@@ -503,28 +509,72 @@ function Features() {
 function Figure({
     name,
     fallback,
+    label = "",
 }: {
     name: string;
     fallback: React.ReactNode;
+    /** 大きく出したときの説明 */
+    label?: string;
 }) {
     const candidates = lpImages(name);
     const [index, setIndex] = useState(0);
     const [hasFailed, setHasFailed] = useState(false);
 
+    /* 押すと大きく見られる */
+    const [isOpen, setIsOpen] = useState(false);
+
     if (hasFailed) return <>{fallback}</>;
 
     return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-            src={candidates[index]}
-            alt=""
-            draggable={false}
-            onError={() => {
-                if (index + 1 < candidates.length) setIndex(index + 1);
-                else setHasFailed(true);
-            }}
-            className="h-full w-full object-cover"
-        />
+        <>
+            <button
+                type="button"
+                onClick={() => setIsOpen(true)}
+                title="押すと大きく見られます"
+                className="h-full w-full cursor-zoom-in"
+            >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src={candidates[index]}
+                    alt={label}
+                    draggable={false}
+                    onError={() => {
+                        if (index + 1 < candidates.length) setIndex(index + 1);
+                        else setHasFailed(true);
+                    }}
+                    className="h-full w-full object-cover"
+                />
+            </button>
+
+            {/*
+             * 大きく出す。
+             *
+             * 小さいままだと何の画面か分からない。
+             * 押したら全体が見えるようにする。
+             */}
+            {isOpen && (
+                <div
+                    role="dialog"
+                    aria-label={label || "画面の写し"}
+                    onClick={() => setIsOpen(false)}
+                    className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/70 p-6"
+                >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={candidates[index]}
+                        alt={label}
+                        draggable={false}
+                        className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+                    />
+
+                    {label && (
+                        <span className="absolute bottom-6 text-[12px] text-white/80">
+                            {label}
+                        </span>
+                    )}
+                </div>
+            )}
+        </>
     );
 }
 
@@ -608,6 +658,15 @@ function SavedMock() {
  * 枠だけ置いて、写しが撮れたら差し替える。
  */
 function DeviceFrame() {
+    /*
+     * 画面の写し。
+     *
+     * 無ければ「準備中」と出す。
+     * 空の枠だけ置くと、壊れているように見える。
+     */
+    const [hasDesktop, setHasDesktop] = useState(true);
+    const [hasMobile, setHasMobile] = useState(true);
+
     return (
         <div className="relative">
             {/* ノート型 */}
@@ -616,24 +675,46 @@ function DeviceFrame() {
                 style={{ borderColor: "#2b3440", aspectRatio: "16 / 10" }}
             >
                 <div
-                    className="flex h-full w-full items-center justify-center rounded-sm"
+                    className="flex h-full w-full items-center justify-center overflow-hidden rounded-sm"
                     style={{ background: NAVY.tint }}
                 >
-                    <span className="text-[11px]" style={{ color: NAVY.soft }}>
-                        執筆画面（準備中）
-                    </span>
+                    {hasDesktop ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                            src="/images/lp/editor.png"
+                            alt="執筆画面"
+                            draggable={false}
+                            onError={() => setHasDesktop(false)}
+                            className="h-full w-full object-cover object-top"
+                        />
+                    ) : (
+                        <span className="text-[11px]" style={{ color: NAVY.soft }}>
+                            執筆画面（準備中）
+                        </span>
+                    )}
                 </div>
             </div>
 
             {/* 手のひら型。右下に重ねる */}
             <div
-                className="absolute -bottom-6 -right-2 hidden w-[22%] rounded-[14px] border-[6px] bg-white shadow-lg sm:block"
+                className="absolute -bottom-6 -right-2 hidden w-[22%] overflow-hidden rounded-[14px] border-[6px] bg-white shadow-lg sm:block"
                 style={{ borderColor: "#2b3440", aspectRatio: "9 / 17" }}
             >
-                <div
-                    className="h-full w-full rounded-[6px]"
-                    style={{ background: NAVY.tint }}
-                />
+                {hasMobile ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                        src="/images/lp/plot.png"
+                        alt="スマートフォンでの画面"
+                        draggable={false}
+                        onError={() => setHasMobile(false)}
+                        className="h-full w-full rounded-[6px] object-cover object-top"
+                    />
+                ) : (
+                    <div
+                        className="h-full w-full rounded-[6px]"
+                        style={{ background: NAVY.tint }}
+                    />
+                )}
             </div>
         </div>
     );
@@ -693,9 +774,15 @@ function Contests() {
                         {cards.map((card) => (
                             <li
                                 key={card.title}
-                                className="relative overflow-hidden rounded-xl px-6 py-7"
+                                /*
+                                 * 押せる。押すとコンテスト一覧へ。
+                                 * 見て終わりの箱にしない。
+                                 */
+                                className="group relative overflow-hidden rounded-2xl px-7 py-8 transition-transform hover:-translate-y-0.5"
                                 style={{
                                     background: `linear-gradient(160deg, ${NAVY.base} 0%, ${NAVY.deep} 100%)`,
+                                    boxShadow:
+                                        "0 2px 8px rgba(31,78,107,0.18), 0 12px 32px rgba(31,78,107,0.14)",
                                 }}
                             >
                                 {/* 遠くの灯り。紺だけだと沈む */}
@@ -709,25 +796,36 @@ function Contests() {
                                 />
 
                                 <div className="relative">
-                                    <h3 className="text-[16px] tracking-[0.06em] text-white">
-                                        {card.title}
-                                    </h3>
-                                    <p className="mt-1 text-[11px] tracking-[0.14em] text-white/45">
+                                    {/*
+                                     * 見出しの上に細い線。
+                                     * 紺一色だと、どこから読むか目が迷う。
+                                     */}
+                                    <span
+                                        className="mb-4 block h-px w-10"
+                                        style={{ background: "#e8b769" }}
+                                        aria-hidden="true"
+                                    />
+
+                                    <p className="text-[10px] tracking-[0.2em] text-white/40">
                                         {card.latin}
                                     </p>
 
-                                    <p className="mt-4 text-[12px] leading-[2] text-white/75">
+                                    <h3 className="mt-1.5 text-[18px] tracking-[0.04em] text-white">
+                                        {card.title}
+                                    </h3>
+
+                                    <p className="mt-4 text-[12px] leading-[2] text-white/70">
                                         {card.body}
                                     </p>
 
-                                    <ul className="mt-5 space-y-2.5">
+                                    <ul className="mt-6 space-y-3 border-t border-white/10 pt-5">
                                         {card.notes.map((note) => (
                                             <li
                                                 key={note}
                                                 className="flex gap-2.5 text-[11px] leading-relaxed text-white/70"
                                             >
                                                 <span
-                                                    className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
+                                                    className="mt-1 h-1 w-1 shrink-0 rounded-full"
                                                     style={{ background: "#e8b769" }}
                                                 />
                                                 {note}

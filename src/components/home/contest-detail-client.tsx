@@ -29,7 +29,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 
 import ContestBanner from "@/components/common/contest-banner";
 import Header from "@/components/layout/header";
@@ -115,6 +115,9 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
     }
 
     const tone = statusColor(contest.status);
+
+    /* 賞金の総額。拾えなければ出さない */
+    const totalPrize = sumPrize(contest.prizes ?? []);
     const remaining = daysUntil(contest.ends_at);
     const isOpen = contest.status === "open";
 
@@ -183,19 +186,19 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
 
             {/* ============ 顔 ============ */}
             <div className="bg-surface">
-                <div className="mx-auto grid max-w-5xl items-center gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-                    <div className="relative overflow-hidden rounded-xl">
+                <div className="mx-auto grid max-w-6xl items-center gap-9 px-6 py-9 sm:px-8 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)]">
+                    {/*
+                     * 絵。
+                     *
+                     * 札は載せない。絵柄に紛れて読めないうえ、
+                     * 状態は締切のところで分かる。
+                     */}
+                    <div className="overflow-hidden rounded-2xl shadow-[0_4px_20px_rgba(31,78,107,0.14)]">
                         <ContestBanner
                             contest={contest}
                             className="aspect-[4/3] w-full"
                             fallback="画像なし"
                         />
-                        <span
-                            className="absolute left-0 top-0 px-3 py-1 text-[11px] font-medium text-white"
-                            style={{ background: tone.chip }}
-                        >
-                            {statusLabel(contest.status)}
-                        </span>
                     </div>
 
                     <div className="min-w-0">
@@ -215,11 +218,18 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                         {/*
                          * 札。
                          *
-                         * 見本では「賞金総額」も並んでいるが、
-                         * 賞は自由に書ける欄なので、足し合わせて金額にできない。
-                         * 数えられるものだけを出す。
+                         * 賞金の総額を先頭に置く。
+                         * 出す人がまず知りたいのはそこ。
+                         *
+                         * 賞は自由に書ける欄なので、金額は
+                         * 「¥30,000」「3万円」のような書き方から拾う。
+                         * 拾えなければ出さない。
                          */}
                         <ul className="mt-4 flex flex-wrap gap-2">
+                            {totalPrize && <Chip isStrong>賞金総額 {totalPrize}</Chip>}
+
+                            {contest.theme && <Chip>{contest.theme}</Chip>}
+
                             <Chip>
                                 {contest.allow_unfinished
                                     ? "未完結OK"
@@ -476,46 +486,70 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                          * 「コンテス／トページ／の「作品」のように
                          * 途中で折り返して読めなくなる。
                          *
-                         * 1 枚あたりの幅を決めて折り返す。
-                         * 行が変わっても、番号が振ってあるので順は追える。
-                         * 矢印は置かない。折り返した先で行末に残ると、
-                         * 次がどこか分からなくなる。
+                         * 3 つまでなら横に並べ、矢印でつなぐ。
+                         * 順に進むことが目で分かる。
+                         *
+                         * 4 つ以上は折り返す。
+                         * 詰めると 1 列が細くなり、途中で折れて読めない。
+                         * そのときは矢印を置かない。折り返した先で
+                         * 行末に残ると、次がどこか分からなくなる。
                          */}
                         <ol
-                            className="grid gap-3"
-                            style={{
-                                gridTemplateColumns:
-                                    "repeat(auto-fit, minmax(210px, 1fr))",
-                            }}
+                            className={
+                                steps.length <= 3
+                                    ? "flex flex-col gap-2 sm:flex-row sm:items-stretch"
+                                    : "grid gap-3"
+                            }
+                            style={
+                                steps.length <= 3
+                                    ? undefined
+                                    : {
+                                          gridTemplateColumns:
+                                              "repeat(auto-fit, minmax(210px, 1fr))",
+                                      }
+                            }
                         >
                             {steps.map((step, index) => (
-                                <li
-                                    key={index}
-                                    className="rounded-lg border bg-surface px-4 py-4"
-                                    style={{ borderColor: C.line }}
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <span
-                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
-                                            style={{ background: C.navy }}
-                                        >
-                                            {index + 1}
-                                        </span>
-
-                                        {index < 3 && (
-                                            <span style={{ color: C.teal }}>
-                                                <StepIcon index={index} />
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <p
-                                        className="mt-2.5 text-[12px] leading-[1.9]"
-                                        style={{ color: C.body }}
+                                <Fragment key={index}>
+                                    <li
+                                        className="flex-1 rounded-lg border bg-surface px-4 py-4"
+                                        style={{ borderColor: C.line }}
                                     >
-                                        {step}
-                                    </p>
-                                </li>
+                                        <div className="flex items-center gap-2.5">
+                                            <span
+                                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+                                                style={{ background: C.navy }}
+                                            >
+                                                {index + 1}
+                                            </span>
+
+                                            {index < 3 && (
+                                                <span style={{ color: C.teal }}>
+                                                    <StepIcon index={index} />
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <p
+                                            className="mt-2.5 text-[12px] leading-[1.9]"
+                                            style={{ color: C.body }}
+                                        >
+                                            {step}
+                                        </p>
+                                    </li>
+
+                                    {/* つなぎの矢印。横に並ぶときだけ */}
+                                    {steps.length <= 3 &&
+                                        index < steps.length - 1 && (
+                                            <li
+                                                aria-hidden="true"
+                                                className="hidden shrink-0 items-center text-[18px] sm:flex"
+                                                style={{ color: C.teal, opacity: 0.5 }}
+                                            >
+                                                ›
+                                            </li>
+                                        )}
+                                </Fragment>
                             ))}
                         </ol>
                     </Section>
@@ -527,13 +561,13 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                             className="overflow-hidden rounded-lg border bg-surface"
                             style={{ borderColor: C.line }}
                         >
-                            {contest.terms && (
-                                <Accordion title="応募規約（必ずお読みください）">
+                            {splitTerms(contest.terms).map((part) => (
+                                <Accordion key={part.title} title={part.title}>
                                     <p className="whitespace-pre-wrap text-[12px] leading-[2] text-muted">
-                                        {contest.terms}
+                                        {part.body}
                                     </p>
                                 </Accordion>
-                            )}
+                            ))}
 
                             {notices.length > 0 && (
                                 <Accordion title="その他の注意事項">
@@ -842,15 +876,105 @@ function Accordion({
     );
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({
+    children,
+    isStrong = false,
+}: {
+    children: React.ReactNode;
+    /** いちばん見せたいもの。賞金など */
+    isStrong?: boolean;
+}) {
     return (
         <li
             className="rounded-full border px-3.5 py-1 text-[11px]"
-            style={{ borderColor: C.line, background: C.tint, color: C.navy }}
+            style={
+                isStrong
+                    ? {
+                          borderColor: C.teal,
+                          background: C.teal,
+                          color: "#ffffff",
+                          fontWeight: 600,
+                      }
+                    : { borderColor: C.line, background: C.tint, color: C.navy }
+            }
         >
             {children}
         </li>
     );
+}
+
+/**
+ * 応募規約を、見出しで分ける。
+ *
+ * 長い文をひとつの箱に入れると、開いた瞬間に圧倒される。
+ * 見出しごとに分ければ、要る所だけ開ける。
+ *
+ * 見出しは行頭の「■」「【】」「#」で見分ける。
+ * 1 つも無ければ、全部をひとつにまとめる。
+ */
+function splitTerms(terms: string): { title: string; body: string }[] {
+    const text = (terms ?? "").trim();
+    if (!text) return [];
+
+    const lines = text.split("\n");
+    const parts: { title: string; body: string[] }[] = [];
+
+    for (const line of lines) {
+        const heading = line.match(/^\s*(?:[■#]+\s*|【(.+?)】)(.*)$/);
+
+        if (heading) {
+            parts.push({
+                title: (heading[1] ?? heading[2] ?? "").trim() || "規約",
+                body: [],
+            });
+            continue;
+        }
+
+        if (parts.length === 0) {
+            parts.push({ title: "応募規約（必ずお読みください）", body: [] });
+        }
+
+        parts[parts.length - 1].body.push(line);
+    }
+
+    return parts.map((part) => ({
+        title: part.title,
+        body: part.body.join("\n").trim(),
+    }));
+}
+
+/**
+ * 賞金の総額を出す。
+ *
+ * 賞は自由に書ける欄なので、金額は書き方がまちまち。
+ *   ¥30,000 / 30,000円 / 3万円
+ * どれも拾えるようにして、足し合わせる。
+ *
+ * 1 つも拾えなければ null。無いものを 0 円と出さない。
+ */
+function sumPrize(prizes: { detail?: string; label?: string }[]): string | null {
+    let total = 0;
+
+    for (const prize of prizes) {
+        const text = `${prize.label ?? ""} ${prize.detail ?? ""}`;
+
+        /* 「3万円」の形 */
+        const man = text.match(/([\d.]+)\s*万/);
+        if (man) {
+            total += Number(man[1]) * 10000;
+            continue;
+        }
+
+        /* 「¥30,000」「30,000円」の形 */
+        const yen = text.match(/[¥￥]?\s*([\d,]{3,})\s*円?/);
+        if (yen) total += Number(yen[1].replace(/,/g, ""));
+    }
+
+    if (total === 0) return null;
+
+    return total >= 10000
+        ? `${total / 10000}万円`
+        : `${total.toLocaleString()}円`;
 }
 
 /**
