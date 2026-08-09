@@ -52,6 +52,14 @@ export default function RoomClient({ roomId }: Props) {
 
     /* 声。いちばん外に置いた受け渡しから借りる */
     const voiceApi = useRoomVoice();
+
+    /*
+     * 話してよい人。
+     *
+     * 部屋の設定とは別に持つ。
+     * room を入れ替えると部屋に入り直してしまうため。
+     */
+    const [speakers, setSpeakers] = useState<string[]>([]);
     const [isEditingName, setIsEditingName] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -171,17 +179,21 @@ export default function RoomClient({ roomId }: Props) {
          * その前に呼んでも空のまま何も起きない。
          */
         voiceApi?.setup(room.id, identity.id, presence.voiceChannel ?? null);
+        setSpeakers(room.speakers ?? []);
+
         const unsubscribe = presence.subscribe(setState);
 
         /*
-         * 部屋の設定が変わったら読み直す。
+         * 部屋の設定が変わったら、話してよい人だけを読み直す。
          *
-         * 話してよい人に足されても、自分の画面には何も届かない。
-         * 押しても変わらないように見える。
+         * room をまるごと入れ替えると、この処理そのものが
+         * やり直され、部屋に入り直してしまう。
+         * それが延々と続いて画面が固まる。
          */
         const unwatchRoom = presence.onRoomChanged?.(() => {
             void (async () => {
-                setRoom(await getRepository().getRoom(room.id));
+                const found = await getRepository().getRoom(room.id);
+                if (found) setSpeakers(found.speakers ?? []);
             })();
         });
 
@@ -204,7 +216,15 @@ export default function RoomClient({ roomId }: Props) {
             presence.dispose();
             presenceRef.current = null;
         };
-    }, [room, identity.id, identity.name]);
+        /*
+         * 見るのは部屋の id だけ。
+         *
+         * room をまるごと見ていると、設定を変えるたびに
+         * ここがやり直され、部屋に入り直してしまう。
+         * 入り直すたびに繋ぎが増えて、画面が固まる。
+         */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [room?.id, identity.id, identity.name]);
 
     /** この滞在で書いた文字数。集中の時間の記録に使う */
     const [isManaging, setIsManaging] = useState(false);
@@ -281,8 +301,7 @@ export default function RoomClient({ roomId }: Props) {
      * 同時に話せるのは 4 人まで（voice.ts の MAX_SPEAKERS）。
      */
     const canSpeak =
-        room !== null &&
-        (isHost || (room.speakers ?? []).includes(identity.id));
+        room !== null && (isHost || speakers.includes(identity.id));
 
     /*
      * いまの時刻。
@@ -660,7 +679,17 @@ export default function RoomClient({ roomId }: Props) {
                         room={room}
                         members={state.members}
                         onChange={async (patch) => {
-                            setRoom(await getRepository().updateRoom(room.id, patch));
+                            const updated = await getRepository().updateRoom(
+                                room.id,
+                                patch,
+                            );
+
+                            /*
+                             * 話してよい人は別に持つ。
+                             * room をまるごと入れ替えると部屋に入り直す。
+                             */
+                            setSpeakers(updated.speakers ?? []);
+                            setRoom(updated);
 
                             /* 中にいる人の画面にも伝える */
                             presenceRef.current?.announceRoomChanged?.();
