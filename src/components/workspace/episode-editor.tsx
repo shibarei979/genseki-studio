@@ -200,7 +200,13 @@ export default function EpisodeEditor({
 
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-lg border border-line bg-surface">
-            <div className="flex items-center gap-4 border-b border-line px-6 py-4">
+            {/*
+             * 上の帯。
+             *
+             * 狭い画面では 2 段にする。
+             * 1 段に詰めると、右のボタンが画面の外へ出る。
+             */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4">
                 <span className="shrink-0 text-base font-medium text-ink">
                     第{episode.ep_number}話
                 </span>
@@ -210,10 +216,10 @@ export default function EpisodeEditor({
                     onChange={(e) => setTitle(e.target.value)}
                     aria-label="話のタイトル"
                     placeholder="タイトル"
-                    className="min-w-0 flex-1 border-b border-transparent bg-transparent text-base font-medium text-ink outline-none focus:border-forest-line"
+                    className="min-w-0 flex-1 border-b border-transparent bg-transparent text-[15px] font-medium text-ink outline-none focus:border-forest-line sm:text-base"
                 />
 
-                <div className="flex shrink-0 items-center gap-4 text-xs text-muted">
+                <div className="thin-scroll flex w-full shrink-0 items-center gap-2.5 overflow-x-auto text-xs text-muted sm:w-auto sm:gap-4">
                     <SaveIndicator state={state} savedAt={savedAt} />
                     <span>{formatNumber(countChars(body))}文字</span>
                     <button
@@ -221,7 +227,7 @@ export default function EpisodeEditor({
                         onClick={onOpenRead}
                         aria-pressed={isReadOpen}
                         className={[
-                            "rounded-md border px-2.5 py-1",
+                            "shrink-0 rounded-md border px-2.5 py-1",
                             isReadOpen
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line hover:border-forest-line hover:text-forest",
@@ -234,7 +240,7 @@ export default function EpisodeEditor({
                         onClick={onOpenProofread}
                         aria-pressed={isProofreadOpen}
                         className={[
-                            "rounded-md border px-2.5 py-1",
+                            "shrink-0 rounded-md border px-2.5 py-1",
                             isProofreadOpen
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line hover:border-forest-line hover:text-forest",
@@ -247,7 +253,7 @@ export default function EpisodeEditor({
                         onClick={onOpenMentions}
                         aria-pressed={isMentionsOpen}
                         className={[
-                            "rounded-md border px-2.5 py-1",
+                            "shrink-0 rounded-md border px-2.5 py-1",
                             isMentionsOpen
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line hover:border-forest-line hover:text-forest",
@@ -260,7 +266,7 @@ export default function EpisodeEditor({
                         onClick={onOpenHistory}
                         aria-pressed={isHistoryOpen}
                         className={[
-                            "rounded-md border px-2.5 py-1",
+                            "shrink-0 rounded-md border px-2.5 py-1",
                             isHistoryOpen
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line hover:border-forest-line hover:text-forest",
@@ -294,7 +300,7 @@ export default function EpisodeEditor({
                     aria-pressed={showLineNumbers}
                     title="10行ごとに行番号を出します"
                     className={[
-                        "rounded-md border px-2.5 py-1",
+                        "shrink-0 rounded-md border px-2.5 py-1",
                         showLineNumbers
                             ? "border-forest bg-forest-tint text-forest"
                             : "border-line bg-surface text-muted hover:border-forest-line hover:text-forest",

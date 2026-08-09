@@ -318,17 +318,28 @@ export default function WorkspaceClient({ workId }: Props) {
                 >
                     <div className="min-w-0 flex-1">
                     {/*
-                     * 話の一覧を出す。
+                     * 話を選ぶ。
                      *
-                     * 狭い画面だけ。広い画面では常に出ているので要らない。
+                     * 狭い画面だけ。広い画面では左に一覧が出ている。
+                     *
+                     * いま何話を見ているかも出す。
+                     * 「一覧をひらく」とだけ書いても、
+                     * それが話を選ぶ所だと分からない。
                      */}
                     {!isFocusMode && (
                         <button
                             type="button"
                             onClick={() => setIsListOpen(true)}
-                            className="mb-2 flex w-full items-center justify-center gap-2 rounded-md border border-line bg-surface py-1.5 text-[12px] text-muted hover:text-ink lg:hidden"
+                            className="mb-2 flex w-full items-center justify-between gap-2 rounded-md border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink hover:border-forest-line lg:hidden"
                         >
-                            話一覧をひらく
+                            <span className="min-w-0 truncate">
+                                {selected
+                                    ? `第${selected.ep_number}話　${selected.title || "無題"}`
+                                    : "話を選ぶ"}
+                            </span>
+                            <span className="shrink-0 text-[11px] text-muted">
+                                ほかの話 ▾
+                            </span>
                         </button>
                     )}
 
