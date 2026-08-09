@@ -40,6 +40,9 @@ export class SupabasePresence implements Presence {
 
     private handlers = new Set<(state: RoomState) => void>();
 
+    /** 部屋の設定が変わったときに呼ぶ */
+    private roomHandlers = new Set<() => void>();
+
     private me: RoomMember | null = null;
     private members: RoomMember[] = [];
     private messages: RoomMessage[] = [];
@@ -75,6 +78,15 @@ export class SupabasePresence implements Presence {
                 this.isClosed = true;
                 this.emit();
             })
+            .on("broadcast", { event: "room" }, () => {
+                /*
+                 * 部屋の設定が変わった。
+                 *
+                 * 話してよい人を足しても、相手の画面には何も届かない。
+                 * 自分で見に行かないと、押しても変わらないように見える。
+                 */
+                this.roomHandlers.forEach((handler) => handler());
+            })
             .on("broadcast", { event: "message" }, ({ payload }) => {
                 this.pushMessage(payload as RoomMessage);
             })
@@ -106,6 +118,21 @@ export class SupabasePresence implements Presence {
         if (!this.me) return;
         this.me = { ...this.me, status };
         this.push(true);
+    }
+
+    /** 部屋の設定が変わったことを、中にいる人へ伝える */
+    announceRoomChanged(): void {
+        this.channel?.send({
+            type: "broadcast",
+            event: "room",
+            payload: {},
+        });
+    }
+
+    /** 部屋の設定が変わったら呼ばれる。戻り値で購読をやめる */
+    onRoomChanged(handler: () => void): () => void {
+        this.roomHandlers.add(handler);
+        return () => this.roomHandlers.delete(handler);
     }
 
     /** テーマカラーを変える。部屋にいる全員の画面に反映される */

@@ -173,6 +173,18 @@ export default function RoomClient({ roomId }: Props) {
         voiceApi?.setup(room.id, identity.id, presence.voiceChannel ?? null);
         const unsubscribe = presence.subscribe(setState);
 
+        /*
+         * 部屋の設定が変わったら読み直す。
+         *
+         * 話してよい人に足されても、自分の画面には何も届かない。
+         * 押しても変わらないように見える。
+         */
+        const unwatchRoom = presence.onRoomChanged?.(() => {
+            void (async () => {
+                setRoom(await getRepository().getRoom(room.id));
+            })();
+        });
+
         // タブを閉じたときにも抜けたことを伝える
         const handleUnload = () => presence.leave();
         window.addEventListener("beforeunload", handleUnload);
@@ -180,6 +192,7 @@ export default function RoomClient({ roomId }: Props) {
         return () => {
             window.removeEventListener("beforeunload", handleUnload);
             unsubscribe();
+            unwatchRoom?.();
 
             /*
              * 声は切らない。
@@ -648,6 +661,9 @@ export default function RoomClient({ roomId }: Props) {
                         members={state.members}
                         onChange={async (patch) => {
                             setRoom(await getRepository().updateRoom(room.id, patch));
+
+                            /* 中にいる人の画面にも伝える */
+                            presenceRef.current?.announceRoomChanged?.();
                         }}
                         onClose={() => void closeAndLeave()}
                         onBack={() => setIsManaging(false)}

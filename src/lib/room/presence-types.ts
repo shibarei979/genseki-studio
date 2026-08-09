@@ -48,4 +48,13 @@ export interface Presence {
      * 持っていなくてよい。
      */
     readonly voiceChannel?: RealtimeChannel | null;
+
+    /**
+     * 部屋の設定が変わったことを伝える。
+     *
+     * 話してよい人を足しても、相手の画面には何も届かない。
+     * 同じ端末の別タブだけで動く版には無い。
+     */
+    announceRoomChanged?(): void;
+    onRoomChanged?(handler: () => void): () => void;
 }

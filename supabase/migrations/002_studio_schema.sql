@@ -228,8 +228,15 @@ create table if not exists public.writing_rooms (
   allow_host_voice   boolean not null default false,
   chat_limit_count   integer not null default 10,
   chat_limit_minutes integer not null default 10,
-  speakers           uuid[] not null default '{}',
-  banned             uuid[] not null default '{}',
+  /*
+   * 話してよい人・締め出した人。
+   *
+   * uuid ではなく text で持つ。
+   * ログインしていない人は端末ごとの目印を使うので、
+   * uuid の形をしていない。
+   */
+  speakers           text[] not null default '{}',
+  banned             text[] not null default '{}',
   layout             jsonb not null default '{}',
   is_official        boolean not null default false,
   created_at         timestamptz not null default now(),
@@ -462,8 +469,8 @@ begin
     $q$alter table public.contests add column if not exists updated_at timestamptz not null default now()$q$,
 
     -- 執筆室
-    $q$alter table public.writing_rooms add column if not exists speakers uuid[] not null default '{}'$q$,
-    $q$alter table public.writing_rooms add column if not exists banned uuid[] not null default '{}'$q$,
+    $q$alter table public.writing_rooms add column if not exists speakers text[] not null default '{}'$q$,
+    $q$alter table public.writing_rooms add column if not exists banned text[] not null default '{}'$q$,
     $q$alter table public.writing_rooms add column if not exists layout jsonb not null default '{}'$q$,
     $q$alter table public.writing_rooms add column if not exists is_official boolean not null default false$q$,
     $q$alter table public.writing_rooms add column if not exists visibility text not null default 'open'$q$,
