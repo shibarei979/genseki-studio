@@ -13,12 +13,11 @@
  * ============================================================
  */
 
-import { stripHighlight } from "@/lib/manuscript/notation";
 import type { Episode, Work } from "@/types";
 
 /** 記法を外して、そのまま読める形にする */
 function plain(body: string): string {
-    return stripHighlight(body)
+    return body
         // ルビ： ｜親文字《よみ》 → 親文字（よみ）
         .replace(/｜([^《]+)《([^》]+)》/g, "$1（$2）")
         // 傍点は落とす。文字だけ残す
