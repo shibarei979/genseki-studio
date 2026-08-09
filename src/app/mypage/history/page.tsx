@@ -2,14 +2,10 @@
  * ============================================================
  * 原石航路 Studio
  * /mypage/history — 閲覧履歴
- *
- * どの話をどこまで読んだか。
- * 作品ごとに 1 行だけ出す。話ごとに並べると探せない。
  * ============================================================
  */
 
-import Link from "next/link";
-
+import HistoryClient from "@/components/mypage/history-client";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function HistoryPage() {
@@ -27,84 +23,98 @@ export default async function HistoryPage() {
         .order("viewed_at", { ascending: false })
         .limit(200);
 
-    /*
-     * 作品ごとに、いちばん新しいものだけ残す。
-     * 同じ作品を何度も開くので、そのまま並べると同じ題名が続く。
-     */
-    const latest = new Map<string, { episodeId: string; at: string }>();
+    const epIds = Array.from(
+        new Set((views ?? []).map((row: any) => row.episode_id).filter(Boolean)),
+    );
+
+    /* 話ごとの、いちばん新しい閲覧 */
+    const latestViewMap: Record<string, string> = {};
     (views ?? []).forEach((row: any) => {
-        if (!row.novel_id || latest.has(row.novel_id)) return;
-        latest.set(row.novel_id, { episodeId: row.episode_id, at: row.viewed_at });
+        if (row.episode_id && !latestViewMap[row.episode_id]) {
+            latestViewMap[row.episode_id] = row.viewed_at;
+        }
     });
 
-    const novelIds = Array.from(latest.keys());
-    if (novelIds.length === 0) {
-        return (
-            <p className="rounded-xl border border-dashed border-line py-20 text-center text-sm text-faint">
-                読んだ作品はまだありません。
-            </p>
-        );
-    }
+    let historyItems: any[] = [];
+    const charCountMap: Record<string, number> = {};
+    const epCountMap: Record<string, number> = {};
+    const firstEpMap: Record<string, string> = {};
 
-    const [novelRes, episodeRes] = await Promise.all([
-        supabase.from("novels").select("id, title, genre").in("id", novelIds),
-        supabase
+    if (epIds.length > 0) {
+        const { data: episodes } = await supabase
             .from("episodes")
-            .select("id, title, ep_number")
-            .in(
-                "id",
-                Array.from(latest.values())
-                    .map((row) => row.episodeId)
+            .select(
+                "id, title, ep_number, novel_id, novels(id, title, genre, author_id, summary, tags, novel_type, is_serial)",
+            )
+            .in("id", epIds as string[]);
+
+        const authorIds = Array.from(
+            new Set(
+                (episodes ?? [])
+                    .map((row: any) => row.novels?.author_id)
                     .filter(Boolean),
             ),
-    ]);
+        );
 
-    const novelById = new Map(
-        (novelRes.data ?? []).map((row: any) => [row.id, row]),
-    );
-    const episodeById = new Map(
-        (episodeRes.data ?? []).map((row: any) => [row.id, row]),
-    );
+        const nameById: Record<string, string> = {};
+        if (authorIds.length > 0) {
+            const { data: authors } = await supabase
+                .from("profiles")
+                .select("user_id, display_name")
+                .in("user_id", authorIds as string[]);
+
+            (authors ?? []).forEach((row: any) => {
+                nameById[row.user_id] = row.display_name;
+            });
+        }
+
+        historyItems = (episodes ?? [])
+            .filter((row: any) => row.novels)
+            .map((row: any) => ({
+                ...row,
+                authorName: nameById[row.novels.author_id] ?? "名無し",
+                viewedAt: latestViewMap[row.id],
+            }))
+            .sort((a: any, b: any) =>
+                (b.viewedAt ?? "").localeCompare(a.viewedAt ?? ""),
+            );
+
+        /* 作品ごとの字数・話数・第1話 */
+        const novelIds = Array.from(
+            new Set(historyItems.map((row: any) => row.novel_id)),
+        );
+
+        if (novelIds.length > 0) {
+            const { data: allEps } = await supabase
+                .from("episodes")
+                .select("id, novel_id, ep_number, char_count")
+                .in("novel_id", novelIds)
+                .order("ep_number");
+
+            (allEps ?? []).forEach((row: any) => {
+                charCountMap[row.novel_id] =
+                    (charCountMap[row.novel_id] ?? 0) + (row.char_count ?? 0);
+                epCountMap[row.novel_id] = (epCountMap[row.novel_id] ?? 0) + 1;
+
+                if (!firstEpMap[row.novel_id]) firstEpMap[row.novel_id] = row.id;
+            });
+        }
+    }
+
+    /* 保存済みの印 */
+    const { data: bookmarks } = await supabase
+        .from("bookmarks")
+        .select("novel_id")
+        .eq("user_id", user.id);
 
     return (
-        <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
-            {novelIds.map((novelId) => {
-                const novel = novelById.get(novelId);
-                const spot = latest.get(novelId);
-                const episode = spot ? episodeById.get(spot.episodeId) : null;
-
-                if (!novel) return null;
-
-                return (
-                    <li key={novelId}>
-                        <Link
-                            href={
-                                episode
-                                    ? `/novel/${novelId}/episode/${episode.id}`
-                                    : `/novel/${novelId}`
-                            }
-                            className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas"
-                        >
-                            <span className="min-w-0 flex-1">
-                                <span className="block truncate text-[14px] text-ink">
-                                    {novel.title || "名前のない作品"}
-                                </span>
-
-                                {episode && (
-                                    <span className="mt-0.5 block truncate text-[11px] text-muted">
-                                        {episode.title || `第${episode.ep_number}話`}
-                                        まで読みました
-                                    </span>
-                                )}
-                            </span>
-
-                            <span className="shrink-0 text-[10px] text-faint">
-                                {spot?.at.slice(0, 10).replace(/-/g, "/")}
-                            </span>
-                        </Link>
-                    </li>
-                );
-            })}
-        </ul>
+        <HistoryClient
+            historyItems={historyItems}
+            charCountMap={charCountMap}
+            epCountMap={epCountMap}
+            firstEpMap={firstEpMap}
+            myBookmarks={bookmarks ?? []}
+            userId={user.id}
+        />
     );
 }

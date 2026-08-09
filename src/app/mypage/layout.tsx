@@ -3,19 +3,24 @@
  * 原石航路 Studio
  * /mypage — 共通の枠
  *
- * ヘッダーとタブだけ。
+ * GENSEKIKORO の組み方をそのまま使う。
  *
- * 中身は各ページが受け持つ。
- * ここで表を読まないので、どのページも
+ *   広い画面 … 左に縦の一覧、右に中身
+ *   狭い画面 … 上に横のタブ、下に中身
+ *
+ * 両方を書いておき、CSS で片方を隠す。
+ * ここでは表を読まないので、どのページも
  * 自分に要るものだけを待てばよい。
  * ============================================================
  */
 
 import { redirect } from "next/navigation";
 
-import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
-import MypageTabs from "@/components/mypage/shell/mypage-tabs";
+import {
+    MypageSideNav,
+    MypageTopTabs,
+} from "@/components/mypage/shell/mypage-tabs";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function MypageLayout({
@@ -32,16 +37,33 @@ export default async function MypageLayout({
     if (!user) redirect("/login?next=/mypage");
 
     return (
-        <div className="page-with-footer bg-canvas">
-            <Header breadcrumbs={[{ label: "マイページ" }]} />
+        <div style={{ minHeight: "100vh", fontFamily: "'Noto Sans JP',sans-serif" }}>
+            <Header />
 
-            <main className="mx-auto w-full max-w-5xl px-6 py-7">
-                <MypageTabs />
+            {/* 狭い画面 */}
+            <div className="mobile-only">
+                <MypageTopTabs />
+                <div style={{ padding: "16px 16px 80px" }}>{children}</div>
+            </div>
 
-                <div className="mt-6">{children}</div>
-            </main>
+            {/* 広い画面 */}
+            <div
+                className="desktop-only"
+                style={{ display: "flex", minHeight: "calc(100vh - 60px)" }}
+            >
+                <MypageSideNav />
 
-            <Footer />
+                <div
+                    style={{
+                        flex: 1,
+                        minWidth: 0,
+                        padding: "32px 48px",
+                        background: "var(--color-bg-card)",
+                    }}
+                >
+                    {children}
+                </div>
+            </div>
         </div>
     );
 }
