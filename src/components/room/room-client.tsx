@@ -26,8 +26,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getRepository } from "@/lib/repository";
 import { createPresence, loadIdentity, saveIdentity } from "@/lib/room/presence";
-import { RoomMedia } from "@/lib/room/room-media";
-import type { MediaState } from "@/lib/room/room-media";
 import { AVATAR_COLORS, assignColors, takenColors } from "@/lib/room/avatar-colors";
 import { backgroundFor, clampToFloor } from "@/lib/room/room-backgrounds";
 import type { Presence, RoomState } from "@/lib/room/presence";
@@ -226,11 +224,6 @@ export default function RoomClient({ roomId }: Props) {
          * 実際に線を張るのは、在室者が分かってから。
          * 相手がいなければ張る先もない。
          */
-        const media = presence.isNetworked
-            ? new RoomMedia(identity.id, presence)
-            : null;
-        mediaRef.current = media;
-        const stopMedia = media?.subscribe(setMedia);
 
         /*
          * 入る場所。
@@ -281,14 +274,9 @@ export default function RoomClient({ roomId }: Props) {
 
         return () => {
             window.removeEventListener("beforeunload", handleUnload);
-            stopMedia?.();
             unsubscribe();
             presence.dispose();
             presenceRef.current = null;
-
-            /* マイクと画面を必ず離す。掴んだままだと端末の印が消えない */
-            mediaRef.current?.dispose();
-            mediaRef.current = null;
         };
         /*
          * 見るのは部屋の id だけ。
@@ -310,7 +298,6 @@ export default function RoomClient({ roomId }: Props) {
 
     useEffect(() => {
         if (!memberIdKey) return;
-        mediaRef.current?.sync(memberIdKey.split(","));
     }, [memberIdKey]);
 
     /** この滞在で書いた文字数。集中の時間の記録に使う */
@@ -334,20 +321,6 @@ export default function RoomClient({ roomId }: Props) {
      * 繋いでいなければ、同じブラウザの別タブまで。
      */
     const [isNetworked, setIsNetworked] = useState(false);
-
-    /*
-     * 声と画面。
-     *
-     * 繋がっていないときは動かさない。
-     * 相手がいないのにマイクを掴むと、
-     * 端末に「使用中」の印だけが立つ。
-     */
-    const mediaRef = useRef<RoomMedia | null>(null);
-    const [media, setMedia] = useState<MediaState>({
-        isMicOn: false,
-        remoteIds: [],
-    });
-    const [mediaError, setMediaError] = useState("");
     /* 繋がっていないとき、その理由 */
     const envGap = describeSupabaseGap();
     /* 繋いだあとの、いまの状態 */
@@ -485,23 +458,6 @@ export default function RoomClient({ roomId }: Props) {
 
     /** 自分以外で、いまこの部屋にいる人 */
     const others = state.members.filter((member) => member.id !== identity.id);
-
-    /**
-     * マイクの入り切り。
-     *
-     * 断られたときは、その場に理由を出す。
-     * 何も起きないと、押せていないのか繋がっていないのかが分からない。
-     */
-    async function toggleMic() {
-        setMediaError("");
-        try {
-            await mediaRef.current?.toggleMic();
-        } catch {
-            setMediaError(
-                "マイクを使えませんでした。ブラウザの設定で許可してください。",
-            );
-        }
-    }
 
     /** ただ出る */
     function justLeave() {
@@ -1138,20 +1094,6 @@ export default function RoomClient({ roomId }: Props) {
 
                         {/* ===== 中央 ===== */}
                         <div className="flex min-w-0 flex-col gap-3">
-                            {/* 届いた声。姿は出さず、音だけ鳴らす */}
-                            {media.remoteIds.map((id) => (
-                                <AudioOut
-                                    key={id}
-                                    stream={mediaRef.current?.streamOf(id) ?? null}
-                                />
-                            ))}
-
-                            {mediaError && (
-                                <p className="rounded-lg bg-amber-tint px-4 py-2.5 text-[12px] leading-relaxed text-amber">
-                                    {mediaError}
-                                </p>
-                            )}
-
                             <RoomFloor
                                 maxHeight={paneHeight}
                                 /*
@@ -1201,26 +1143,15 @@ export default function RoomClient({ roomId }: Props) {
                                  * 指が覚えた位置がずれる。
                                  */}
                                 {/*
-                                 * マイク。
+                                 * マイクは、いまは置かない。
                                  *
-                                 * 端末どうしを直に繋いで声を送る。
-                                 * サーバーに繋いでいないときは相手がいないので、
-                                 * 押せない状態にしておく。
+                                 * 端末どうしを直に繋ぐ仕組みは書いてあるが、
+                                 * 届かない不具合が残っている。
+                                 * 押せるのに聞こえないほうが困る。
+                                 *
+                                 * lib/room/room-media.ts は残してある。
+                                 * 直ったら、ここに戻す。
                                  */}
-                                <ActionButton
-                                    icon={<MicIcon off={!media.isMicOn} />}
-                                    label="マイク"
-                                    note={
-                                        !isNetworked
-                                            ? "繋がっていません"
-                                            : media.isMicOn
-                                              ? "ON"
-                                              : "OFF"
-                                    }
-                                    isOn={media.isMicOn}
-                                    disabled={!isNetworked || !mediaRef.current}
-                                    onClick={() => void toggleMic()}
-                                />
 
                                 {/*
                                  * 集中モード。
@@ -1379,44 +1310,6 @@ export default function RoomClient({ roomId }: Props) {
     );
 }
 
-/**
- * 届いた声。
- *
- * 姿は出さない。音を鳴らすためだけの要素。
- * 自分の声は鳴らさない（自分には送っていない）。
- */
-function AudioOut({ stream }: { stream: MediaStream | null }) {
-    const ref = useRef<HTMLAudioElement>(null);
-
-    useEffect(() => {
-        const element = ref.current;
-        if (!element || !stream) return;
-
-        element.srcObject = stream;
-
-        /*
-         * 鳴らす指示を、こちらから出す。
-         *
-         * autoPlay だけでは鳴らないことがある。
-         * ブラウザは、人が触る前に音が出るのを止めている。
-         *
-         * マイクを押したあとなら触っているので通る。
-         * 通らなければ、次に画面のどこかを押したときに鳴らす。
-         */
-        void element.play().catch(() => {
-            const retry = () => {
-                void element.play().catch(() => {
-                    /* それでも鳴らなければ諦める */
-                });
-                window.removeEventListener("pointerdown", retry);
-            };
-
-            window.addEventListener("pointerdown", retry);
-        });
-    }, [stream]);
-
-    return <audio ref={ref} autoPlay playsInline className="hidden" />;
-}
 
 /**
  * ============================================================
@@ -1691,15 +1584,6 @@ function ClockIcon({ large = false }: { large?: boolean }) {
  * 切っているときは斜線を引く。
  * 色や文字だけで示すと、目の端では入り切りが分からない。
  */
-function MicIcon({ off = false }: { off?: boolean }) {
-    return (
-        <svg width="18" height="18" viewBox="0 0 24 24" {...stroke(1.9)}>
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
-            {off && <path d="m4 3 16 18" />}
-        </svg>
-    );
-}
 
 function ExitIcon() {
     return (
