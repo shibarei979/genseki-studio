@@ -10,7 +10,7 @@
 import { useRouter } from "next/navigation";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import Header from "@/components/layout/header";
 import RoomFloor from "@/components/room/room-floor";
@@ -57,23 +57,28 @@ export default function RoomClient({ roomId }: Props) {
      * 鍵は Cookie にあるので、localStorage からは読めない。
      * useAuth に読んでもらう。
      */
-    const { user } = useAuth();
-
-    const [identity, setIdentity] = useState(() => loadIdentity());
+    const { user, isLoading: isAuthLoading } = useAuth();
 
     /*
-     * ログインが分かったら、その id に差し替える。
+     * 自分の名乗り。
      *
-     * 端末ごとの目印のままだと、作品の author_id と噛み合わず、
-     * 部屋で人を押しても作品にたどり着けない。
+     * ログインが分かるまでは決めない。
+     *
+     * 先に端末の目印で部屋へ入り、あとから id を差し替えると、
+     * 古い名乗りが部屋に残って同じ人が 2 人に見える。
      */
-    useEffect(() => {
-        if (!user?.id) return;
+    /*
+     * 名前。
+     *
+     * id とは別に持つ。
+     * 名前を書き換えても、部屋に入り直さないようにするため。
+     */
+    const [displayName, setDisplayName] = useState(() => loadIdentity().name);
 
-        setIdentity((current) =>
-            current.id === user.id ? current : { ...current, id: user.id },
-        );
-    }, [user?.id]);
+    const identity = useMemo(
+        () => ({ ...loadIdentity(user?.id), name: displayName }),
+        [user?.id, displayName],
+    );
     const [isEditingName, setIsEditingName] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -177,11 +182,12 @@ export default function RoomClient({ roomId }: Props) {
             // 部屋での名前はマイページの表示名に合わせる。
             // 2 か所で別々に持つと、どちらが本当か分からなくなる
             const profile = await repository.getProfile();
-            setIdentity((current) => {
-                if (current.name === profile.display_name) return current;
-                const next = { ...current, name: profile.display_name };
-                saveIdentity(next);
-                return next;
+
+            setDisplayName((current) => {
+                if (current === profile.display_name) return current;
+
+                saveIdentity({ ...loadIdentity(), name: profile.display_name });
+                return profile.display_name;
             });
 
             if (isGone) return;
@@ -196,6 +202,14 @@ export default function RoomClient({ roomId }: Props) {
     /** 部屋に入る */
     useEffect(() => {
         if (!room) return;
+
+        /*
+         * ログインが分かるまで待つ。
+         *
+         * 待たずに入ると、あとで id が変わったときに
+         * 古い名乗りが残り、同じ人が 2 人に見える。
+         */
+        if (isAuthLoading) return;
 
         const presence = createPresence(room.id);
         presenceRef.current = presence;
@@ -862,9 +876,11 @@ export default function RoomClient({ roomId }: Props) {
                                                     const name =
                                                         e.target.value.trim() ||
                                                         "名無しの書き手";
-                                                    const next = { ...identity, name };
-                                                    saveIdentity(next);
-                                                    setIdentity(next);
+                                                    saveIdentity({
+                                                        ...loadIdentity(),
+                                                        name,
+                                                    });
+                                                    setDisplayName(name);
                                                     setIsEditingName(false);
                                                 }}
                                                 onKeyDown={(e) => {
@@ -922,7 +938,11 @@ export default function RoomClient({ roomId }: Props) {
                                                             colorId: color.id,
                                                         };
                                                         saveIdentity(next);
-                                                        setIdentity(next);
+
+                                                        /*
+                                                         * 色は部屋の側で持つ。
+                                                         * 名乗りを作り直すと部屋に入り直してしまう。
+                                                         */
                                                         presenceRef.current?.setColor(
                                                             color.id,
                                                         );
