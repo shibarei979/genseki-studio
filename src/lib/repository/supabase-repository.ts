@@ -2059,11 +2059,55 @@ export const supabaseRepository: Repository = {
 
 
     async listNotices(): Promise<AdminNotice[]> {
-        const { data } = await db()
-            .from("admin_notices")
-            .select("*")
-            .order("published_at", { ascending: false });
-        return rows<AdminNotice>(data);
+        /*
+         * お知らせは 2 つの表に分かれている。
+         *
+         *   admin_notices  … Studio で作ったもの
+         *   announcements  … 前の版から引き継いだもの
+         *
+         * 運営画面も 2 つあり、どちらに書いても
+         * 出てくるようにしないと、書いたものが消えたように見える。
+         *
+         * 片方が無い環境でも止まらないよう、失敗は拾う。
+         */
+        const [noticeRes, announceRes] = await Promise.all([
+            Promise.resolve(
+                db()
+                    .from("admin_notices")
+                    .select("*")
+                    .order("published_at", { ascending: false }),
+            ).catch(() => ({ data: [] } as any)),
+
+            Promise.resolve(
+                db()
+                    .from("announcements")
+                    .select("*")
+                    .order("created_at", { ascending: false }),
+            ).catch(() => ({ data: [] } as any)),
+        ]);
+
+        const notices = rows<AdminNotice>(noticeRes.data);
+
+        /* announcements を、ベルの形に合わせる */
+        const announcements = rows<Record<string, unknown>>(
+            announceRes.data,
+        ).map((row) => ({
+            id: String(row.id),
+            type: (row.type as AdminNotice["type"]) ?? "info",
+            title: String(row.title ?? ""),
+            body: String(row.body ?? row.content ?? ""),
+            link: String(row.link ?? ""),
+            image_url: (row.image_url as string) ?? null,
+            is_published: row.is_published !== false,
+            published_at: String(
+                row.published_at ?? row.created_at ?? "",
+            ).slice(0, 10),
+        })) as AdminNotice[];
+
+        /* 新しい順に混ぜる */
+        return [...notices, ...announcements].sort((a, b) =>
+            (b.published_at ?? "").localeCompare(a.published_at ?? ""),
+        );
     },
 
     async createNotice(): Promise<AdminNotice> {
