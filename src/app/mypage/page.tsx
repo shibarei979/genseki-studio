@@ -48,7 +48,7 @@ export default async function MypagePage() {
    * 取ってくるものは前と同じ。
    */
   const [
-    followingRes, novelRes, bookmarkRes, contestRes, entryRes, missionRes,
+    followingRes, novelRes, bookmarkRes, missionRes,
   ] = await Promise.all([
     supabase
       .from('follows')
@@ -75,13 +75,6 @@ export default async function MypagePage() {
       .order('created_at', { ascending: false })
       .limit(50),
 
-    supabase
-      .from('contests').select('id, title, deadline, is_site_contest')
-      .eq('is_published', true).eq('is_site_contest', true)
-      .or(`deadline.is.null,deadline.gt.${nowIso}`).order('created_at', { ascending: false }),
-
-    supabase.from('contest_entries').select('contest_id, novel_id').eq('user_id', user.id),
-
     supabase.from('user_missions').select('mission_id').eq('user_id', user.id),
   ])
 
@@ -89,8 +82,6 @@ export default async function MypagePage() {
   const followingData = followingRes.data
   const novels = novelRes.data
   const bookmarkedNovels = bookmarkRes.data
-  const contests = contestRes.data
-  const entries = entryRes.data
   const claimedMissions = missionRes.data
 
   const followingAuthors = (followingData || []).map((f: any) => f.profiles).filter(Boolean)
@@ -140,7 +131,6 @@ export default async function MypagePage() {
 
   mark('batch2')
   /* カレンダーはどこにも出していないので読まない */
-  const postDates: string[] = []
 
   const bmAuthorMap: Record<string,string> = {}
   bmAuthorRes.data?.forEach((a:any) => { bmAuthorMap[a.user_id] = a.display_name })
@@ -265,7 +255,8 @@ export default async function MypagePage() {
     supabase.from('comments').select('*',{count:'exact',head:true}).eq('user_id',user.id),
     supabase.from('bookmarks').select('*',{count:'exact',head:true}).eq('user_id',user.id),
     supabase.from('novels').select('*',{count:'exact',head:true}).eq('author_id',user.id).eq('published',true),
-    supabase.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',user.id),
+    /* フォロー数は上で数えている。使い回す */
+    Promise.resolve({ count: followingCount2 } as any),
     supabase.from('read_episodes').select('*',{count:'exact',head:true}).eq('user_id',user.id),
     supabase.from('tweets').select('*',{count:'exact',head:true}).eq('user_id',user.id),
     supabase.from('series').select('*',{count:'exact',head:true}).eq('user_id',user.id),
@@ -304,8 +295,6 @@ export default async function MypagePage() {
       followingAuthors={followingAuthors}
       followerCount={followerCount || 0}
       followingCount={followingCount2 || 0}
-      contests={contests || []}
-      initialEntries={entries || []}
       claimedMissionIds={claimedMissionIds}
       unreadFeedback={unreadFeedback}
       unreadRanking={unreadRanking}
@@ -315,7 +304,6 @@ export default async function MypagePage() {
       charCountMap={charCountMap}
       likeMap={likeMap2}
       novelLikeMap={novelLikeMap}
-      postDates={postDates}
       novelCommentMap={novelCommentMap}
       novelViewMap={novelViewMap}
       novelEpCountMap={novelEpCountMap}
