@@ -38,9 +38,28 @@ export default function AdminNoticesClient() {
         void reload();
     }, [reload]);
 
+    /*
+     * 直したことを伝える。
+     *
+     * 黙って保存すると、書けたのか分からない。
+     * 失敗しても何も出ないと、打ち直すことになる。
+     */
+    const [notice2, setNotice2] = useState("");
+
     async function patch(id: string, next: Partial<AdminNotice>) {
-        await getRepository().updateNotice(id, next);
-        await reload();
+        try {
+            await getRepository().updateNotice(id, next);
+            await reload();
+
+            setNotice2("保存しました");
+            window.setTimeout(() => setNotice2(""), 2000);
+        } catch (caught) {
+            setNotice2(
+                caught instanceof Error
+                    ? caught.message
+                    : "保存できませんでした",
+            );
+        }
     }
 
     return (
@@ -61,6 +80,12 @@ export default function AdminNoticesClient() {
                 </button>
             }
         >
+            {notice2 && (
+                <p className="mb-3 rounded-lg bg-forest-tint px-4 py-2.5 text-[12px] text-forest">
+                    {notice2}
+                </p>
+            )}
+
             {notices.length === 0 ? (
                 <Empty>まだお知らせがありません。</Empty>
             ) : (
