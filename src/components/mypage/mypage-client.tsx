@@ -1,16 +1,28 @@
 'use client'
-import SeriesManager from '@/components/series-manager'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
+
 import Header from '@/components/layout/header'
-import type { Profile, Novel } from '@/types'
-import MissionClient from '@/components/mypage/mission-client'
 import MypageDashboard from '@/components/mypage/mypage-dashboard'
-import TweetSection from '@/components/tweet-section'
-import ChapterEditModal from '@/components/mypage/chapter-edit-modal'
+
+/*
+ * タブを押すまで読み込まない。
+ *
+ * 開いた瞬間に 8 タブぶんを全部読むと、
+ * 「マイページ」を見たいだけの人まで待つことになる。
+ *
+ * 見た目は変わらない。読む時機が変わるだけ。
+ */
+const SeriesManager    = dynamic(() => import('@/components/series-manager'))
+const MissionClient    = dynamic(() => import('@/components/mypage/mission-client'))
+const TweetSection     = dynamic(() => import('@/components/tweet-section'))
+const ChapterEditModal = dynamic(() => import('@/components/mypage/chapter-edit-modal'))
+
+import type { Profile, Novel } from '@/types'
 
 interface Contest { id: string; title: string; deadline: string | null; is_site_contest: boolean }
 interface Entry { contest_id: string; novel_id: string }
