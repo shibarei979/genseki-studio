@@ -27,17 +27,52 @@ export default async function MypagePage() {
     supabase.from('follows').select('*', { count:'exact', head:true }).eq('follower_id', user.id),
   ])
 
-  const { data: followingData } = await supabase
-    .from('follows')
-    .select('following_id, profiles!follows_following_id_fkey(user_id, display_name, icon_url)')
-    .eq('follower_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(20)
+  const nowIso = new Date().toISOString()
+
+  /*
+   * 互いに関わらないものを、まとめて頼む。
+   *
+   * 1 つずつ待つと、往復の時間が積み上がる。
+   * 取ってくるものは前と同じ。
+   */
+  const [
+    followingRes, novelRes, bookmarkRes, contestRes, entryRes, missionRes,
+  ] = await Promise.all([
+    supabase
+      .from('follows')
+      .select('following_id, profiles!follows_following_id_fkey(user_id, display_name, icon_url)')
+      .eq('follower_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20),
+
+    supabase
+      .from('novels').select('*').eq('author_id', user.id).order('created_at', { ascending: false }),
+
+    supabase
+      .from('bookmarks')
+      .select('novel_id, created_at, folder_id, novels(id, title, genre, is_serial, novel_type, summary, tags, author_id)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50),
+
+    supabase
+      .from('contests').select('id, title, deadline, is_site_contest')
+      .eq('is_published', true).eq('is_site_contest', true)
+      .or(`deadline.is.null,deadline.gt.${nowIso}`).order('created_at', { ascending: false }),
+
+    supabase.from('contest_entries').select('contest_id, novel_id').eq('user_id', user.id),
+
+    supabase.from('user_missions').select('mission_id').eq('user_id', user.id),
+  ])
+
+  const followingData = followingRes.data
+  const novels = novelRes.data
+  const bookmarkedNovels = bookmarkRes.data
+  const contests = contestRes.data
+  const entries = entryRes.data
+  const claimedMissions = missionRes.data
 
   const followingAuthors = (followingData || []).map((f: any) => f.profiles).filter(Boolean)
-
-  const { data: novels } = await supabase
-    .from('novels').select('*').eq('author_id', user.id).order('created_at', { ascending: false })
 
   // 作品ごとのいいね・コメント・閲覧数
   const novelIds = (novels || []).map((n: any) => n.id)
@@ -58,35 +93,33 @@ export default async function MypagePage() {
     epsData.data?.forEach((e:any) => { novelEpCountMap[e.novel_id] = (novelEpCountMap[e.novel_id]||0)+1 })
   }
 
-  // カレンダー用：過去1年のエピソード投稿日
+  /*
+   * カレンダー・保存済みの書き手・閲覧履歴。
+   * どれも互いに関わらないので、まとめて頼む。
+   */
   const oneYearAgo = new Date(Date.now() - 365*24*60*60*1000).toISOString()
-  const { data: calendarEps } = await supabase
-    .from('episodes').select('created_at').in('novel_id', novelIds.length > 0 ? novelIds : [''])
-    .eq('published', true).gte('created_at', oneYearAgo)
+  const bmAuthorIds = Array.from(new Set((bookmarkedNovels||[]).map((b:any) => b.novels?.author_id).filter(Boolean)))
+
+  const [calendarRes, bmAuthorRes, viewRes] = await Promise.all([
+    supabase
+      .from('episodes').select('created_at').in('novel_id', novelIds.length > 0 ? novelIds : [''])
+      .eq('published', true).gte('created_at', oneYearAgo),
+
+    bmAuthorIds.length > 0
+      ? supabase.from('profiles').select('user_id, display_name').in('user_id', bmAuthorIds as string[])
+      : Promise.resolve({ data: [] } as any),
+
+    supabase
+      .from('page_views').select('episode_id, novel_id, viewed_at')
+      .eq('user_id', user.id).order('viewed_at', { ascending: false }).limit(200),
+  ])
+
+  const calendarEps = calendarRes.data
   const postDates = (calendarEps||[]).map((e:any) => e.created_at.slice(0,10))
 
-  const { data: bookmarkedNovels } = await supabase
-    .from('bookmarks')
-    .select('novel_id, created_at, folder_id, novels(id, title, genre, is_serial, novel_type, summary, tags, author_id)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(50)
-
-  // 保存済み作品の作者名
-  const bmAuthorIds = Array.from(new Set((bookmarkedNovels||[]).map((b:any) => b.novels?.author_id).filter(Boolean)))
   const bmAuthorMap: Record<string,string> = {}
-  if (bmAuthorIds.length > 0) {
-    const { data: bmAuthors } = await supabase.from('profiles').select('user_id, display_name').in('user_id', bmAuthorIds as string[])
-    bmAuthors?.forEach((a:any) => { bmAuthorMap[a.user_id] = a.display_name })
-  }
+  bmAuthorRes.data?.forEach((a:any) => { bmAuthorMap[a.user_id] = a.display_name })
 
-  const now = new Date().toISOString()
-  const { data: contests } = await supabase
-    .from('contests').select('id, title, deadline, is_site_contest')
-    .eq('is_published', true).eq('is_site_contest', true)
-    .or(`deadline.is.null,deadline.gt.${now}`).order('created_at', { ascending: false })
-
-  const { data: entries } = await supabase.from('contest_entries').select('contest_id, novel_id').eq('user_id', user.id)
 
   // 未読の感想（コメント＋拡散）・未読ランクイン：read_feedbacksに無いもの＝未読
   let unreadFeedback = 0, unreadRanking = 0
@@ -106,7 +139,6 @@ export default async function MypagePage() {
     unreadRanking = (rkRes.data || []).map((r: any) => `r-${r.id}`).filter(k => !readSet.has(k)).length
   }
 
-  const { data: claimedMissions } = await supabase.from('user_missions').select('mission_id').eq('user_id', user.id)
   const claimedMissionIds = (claimedMissions || []).map((r: any) => r.mission_id)
 
   // 活動サマリー（今月・先月比）と最近のつぶやき
@@ -142,9 +174,7 @@ export default async function MypagePage() {
   }
 
   // 閲覧履歴
-  const { data: views } = await supabase
-    .from('page_views').select('episode_id, novel_id, viewed_at')
-    .eq('user_id', user.id).order('viewed_at', { ascending: false }).limit(200)
+  const views = viewRes.data
 
   const epIds = Array.from(new Set((views||[]).map((v:any) => v.episode_id).filter(Boolean)))
   const latestViewMap: Record<string,string> = {}
