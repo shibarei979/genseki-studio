@@ -229,36 +229,14 @@ export default function RoomFloor({
      * 扉の前に立ったら知らせる。
      * 自分が動いたときだけ見る。他の人が扉に立っても関係ない。
      */
-    const fromMembers = members.find((member) => member.id === selfId);
-
-    /*
-     * 自分の位置。
-     *
-     * 送るのは 1 秒に 1 回まで（送りすぎると届かなくなる）。
-     * そのぶん、みんなに届く位置は少し遅れる。
-     *
-     * 自分の画面では、その遅れを待たない。
-     * 待つと、次に押したとき古い場所から道を探すことになり、
-     * やがて壁の中から探し始めて動けなくなる。
-     */
-    const [selfSpot, setSelfSpot] = useState<{ x: number; y: number } | null>(
-        null,
-    );
-
     /*
      * 自分。
      *
-     * useMemo で包む。包まないと、描くたびに新しいものができて、
-     * 下の扉の判定が毎回走る。
-     * 走るたびに描き直しが起き、やがて追いつかなくなる。
+     * 手元で別に持たない。
+     * 送られてきた位置と食い違うと、次に押したとき
+     * 古い場所から道を探すことになり、やがて動けなくなる。
      */
-    const self = useMemo(
-        () =>
-            fromMembers
-                ? { ...fromMembers, ...(selfSpot ?? {}) }
-                : undefined,
-        [fromMembers, selfSpot],
-    );
+    const self = members.find((member) => member.id === selfId);
 
     const wasAtDoor = useRef(false);
 
@@ -274,16 +252,6 @@ export default function RoomFloor({
         if (atDoor && !wasAtDoor.current) onReachDoor?.();
         wasAtDoor.current = atDoor;
     }, [selfX, selfY, background, onReachDoor]);
-
-    /*
-     * 部屋を移ったら、手元の位置を忘れる。
-     *
-     * 前の部屋の場所を持ったままだと、
-     * 新しい部屋の壁の中に立っていることになる。
-     */
-    useEffect(() => {
-        setSelfSpot(null);
-    }, [selfId]);
 
     /* 画面を離れるときは歩くのをやめる */
     useEffect(
@@ -342,7 +310,6 @@ export default function RoomFloor({
         if (walkRef.current !== null) window.clearInterval(walkRef.current);
 
         let index = 0;
-        setSelfSpot(steps[0]);
         onMove(steps[0].x, steps[0].y);
         index += 1;
 
@@ -352,7 +319,6 @@ export default function RoomFloor({
                 walkRef.current = null;
                 return;
             }
-            setSelfSpot(steps[index]);
             onMove(steps[index].x, steps[index].y);
             index += 1;
         }, STEP_MS);

@@ -25,11 +25,14 @@ import type { Presence, RoomState } from "@/lib/room/presence-types";
 /**
  * 自分の状態を送る間隔。
  *
- * Supabase Realtime の上限は毎秒 10 回。
- * 人が増えると、その人数ぶん飛び交う。
- * 20 人いても届くよう、1 人あたり毎秒 1 回に抑える。
+ * 短くしすぎると Supabase の上限（毎秒 10 回）に当たる。
+ * 長くしすぎると、自分の位置が返ってくるのが遅れ、
+ * 次に押したとき古い場所から道を探すことになる。
+ *
+ * 歩く刻みは 620ms。それより少し短くしておけば、
+ * 1 歩ごとにきちんと届く。
  */
-const SEND_INTERVAL_MS = 1000;
+const SEND_INTERVAL_MS = 250;
 
 /** 発言はこの数だけ手元に残す */
 const MESSAGE_LIMIT = 60;
