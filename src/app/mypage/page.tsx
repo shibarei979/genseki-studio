@@ -138,31 +138,60 @@ export default async function MypagePage() {
 
   // 未読の感想（コメント＋拡散）・未読ランクイン：read_feedbacksに無いもの＝未読
   let unreadFeedback = 0, unreadRanking = 0
-  {
-    const [cmRes, dcRes, rkRes, readRes] = await Promise.all([
-      /*
-       * 未読の数。
-       *
-       * 3,500 行を運んで、数を出すだけだった。
-       * 出るのは「3」のような小さな数字なので、
-       * そこまで正確でなくてよい。
-       *
-       * 新しいものから 100 件ずつ見る。
-       * それより古い未読は、もう読まれない。
-       */
-      novelIds.length > 0 ? supabase.from('comments').select('id').in('novel_id',novelIds).neq('user_id',user.id).order('created_at',{ascending:false}).limit(100) : Promise.resolve({ data: [] } as any),
-      novelIds.length > 0 ? supabase.from('discovers').select('novel_id, user_id, created_at').in('novel_id',novelIds).eq('is_pending',false).neq('user_id',user.id).order('created_at',{ascending:false}).limit(100) : Promise.resolve({ data: [] } as any),
-      supabase.from('ranking_history').select('id').eq('author_id',user.id).order('created_at',{ascending:false}).limit(100),
-      supabase.from('read_feedbacks').select('item_key').eq('user_id',user.id).order('created_at',{ascending:false}).limit(300),
-    ])
-    const readSet = new Set((readRes.data || []).map((r: any) => r.item_key))
-    const fbKeys = [
-      ...(cmRes.data || []).map((c: any) => `c-${c.id}`),
-      ...(dcRes.data || []).map((d: any) => `d-${d.novel_id}-${d.user_id}-${d.created_at}`),
-    ]
-    unreadFeedback = fbKeys.filter(k => !readSet.has(k)).length
-    unreadRanking = (rkRes.data || []).map((r: any) => `r-${r.id}`).filter(k => !readSet.has(k)).length
-  }
+
+  /*
+   * 未読とミッションを、一度にまとめて頼む。
+   *
+   * 囲みを外してあるのは、
+   * ここで取ったものを後ろでも使うため。
+   */
+  const [
+    cmRes, dcRes, rkRes, readRes,
+    likesM, discoversM, commentsM, bookmarksM, novelsCountM,
+    readsM, tweetsM, seriesM, epCountRes,
+  ] = await Promise.all([
+    /*
+     * 未読の数。
+     *
+     * 3,500 行を運んで、数を出すだけだった。
+     * 出るのは「3」のような小さな数字なので、
+     * そこまで正確でなくてよい。
+     *
+     * 新しいものから 100 件ずつ見る。
+     * それより古い未読は、もう読まれない。
+     */
+    novelIds.length > 0 ? supabase.from('comments').select('id').in('novel_id',novelIds).neq('user_id',user.id).order('created_at',{ascending:false}).limit(100) : Promise.resolve({ data: [] } as any),
+    novelIds.length > 0 ? supabase.from('discovers').select('novel_id, user_id, created_at').in('novel_id',novelIds).eq('is_pending',false).neq('user_id',user.id).order('created_at',{ascending:false}).limit(100) : Promise.resolve({ data: [] } as any),
+    supabase.from('ranking_history').select('id').eq('author_id',user.id).order('created_at',{ascending:false}).limit(100),
+    supabase.from('read_feedbacks').select('item_key').eq('user_id',user.id).order('created_at',{ascending:false}).limit(300),
+
+    /*
+     * ミッションの数え上げも、ここで一緒に。
+     *
+     * 未読とは関わらないので、同時に頼んでよい。
+     * 順に待つと、そのぶん積み上がる。
+     */
+    supabase.from('likes').select('*',{count:'exact',head:true}).eq('user_id',user.id),
+    supabase.from('discovers').select('*',{count:'exact',head:true}).eq('user_id',user.id),
+    supabase.from('comments').select('*',{count:'exact',head:true}).eq('user_id',user.id),
+    supabase.from('bookmarks').select('*',{count:'exact',head:true}).eq('user_id',user.id),
+    supabase.from('novels').select('*',{count:'exact',head:true}).eq('author_id',user.id).eq('published',true),
+    supabase.from('read_episodes').select('*',{count:'exact',head:true}).eq('user_id',user.id),
+    supabase.from('tweets').select('*',{count:'exact',head:true}).eq('user_id',user.id),
+    supabase.from('series').select('*',{count:'exact',head:true}).eq('user_id',user.id),
+
+    novelIds.length > 0
+      ? supabase.from('episodes').select('*',{count:'exact',head:true}).in('novel_id',novelIds)
+      : Promise.resolve({ count: 0 } as any),
+  ])
+  const readSet = new Set((readRes.data || []).map((r: any) => r.item_key))
+  const fbKeys = [
+    ...(cmRes.data || []).map((c: any) => `c-${c.id}`),
+    ...(dcRes.data || []).map((d: any) => `d-${d.novel_id}-${d.user_id}-${d.created_at}`),
+  ]
+  unreadFeedback = fbKeys.filter(k => !readSet.has(k)).length
+  unreadRanking = (rkRes.data || []).map((r: any) => `r-${r.id}`).filter(k => !readSet.has(k)).length
+  mark('counts')
 
   const claimedMissionIds = (claimedMissions || []).map((r: any) => r.mission_id)
 
@@ -218,6 +247,7 @@ export default async function MypagePage() {
     historyItems = Object.values(novelMap).sort((a,b) => b.viewedAt > a.viewedAt ? 1 : -1)
   }
 
+  mark('history')
   const historyNovelIds = historyItems.map((i:any) => i.novelId)
   const firstEpMap: Record<string,string> = {}
   if (historyNovelIds.length > 0) {
@@ -249,30 +279,14 @@ export default async function MypagePage() {
 
   // ミッション用stats
   let missionStats = { likeCount:0, discoverCount:0, commentCount:0, bookmarkCount:0, novelCount:0, episodeCount:0, followCount:0, readCount:0, hasBio:false, tweetCount:0, seriesCount:0 }
-  const [likesM, discoversM, commentsM, bookmarksM, novelsCountM, followsCountM, readsM, tweetsM, seriesM] = await Promise.all([
-    supabase.from('likes').select('*',{count:'exact',head:true}).eq('user_id',user.id),
-    supabase.from('discovers').select('*',{count:'exact',head:true}).eq('user_id',user.id),
-    supabase.from('comments').select('*',{count:'exact',head:true}).eq('user_id',user.id),
-    supabase.from('bookmarks').select('*',{count:'exact',head:true}).eq('user_id',user.id),
-    supabase.from('novels').select('*',{count:'exact',head:true}).eq('author_id',user.id).eq('published',true),
-    /* フォロー数は上で数えている。使い回す */
-    Promise.resolve({ count: followingCount2 } as any),
-    supabase.from('read_episodes').select('*',{count:'exact',head:true}).eq('user_id',user.id),
-    supabase.from('tweets').select('*',{count:'exact',head:true}).eq('user_id',user.id),
-    supabase.from('series').select('*',{count:'exact',head:true}).eq('user_id',user.id),
-  ])
   /* すでに読んだものを使う。同じ問い合わせを 2 度していた */
   const myNovelIds2 = novelIds
-  let episodeCount2 = 0
-  if (myNovelIds2.length > 0) {
-    const {count} = await supabase.from('episodes').select('*',{count:'exact',head:true}).in('novel_id',myNovelIds2)
-    episodeCount2 = count||0
-  }
+  const episodeCount2 = epCountRes.count || 0
   missionStats = {
     likeCount: likesM.count||0, discoverCount: discoversM.count||0,
     commentCount: commentsM.count||0, bookmarkCount: bookmarksM.count||0,
     novelCount: novelsCountM.count||0, episodeCount: episodeCount2,
-    followCount: followsCountM.count||0,
+    followCount: followingCount2||0,
     readCount: readsM.count||0,
     hasBio: !!(profile?.bio && profile.bio.trim().length > 0),
     tweetCount: tweetsM.count||0,
