@@ -25,51 +25,13 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { hasSupabase } from "@/config/env.client";
+import type { Presence, RoomState } from "@/lib/room/presence-types";
 import { SupabasePresence } from "@/lib/room/supabase-presence";
 
 import type { MemberStatus, RoomMember, RoomMessage } from "@/types";
 import { MEMBER_TIMEOUT_MS } from "@/types";
 
-export interface RoomState {
-    members: RoomMember[];
-    messages: RoomMessage[];
-    /**
-     * 部屋が閉じられたか。
-     *
-     * 立てた人が部屋ごと閉じたとき、
-     * 中にいる人の画面にも伝える必要がある。
-     * 伝えないと、消えた部屋の中を歩き続けることになる。
-     */
-    isClosed: boolean;
-}
 
-export interface Presence {
-    /** 別の端末とも繋がるか。画面に注意書きを出すために使う */
-    readonly isNetworked: boolean;
-
-    join(member: RoomMember): void;
-    leave(): void;
-    move(x: number, y: number): void;
-    setStatus(status: MemberStatus): void;
-    setColor(colorId: number): void;
-    announceClosed(): void;
-    addWrittenChars(count: number): void;
-    send(message: Omit<RoomMessage, "id" | "created_at">): void;
-    /** 状態が変わるたびに呼ばれる。戻り値で購読をやめる */
-    subscribe(handler: (state: RoomState) => void): () => void;
-    dispose(): void;
-
-    /**
-     * 声をつなぐための通り道。
-     *
-     * 相手を見つける合図のやり取りに使う。
-     * 声そのものは通らない。
-     *
-     * 同じ端末の別タブだけで動く版には無いので、
-     * 持っていなくてよい。
-     */
-    readonly voiceChannel?: RealtimeChannel | null;
-}
 
 /**
  * ============================================================
@@ -318,3 +280,6 @@ export function saveIdentity(identity: Identity): void {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
 }
+
+/* 型は presence-types.ts に置いてある。ここからも出す */
+export type { Presence, RoomState } from "@/lib/room/presence-types";

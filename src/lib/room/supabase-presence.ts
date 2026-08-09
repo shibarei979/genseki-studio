@@ -20,7 +20,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { MemberStatus, RoomMember, RoomMessage } from "@/types";
 
-import type { Presence, RoomState } from "@/lib/room/presence";
+import type { Presence, RoomState } from "@/lib/room/presence-types";
 
 /** 発言はこの数だけ手元に残す */
 const MESSAGE_LIMIT = 60;
