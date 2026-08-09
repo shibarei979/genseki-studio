@@ -39,7 +39,13 @@ type IconName = "home" | "pen" | "search" | "book" | "trophy";
  * 押せる場所が用意だけされていると、
  * 何度か押して空振りしたあと、二度と押されなくなる。
  */
-const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
+const NAV_ITEMS: {
+    href: string;
+    label: string;
+    icon: IconName;
+    /** 運営が入切する機能。切っていれば出さない */
+    feature?: string;
+}[] = [
     { href: "/", label: "ホーム", icon: "home" },
     { href: "/post", label: "作品を書く", icon: "pen" },
     /*
@@ -48,8 +54,8 @@ const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
      * 読めるのは執筆室で同じ部屋にいる人の作品だけ。
      * 探す場所を出すと、何も無い一覧に行き着く。
      */
-    { href: "/rooms", label: "執筆室", icon: "book" },
-    { href: "/contest", label: "コンテスト", icon: "trophy" },
+    { href: "/rooms", label: "執筆室", icon: "book", feature: "rooms" },
+    { href: "/contest", label: "コンテスト", icon: "trophy", feature: "contest" },
 ];
 
 interface Props {
@@ -61,6 +67,33 @@ export default function Header({ breadcrumbs = [] }: Props) {
     const pathname = usePathname();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [isNoticeOpen, setIsNoticeOpen] = useState(false);
+
+    /*
+     * 運営が切った機能。
+     *
+     * 切っているのに帯に出ていると、押しても何も無い所へ着く。
+     * 出さないほうがよい。
+     *
+     * 読めるまでは全部出す。
+     * 一瞬消えて出直すと、ちらついて見える。
+     */
+    const [offKeys, setOffKeys] = useState<string[]>([]);
+
+    useEffect(() => {
+        void (async () => {
+            const flags = await getRepository().listFeatureFlags();
+
+            setOffKeys(
+                flags
+                    .filter((flag) => flag.status !== "on")
+                    .map((flag) => flag.key),
+            );
+        })();
+    }, []);
+
+    const shownNav = NAV_ITEMS.filter(
+        (item) => !item.feature || !offKeys.includes(item.feature),
+    );
     const [seenAt, setSeenAt] = useState<string | null>(null);
     /** 運営が立てたお知らせ。無ければ既定のものを出す */
     const [notices, setNotices] = useState<
@@ -197,7 +230,7 @@ export default function Header({ breadcrumbs = [] }: Props) {
                     aria-label="主なページ"
                     className="absolute inset-y-0 left-1/2 hidden -translate-x-1/2 items-stretch gap-0.5 lg:flex"
                 >
-                    {NAV_ITEMS.map((item) => (
+                    {shownNav.map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}
@@ -350,7 +383,7 @@ export default function Header({ breadcrumbs = [] }: Props) {
                 aria-label="主なページ"
                 className="thin-scroll flex items-center gap-1 overflow-x-auto border-t border-line px-8 py-1.5 lg:hidden"
             >
-                {NAV_ITEMS.map((item) => (
+                {shownNav.map((item) => (
                     <Link
                         key={item.href}
                         href={item.href}
