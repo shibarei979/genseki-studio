@@ -196,17 +196,14 @@ export default function RoomManagePanel({
                     onChange={(next) => onChange({ allow_stamps: next })}
                 />
 
-                {/* マイク。仕組みはまだ無いが、決めておける */}
+                {/* マイク */}
                 <div className="flex items-center justify-between gap-3 border-b border-line py-2.5 last:border-b-0">
                     <div className="min-w-0">
-                        <p className="flex items-center gap-1.5 text-[13px] text-ink">
+                        <p className="text-[13px] text-ink">
                             部屋主のマイクを使う
-                            <span className="rounded bg-canvas px-1.5 py-0.5 text-[10px] text-faint">
-                                準備中
-                            </span>
                         </p>
                         <p className="mt-0.5 text-[11px] text-faint">
-                            声を流す仕組みはまだありません。設定だけ残せます。
+                            案内や読み合わせのときに、自分の声を流せます。
                         </p>
                     </div>
 
