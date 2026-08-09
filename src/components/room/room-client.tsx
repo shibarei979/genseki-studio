@@ -21,6 +21,8 @@ import RoomManagePanel from "@/components/room/room-manage-panel";
 import { useRoomSession } from "@/hooks/use-room-session";
 import { useAuth } from "@/hooks/use-auth";
 import { getRepository } from "@/lib/repository";
+import VoicePanel from "@/components/room/voice-panel";
+import { useRoomVoice } from "@/components/room/voice-provider";
 import { createPresence, loadIdentity, saveIdentity } from "@/lib/room/presence";
 import { AVATAR_COLORS, assignColors, takenColors } from "@/lib/room/avatar-colors";
 import { loadLastSpot, saveLastSpot } from "@/lib/room/last-spot";
@@ -47,6 +49,9 @@ export default function RoomClient({ roomId }: Props) {
     const [isLoading, setIsLoading] = useState(true);
     const [state, setState] = useState<RoomState>({ members: [], messages: [], isClosed: false });
     const [identity, setIdentity] = useState(() => loadIdentity());
+
+    /* 声。いちばん外に置いた受け渡しから借りる */
+    const voiceApi = useRoomVoice();
     const [isEditingName, setIsEditingName] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -107,6 +112,15 @@ export default function RoomClient({ roomId }: Props) {
         presenceRef.current = presence;
 
         /*
+         * 声の支度。
+         *
+         * 在室と同じ通り道を使う。
+         * 相手を見つける合図だけが通り、声そのものは
+         * 端末どうしで直につなぐ。
+         */
+        voiceApi?.setup(identity.id, presence.voiceChannel ?? null);
+
+        /*
          * 入る場所。
          *
          * 扉のあたりから始める。
@@ -165,6 +179,10 @@ export default function RoomClient({ roomId }: Props) {
         return () => {
             window.removeEventListener("beforeunload", handleUnload);
             unsubscribe();
+
+            /* 部屋を出たら声も切る */
+            voiceApi?.teardown();
+
             presence.dispose();
             presenceRef.current = null;
         };
@@ -840,20 +858,44 @@ export default function RoomClient({ roomId }: Props) {
                             />
 
                             {/*
+                             * 声。
+                             *
+                             * 部屋主と、部屋主が許した人だけが話せる。
+                             * 同時に話せるのは 4 人まで。
+                             */}
+                            {voiceApi && presenceRef.current?.isNetworked && (
+                                <VoicePanel
+                                    canUseVoice
+                                    canSpeak={isHost || room.allow_host_voice}
+                                    isMicOn={voiceApi.voice.isMicOn}
+                                    error={voiceApi.voice.error}
+                                    voiceMembers={voiceApi.voice.members}
+                                    members={state.members}
+                                    selfId={identity.id}
+                                    onToggle={() => void voiceApi.toggleMic()}
+                                />
+                            )}
+
+                            {/*
                              * 繋がり方。
                              *
-                             * 見本では「良好」とだけ出ているが、
-                             * いまは同じブラウザの別タブとしか繋がらない。
-                             * 良好と書くと、別の端末の人が見えないのを
-                             * 不具合だと受け取られる。事実を書く。
+                             * 繋ぎ先があれば、別の端末の人も見える。
+                             * 無ければ、同じブラウザの別タブだけ。
                              */}
                             <section className="rounded-xl border border-line bg-surface px-4 py-3">
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="text-[11px] text-muted">接続状況</span>
-                                    <span className="flex items-center gap-1.5 text-[11px] text-amber">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-amber" />
-                                        この端末の中だけ
-                                    </span>
+                                    {presenceRef.current?.isNetworked ? (
+                                        <span className="flex items-center gap-1.5 text-[11px] text-forest">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-forest" />
+                                            繋がっています
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-1.5 text-[11px] text-amber">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+                                            この端末の中だけ
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-faint">
@@ -864,9 +906,11 @@ export default function RoomClient({ roomId }: Props) {
                                     <span className="tabular-nums">ver {APP_VERSION}</span>
                                 </div>
 
-                                <p className="mt-2 text-[11px] leading-relaxed text-faint">
-                                    別の端末の人が見えるようにするにはサーバーが要ります。
-                                </p>
+                                {!presenceRef.current?.isNetworked && (
+                                    <p className="mt-2 text-[11px] leading-relaxed text-faint">
+                                        別の端末の人が見えるようにするにはサーバーが要ります。
+                                    </p>
+                                )}
                             </section>
                         </div>
 

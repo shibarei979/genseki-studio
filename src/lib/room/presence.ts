@@ -24,6 +24,9 @@
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
+import { hasSupabase } from "@/config/env.client";
+import { SupabasePresence } from "@/lib/room/supabase-presence";
+
 import type { MemberStatus, RoomMember, RoomMessage } from "@/types";
 import { MEMBER_TIMEOUT_MS } from "@/types";
 
@@ -265,6 +268,14 @@ export class LocalPresence implements Presence {
 }
 
 export function createPresence(roomId: string): Presence {
+    /*
+     * 繋ぎ先があれば、そちらを使う。
+     *
+     * BroadcastChannel 版は、同じブラウザの別タブにしか届かない。
+     * 一人で試すぶんには足りるが、人を呼べない。
+     */
+    if (hasSupabase()) return new SupabasePresence(roomId);
+
     return new LocalPresence(roomId);
 }
 
