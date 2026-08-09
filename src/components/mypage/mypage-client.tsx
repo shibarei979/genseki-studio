@@ -730,7 +730,22 @@ export default function MypageClient({
       }).map((novel, i) => (
         <div key={novel.id} style={{borderTop:i>0?'1px solid var(--color-brand-light)':'none'}}>
           {/* 横長の作品行：作品情報 | 数値 | 操作 */}
-          <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto 172px',gap:24,alignItems:'center',padding:'20px 24px'}}>
+          {/*
+           * 作品 1 件。
+           *
+           * 広い画面は 3 列。作品情報・数字・操作。
+           * 狭い画面では縦に積む。
+           *
+           * 3 列のままだと 1 列が数十 px になり、
+           * 題名が 1 文字ずつ縦に折れる。
+           */}
+          <div style={{
+            display:'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) auto 172px',
+            gap: isMobile ? 14 : 24,
+            alignItems: isMobile ? 'stretch' : 'center',
+            padding: isMobile ? '16px 14px' : '20px 24px',
+          }}>
             {/* 左：作品情報 */}
             <div style={{minWidth:0,cursor:'pointer'}} onClick={()=>router.push(`/mypage/novel/${novel.id}`)}>
               <div style={{fontSize:17,fontWeight:700,color:'var(--color-text)',lineHeight:1.4,marginBottom:8,overflowWrap:'anywhere' as any}}>{novel.title}</div>
@@ -753,7 +768,18 @@ export default function MypageClient({
               </div>
             </div>
             {/* 中央：数値（4項目・縦線区切り・アイコン付き） */}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4, minmax(64px, 1fr))'}}>
+            {/*
+             * 数字。
+             *
+             * 4 つ横に並べる。狭い画面では 1 つあたりが細くなるので、
+             * 下限を外して詰められるようにする。
+             */}
+            <div style={{
+              display:'grid',
+              gridTemplateColumns: isMobile
+                ? 'repeat(4, minmax(0, 1fr))'
+                : 'repeat(4, minmax(64px, 1fr))',
+            }}>
               {[
                 {v:(charCountMapNow[novel.id]||0).toLocaleString(), l:'文字数', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>},
                 {v:novel.published?(novelViewMap[novel.id]||0).toLocaleString():'—', l:'閲覧数', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>},
@@ -767,9 +793,20 @@ export default function MypageClient({
               ))}
             </div>
             {/* 右：操作ボタン（縦並び） */}
-            <div style={{display:'flex',flexDirection:'column',gap:8,alignItems:'stretch'}}>
+            {/*
+             * 操作。
+             *
+             * 広い画面は縦。右端の細い列に収まる。
+             * 狭い画面は横。縦に積むと下へ伸びすぎる。
+             */}
+            <div style={{
+              display:'flex',
+              flexDirection: isMobile ? 'row' : 'column',
+              gap:8,
+              alignItems:'stretch',
+            }}>
               <button onClick={()=>router.push(`/mypage/novel/${novel.id}`)}
-                style={{fontSize:12,fontWeight:700,border:'none',padding:'9px 14px',borderRadius:8,color:'var(--color-text-inverse)',background:'var(--color-brand)',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5}}>
+                style={{fontSize:12,fontWeight:700,border:'none',padding:'9px 14px',borderRadius:8,color:'var(--color-text-inverse)',background:'var(--color-brand)',cursor:'pointer',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,flex: isMobile ? 1 : undefined,whiteSpace:'nowrap' as const}}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 作品を管理する
               </button>
