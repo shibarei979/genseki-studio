@@ -26,7 +26,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import AvatarSprite from "@/components/room/avatar-sprite";
 import {
@@ -245,19 +245,35 @@ export default function RoomFloor({
         null,
     );
 
-    const self = fromMembers
-        ? { ...fromMembers, ...(selfSpot ?? {}) }
-        : undefined;
+    /*
+     * 自分。
+     *
+     * useMemo で包む。包まないと、描くたびに新しいものができて、
+     * 下の扉の判定が毎回走る。
+     * 走るたびに描き直しが起き、やがて追いつかなくなる。
+     */
+    const self = useMemo(
+        () =>
+            fromMembers
+                ? { ...fromMembers, ...(selfSpot ?? {}) }
+                : undefined,
+        [fromMembers, selfSpot],
+    );
+
     const wasAtDoor = useRef(false);
 
-    useEffect(() => {
-        if (!self) return;
+    const selfX = self?.x;
+    const selfY = self?.y;
 
-        const atDoor = isAtRoomDoor(background, self.x, self.y);
+    useEffect(() => {
+        if (selfX === undefined || selfY === undefined) return;
+
+        const atDoor = isAtRoomDoor(background, selfX, selfY);
+
         // 立った瞬間だけ尋ねる。留まっているあいだ繰り返さない
         if (atDoor && !wasAtDoor.current) onReachDoor?.();
         wasAtDoor.current = atDoor;
-    }, [self?.x, self?.y, background, onReachDoor, self]);
+    }, [selfX, selfY, background, onReachDoor]);
 
     /*
      * 部屋を移ったら、手元の位置を忘れる。

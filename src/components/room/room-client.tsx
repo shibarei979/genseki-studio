@@ -10,7 +10,7 @@
 import { useRouter } from "next/navigation";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Header from "@/components/layout/header";
 import RoomFloor from "@/components/room/room-floor";
@@ -358,14 +358,38 @@ export default function RoomClient({ roomId }: Props) {
      * 扉まで歩いたときと、退出のボタンを押したときで
      * 同じ流れにしたいので、1 か所にまとめてある。
      */
-    function askToLeave() {
+    /*
+     * useCallback で包む。
+     *
+     * 包まないと描くたびに新しいものができ、
+     * 受け取った側の処理が毎回走り直す。
+     * それが描き直しを呼び、追いつかなくなる。
+     */
+    const askToLeave = useCallback(() => {
         if (isHost) {
             setHandoverTo(others[0]?.id ?? null);
             setIsLeaving(true);
         } else {
             setIsDoorAsking(true);
         }
-    }
+    }, [isHost, others]);
+
+    /*
+     * 歩いた先を伝える。
+     *
+     * useCallback で包む。
+     * 描くたびに新しいものを渡すと、
+     * 受け取った側の処理が走り直す。
+     */
+    const handleMove = useCallback(
+        (x: number, y: number) => {
+            presenceRef.current?.move(x, y);
+
+            /* 次に戻ってきたとき、ここに立っている */
+            if (roomId) saveLastSpot(roomId, x, y);
+        },
+        [roomId],
+    );
 
     /**
      * 別の人に任せて出る。
@@ -986,11 +1010,7 @@ export default function RoomClient({ roomId }: Props) {
                                 /* 集中モード中は床に吹き出しを出さない */
                                 messages={isFocusing ? [] : state.messages}
                                 selfId={identity.id}
-                                onMove={(x, y) => {
-                                    presenceRef.current?.move(x, y);
-                                    /* 次に戻ってきたとき、ここに立っている */
-                                    saveLastSpot(room.id, x, y);
-                                }}
+                                onMove={handleMove}
                             />
 
                             {/*
