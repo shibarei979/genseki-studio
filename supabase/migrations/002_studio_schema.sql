@@ -1068,3 +1068,43 @@ begin
 
   raise notice 'すべて揃いました';
 end $$;
+
+-- 知らせの表
+--
+-- 運営からのお知らせや、いいね・コメントの知らせを入れる。
+-- ヘッダーのベルに出る。
+
+create table if not exists public.notifications (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null,
+  -- announcement / like / comment / follow など
+  type       text not null default 'announcement',
+  message    text not null default '',
+  link       text,
+  is_read    boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- 自分あてのものを、新しい順に取り出す
+create index if not exists notifications_user_idx
+  on public.notifications (user_id, created_at desc);
+
+alter table public.notifications enable row level security;
+
+-- 自分あてのものだけ読める
+drop policy if exists notifications_read on public.notifications;
+create policy notifications_read on public.notifications
+  for select using (auth.uid() = user_id);
+
+-- 読んだ印を付けられる
+drop policy if exists notifications_update on public.notifications;
+create policy notifications_update on public.notifications
+  for update using (auth.uid() = user_id);
+
+-- 入れられるのは運営だけ
+drop policy if exists notifications_insert on public.notifications;
+create policy notifications_insert on public.notifications
+  for insert to authenticated
+  with check (public.is_admin());
+
+notify pgrst, 'reload schema';
