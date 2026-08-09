@@ -217,9 +217,10 @@ function Hero({ onStart }: { onStart?: () => void }) {
              * 右へ寄せすぎると、字と絵の境目が
              * 画面の真ん中より左に来る。半分でちょうどよい。
              *
-             * 狭い画面では上に置く。横に並べる幅が無い。
+             * 狭い画面では全体に敷き、その上に字を載せる。
+             * 横に並べる幅が無いので、重ねる。
              */}
-            <div className="relative h-44 w-full overflow-hidden sm:h-56 md:absolute md:inset-y-0 md:right-0 md:h-auto md:w-1/2">
+            <div className="absolute inset-0 overflow-hidden md:inset-y-0 md:left-auto md:right-0 md:w-1/2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={HERO_IMAGES[heroIndex]}
@@ -234,6 +235,20 @@ function Hero({ onStart }: { onStart?: () => void }) {
                     aria-hidden="true"
                 />
             </div>
+            <div
+                className="absolute inset-0 md:hidden"
+                style={{
+                    /*
+                     * 狭い画面。
+                     *
+                     * 絵の上に字を載せるので、白を薄く敷く。
+                     * 敷かないと、絵の明るい所で字が消える。
+                     */
+                    background:
+                        "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.88) 55%, rgba(255,255,255,0.8) 100%)",
+                }}
+                aria-hidden="true"
+            />
             <div
                 className="absolute inset-0 hidden md:block"
                 style={{
@@ -256,7 +271,7 @@ function Hero({ onStart }: { onStart?: () => void }) {
                     style={{ color: NAVY.ink }}
                 >
                     物語を生み出すすべての人のための、
-                    <br className="hidden sm:inline" />
+                    <br />
                     創作活動プラットフォーム
                 </h1>
 
@@ -276,7 +291,7 @@ function Hero({ onStart }: { onStart?: () => void }) {
                  * 狭い画面では幅いっぱいに。
                  * 指で押すものなので、小さいと外す。
                  */}
-                <div className="mt-5 flex gap-2 sm:mt-9 sm:flex-wrap sm:gap-3">
+                <div className="mt-5 grid grid-cols-2 gap-2 sm:mt-9 sm:flex sm:flex-wrap sm:gap-3">
                     <StartButton
                         onStart={onStart}
                         className="rounded-md py-2.5 text-center text-[12px] font-medium text-white hover:opacity-90 sm:py-3.5 sm:px-9 sm:text-[13px]"
@@ -351,25 +366,30 @@ function WhatYouCanDo() {
                          * 狭い画面では正方形の枠に収める。
                          * 高さが揃うので、2 × 2 が整って見える。
                          */
-                        className="flex aspect-square flex-col items-center justify-center rounded-xl border px-2 text-center sm:aspect-auto sm:block sm:rounded-none sm:border-0 sm:px-6 lg:border-l"
+                        /*
+                         * 狭い画面では正方形に収める。
+                         * 枠線は引かない。4 つが箱に見えて、
+                         * 押せるものだと受け取られる。
+                         */
+                        className="flex aspect-square flex-col items-center justify-center px-2 text-center sm:aspect-auto sm:block sm:px-6 lg:border-l"
                         style={{
                             /* 1 つ目の左には線を引かない */
                             borderColor: index === 0 ? "transparent" : NAVY.line,
                         }}
                     >
                         <span
-                            className="mx-auto flex h-10 w-10 items-center justify-center rounded-full sm:h-16 sm:w-16"
+                            className="mx-auto flex h-9 w-9 items-center justify-center rounded-full sm:h-16 sm:w-16"
                             style={{ background: NAVY.tint, color: NAVY.base }}
                         >
                             {item.icon}
                         </span>
                         <h3
-                            className="mt-2.5 text-[12px] tracking-[0.04em] sm:mt-5 sm:text-[15px] sm:tracking-[0.08em]"
+                            className="mt-2 text-[12px] tracking-[0.04em] sm:mt-5 sm:text-[15px] sm:tracking-[0.08em]"
                             style={{ color: NAVY.ink }}
                         >
                             {item.title}
                         </h3>
-                        <p className="mt-1.5 line-clamp-3 text-[10px] leading-[1.7] text-[#5a6a7c] sm:mt-3 sm:line-clamp-none sm:text-[12px] sm:leading-[2]">
+                        <p className="mt-1.5 text-[9.5px] leading-[1.6] text-[#5a6a7c] sm:mt-3 sm:text-[12px] sm:leading-[2]">
                             {item.body}
                         </p>
                     </li>
