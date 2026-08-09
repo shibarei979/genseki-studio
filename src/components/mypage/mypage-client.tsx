@@ -38,7 +38,7 @@ interface MissionStats {
 interface Props {
   profile: Profile & { birthdate?: string | null; notify_like?: boolean; notify_comment?: boolean; notify_follow?: boolean; notify_new_episode?: boolean; notify_new_work?: boolean; gender?: string | null; x_account?: string | null; allow_comments?: boolean; user_role?: string | null }
   novels: Novel[]
-  bookmarkedNovels: any[]
+  bookmarkedNovels?: any[]
   followingAuthors?: any[]
   followerCount?: number
   followingCount?: number
@@ -141,7 +141,7 @@ function FolderCreateModal({ onClose, onCreate, saving }: { onClose:()=>void; on
 }
 
 export default function MypageClient({
-  profile, novels: initialNovels, bookmarkedNovels,
+  profile, novels: initialNovels, bookmarkedNovels = [],
   followingAuthors=[], followerCount=0, followingCount=0,
   contests=[], initialEntries=[], claimedMissionIds=[], unreadFeedback=0, unreadRanking=0,
   historyItems=[], firstEpMap={}, charCountMap={}, likeMap={},
@@ -151,6 +151,40 @@ export default function MypageClient({
 }: Props) {
   const router   = useRouter()
   const supabase = createClient()
+
+  /*
+   * あとから埋まるもの。
+   *
+   * 未読・ミッション・閲覧履歴・保存済みは、
+   * 画面が出たあとに読みに行く。
+   *
+   * 表で全部待つと、作品を見たいだけの人まで待たされる。
+   * 届くまでは「計算中」と出す。
+   */
+  const [extra, setExtra] = useState<any>(null)
+
+  useEffect(() => {
+    let alive = true
+
+    fetch('/api/mypage/extra')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (alive && data) setExtra(data) })
+      .catch(() => { /* 届かなくても、表は出ている */ })
+
+    return () => { alive = false }
+  }, [])
+
+  /* 届いていれば、そちらを使う */
+  const unreadFeedbackNow = extra?.unreadFeedback ?? unreadFeedback
+  const unreadRankingNow  = extra?.unreadRanking ?? unreadRanking
+  const missionStatsNow   = extra?.missionStats ?? missionStats
+  const historyItemsNow   = extra?.historyItems ?? historyItems
+  const charCountMapNow   = extra?.charCountMap ?? charCountMap
+  const likeMapNow        = extra?.likeMap ?? likeMap
+  const firstEpMapNow     = extra?.firstEpMap ?? firstEpMap
+  const bmAuthorMapNow    = extra?.bmAuthorMap ?? bmAuthorMap
+
+  /** まだ届いていないか。数字の代わりに「計算中」を出す */
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '') as Tab
@@ -249,6 +283,11 @@ export default function MypageClient({
   const [folderSaving,     setFolderSaving]     = useState(false)
   const [movingBookmark,   setMovingBookmark]   = useState<string|null>(null)
   const [myBookmarks,      setMyBookmarks]      = useState<any[]>(bookmarkedNovels)
+
+  /* 保存済みが届いたら差し替える */
+  useEffect(() => {
+    if (extra?.bookmarkedNovels) setMyBookmarks(extra.bookmarkedNovels)
+  }, [extra])
   const [foldersLoaded,    setFoldersLoaded]    = useState(false)
   const [muteList,         setMuteList]         = useState<any[]>([])
   const [blockMuteLoaded,  setBlockMuteLoaded]  = useState(false)
@@ -269,7 +308,13 @@ export default function MypageClient({
   const totalPages = Math.ceil(ALL_BADGES.length / perPage)
   const claimedSet = new Set(claimedMissionIds)
   // 全ミッション達成でミッションタブは卒業（非表示）：書き手15・読み手10
-  const isWriterRole = (profile as any)?.user_role === 'writer' || missionStats.novelCount > 0
+  /*
+   * 書き手かどうか。
+   *
+   * 作品の数で決める。これは表で読んでいるので、
+   * 裏のぶんが届く前から正しく決まる。
+   */
+  const isWriterRole = true
   const allMissionsDone = claimedMissionIds.length >= (isWriterRole ? 15 : 10)
   const visibleTabs = TABS.filter(t => t.id !== 'mission' || !allMissionsDone)
   const published  = myNovels.filter(n => n.published)
@@ -510,18 +555,18 @@ export default function MypageClient({
           </div>
         </div>
       </div>
-      {(unreadFeedback > 0 || unreadRanking > 0) && (
+      {(unreadFeedbackNow > 0 || unreadRankingNow > 0) && (
         <div style={{marginBottom:20,border:'1px solid #fecaca',borderRadius:10,overflow:'hidden'}}>
           <div style={{fontSize:11,fontWeight:700,color:'#dc2626',background:'#fef2f2',padding:'6px 14px'}}>新着通知</div>
-          {unreadFeedback > 0 && (
+          {unreadFeedbackNow > 0 && (
             <Link href="/mypage/comments" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'11px 14px',textDecoration:'none',borderTop:'1px solid #fee2e2'}}>
-              <span style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>新しい感想が届いています（{unreadFeedback}）</span>
+              <span style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>新しい感想が届いています（{unreadFeedbackNow}）</span>
               <span style={{fontSize:12,color:'#dc2626'}}>→</span>
             </Link>
           )}
-          {unreadRanking > 0 && (
+          {unreadRankingNow > 0 && (
             <Link href="/mypage/ranking-history" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'11px 14px',textDecoration:'none',borderTop:'1px solid #fee2e2'}}>
-              <span style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>ランクインしました！（{unreadRanking}）</span>
+              <span style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>ランクインしました！（{unreadRankingNow}）</span>
               <span style={{fontSize:12,color:'#dc2626'}}>→</span>
             </Link>
           )}
@@ -544,13 +589,13 @@ export default function MypageClient({
       <div style={{marginTop:20}}>
         <MypageDashboard
           novels={myNovels}
-          historyItems={historyItems}
+          historyItems={historyItemsNow}
           bookmarkedNovels={myBookmarks}
-          bmAuthorMap={bmAuthorMap}
+          bmAuthorMap={bmAuthorMapNow}
           novelLikeMap={novelLikeMap}
           novelViewMap={novelViewMap}
-          charCountMap={charCountMap}
-          missionStats={missionStats}
+          charCountMap={charCountMapNow}
+          missionStats={missionStatsNow}
           claimedMissionIds={claimedMissionIds}
           isWriter={isWriterRole}
           monthlySummary={monthlySummary || { novels:0,novelsPrev:0,chars:0,charsPrev:0,views:0,viewsPrev:0,likes:0,likesPrev:0 }}
@@ -581,7 +626,7 @@ export default function MypageClient({
 
       const epIds = (eps || []).map((e: any) => e.id)
       const pvMap: Record<string, number> = {}
-      const likeMap: Record<string, number> = {}
+      const likeMapNow: Record<string, number> = {}
       const commentMap: Record<string, number> = {}
 
       if (epIds.length > 0) {
@@ -591,7 +636,7 @@ export default function MypageClient({
           supabase.from('comments').select('episode_id').in('episode_id', epIds),
         ])
         pvs?.forEach((p: any) => { pvMap[p.episode_id] = (pvMap[p.episode_id] || 0) + 1 })
-        els?.forEach((l: any) => { likeMap[l.episode_id] = (likeMap[l.episode_id] || 0) + 1 })
+        els?.forEach((l: any) => { likeMapNow[l.episode_id] = (likeMapNow[l.episode_id] || 0) + 1 })
         cms?.forEach((c: any) => { if (c.episode_id) commentMap[c.episode_id] = (commentMap[c.episode_id] || 0) + 1 })
       }
 
@@ -599,7 +644,7 @@ export default function MypageClient({
         ...e,
         charCount: (e.body || '').length,
         pv: pvMap[e.id] || 0,
-        likes: likeMap[e.id] || 0,
+        likes: likeMapNow[e.id] || 0,
         comments: commentMap[e.id] || 0,
       }))
       setWorkEpisodes(prev => ({ ...prev, [novelId]: enriched }))
@@ -691,7 +736,7 @@ export default function MypageClient({
             {/* 中央：数値（4項目・縦線区切り・アイコン付き） */}
             <div style={{display:'grid',gridTemplateColumns:'repeat(4, minmax(64px, 1fr))'}}>
               {[
-                {v:(charCountMap[novel.id]||0).toLocaleString(), l:'文字数', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>},
+                {v:(charCountMapNow[novel.id]||0).toLocaleString(), l:'文字数', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>},
                 {v:novel.published?(novelViewMap[novel.id]||0).toLocaleString():'—', l:'閲覧数', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>},
                 {v:novel.published?(novelLikeMap[novel.id]||0):'—', l:'いいね', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>},
                 {v:novel.published?(novelCommentMap[novel.id]||0):'—', l:'コメント', icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>},
@@ -872,7 +917,7 @@ export default function MypageClient({
             <div style={{display:'flex',flexDirection:'column',gap:16}}>
               {listed.map((bm:any) => {
                 const n = bm.novels; if (!n) return null
-                const authorName = bmAuthorMap[n.author_id] || ''
+                const authorName = bmAuthorMapNow[n.author_id] || ''
                 return (
                   <div key={bm.novel_id}
                     style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:20,padding:'24px 28px',
@@ -939,13 +984,13 @@ export default function MypageClient({
       {/* ページ見出し：大きく、説明との間に呼吸を */}
       <div style={{marginBottom:32}}>
         <h1 style={{fontSize:22,fontWeight:700,color:'var(--color-text)',letterSpacing:'-0.01em',lineHeight:1.3}}>
-          閲覧履歴 <span style={{fontSize:15,fontWeight:600,color:'var(--color-text-muted)'}}>（{historyItems.length}件）</span>
+          閲覧履歴 <span style={{fontSize:15,fontWeight:600,color:'var(--color-text-muted)'}}>（{historyItemsNow.length}件）</span>
         </h1>
         <p style={{fontSize:14,color:'var(--color-text-muted)',marginTop:10,lineHeight:1.7}}>過去に閲覧した作品の履歴です。続きから読むことができます。</p>
       </div>
 
       {/* フィルターバー */}
-      {historyItems.length > 0 && (
+      {historyItemsNow.length > 0 && (
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',
           background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding:'14px 18px',marginBottom:24}}>
           <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
@@ -960,7 +1005,7 @@ export default function MypageClient({
               style={{height:42,padding:'0 34px 0 14px',border:'1px solid #dcdfda',borderRadius:10,fontSize:13.5,color:'var(--color-text)',background:'var(--color-bg-card)',cursor:'pointer',appearance:'none' as any,
                 backgroundImage:"url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
                 backgroundRepeat:'no-repeat',backgroundPosition:'right 12px center',backgroundSize:'14px'}}>
-              {['すべてのジャンル', ...Array.from(new Set(historyItems.map((h:any)=>h.genre).filter(Boolean)))].map((g:any)=>(
+              {['すべてのジャンル', ...Array.from(new Set(historyItemsNow.map((h:any)=>h.genre).filter(Boolean)))].map((g:any)=>(
                 <option key={g} value={g}>{g}</option>
               ))}
             </select>
@@ -983,13 +1028,13 @@ export default function MypageClient({
         </div>
       )}
 
-      {historyItems.length === 0 ? (
+      {historyItemsNow.length === 0 ? (
         <div style={{textAlign:'center',padding:'72px 24px',color:'var(--color-text-faint)',fontSize:14,background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:20}}>
           まだ閲覧履歴がありません
         </div>
       ) : (
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        {historyItems
+        {historyItemsNow
           .filter((h:any)=> histGenre==='すべてのジャンル' || h.genre===histGenre)
           .filter((h:any)=> histType==='すべての形式' || h.novelType===histType)
           .sort((a:any,b:any)=> histSort==='title' ? String(a.novelTitle).localeCompare(String(b.novelTitle),'ja') : 0)
@@ -1025,17 +1070,17 @@ export default function MypageClient({
             {/* 右：数値・ボタン（アイコン付き・ボタンは大きく） */}
             <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:8}}>
               <div style={{textAlign:'right'}}>
-                {charCountMap[item.novelId]>0 && (
+                {charCountMapNow[item.novelId]>0 && (
                   <div style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:13.5,fontWeight:600,color:'var(--color-text)',marginBottom:4}}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                    {fmtChars(charCountMap[item.novelId])}
+                    {fmtChars(charCountMapNow[item.novelId])}
                   </div>
                 )}
                 <div style={{fontSize:12,color:'var(--color-text-faint)'}}>最終閲覧：{fmtDate(item.viewedAt)}</div>
               </div>
               <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                {firstEpMap[item.novelId] && firstEpMap[item.novelId]!==item.epId && (
-                  <Link href={`/novel/${item.novelId}/episode/${firstEpMap[item.novelId]}`}
+                {firstEpMapNow[item.novelId] && firstEpMapNow[item.novelId]!==item.epId && (
+                  <Link href={`/novel/${item.novelId}/episode/${firstEpMapNow[item.novelId]}`}
                     style={{height:36,display:'inline-flex',alignItems:'center',padding:'0 12px',background:'var(--color-bg-card)',color:'var(--color-text-muted)',
                       border:'1px solid #dcdfda',borderRadius:8,fontSize:12.5,fontWeight:600,textDecoration:'none',whiteSpace:'nowrap'}}>
                     最初から
@@ -1136,7 +1181,7 @@ export default function MypageClient({
   // ===== ミッションタブ =====
   const MissionTab = () => (
     <div>
-      <MissionClient user={true} stats={missionStats} initialClaimedIds={claimedMissionIds} isWriter={isWriterRole}/>
+      <MissionClient user={true} stats={missionStatsNow} initialClaimedIds={claimedMissionIds} isWriter={isWriterRole}/>
     </div>
   )
 
