@@ -18,7 +18,7 @@ import Header from "@/components/layout/header";
 import EpisodeEditor from "@/components/workspace/episode-editor";
 import EpisodeList from "@/components/workspace/episode-list";
 import MentionPanel from "@/components/workspace/mention-panel";
-import ReplacePanel from "@/components/workspace/replace-panel";
+import ProofreadPanel from "@/components/workspace/proofread-panel";
 import ReadPanel from "@/components/workspace/read-panel";
 import VersionHistoryPanel from "@/components/workspace/version-history-panel";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
@@ -33,7 +33,7 @@ import { AUTO_EXTRACT_INTERVAL_MS } from "@/config";
 import { getRepository } from "@/lib/repository";
 import { useAiStatus } from "@/hooks/use-ai-status";
 import { formatNumber } from "@/lib/utils/text";
-import type { Chapter, DisplaySettings, Episode, Work } from "@/types";
+import type { DisplaySettings, Episode, Work } from "@/types";
 import { nextEpisodeStatus } from "@/types";
 
 interface Props {
@@ -50,74 +50,16 @@ export default function WorkspaceClient({ workId }: Props) {
      * 一度使ったら消す。話を切り替えるたびに飛ぶと邪魔になる。
      */
     const [jumpLine, setJumpLine] = useState<number | null>(null);
-
-    /* 章。作らずに書き始められるので、無い作品もある */
-    const [chapters, setChapters] = useState<Chapter[]>([]);
-
-    const reloadChapters = useCallback(async () => {
-        setChapters(await getRepository().listChapters(workId));
-    }, [workId]);
-
-    useEffect(() => {
-        void reloadChapters();
-    }, [reloadChapters]);
-
-    async function handleCreateChapter() {
-        await getRepository().createChapter(workId);
-        await reloadChapters();
-    }
-
-    async function handleRenameChapter(chapterId: string, title: string) {
-        await getRepository().updateChapter(chapterId, { title });
-        await reloadChapters();
-    }
-
-    async function handleDeleteChapter(chapterId: string) {
-        /*
-         * 中の話は消えない。章から外れるだけ。
-         * 章を消したつもりで原稿ごと消えるのは、取り返しがつかない。
-         */
-        await getRepository().deleteChapter(chapterId);
-        await reloadChapters();
-        await reload();
-    }
-
-    async function handleReorderChapters(orderedIds: string[]) {
-        await getRepository().reorderChapters(workId, orderedIds);
-        await reloadChapters();
-    }
-
-    async function handleMoveToChapter(
-        episodeId: string,
-        chapterId: string | null,
-    ) {
-        await updateEpisode(episodeId, { chapter_id: chapterId });
-    }
-
-    /** 話を複製する。下書きとして作る */
-    async function handleDuplicate(episode: Episode) {
-        const repository = getRepository();
-        const created = await repository.createEpisode(workId);
-
-        await repository.updateEpisode(created.id, {
-            title: episode.title ? `${episode.title}（写し）` : "",
-            body: episode.body,
-            status: "todo",
-            chapter_id: episode.chapter_id ?? null,
-        });
-
-        await reload();
-    }
     /** URL で指定された行き先。話が読み込まれるまで持っておく */
     const wantedEpisodeRef = useRef<string | null>(null);
     const wantedLineRef = useRef<number | null>(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isMentionsOpen, setIsMentionsOpen] = useState(false);
     const [selection, setSelection] = useState("");
-    const [isReplaceOpen, setIsReplaceOpen] = useState(false);
+    const [isProofreadOpen, setIsProofreadOpen] = useState(false);
     const [isReadOpen, setIsReadOpen] = useState(false);
     const aiStatus = useAiStatus();
-    /** 置換の欄が読む本文と、直した結果を戻す口 */
+    /** 推敲パネルが読む本文と、直した結果を戻す口 */
     const [draft, setDraft] = useState<{ body: string; apply: (next: string) => void }>({
         body: "",
         apply: () => {},
@@ -142,15 +84,8 @@ export default function WorkspaceClient({ workId }: Props) {
     useEffect(() => {
         void (async () => {
             const repository = getRepository();
-
-            /* 互いに関わらないので、同時に頼む */
-            const [workData, settingsData] = await Promise.all([
-                repository.getWork(workId),
-                repository.getDisplaySettings(workId),
-            ]);
-
-            setWork(workData);
-            setSettings(settingsData);
+            setWork(await repository.getWork(workId));
+            setSettings(await repository.getDisplaySettings(workId));
             setIsWorkLoading(false);
         })();
     }, [workId]);
@@ -201,14 +136,8 @@ export default function WorkspaceClient({ workId }: Props) {
     const selected = episodes.find((ep) => ep.id === selectedId) ?? null;
     const totalChars = episodes.reduce((sum, ep) => sum + ep.char_count, 0);
 
-    async function handleCreate(chapterId?: string | null) {
+    async function handleCreate() {
         const episode = await createEpisode();
-
-        /* 章の中から作ったなら、その章に入れる */
-        if (chapterId) {
-            await updateEpisode(episode.id, { chapter_id: chapterId });
-        }
-
         setSelectedId(episode.id);
     }
 
@@ -285,7 +214,7 @@ export default function WorkspaceClient({ workId }: Props) {
 
     if (isWorkLoading || isEpisodesLoading) {
         return (
-            <div className="min-h-screen bg-canvas">
+            <div className="min-h-screen bg-page">
                 <Header />
                 <p className="py-24 text-center text-sm text-faint">読み込んでいます</p>
             </div>
@@ -294,7 +223,7 @@ export default function WorkspaceClient({ workId }: Props) {
 
     if (!work || !settings) {
         return (
-            <div className="min-h-screen bg-canvas">
+            <div className="min-h-screen bg-page">
                 <Header breadcrumbs={[{ label: "作品一覧", href: "/" }, { label: "見つかりません" }]} />
                 <div className="py-24 text-center">
                     <p className="text-sm text-ink">この作品は見つかりませんでした。</p>
@@ -313,7 +242,7 @@ export default function WorkspaceClient({ workId }: Props) {
     }
 
     return (
-        <div className="flex h-screen flex-col bg-canvas">
+        <div className="flex h-screen flex-col bg-page">
             <Header
                 breadcrumbs={[
                     { label: "作品一覧", href: "/" },
@@ -344,30 +273,14 @@ export default function WorkspaceClient({ workId }: Props) {
                         <div className="min-h-0 flex-1">
                             <EpisodeList
                                 episodes={episodes}
-                                chapters={chapters}
                                 selectedId={selectedId}
                                 onSelect={setSelectedId}
-                                onCreate={(chapterId) =>
-                                    void handleCreate(chapterId)
-                                }
+                                onCreate={handleCreate}
                                 onDelete={(id) => void deleteEpisode(id)}
-                                onDuplicate={(ep) => void handleDuplicate(ep)}
                                 onToggleStatus={(ep) => void handleToggleStatus(ep)}
                                 onReorder={(ids) => void reorderEpisodes(ids)}
-                                onMoveToChapter={(id, chapterId) =>
-                                    void handleMoveToChapter(id, chapterId)
-                                }
-                                onCreateChapter={() => void handleCreateChapter()}
-                                onRenameChapter={(id, title) =>
-                                    void handleRenameChapter(id, title)
-                                }
-                                onDeleteChapter={(id) => void handleDeleteChapter(id)}
-                                onReorderChapters={(ids) =>
-                                    void handleReorderChapters(ids)
-                                }
                             />
                         </div>
-
                     </div>
                 </aside>
 
@@ -386,58 +299,33 @@ export default function WorkspaceClient({ workId }: Props) {
                                 void recordProgress();
                             }}
                             onToggleWritingMode={() => void handleToggleWritingMode()}
-                            onSetFontSize={(size) =>
-                                void (async () => {
-                                    setSettings(
-                                        await getRepository().saveDisplaySettings(
-                                            workId,
-                                            { font_size: size },
-                                        ),
-                                    );
-                                })()
-                            }
-                            onSetFont={(font) =>
-                                void (async () => {
-                                    setSettings(
-                                        await getRepository().saveDisplaySettings(
-                                            workId,
-                                            { font_family: font },
-                                        ),
-                                    );
-                                })()
-                            }
-                            onSetWritingMode={(mode) =>
-                                void (async () => {
-                                    setSettings(
-                                        await getRepository().saveDisplaySettings(
-                                            workId,
-                                            { writing_mode: mode },
-                                        ),
-                                    );
-                                })()
-                            }
                             onOpenHistory={() => {
                                 setIsHistoryOpen((open) => !open);
                                 setIsMentionsOpen(false);
-                                setIsReplaceOpen(false);
+                                setIsProofreadOpen(false);
                                 setIsReadOpen(false);
                             }}
                             isHistoryOpen={isHistoryOpen}
                             onOpenMentions={() => {
                                 setIsMentionsOpen((open) => !open);
                                 setIsHistoryOpen(false);
-                                setIsReplaceOpen(false);
+                                setIsProofreadOpen(false);
                                 setIsReadOpen(false);
                             }}
                             isMentionsOpen={isMentionsOpen}
                             onSelectionChange={setSelection}
-                            onOpenReplace={() => setIsReplaceOpen((open) => !open)}
-                            isReplaceOpen={isReplaceOpen}
+                            onOpenProofread={() => {
+                                setIsProofreadOpen((open) => !open);
+                                setIsHistoryOpen(false);
+                                setIsMentionsOpen(false);
+                                setIsReadOpen(false);
+                            }}
+                            isProofreadOpen={isProofreadOpen}
                             onOpenRead={() => {
                                 setIsReadOpen((open) => !open);
                                 setIsHistoryOpen(false);
                                 setIsMentionsOpen(false);
-                                setIsReplaceOpen(false);
+                                setIsProofreadOpen(false);
                             }}
                             isReadOpen={isReadOpen}
                             onRegisterBody={registerBody}
@@ -467,23 +355,12 @@ export default function WorkspaceClient({ workId }: Props) {
                         />
                     )}
 
-                    {selected && isReplaceOpen && (
-                        <div className="w-[340px] shrink-0 border-l border-line bg-surface">
-                            <ReplacePanel
-                                body={selected.body}
-                                onApply={(next) =>
-                                    void (async () => {
-                                        const saved = await updateEpisode(
-                                            selected.id,
-                                            { body: next },
-                                        );
-                                        void runAutoExtract(saved);
-                                    })()
-                                }
-                                onJump={(line) => setJumpLine(line)}
-                                onClose={() => setIsReplaceOpen(false)}
-                            />
-                        </div>
+                    {selected && isProofreadOpen && (
+                        <ProofreadPanel
+                            body={draft.body}
+                            onApplyFix={(next) => draft.apply(next)}
+                            onClose={() => setIsProofreadOpen(false)}
+                        />
                     )}
 
                     {selected && isMentionsOpen && (
