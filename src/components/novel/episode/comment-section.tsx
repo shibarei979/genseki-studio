@@ -63,6 +63,27 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
   const [replyPosting, setReplyPosting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  /*
+   * コメントは、画面が出たあとに読む。
+   *
+   * 本文を読み終えるまで見えない場所なので、
+   * 表で待つ理由が無い。
+   */
+  useEffect(() => {
+    if (initialComments.length > 0) return
+
+    let alive = true
+
+    fetch(`/api/novel/${novelId}/comments`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (alive && data?.comments) setComments(buildTree(data.comments))
+      })
+      .catch(() => { /* 届かなくても、本文は読める */ })
+
+    return () => { alive = false }
+  }, [novelId, initialComments.length])
+
   useEffect(() => {
     if (quotedText && textareaRef.current) {
       textareaRef.current.focus()

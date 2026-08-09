@@ -69,39 +69,22 @@ export default async function EpisodePage({ params }: Props) {
   }
 
   // author・全話・コメント・話いいね数は互いに独立なので並列取得
-  const [authorRes, allEpsRes, rawCommentsRes, epLikeCountRes] = await Promise.all([
+  const [authorRes, allEpsRes, epLikeCountRes] = await Promise.all([
     supabase.from('profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('episodes').select('id, ep_number, title, published, scheduled_at').eq('novel_id', params.id).order('ep_number', { ascending: true }),
-    supabase.from('comments').select('id, body, created_at, user_id, is_pinned, rating, quoted_text, parent_id').eq('novel_id', params.id).order('created_at', { ascending: false }).limit(50),
     supabase.from('episode_likes').select('*', { count: 'exact', head: true }).eq('episode_id', params.epId),
   ])
   const authorData = authorRes.data
   const allEps = allEpsRes.data
-  const rawComments = rawCommentsRes.data
   const epLikeCount = epLikeCountRes.count
 
-  // コメントのいいね数と投稿者プロフィール（rawCommentsに依存）を並列取得
-  const commentIds = (rawComments || []).map((c: any) => c.id)
-  const commentUserIds = Array.from(new Set((rawComments || []).map((c: any) => c.user_id).filter(Boolean)))
-  let commentLikeCounts: Record<string, number> = {}
-  let commentProfiles: Record<string, {display_name: string, icon_url: string}> = {}
-  const [clRes, cpRes] = await Promise.all([
-    commentIds.length > 0 ? supabase.from('comment_likes').select('comment_id').in('comment_id', commentIds) : Promise.resolve({ data: [] }),
-    commentUserIds.length > 0 ? supabase.from('profiles').select('user_id, display_name, icon_url').in('user_id', commentUserIds as string[]) : Promise.resolve({ data: [] }),
-  ])
-  clRes.data?.forEach((cl: any) => { commentLikeCounts[cl.comment_id] = (commentLikeCounts[cl.comment_id] || 0) + 1 })
-  cpRes.data?.forEach((p: any) => { commentProfiles[p.user_id] = { display_name: p.display_name || '名無し', icon_url: p.icon_url || '' } })
-
-  const comments = (rawComments || []).map((c: any) => ({
-    id: c.id, body: c.body, created_at: c.created_at, user_id: c.user_id,
-    display_name: commentProfiles[c.user_id]?.display_name || '名無し',
-    icon_url: commentProfiles[c.user_id]?.icon_url || '',
-    like_count: commentLikeCounts[c.id] || 0,
-    is_pinned: c.is_pinned || false,
-    rating: c.rating ?? null,
-    quoted_text: c.quoted_text ?? null,
-    parent_id: c.parent_id ?? null,
-  }))
+  /*
+   * コメントは、画面が出たあとに読む。
+   *
+   * いいねの数と書いた人の名前で 3 回かかるが、
+   * 出るのは本文の下。読み終えるまで見えない。
+   */
+  const comments: any[] = []
 
   let epLiked = false
   if (user) {
