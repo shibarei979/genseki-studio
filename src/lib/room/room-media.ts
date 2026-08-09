@@ -73,6 +73,13 @@ interface Peer {
     connection: RTCPeerConnection;
     /** 相手から届いた声や画面 */
     stream: MediaStream;
+    /**
+     * 声を送る口。
+     *
+     * 初めに 1 本だけ作り、中身だけ差し替える。
+     * 後から口を増やすと、繋ぎ直すときに並びが変わって弾かれる。
+     */
+    sender?: RTCRtpSender;
 }
 
 export interface MediaState {
@@ -131,6 +138,17 @@ export class RoomMedia {
              */
             for (const track of this.micStream.getTracks()) track.stop();
             this.micStream = null;
+
+            /*
+             * 送る口は残し、中身だけ空にする。
+             *
+             * 口ごと外すと、次に入れたとき並びが変わり、
+             * 繋ぎ直しが弾かれる。
+             */
+            for (const [, peer] of Array.from(this.peers)) {
+                void peer.sender?.replaceTrack(null);
+            }
+
             this.emit();
             return;
         }
@@ -153,9 +171,15 @@ export class RoomMedia {
          * これをしていなかったので、繋がっているのに
          * 中身が空のまま届いていた。
          */
+        const track = this.micStream.getAudioTracks()[0];
+
         for (const [id, peer] of Array.from(this.peers)) {
-            for (const track of this.micStream.getTracks()) {
-                peer.connection.addTrack(track, this.micStream);
+            /*
+             * 送る口に中身を入れる。
+             * 口そのものは増やさない。増やすと並びが変わる。
+             */
+            if (peer.sender && track) {
+                void peer.sender.replaceTrack(track);
                 log("音を乗せた", id.slice(0, 8));
             }
 
@@ -255,12 +279,25 @@ export class RoomMedia {
             log("繋ぎの状態", id.slice(0, 8), connection.connectionState);
         });
 
-        /* いま出している声を、繋いだ相手にも送る */
-        if (this.micStream) {
-            for (const track of this.micStream.getTracks()) {
-                connection.addTrack(track, this.micStream);
-            }
-        }
+        /*
+         * 声を送る口を、初めに 1 本だけ作る。
+         *
+         * addTrack を後から呼ぶと、送る口が増える。
+         * 増えると、繋ぎ直すときに並びが変わり
+         *   The order of m-lines ... doesn't match
+         * と言われて弾かれる。そこから戻れなくなる。
+         *
+         * 口は 1 本のまま、中身だけ差し替える。
+         */
+        const sender = connection.addTransceiver("audio", {
+            direction: "sendrecv",
+        }).sender;
+
+        peer.sender = sender;
+
+        /* いま出している声があれば、すぐ乗せる */
+        const track = this.micStream?.getAudioTracks()[0];
+        if (track) void sender.replaceTrack(track);
 
         connection.addEventListener("track", (event) => {
             stream.addTrack(event.track);
