@@ -71,8 +71,8 @@ const ALL_BADGES = [
   { id:'login_3',     name:'ログインバッジ Lv.2',       color:'#94a3b8' },
   { id:'login_7',     name:'ログインバッジ Lv.3',       color:'#94a3b8' },
   { id:'login_30',    name:'ログインバッジ Lv.4',       color:'#94a3b8' },
-  { id:'newbie',      name:'新人バッジ',               color:'#f59e0b' },
-  { id:'push_badge',  name:'推しバッジ',               color:'#f59e0b' },
+  { id:'newbie',      name:'新人バッジ',               color:'#4a7fa5' },
+  { id:'push_badge',  name:'推しバッジ',               color:'#4a7fa5' },
   { id:'_slot1',      name:'？？？',                  color:'#94a3b8' },
   { id:'_slot2',      name:'？？？',                  color:'#94a3b8' },
 ]
@@ -823,7 +823,7 @@ export default function MypageClient({
             <div key={item.id}
               onClick={()=>setSelectedFolder(item.id)}
               style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'11px 14px',cursor:'pointer',borderRadius:8,
-                background:selectedFolder===item.id?'#FFF0E5':'transparent',
+                background:selectedFolder===item.id?'#eef5f9':'transparent',
                 color:selectedFolder===item.id?'var(--color-brand)':'var(--color-text)',
                 fontWeight:selectedFolder===item.id?700:500}}>
               <span style={{fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</span>
@@ -873,7 +873,7 @@ export default function MypageClient({
                           display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as any,overflow:'hidden',overflowWrap:'anywhere' as any}}>{n.summary}</p>
                       )}
                       <div style={{display:'flex',gap:7,flexWrap:'wrap',alignItems:'center'}}>
-                        <span style={{fontSize:11.5,height:22,display:'inline-flex',alignItems:'center',background:'#FFF0E5',color:'var(--color-brand)',padding:'0 10px',borderRadius:6,fontWeight:600}}>{n.genre}</span>
+                        <span style={{fontSize:11.5,height:22,display:'inline-flex',alignItems:'center',background:'#eef5f9',color:'var(--color-brand)',padding:'0 10px',borderRadius:6,fontWeight:600}}>{n.genre}</span>
                         {n.novel_type && <span style={{fontSize:11.5,height:22,display:'inline-flex',alignItems:'center',background:'#EEF4FF',color:'#2563eb',padding:'0 10px',borderRadius:6,fontWeight:600}}>{n.novel_type}</span>}
                         {n.is_serial
                           ? <span style={{fontSize:11.5,height:22,display:'inline-flex',alignItems:'center',background:'#EAF8EF',color:'#35a45d',padding:'0 10px',borderRadius:6,fontWeight:600}}>連載中</span>
@@ -889,7 +889,7 @@ export default function MypageClient({
                       <select
                         value={bm.folder_id||''}
                         onChange={e=>handleMoveBookmark(bm.novel_id,e.target.value||null)}
-                        style={{height:40,padding:'0 12px',border:'1px solid #EADFD4',borderRadius:10,background:'var(--color-bg-card)',color:'var(--color-text-muted)',cursor:'pointer',fontSize:12.5}}>
+                        style={{height:40,padding:'0 12px',border:'1px solid #dcdfda',borderRadius:10,background:'var(--color-bg-card)',color:'var(--color-text-muted)',cursor:'pointer',fontSize:12.5}}>
                         <option value=''>未分類</option>
                         {folders.map((f:any)=>(<option key={f.id} value={f.id}>{f.name}</option>))}
                       </select>
@@ -938,14 +938,14 @@ export default function MypageClient({
           background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding:'14px 18px',marginBottom:24}}>
           <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
             <select value={histSort} onChange={e=>setHistSort(e.target.value as any)}
-              style={{height:42,padding:'0 34px 0 14px',border:'1px solid #EADFD4',borderRadius:10,fontSize:13.5,color:'var(--color-text)',background:'var(--color-bg-card)',cursor:'pointer',appearance:'none' as any,
+              style={{height:42,padding:'0 34px 0 14px',border:'1px solid #dcdfda',borderRadius:10,fontSize:13.5,color:'var(--color-text)',background:'var(--color-bg-card)',cursor:'pointer',appearance:'none' as any,
                 backgroundImage:"url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
                 backgroundRepeat:'no-repeat',backgroundPosition:'right 12px center',backgroundSize:'14px'}}>
               <option value="recent">最近読んだ順</option>
               <option value="title">タイトル順</option>
             </select>
             <select value={histGenre} onChange={e=>setHistGenre(e.target.value)}
-              style={{height:42,padding:'0 34px 0 14px',border:'1px solid #EADFD4',borderRadius:10,fontSize:13.5,color:'var(--color-text)',background:'var(--color-bg-card)',cursor:'pointer',appearance:'none' as any,
+              style={{height:42,padding:'0 34px 0 14px',border:'1px solid #dcdfda',borderRadius:10,fontSize:13.5,color:'var(--color-text)',background:'var(--color-bg-card)',cursor:'pointer',appearance:'none' as any,
                 backgroundImage:"url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
                 backgroundRepeat:'no-repeat',backgroundPosition:'right 12px center',backgroundSize:'14px'}}>
               {['すべてのジャンル', ...Array.from(new Set(historyItems.map((h:any)=>h.genre).filter(Boolean)))].map((g:any)=>(
@@ -953,7 +953,7 @@ export default function MypageClient({
               ))}
             </select>
             <select value={histType} onChange={e=>setHistType(e.target.value)}
-              style={{height:42,padding:'0 34px 0 14px',border:'1px solid #EADFD4',borderRadius:10,fontSize:13.5,color:'var(--color-text)',background:'var(--color-bg-card)',cursor:'pointer',appearance:'none' as any,
+              style={{height:42,padding:'0 34px 0 14px',border:'1px solid #dcdfda',borderRadius:10,fontSize:13.5,color:'var(--color-text)',background:'var(--color-bg-card)',cursor:'pointer',appearance:'none' as any,
                 backgroundImage:"url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
                 backgroundRepeat:'no-repeat',backgroundPosition:'right 12px center',backgroundSize:'14px'}}>
               {['すべての形式','長編','短編'].map(t=>(<option key={t} value={t}>{t}</option>))}
@@ -964,7 +964,7 @@ export default function MypageClient({
               await supabase.from('page_views').delete().eq('user_id', profile.user_id)
               window.location.reload()
             }}
-            style={{height:42,display:'inline-flex',alignItems:'center',padding:'0 16px',border:'1px solid #EADFD4',borderRadius:10,
+            style={{height:42,display:'inline-flex',alignItems:'center',padding:'0 16px',border:'1px solid #dcdfda',borderRadius:10,
               fontSize:13.5,color:'var(--color-text-muted)',background:'var(--color-bg-card)',cursor:'pointer'}}>
             履歴をクリア
           </button>
@@ -999,7 +999,7 @@ export default function MypageClient({
                   display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as any,overflow:'hidden',overflowWrap:'anywhere' as any}}>{item.summary}</p>
               )}
               <div style={{display:'flex',gap:7,flexWrap:'wrap',alignItems:'center'}}>
-                <span style={{fontSize:11.5,lineHeight:'22px',height:22,display:'inline-flex',alignItems:'center',background:'#FFF0E5',color:'var(--color-brand)',padding:'0 10px',borderRadius:6,fontWeight:600}}>{item.genre}</span>
+                <span style={{fontSize:11.5,lineHeight:'22px',height:22,display:'inline-flex',alignItems:'center',background:'#eef5f9',color:'var(--color-brand)',padding:'0 10px',borderRadius:6,fontWeight:600}}>{item.genre}</span>
                 {item.novelType && <span style={{fontSize:11.5,lineHeight:'22px',height:22,display:'inline-flex',alignItems:'center',background:'#EEF4FF',color:'#2563eb',padding:'0 10px',borderRadius:6,fontWeight:600}}>{item.novelType}</span>}
                 {item.isSerial
                   ? <span style={{fontSize:11.5,lineHeight:'22px',height:22,display:'inline-flex',alignItems:'center',background:'#EAF8EF',color:'#35a45d',padding:'0 10px',borderRadius:6,fontWeight:600}}>連載中</span>
@@ -1025,7 +1025,7 @@ export default function MypageClient({
                 {firstEpMap[item.novelId] && firstEpMap[item.novelId]!==item.epId && (
                   <Link href={`/novel/${item.novelId}/episode/${firstEpMap[item.novelId]}`}
                     style={{height:36,display:'inline-flex',alignItems:'center',padding:'0 12px',background:'var(--color-bg-card)',color:'var(--color-text-muted)',
-                      border:'1px solid #EADFD4',borderRadius:8,fontSize:12.5,fontWeight:600,textDecoration:'none',whiteSpace:'nowrap'}}>
+                      border:'1px solid #dcdfda',borderRadius:8,fontSize:12.5,fontWeight:600,textDecoration:'none',whiteSpace:'nowrap'}}>
                     最初から
                   </Link>
                 )}
@@ -1038,7 +1038,7 @@ export default function MypageClient({
                 <Link href={`/novel/${item.novelId}`}
                   title={bookmarkedIds.has(item.novelId)?'保存済み':'作品ページで保存する'}
                   style={{width:36,height:36,display:'inline-flex',alignItems:'center',justifyContent:'center',
-                    border:'1px solid #EADFD4',borderRadius:8,background:'var(--color-bg-card)',cursor:'pointer',flexShrink:0}}>
+                    border:'1px solid #dcdfda',borderRadius:8,background:'var(--color-bg-card)',cursor:'pointer',flexShrink:0}}>
                   <svg width="17" height="17" viewBox="0 0 24 24"
                     fill={bookmarkedIds.has(item.novelId)?'var(--color-brand)':'none'}
                     stroke={bookmarkedIds.has(item.novelId)?'var(--color-brand)':'var(--color-text-faint)'}
@@ -1224,19 +1224,23 @@ export default function MypageClient({
             <div style={secTitle}>表示設定</div>
             <div style={{fontSize:13,fontWeight:600,color:'var(--color-text)',marginBottom:4}}>ホーム初期表示</div>
             <div style={{fontSize:11.5,color:'var(--color-text-muted)',marginBottom:10}}>マイページを開いたときに表示する内容を選べます。いつでも変更できます。</div>
+            {/*
+              読書向けはまだ用意していない。
+              押せるようにしておくと、選んでも何も変わらず
+              壊れていると受け取られる。
+            */}
             <div style={{display:'inline-flex',border:'1px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden'}}>
-              {([{v:'reader',l:'読書向け'},{v:'writer',l:'執筆向け'}] as const).map(({v,l})=>(
-                <button key={v} onClick={async()=>{
-                    setUserRole(v); setRoleSaving(true)
-                    await supabase.from('profiles').update({user_role:v}).eq('user_id',profile.user_id)
-                    setRoleSaving(false)
-                  }}
-                  style={{padding:'8px 22px',fontSize:13,fontWeight:userRole===v?700:500,border:'none',cursor:'pointer',
-                    background:userRole===v?'var(--color-brand)':'var(--color-bg-card)',
-                    color:userRole===v?'var(--base-color-1)':'var(--color-text-muted)'}}>
-                  {l}
-                </button>
-              ))}
+              <span
+                title="読書向けの画面は準備中です"
+                style={{padding:'8px 22px',fontSize:13,fontWeight:500,
+                  background:'var(--color-bg-card)',color:'var(--color-text-faint)'}}>
+                読書向け（準備中）
+              </span>
+              <span
+                style={{padding:'8px 22px',fontSize:13,fontWeight:700,
+                  background:'var(--color-brand)',color:'var(--base-color-1)'}}>
+                執筆向け
+              </span>
             </div>
             {roleSaving && <span style={{fontSize:11,color:'var(--color-brand)',marginLeft:10}}>保存中...</span>}
           </div>
@@ -1254,7 +1258,7 @@ export default function MypageClient({
               {label:'バッジ図鑑', sub:`${claimedSet.size}/${ALL_BADGES.filter(b=>!b.id.startsWith('_')).length}獲得済み`, onClick:()=>{setShowBadgeBook(true);setBadgePage(0)}},
             ].map((item,i,arr) => (
               <button key={item.label} onClick={item.onClick}
-                style={{...rowBase,width:'100%',background:'none',border:'none',borderBottom:i<arr.length-1?'1px solid var(--color-border-light, #f1e9e1)':'none',cursor:'pointer',textAlign:'left' as const}}>
+                style={{...rowBase,width:'100%',background:'none',border:'none',borderBottom:i<arr.length-1?'1px solid var(--color-border-light, #eceef0)':'none',cursor:'pointer',textAlign:'left' as const}}>
                 <div>
                   <div style={{fontSize:13,color:'var(--color-text)',fontWeight:500}}>{item.label}</div>
                   {item.sub && <div style={{fontSize:11,color:'var(--color-text-faint)',marginTop:2}}>{item.sub}</div>}
@@ -1272,7 +1276,7 @@ export default function MypageClient({
               {label:'パスワードを変更', sub:'', onClick:()=>setShowPwModal(true)},
             ] : []).map((item,i)=>(
               <button key={item.label} onClick={item.onClick}
-                style={{...rowBase,width:'100%',background:'none',border:'none',borderBottom:'1px solid var(--color-border-light, #f1e9e1)',cursor:'pointer',textAlign:'left' as const}}>
+                style={{...rowBase,width:'100%',background:'none',border:'none',borderBottom:'1px solid var(--color-border-light, #eceef0)',cursor:'pointer',textAlign:'left' as const}}>
                 <div>
                   <div style={{fontSize:13,color:'var(--color-text)',fontWeight:500}}>{item.label}</div>
                   {item.sub && <div style={{fontSize:11,color:'var(--color-text-faint)',marginTop:2}}>{item.sub}</div>}
@@ -1281,7 +1285,7 @@ export default function MypageClient({
               </button>
             ))}
             <button onClick={handleSignOut} disabled={loading}
-              style={{...rowBase,width:'100%',background:'none',border:'none',borderBottom:'1px solid var(--color-border-light, #f1e9e1)',cursor:'pointer',fontSize:13,color:'var(--color-text)',textAlign:'left' as const}}>
+              style={{...rowBase,width:'100%',background:'none',border:'none',borderBottom:'1px solid var(--color-border-light, #eceef0)',cursor:'pointer',fontSize:13,color:'var(--color-text)',textAlign:'left' as const}}>
               <span>{loading?'...':'ログアウト'}</span>
             </button>
             <div style={{marginTop:8,paddingTop:12,borderTop:'1px solid var(--color-brand-border)'}}>
@@ -1306,7 +1310,7 @@ export default function MypageClient({
               {label:'フォロー中の作者が話を更新',   desc:'フォロー中の作者が作品を更新したときに通知します。',     key:'notify_new_episode', val:notifyNewEpisode, set:setNotifyNewEpisode},
               {label:'フォロー中の作者が新作を公開', desc:'フォロー中の作者が新しい作品を公開したときに通知します。', key:'notify_new_work',    val:notifyNewWork,    set:setNotifyNewWork},
             ].map((item, i, arr) => (
-              <div key={item.key} style={{...rowBase,borderBottom:i<arr.length-1?'1px solid var(--color-border-light, #f1e9e1)':'none'}}>
+              <div key={item.key} style={{...rowBase,borderBottom:i<arr.length-1?'1px solid var(--color-border-light, #eceef0)':'none'}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,color:'var(--color-text)',fontWeight:500}}>{item.label}</div>
                   <div style={{fontSize:11,color:'var(--color-text-faint)',marginTop:2}}>{item.desc}</div>
@@ -1390,7 +1394,7 @@ export default function MypageClient({
                     style={{width:'100%',display:'flex',alignItems:'center',gap:12,padding:'11px 14px',textAlign:'left' as const,
                       fontSize:14,fontWeight:on?700:500,
                       color:on?'var(--color-brand)':'#555',
-                      background:on?'#FFF0E5':'transparent',
+                      background:on?'#eef5f9':'transparent',
                       border:'none',borderRadius:8,cursor:'pointer',marginBottom:2,transition:'all .12s',position:'relative'}}>
                     {on && <span style={{position:'absolute',left:0,top:8,bottom:8,width:3,borderRadius:2,background:'var(--color-brand)'}}/>}
                     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
@@ -1402,7 +1406,7 @@ export default function MypageClient({
               })}
 
               {/* コンテスト開催中バナー */}
-              <div style={{marginTop:28,background:'#FFF8F1',border:'1px solid #F5DFC8',borderRadius:14,padding:'18px 16px',position:'relative',overflow:'hidden'}}>
+              <div style={{marginTop:28,background:'#eef5f9',border:'1px solid #cfe0ea',borderRadius:14,padding:'18px 16px',position:'relative',overflow:'hidden'}}>
                 <div style={{fontSize:13.5,fontWeight:700,color:'var(--color-brand)',marginBottom:8}}>コンテスト開催中！</div>
                 <div style={{fontSize:12,color:'var(--color-text-muted)',lineHeight:1.7,marginBottom:14}}>テーマに沿った作品を<br/>投稿してみませんか？</div>
                 <Link href="/contest"
@@ -1413,7 +1417,7 @@ export default function MypageClient({
                 {/* 羽ペンの装飾 */}
                 <svg width="56" height="56" viewBox="0 0 56 56" fill="none" style={{position:'absolute',right:-4,bottom:-6,opacity:0.5}}>
                   <path d="M40 14c-8 2-16 9-19 17-2 5-3 10-2 15l-4 4a1.5 1.5 0 0 0 2 2l4-4c5 1 10 0 15-2 8-3 15-11 17-19 1-4 2-9 2-12 0-1-1-2-2-2-3 0-8 1-13 1z"
-                    fill="#FFE8D5" stroke="var(--color-brand)" strokeWidth="1.5" strokeLinejoin="round"/>
+                    fill="#dce9f1" stroke="var(--color-brand)" strokeWidth="1.5" strokeLinejoin="round"/>
                 </svg>
               </div>
             </div>
@@ -1526,17 +1530,17 @@ export default function MypageClient({
         <div style={{position:'fixed',inset:0,zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(5,3,12,0.92)',padding:isMobile?0:20}}>
           <div style={{position:'absolute',inset:0}} onClick={()=>setShowBadgeBook(false)}/>
           <div style={{position:isMobile?'absolute':'relative',bottom:isMobile?0:undefined,zIndex:1,width:isMobile?'100%':'94%',maxWidth:940,height:isMobile?'92vh':'86vh',display:'flex',borderRadius:isMobile?'18px 18px 0 0':10,overflow:'visible',filter:'drop-shadow(0 40px 60px rgba(0,0,0,0.9))'} as any}>
-            <div style={{flex:1,display:'flex',flexDirection:'column',borderRadius:isMobile?'18px 18px 0 0':'0 10px 10px 0',overflow:'hidden',background:'#f5ede0'}}>
-              <div style={{background:'linear-gradient(180deg, #2d1206 0%, #4a1e0a 100%)',padding:isMobile?'14px 16px 12px':'16px 24px 14px',borderBottom:'3px solid #7a3a18'}}>
+            <div style={{flex:1,display:'flex',flexDirection:'column',borderRadius:isMobile?'18px 18px 0 0':'0 10px 10px 0',overflow:'hidden',background:'#eef2f5'}}>
+              <div style={{background:'linear-gradient(180deg, #16201d 0%, #1a211d 100%)',padding:isMobile?'14px 16px 12px':'16px 24px 14px',borderBottom:'3px solid #3d5866'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                   <div>
-                    <div style={{fontSize:isMobile?16:20,fontWeight:700,color:'#ffd87a',fontFamily:"'Noto Serif JP',serif"}}>バッジ図鑑</div>
+                    <div style={{fontSize:isMobile?16:20,fontWeight:700,color:'#b9d4e4',fontFamily:"'Noto Serif JP',serif"}}>バッジ図鑑</div>
                     <div style={{fontSize:11,color:'rgba(255,200,100,0.6)',marginTop:1}}>{claimedSet.size}/{ALL_BADGES.filter(b=>!b.id.startsWith('_')).length} 獲得済み</div>
                   </div>
                   <button onClick={()=>setShowBadgeBook(false)} style={{width:28,height:28,border:'1px solid rgba(255,200,100,0.3)',borderRadius:'50%',background:'rgba(0,0,0,0.3)',color:'rgba(255,200,100,0.7)',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
                 </div>
                 <div style={{marginTop:10,height:4,background:'rgba(0,0,0,0.3)',borderRadius:2,overflow:'hidden'}}>
-                  <div style={{height:'100%',background:'linear-gradient(90deg,#c8922a,#ffd87a,#c8922a)',width:`${(claimedSet.size/ALL_BADGES.filter(b=>!b.id.startsWith('_')).length)*100}%`,transition:'width .4s'}}/>
+                  <div style={{height:'100%',background:'linear-gradient(90deg,#4a6b80,#b9d4e4,#4a6b80)',width:`${(claimedSet.size/ALL_BADGES.filter(b=>!b.id.startsWith('_')).length)*100}%`,transition:'width .4s'}}/>
                 </div>
               </div>
               <div style={{flex:1,overflowY:'auto',padding:isMobile?'16px 12px':'20px 28px'}}>
@@ -1551,7 +1555,7 @@ export default function MypageClient({
                           {owned?<span style={{fontSize:isMobile?9:11,fontWeight:700,color:'var(--color-text-inverse)',textAlign:'center',lineHeight:1.25,padding:'0 4px',zIndex:1,textShadow:'0 1px 3px rgba(0,0,0,0.6)'}}>{badge.name.replace(' Lv.','\nLv.')}</span>
                             :<span style={{fontSize:isMobile?16:20,color:'color-mix(in srgb, var(--base-color-1) 15%, transparent)',fontWeight:700}}>{isSlot?'':'?'}</span>}
                         </div>
-                        <div style={{fontSize:isMobile?9:10,color:owned?'#5a3010':'#c4a882',textAlign:'center',lineHeight:1.3,fontWeight:owned?600:400}}>
+                        <div style={{fontSize:isMobile?9:10,color:owned?'#2c4552':'#8fa8b8',textAlign:'center',lineHeight:1.3,fontWeight:owned?600:400}}>
                           {isSlot?'':owned?badge.name:'未獲得'}
                         </div>
                       </div>
@@ -1560,10 +1564,10 @@ export default function MypageClient({
                 </div>
               </div>
               {totalPages>1 && (
-                <div style={{background:'linear-gradient(180deg,#ede0cc,#e0cdb0)',borderTop:'2px solid #c8a87a',padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                  <button onClick={()=>setBadgePage(p=>Math.max(0,p-1))} disabled={badgePage===0} style={{padding:'6px 14px',border:'1px solid #a07840',borderRadius:16,background:badgePage===0?'transparent':'#4a1e0a',color:badgePage===0?'#c4a882':'#ffd87a',cursor:badgePage===0?'not-allowed':'pointer',fontSize:12,fontWeight:600}}>‹ 前</button>
-                  <span style={{fontSize:11,color:'#a07840'}}>{badgePage+1}/{totalPages}</span>
-                  <button onClick={()=>setBadgePage(p=>Math.min(totalPages-1,p+1))} disabled={badgePage===totalPages-1} style={{padding:'6px 14px',border:'1px solid #a07840',borderRadius:16,background:badgePage===totalPages-1?'transparent':'#4a1e0a',color:badgePage===totalPages-1?'#c4a882':'#ffd87a',cursor:badgePage===totalPages-1?'not-allowed':'pointer',fontSize:12,fontWeight:600}}>次 ›</button>
+                <div style={{background:'linear-gradient(180deg,#dfe6ea,#c9d8e2)',borderTop:'2px solid #8fa8b8',padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <button onClick={()=>setBadgePage(p=>Math.max(0,p-1))} disabled={badgePage===0} style={{padding:'6px 14px',border:'1px solid #4a6b80',borderRadius:16,background:badgePage===0?'transparent':'#1a211d',color:badgePage===0?'#8fa8b8':'#b9d4e4',cursor:badgePage===0?'not-allowed':'pointer',fontSize:12,fontWeight:600}}>‹ 前</button>
+                  <span style={{fontSize:11,color:'#4a6b80'}}>{badgePage+1}/{totalPages}</span>
+                  <button onClick={()=>setBadgePage(p=>Math.min(totalPages-1,p+1))} disabled={badgePage===totalPages-1} style={{padding:'6px 14px',border:'1px solid #4a6b80',borderRadius:16,background:badgePage===totalPages-1?'transparent':'#1a211d',color:badgePage===totalPages-1?'#8fa8b8':'#b9d4e4',cursor:badgePage===totalPages-1?'not-allowed':'pointer',fontSize:12,fontWeight:600}}>次 ›</button>
                 </div>
               )}
             </div>

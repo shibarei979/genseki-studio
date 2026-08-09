@@ -104,7 +104,7 @@ export default function ContactManager({ initialContacts }: { initialContacts: C
               <div style={{fontSize:13,fontWeight:700,color:'#1e293b'}}>問い合わせ詳細</div>
               <div style={{display:'flex',gap:6}}>
                 <button onClick={()=>toggleRead(selected)}
-                  style={btn(selected.is_read?'#f59e0b':'#10b981',selected.is_read?'#fffbeb':'#f0fdf4',selected.is_read?'#fde68a':'#86efac')}>
+                  style={btn(selected.is_read?'#4a7fa5':'#10b981',selected.is_read?'#fffbeb':'#f0fdf4',selected.is_read?'#fde68a':'#86efac')}>
                   {selected.is_read?'未読に戻す':'既読にする'}
                 </button>
                 <button onClick={()=>handleDelete(selected.id)} style={btn('#dc2626','#fef2f2','#fca5a5')}>削除</button>

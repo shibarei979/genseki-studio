@@ -156,7 +156,7 @@ export default function MessageSender({ users, sentMessages: initialMessages }: 
                 <span style={{fontSize:10,color:'#94a3b8'}}>{new Date(m.created_at).toLocaleDateString('ja-JP')}</span>
                 {m.is_read
                   ? <span style={{fontSize:9,color:'#10b981',background:'#f0fdf4',border:'1px solid #86efac',padding:'1px 5px',borderRadius:4}}>既読</span>
-                  : <span style={{fontSize:9,color:'#f59e0b',background:'#fffbeb',border:'1px solid #fde68a',padding:'1px 5px',borderRadius:4}}>未読</span>
+                  : <span style={{fontSize:9,color:'#4a7fa5',background:'#fffbeb',border:'1px solid #fde68a',padding:'1px 5px',borderRadius:4}}>未読</span>
                 }
               </div>
               <div style={{fontSize:11,color:'#64748b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.subject}</div>

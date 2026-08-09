@@ -437,7 +437,7 @@ export default function EpisodeBody({ title, body, preface, afterword, authorNam
               {selecting && (
                 <div style={{
                   display:'flex', alignItems:'center', gap:8,
-                  background:'#FFF6EC', border:'1px solid #dcdfda', borderRadius:8,
+                  background:'#eef5f9', border:'1px solid #dcdfda', borderRadius:8,
                   padding:'9px 14px', marginBottom:20, fontSize:12.5, color:'#55605a',
                 }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
@@ -506,7 +506,7 @@ function VerticalBody({ title, body, preface, afterword, authorName, fontSize, f
         </div>
       )}
       {selecting && (
-        <div style={{display:'flex',alignItems:'center',gap:8,background:'#FFF6EC',border:'1px solid #dcdfda',borderRadius:8,padding:'9px 14px',margin:'12px 32px',fontSize:12.5,color:'#55605a'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,background:'#eef5f9',border:'1px solid #dcdfda',borderRadius:8,padding:'9px 14px',margin:'12px 32px',fontSize:12.5,color:'#55605a'}}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
           </svg>

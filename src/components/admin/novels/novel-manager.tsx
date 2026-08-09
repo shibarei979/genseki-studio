@@ -129,7 +129,7 @@ export default function NovelManager({ initialNovels, total, currentPage, q, pub
             </div>
             <div style={{display:'flex',gap:4,flexShrink:0}}>
               <button onClick={()=>setTagModal(n)} style={btn('var(--color-brand)','var(--color-brand-light)','#f5b080')}>タグ</button>
-              <button onClick={()=>togglePublish(n)} style={btn(n.published?'#f59e0b':'#10b981',n.published?'#fffbeb':'#f0fdf4',n.published?'#fde68a':'#86efac')}>
+              <button onClick={()=>togglePublish(n)} style={btn(n.published?'#4a7fa5':'#10b981',n.published?'#fffbeb':'#f0fdf4',n.published?'#fde68a':'#86efac')}>
                 {n.published?'非公開':'公開'}
               </button>
               <button onClick={()=>handleDelete(n)} style={btn('#dc2626','#fef2f2','#fca5a5')}>削除</button>

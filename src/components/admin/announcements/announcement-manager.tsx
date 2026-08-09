@@ -192,7 +192,7 @@ export default function AnnouncementManager({ initialAnnouncements }: { initialA
               </div>
               {!a.is_published && <span style={{fontSize:11,color:'#94a3b8',background:'#f1f5f9',padding:'2px 8px',borderRadius:4}}>非公開</span>}
               <div style={{display:'flex',gap:6,flexShrink:0}}>
-                <button onClick={()=>togglePublish(a)} style={btn(a.is_published?'#f59e0b':'#10b981',a.is_published?'#fffbeb':'#f0fdf4',a.is_published?'#fde68a':'#86efac')}>
+                <button onClick={()=>togglePublish(a)} style={btn(a.is_published?'#4a7fa5':'#10b981',a.is_published?'#fffbeb':'#f0fdf4',a.is_published?'#fde68a':'#86efac')}>
                   {a.is_published?'非公開':'公開'}
                 </button>
                 <button onClick={()=>openEdit(a)} style={btn('#3b82f6','#eff6ff','#bfdbfe')}>編集</button>

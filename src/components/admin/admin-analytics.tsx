@@ -18,7 +18,7 @@ interface Props {
   totalPageViews:  number
 }
 
-const COLORS = ['var(--color-brand)','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16']
+const COLORS = ['var(--color-brand)','#3b82f6','#10b981','#4a7fa5','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16']
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
@@ -145,7 +145,7 @@ export default function AdminAnalytics({
               <Bar dataKey="count" name="PV数" fill="#3b82f6" radius={[3,3,0,0]}>
                 {hourlyAccess.map((d,i)=>{
                   const peak = Math.max(...hourlyAccess.map(h=>h.count))
-                  return <Cell key={i} fill={d.count===peak?'var(--color-brand)':d.count>peak*0.7?'#f59e0b':'#3b82f6'}/>
+                  return <Cell key={i} fill={d.count===peak?'var(--color-brand)':d.count>peak*0.7?'#4a7fa5':'#3b82f6'}/>
                 })}
               </Bar>
             </BarChart>
@@ -349,7 +349,7 @@ export default function AdminAnalytics({
               <YAxis type="category" dataKey="path" tick={{fontSize:9,fill:'#1e293b'}} width={98}/>
               <Tooltip content={<CustomTooltip/>}/>
               <Bar dataKey="count" name="PV数" fill="#10b981" radius={[0,3,3,0]}>
-                {pageViewStats.slice(0,15).map((_,i)=><Cell key={i} fill={i===0?'var(--color-brand)':i<3?'#f59e0b':'#10b981'}/>)}
+                {pageViewStats.slice(0,15).map((_,i)=><Cell key={i} fill={i===0?'var(--color-brand)':i<3?'#4a7fa5':'#10b981'}/>)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
