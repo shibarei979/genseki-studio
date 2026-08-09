@@ -143,8 +143,8 @@ export default function AdminContestClient() {
                                                     {contest.title || "名前のないコンテスト"}
                                                 </p>
                                                 <p className="mt-0.5 text-[10px] text-faint">
-                                                    {formatWhen(contest.starts_at)}
-                                                    <br />〜 {formatWhen(contest.ends_at)}
+                                                    {contest.starts_at}
+                                                    <br />〜 {contest.ends_at}
                                                 </p>
                                             </div>
                                         </div>
@@ -368,18 +368,11 @@ function ContestEditor({
                     </Section>
 
                     <Section title="日どり">
-                        {/*
-                         * 時刻まで決められるようにする。
-                         *
-                         * 締め切りは「その日のいつまでか」で意味が変わる。
-                         * 日にちだけだと、23:59 なのか正午なのか分からず、
-                         * 出す側も受ける側も困る。
-                         */}
-                        <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="grid grid-cols-3 gap-2">
                             <Labeled label="始まり">
                                 <input
-                                    type="datetime-local"
-                                    value={toLocalInput(contest.starts_at)}
+                                    type="date"
+                                    value={contest.starts_at}
                                     onChange={(e) =>
                                         onChange({ starts_at: e.target.value })
                                     }
@@ -388,16 +381,16 @@ function ContestEditor({
                             </Labeled>
                             <Labeled label="締め切り">
                                 <input
-                                    type="datetime-local"
-                                    value={toLocalInput(contest.ends_at)}
+                                    type="date"
+                                    value={contest.ends_at}
                                     onChange={(e) => onChange({ ends_at: e.target.value })}
                                     className={inputClass}
                                 />
                             </Labeled>
                             <Labeled label="結果">
                                 <input
-                                    type="datetime-local"
-                                    value={toLocalInput(contest.result_at)}
+                                    type="date"
+                                    value={contest.result_at}
                                     onChange={(e) =>
                                         onChange({ result_at: e.target.value })
                                     }
@@ -1087,40 +1080,4 @@ function LineList({
             </button>
         </div>
     );
-}
-
-/**
- * 日どりの欄に渡す形にする。
- *
- * 日にちだけで持っていたものは、その日の 0 時として扱う。
- * 締め切りだけは、書き手が直すまで 23:59 のほうが親切だが、
- * こちらで決めると意図と違う時刻になる。
- */
-function toLocalInput(value: string | null | undefined): string {
-    if (!value) return "";
-
-    /* すでに時刻まで入っている */
-    if (value.includes("T")) return value.slice(0, 16);
-
-    /* 日にちだけ */
-    return `${value}T00:00`;
-}
-
-/**
- * 「8月20日 20:00」の形にする。
- *
- * 0 時ちょうどのときは時刻を出さない。
- * 決めていないのか、その時刻なのか紛らわしい。
- */
-function formatWhen(value: string | null | undefined): string {
-    if (!value) return "—";
-
-    const at = new Date(value.includes("T") ? value : `${value}T00:00`);
-    if (Number.isNaN(at.getTime())) return value;
-
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const day = `${at.getFullYear()}/${at.getMonth() + 1}/${at.getDate()}`;
-
-    if (at.getHours() === 0 && at.getMinutes() === 0) return day;
-    return `${day} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }
