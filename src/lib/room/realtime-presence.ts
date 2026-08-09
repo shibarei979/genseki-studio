@@ -114,6 +114,15 @@ export class RealtimePresence implements Presence {
     private isClosed = false;
     /** 購読が始まったか。始まる前に送っても届かない */
     private isReady = false;
+    /*
+     * どこで止まっているか。
+     *
+     * 表が無い・権限が足りない・配信が入っていない、のどれでも
+     * 画面上は「相手が見えない」だけになる。
+     * 理由をそのまま持っておいて、画面に出す。
+     */
+    private link: { phase: "idle" | "connecting" | "live" | "error"; detail: string } =
+        { phase: "idle", detail: "" };
     /** 声と画面の合図を受け取る人たち */
     private mediaHandlers = new Set<(payload: unknown) => void>();
 
@@ -206,6 +215,10 @@ export class RealtimePresence implements Presence {
         this.emit();
     }
 
+    linkState(): { phase: "idle" | "connecting" | "live" | "error"; detail: string } {
+        return this.link;
+    }
+
     /**
      * 声と画面の合図を送る。
      *
@@ -237,14 +250,28 @@ export class RealtimePresence implements Presence {
         /*
          * id は表側で振る。
          * こちらで作ると、届いた行と重複して 2 度出る。
+         *
+         * 失敗を握りつぶさない。
+         * 書けていないのに画面上は何も起きないと、
+         * 「送ったのに相手に見えない」の理由が分からなくなる。
          */
-        void createClient().from("room_messages").insert({
-            room_id: this.roomId,
-            member_id: message.member_id,
-            member_name: message.member_name,
-            kind: message.kind,
-            body: message.body,
-        });
+        void createClient()
+            .from("room_messages")
+            .insert({
+                room_id: this.roomId,
+                member_id: message.member_id,
+                member_name: message.member_name,
+                kind: message.kind,
+                body: message.body,
+            })
+            .then(({ error }) => {
+                if (!error) return;
+                this.link = {
+                    phase: "error",
+                    detail: `発言を書けませんでした：${error.message}`,
+                };
+                this.emit();
+            });
     }
 
     subscribe(handler: (state: RoomState) => void): () => void {
@@ -315,7 +342,18 @@ export class RealtimePresence implements Presence {
          * 書けなかったら黙って落とさず、画面に出せるところまで持っていく。
          * ここで throw すると、歩くたびに例外が飛ぶ。
          */
-        if (error) console.warn("在室の書き込みに失敗しました", error.message);
+        if (!error) return;
+
+        /*
+         * 画面へ出す。
+         * コンソールにだけ書くと、開いていない人には
+         * 「入ったのに相手から見えない」としか分からない。
+         */
+        this.link = {
+            phase: "error",
+            detail: `在室を書けませんでした：${error.message}`,
+        };
+        this.emit();
     }
 
     /** 入ったときに、いまの全員と直近のチャットを読む */
@@ -331,6 +369,21 @@ export class RealtimePresence implements Presence {
                 .order("created_at", { ascending: false })
                 .limit(MESSAGE_LIMIT),
         ]);
+
+        /*
+         * 読めなかったら、その理由を持っておく。
+         *
+         * 表が無い・権限が足りないときはここで分かる。
+         * 空で返ってきたのか、そもそも読めなかったのかは、
+         * 画面上ではどちらも「誰もいない」に見える。
+         */
+        const failed = members.error ?? messages.error;
+        if (failed) {
+            this.link = {
+                phase: "error",
+                detail: `部屋の中身を読めませんでした：${failed.message}`,
+            };
+        }
 
         for (const row of (members.data ?? []) as MemberRow[]) {
             if (row.member_id === this.self?.id) continue;
@@ -428,8 +481,32 @@ export class RealtimePresence implements Presence {
                     handler(payload);
                 }
             })
-            .subscribe((status) => {
+            .subscribe((status, error) => {
                 this.isReady = status === "SUBSCRIBED";
+
+                if (status === "SUBSCRIBED") {
+                    this.link = { phase: "live", detail: "" };
+                } else if (status === "CHANNEL_ERROR") {
+                    /*
+                     * ほとんどの場合、表が配信に入っていない。
+                     * 005_room_sharing.sql の publication のところ。
+                     */
+                    this.link = {
+                        phase: "error",
+                        detail:
+                            error?.message ??
+                            "受け取りを開けませんでした。room_members と room_messages が Realtime に入っているか確かめてください。",
+                    };
+                } else if (status === "TIMED_OUT") {
+                    this.link = {
+                        phase: "error",
+                        detail: "受け取りが時間切れになりました。",
+                    };
+                } else {
+                    this.link = { phase: "connecting", detail: "" };
+                }
+
+                this.emit();
             });
     }
 

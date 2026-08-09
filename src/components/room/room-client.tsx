@@ -233,7 +233,10 @@ export default function RoomClient({ roomId }: Props) {
         };
 
         presence.join(member);
-        const unsubscribe = presence.subscribe(setState);
+        const unsubscribe = presence.subscribe((next) => {
+            setState(next);
+            setLink(presence.linkState());
+        });
 
         // タブを閉じたときにも抜けたことを伝える
         const handleUnload = () => presence.leave();
@@ -302,6 +305,11 @@ export default function RoomClient({ roomId }: Props) {
     const [mediaError, setMediaError] = useState("");
     /* 繋がっていないとき、その理由 */
     const envGap = describeSupabaseGap();
+    /* 繋いだあとの、いまの状態 */
+    const [link, setLink] = useState<{
+        phase: "idle" | "connecting" | "live" | "error";
+        detail: string;
+    }>({ phase: "idle", detail: "" });
 
     /*
      * 集中タイマー。
@@ -1007,10 +1015,20 @@ export default function RoomClient({ roomId }: Props) {
                             <section className="rounded-xl border border-line bg-surface px-4 py-3">
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="text-[11px] text-muted">接続状況</span>
-                                    {isNetworked ? (
+                                    {isNetworked && link.phase === "live" ? (
                                         <span className="flex items-center gap-1.5 text-[11px] text-[var(--color-leaf)]">
                                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-leaf)]" />
                                             他の端末とつながっています
+                                        </span>
+                                    ) : isNetworked && link.phase === "error" ? (
+                                        <span className="flex items-center gap-1.5 text-[11px] text-[var(--color-danger)]">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-danger)]" />
+                                            つながっていません
+                                        </span>
+                                    ) : isNetworked ? (
+                                        <span className="flex items-center gap-1.5 text-[11px] text-muted">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-faint" />
+                                            つなぎ中
                                         </span>
                                     ) : (
                                         <span className="flex items-center gap-1.5 text-[11px] text-amber">
@@ -1029,10 +1047,25 @@ export default function RoomClient({ roomId }: Props) {
                                 </div>
 
                                 <p className="mt-2 text-[11px] leading-relaxed text-faint">
-                                    {isNetworked
-                                        ? "URL を渡した相手も、同じ部屋に入れます。"
-                                        : "別の端末の人は見えません。"}
+                                    {!isNetworked
+                                        ? "別の端末の人は見えません。"
+                                        : link.phase === "live"
+                                          ? "URL を渡した相手も、同じ部屋に入れます。"
+                                          : "相手が見えるまで少しかかることがあります。"}
                                 </p>
+
+                                {/*
+                                 * 止まっている理由。
+                                 *
+                                 * 表が無い、権限が足りない、配信に入っていない。
+                                 * どれも画面上は「相手が見えない」だけになる。
+                                 * 出しておかないと、何を直せばよいか分からない。
+                                 */}
+                                {link.phase === "error" && link.detail && (
+                                    <p className="mt-2 rounded-md bg-[var(--color-danger-tint)] px-2.5 py-2 text-[10px] leading-relaxed text-[var(--color-danger)]">
+                                        {link.detail}
+                                    </p>
+                                )}
 
                                 {/*
                                  * 繋がっていない理由をそのまま出す。

@@ -51,6 +51,19 @@ export interface Presence {
     setColor(colorId: number): void;
     announceClosed(): void;
     /**
+     * いまの繋がり具合。
+     *
+     * 「繋いでいるはずなのに相手が見えない」ときに、
+     * どこで止まっているのかを画面へ出すために使う。
+     *
+     *   idle       … まだ始めていない
+     *   connecting … 繋ぎにいっている
+     *   live       … 繋がった
+     *   error      … 断られた。理由が入る
+     */
+    linkState(): { phase: "idle" | "connecting" | "live" | "error"; detail: string };
+
+    /**
      * 声と画面の合図を送る。
      *
      * 通り道そのものは渡さない。
@@ -167,6 +180,10 @@ export class LocalPresence implements Presence {
     addWrittenChars(count: number): void {
         if (!this.self) return;
         this.patchSelf({ written_chars: Math.max(0, count) });
+    }
+
+    linkState(): { phase: "idle" | "connecting" | "live" | "error"; detail: string } {
+        return { phase: "idle", detail: "この端末の中だけで動いています" };
     }
 
     /* 端末の中だけなので、繋ぐ相手がいない */
