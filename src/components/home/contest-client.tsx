@@ -102,7 +102,7 @@ export default function ContestClient() {
                 ) : sorted.length === 0 ? (
                     <EmptyState />
                 ) : (
-                    <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <ul className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
                         {sorted.map((contest) => (
                             <li key={contest.id}>
                                 <ContestCard contest={contest} />
@@ -145,7 +145,7 @@ function ContestCard({ contest }: { contest: Contest }) {
             <div className="relative">
                 <ContestBanner
                     contest={contest}
-                    className="aspect-video w-full"
+                    className="aspect-[21/9] w-full sm:aspect-video"
                     fallback="画像なし"
                 />
 
@@ -158,7 +158,7 @@ function ContestCard({ contest }: { contest: Contest }) {
             </div>
 
             {/* 中身 */}
-            <div className="flex flex-1 flex-col px-4 py-3.5">
+            <div className="flex flex-1 flex-col px-3.5 py-3 sm:px-4 sm:py-3.5">
                 <h2 className="text-[15px] font-semibold leading-snug text-ink">
                     {contest.title || "名前のないコンテスト"}
                 </h2>
@@ -179,14 +179,22 @@ function ContestCard({ contest }: { contest: Contest }) {
                     )}
                 </p>
 
+                {/*
+                 * 説明と賞。
+                 *
+                 * 狭い画面では出さない。
+                 * 一覧は「どれを開くか」を選ぶ場なので、
+                 * 題名と締切があれば足りる。
+                 * 中身は開いた先で読める。
+                 */}
                 {contest.description && (
-                    <p className="mt-2.5 line-clamp-3 flex-1 text-xs leading-relaxed text-muted">
+                    <p className="mt-2.5 hidden line-clamp-3 flex-1 text-xs leading-relaxed text-muted sm:block">
                         {contest.description}
                     </p>
                 )}
 
                 {(contest.prizes ?? []).length > 0 && (
-                    <p className="mt-2.5 flex items-start gap-1.5 border-t border-line pt-2.5 text-[11px] text-muted">
+                    <p className="mt-2.5 hidden items-start gap-1.5 border-t border-line pt-2.5 text-[11px] text-muted sm:flex">
                         <span className="shrink-0 text-faint">賞</span>
                         <span className="min-w-0 flex-1 truncate">
                             {(contest.prizes ?? [])
@@ -202,7 +210,8 @@ function ContestCard({ contest }: { contest: Contest }) {
 
 /** 「2026/08/31（月）」の形にする */
 function formatDate(text: string): string {
-    const date = new Date(`${text}T00:00:00`);
+    /* 時刻まで決めてあれば、そのまま読む */
+    const date = new Date(text.includes("T") ? text : `${text}T00:00:00`);
     if (Number.isNaN(date.getTime())) return text;
 
     const week = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()];
