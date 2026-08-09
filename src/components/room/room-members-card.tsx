@@ -16,6 +16,8 @@
 
 "use client";
 
+import Link from "next/link";
+
 import { useState } from "react";
 
 import AvatarSprite from "@/components/room/avatar-sprite";
@@ -127,6 +129,25 @@ export default function RoomMembersCard({ members, selfId }: Props) {
                                         )}
                                     </span>
                                 </span>
+
+                                {/*
+                                 * その人の作品へ。
+                                 *
+                                 * 隣で書いている人が何を書いているのか、
+                                 * 気になっても訊きにくい。
+                                 * 押せば読みに行ける。
+                                 *
+                                 * 自分のぶんは出さない。執筆から見られる。
+                                 */}
+                                {!isSelf && (
+                                    <Link
+                                        href={`/author/${member.id}`}
+                                        title={`${member.display_name}さんの作品`}
+                                        className="shrink-0 rounded-full border border-line px-2.5 py-1 text-[10px] text-muted hover:border-forest-line hover:text-forest"
+                                    >
+                                        作品
+                                    </Link>
+                                )}
                             </li>
                         );
                     })}
