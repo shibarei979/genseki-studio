@@ -259,6 +259,25 @@ export default function MypageClient({
   const [pwError,        setPwError]        = useState('')
   const [pwSaving,       setPwSaving]       = useState(false)
   const [isMobile,       setIsMobile]       = useState(false)
+
+  /*
+   * 画面が狭いか。
+   *
+   * 決めていなかったので、いつも「広い」ことになっていた。
+   * 狭い画面でも左の一覧が出て、中身の居場所が無くなる。
+   *
+   * 幅が変わるたびに見直す。
+   * 端末を横向きにしたときにも合う。
+   */
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1023px)')
+
+    const apply = () => setIsMobile(media.matches)
+    apply()
+
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [])
   const [showBadgeBook,  setShowBadgeBook]  = useState(false)
   const [badgePage,      setBadgePage]      = useState(0)
   const [showBoard,      setShowBoard]      = useState(false)
@@ -502,7 +521,7 @@ export default function MypageClient({
           <button onClick={()=>setShowBdModal(true)} style={{padding:'6px 14px',background:'var(--color-brand)',color:'var(--color-text-inverse)',border:'none',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0}}>設定する</button>
         </div>
       )}
-      <div style={{display:'flex',alignItems:'flex-start',gap:24,marginBottom:20,flexWrap:'wrap',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding:'20px 22px'}}>
+      <div style={{display:'flex',alignItems:'flex-start',gap:24,marginBottom:20,flexWrap:'wrap',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding: isMobile ? '16px 14px' : '20px 22px'}}>
         <div style={{position:'relative',flexShrink:0,cursor:'pointer'}} onClick={()=>iconInputRef.current?.click()}>
           <input ref={iconInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f){handleIconUpload(f);e.target.value=''}}}/>
           {iconUrl
@@ -1421,7 +1440,7 @@ export default function MypageClient({
                 ))}
               </div>
             </div>
-            <div style={{padding:'16px 16px 80px'}}>
+            <div style={{padding:'14px 14px 80px'}}>
               {activeTab==='mypage' && <MypageTab/>}
               {activeTab==='works' && <WorksTab/>}
               {activeTab==='bookmarks' && <BookmarksTab/>}
