@@ -17,11 +17,13 @@
     "dependencies": {
         "@supabase/ssr": "^0.5.2",
         "@supabase/supabase-js": "^2.45.4",
+        "docx": "^9.0.0",
         "jszip": "^3.10.1",
         "next": "14.2.35",
         "pdfjs-dist": "^4.7.76",
         "react": "^18",
         "react-dom": "^18",
+        "recharts": "^2.15.0",
         "server-only": "^0.0.1",
         "xlsx-js-style": "^1.2.0"
     },
