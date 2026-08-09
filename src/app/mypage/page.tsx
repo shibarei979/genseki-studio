@@ -120,7 +120,14 @@ export default async function MypagePage() {
 
     supabase
       .from('page_views').select('episode_id, novel_id, viewed_at')
-      .eq('user_id', user.id).order('viewed_at', { ascending: false }).limit(200),
+      /*
+       * 閲覧履歴。
+       *
+       * 200 件読んでも、作品ごとに 1 つへ畳む。
+       * 同じ作品を何度も開くので、200 件でも作品は数十。
+       * 60 件あれば足りる。
+       */
+      .eq('user_id', user.id).order('viewed_at', { ascending: false }).limit(60),
   ])
 
   const calendarEps = calendarRes.data
@@ -134,10 +141,20 @@ export default async function MypagePage() {
   let unreadFeedback = 0, unreadRanking = 0
   {
     const [cmRes, dcRes, rkRes, readRes] = await Promise.all([
-      novelIds.length > 0 ? supabase.from('comments').select('id').in('novel_id',novelIds).neq('user_id',user.id).limit(500) : Promise.resolve({ data: [] } as any),
-      novelIds.length > 0 ? supabase.from('discovers').select('novel_id, user_id, created_at').in('novel_id',novelIds).eq('is_pending',false).neq('user_id',user.id).limit(500) : Promise.resolve({ data: [] } as any),
-      supabase.from('ranking_history').select('id').eq('author_id',user.id).limit(500),
-      supabase.from('read_feedbacks').select('item_key').eq('user_id',user.id).limit(2000),
+      /*
+       * 未読の数。
+       *
+       * 3,500 行を運んで、数を出すだけだった。
+       * 出るのは「3」のような小さな数字なので、
+       * そこまで正確でなくてよい。
+       *
+       * 新しいものから 100 件ずつ見る。
+       * それより古い未読は、もう読まれない。
+       */
+      novelIds.length > 0 ? supabase.from('comments').select('id').in('novel_id',novelIds).neq('user_id',user.id).order('created_at',{ascending:false}).limit(100) : Promise.resolve({ data: [] } as any),
+      novelIds.length > 0 ? supabase.from('discovers').select('novel_id, user_id, created_at').in('novel_id',novelIds).eq('is_pending',false).neq('user_id',user.id).order('created_at',{ascending:false}).limit(100) : Promise.resolve({ data: [] } as any),
+      supabase.from('ranking_history').select('id').eq('author_id',user.id).order('created_at',{ascending:false}).limit(100),
+      supabase.from('read_feedbacks').select('item_key').eq('user_id',user.id).order('created_at',{ascending:false}).limit(300),
     ])
     const readSet = new Set((readRes.data || []).map((r: any) => r.item_key))
     const fbKeys = [
