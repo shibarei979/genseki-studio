@@ -224,7 +224,7 @@ export default function WorkspaceClient({ workId }: Props) {
         return (
             <div className="min-h-screen bg-page">
                 <Header />
-                <p className="py-24 text-center text-sm text-faint">読み込んでいます</p>
+                <p className="py-24 text-center text-[13px] text-faint">読み込んでいます</p>
             </div>
         );
     }
@@ -234,13 +234,13 @@ export default function WorkspaceClient({ workId }: Props) {
             <div className="min-h-screen bg-page">
                 <Header breadcrumbs={[{ label: "作品一覧", href: "/" }, { label: "見つかりません" }]} />
                 <div className="py-24 text-center">
-                    <p className="text-sm text-ink">この作品は見つかりませんでした。</p>
-                    <p className="mt-1 text-sm text-muted">
+                    <p className="text-[13px] text-ink">この作品は見つかりませんでした。</p>
+                    <p className="mt-1 text-[13px] text-muted">
                         削除されたか、別のブラウザで作られた可能性があります。
                     </p>
                     <Link
                         href="/"
-                        className="mt-6 inline-block rounded-md bg-forest px-5 py-2 text-sm text-white hover:bg-forest-dark"
+                        className="mt-6 inline-block rounded-md bg-forest px-5 py-2 text-[13px] text-white hover:bg-forest-dark"
                     >
                         作品一覧へ戻る
                     </Link>
@@ -259,7 +259,7 @@ export default function WorkspaceClient({ workId }: Props) {
                 ]}
             />
 
-            <div className="flex min-h-0 flex-1 gap-4 p-3 sm:p-4">
+            <div className="flex min-h-0 flex-1 gap-2.5 p-2.5 sm:gap-4 sm:p-3">
                 {/*
                  * 話の一覧。
                  *
@@ -287,8 +287,8 @@ export default function WorkspaceClient({ workId }: Props) {
                     </button>
 
                     <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-lg border border-line bg-surface">
-                        <div className="border-b border-line px-4 py-4">
-                            <h1 className="truncate text-[15px] font-medium text-ink">
+                        <div className="border-b border-line px-3.5 py-3">
+                            <h1 className="truncate text-[14px] font-medium text-ink">
                                 {work.title}
                             </h1>
                             <p className="mt-1 text-xs text-muted">
@@ -330,7 +330,7 @@ export default function WorkspaceClient({ workId }: Props) {
                         <button
                             type="button"
                             onClick={() => setIsListOpen(true)}
-                            className="mb-2 flex w-full items-center justify-between gap-2 rounded-md border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink hover:border-forest-line lg:hidden"
+                            className="mb-2 flex w-full items-center justify-between gap-2 rounded-md border border-line bg-surface px-3.5 py-2 text-[13px] text-ink hover:border-forest-line lg:hidden"
                         >
                             <span className="min-w-0 truncate">
                                 {selected
@@ -390,11 +390,11 @@ export default function WorkspaceClient({ workId }: Props) {
                     ) : (
                         <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-line bg-surface">
                             <div className="text-center">
-                                <p className="text-sm text-ink">まだ話がありません。</p>
+                                <p className="text-[13px] text-ink">まだ話がありません。</p>
                                 <button
                                     type="button"
                                     onClick={() => void handleCreate()}
-                                    className="mt-5 rounded-md bg-forest px-5 py-2 text-sm text-white hover:bg-forest-dark"
+                                    className="mt-5 rounded-md bg-forest px-5 py-2 text-[13px] text-white hover:bg-forest-dark"
                                 >
                                     第1話を作る
                                 </button>
@@ -442,7 +442,7 @@ export default function WorkspaceClient({ workId }: Props) {
             <button
                 type="button"
                 onClick={() => setIsFocusMode((on) => !on)}
-                className="fixed bottom-5 right-5 rounded-full border border-line bg-surface px-4 py-2.5 text-sm text-muted shadow-sm hover:border-forest-line hover:text-forest"
+                className="fixed bottom-5 right-5 rounded-full border border-line bg-surface px-4 py-2 text-[13px] text-muted shadow-sm hover:border-forest-line hover:text-forest"
             >
                 {isFocusMode ? "集中モードを解除" : "集中モード"}
             </button>

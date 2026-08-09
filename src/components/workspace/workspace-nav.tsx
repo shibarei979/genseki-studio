@@ -64,7 +64,7 @@ function NavButton({
             href={href}
             aria-current={isActive ? "page" : undefined}
             className={[
-                "block rounded-md px-3 py-2.5 text-center text-sm",
+                "block rounded-md px-3 py-2 text-center text-[13px]",
                 isActive
                     ? "bg-forest text-white"
                     : "border border-line text-muted hover:bg-canvas",

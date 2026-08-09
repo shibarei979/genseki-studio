@@ -206,8 +206,8 @@ export default function EpisodeEditor({
              * 狭い画面では 2 段にする。
              * 1 段に詰めると、右のボタンが画面の外へ出る。
              */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4">
-                <span className="shrink-0 text-base font-medium text-ink">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line px-3 py-2 sm:flex-nowrap sm:gap-2.5 sm:px-5 sm:py-2.5">
+                <span className="shrink-0 text-[13px] font-medium text-ink">
                     第{episode.ep_number}話
                 </span>
                 <input
@@ -216,10 +216,10 @@ export default function EpisodeEditor({
                     onChange={(e) => setTitle(e.target.value)}
                     aria-label="話のタイトル"
                     placeholder="タイトル"
-                    className="min-w-0 flex-1 border-b border-transparent bg-transparent text-[15px] font-medium text-ink outline-none focus:border-forest-line sm:text-base"
+                    className="min-w-0 flex-1 border-b border-transparent bg-transparent text-[14px] font-medium text-ink outline-none focus:border-forest-line"
                 />
 
-                <div className="thin-scroll flex w-full shrink-0 items-center gap-2.5 overflow-x-auto text-xs text-muted sm:w-auto sm:gap-4">
+                <div className="thin-scroll flex w-full shrink-0 items-center gap-2 overflow-x-auto text-[11px] text-muted sm:w-auto sm:gap-2.5">
                     <SaveIndicator state={state} savedAt={savedAt} />
                     <span>{formatNumber(countChars(body))}文字</span>
                     <button
@@ -227,7 +227,7 @@ export default function EpisodeEditor({
                         onClick={onOpenRead}
                         aria-pressed={isReadOpen}
                         className={[
-                            "shrink-0 rounded-md border px-2.5 py-1",
+                            "shrink-0 rounded border px-2 py-0.5",
                             isReadOpen
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line hover:border-forest-line hover:text-forest",
@@ -240,7 +240,7 @@ export default function EpisodeEditor({
                         onClick={onOpenProofread}
                         aria-pressed={isProofreadOpen}
                         className={[
-                            "shrink-0 rounded-md border px-2.5 py-1",
+                            "shrink-0 rounded border px-2 py-0.5",
                             isProofreadOpen
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line hover:border-forest-line hover:text-forest",
@@ -253,7 +253,7 @@ export default function EpisodeEditor({
                         onClick={onOpenMentions}
                         aria-pressed={isMentionsOpen}
                         className={[
-                            "shrink-0 rounded-md border px-2.5 py-1",
+                            "shrink-0 rounded border px-2 py-0.5",
                             isMentionsOpen
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line hover:border-forest-line hover:text-forest",
@@ -266,7 +266,7 @@ export default function EpisodeEditor({
                         onClick={onOpenHistory}
                         aria-pressed={isHistoryOpen}
                         className={[
-                            "shrink-0 rounded-md border px-2.5 py-1",
+                            "shrink-0 rounded border px-2 py-0.5",
                             isHistoryOpen
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line hover:border-forest-line hover:text-forest",
@@ -285,11 +285,11 @@ export default function EpisodeEditor({
              *
              * よく使う「縦横」と「行番号」だけは外に出す。
              */}
-            <div className="relative flex items-center gap-2 border-b border-line bg-canvas px-3 py-2 text-xs sm:px-6">
+            <div className="relative flex items-center gap-1.5 border-b border-line bg-canvas px-3 py-1.5 text-[11px] sm:px-5">
                 <button
                     type="button"
                     onClick={onToggleWritingMode}
-                    className="rounded-md border border-line bg-surface px-2.5 py-1 text-muted hover:border-forest-line hover:text-forest"
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
                 >
                     {WRITING_MODE_LABEL[otherMode]}にする
                 </button>
@@ -300,7 +300,7 @@ export default function EpisodeEditor({
                     aria-pressed={showLineNumbers}
                     title="10行ごとに行番号を出します"
                     className={[
-                        "shrink-0 rounded-md border px-2.5 py-1",
+                        "shrink-0 rounded border px-2 py-0.5",
                         showLineNumbers
                             ? "border-forest bg-forest-tint text-forest"
                             : "border-line bg-surface text-muted hover:border-forest-line hover:text-forest",
@@ -323,7 +323,7 @@ export default function EpisodeEditor({
                     type="button"
                     onClick={handleRuby}
                     title="選んだ文字にルビを振ります（｜親文字《ルビ》）"
-                    className="rounded-md border border-line bg-surface px-2.5 py-1 text-muted hover:border-forest-line hover:text-forest"
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
                 >
                     ルビ
                 </button>
@@ -332,7 +332,7 @@ export default function EpisodeEditor({
                     type="button"
                     onClick={handleEmphasis}
                     title="選んだ文字に傍点をつけます（《《文字》》）"
-                    className="rounded-md border border-line bg-surface px-2.5 py-1 text-muted hover:border-forest-line hover:text-forest"
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
                 >
                     傍点
                 </button>
@@ -345,7 +345,7 @@ export default function EpisodeEditor({
                             ? "半角英数字を全角に、... を …… に直し、段落の頭を字下げします"
                             : "全角英数字を半角に、…… を ... に直します"
                     }
-                    className="rounded-md border border-line bg-surface px-2.5 py-1 text-muted hover:border-forest-line hover:text-forest"
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
                 >
                     {settings.writing_mode === "vertical"
                         ? "縦書き用に整える"
@@ -356,7 +356,7 @@ export default function EpisodeEditor({
                     <button
                         type="button"
                         onClick={handleUndoNormalize}
-                        className="rounded-md border border-line bg-surface px-2.5 py-1 text-muted hover:text-ink"
+                        className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:text-ink"
                     >
                         整形を取り消す
                     </button>
@@ -371,7 +371,7 @@ export default function EpisodeEditor({
                     aria-expanded={isToolsOpen}
                     title="ほかの道具"
                     className={[
-                        "ml-auto rounded-md border px-2.5 py-1 sm:hidden",
+                        "ml-auto shrink-0 rounded border px-2 py-0.5 sm:hidden",
                         isToolsOpen
                             ? "border-forest bg-forest-tint text-forest"
                             : "border-line bg-surface text-muted",

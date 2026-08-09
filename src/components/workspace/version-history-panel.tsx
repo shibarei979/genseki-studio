@@ -64,8 +64,8 @@ export default function VersionHistoryPanel({ episode, onClose, onRestored }: Pr
 
     return (
         <div className="flex h-full w-[380px] shrink-0 flex-col rounded-lg border border-line bg-surface">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-                <h2 className="text-sm font-medium text-ink">履歴</h2>
+            <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
+                <h2 className="text-[13px] font-medium text-ink">履歴</h2>
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
@@ -78,7 +78,7 @@ export default function VersionHistoryPanel({ episode, onClose, onRestored }: Pr
                         type="button"
                         onClick={onClose}
                         aria-label="履歴を閉じる"
-                        className="px-1 text-sm text-faint hover:text-ink"
+                        className="px-1 text-[13px] text-faint hover:text-ink"
                     >
                         ✕
                     </button>
@@ -86,9 +86,9 @@ export default function VersionHistoryPanel({ episode, onClose, onRestored }: Pr
             </div>
 
             {isLoading ? (
-                <p className="py-10 text-center text-sm text-faint">読み込んでいます</p>
+                <p className="py-10 text-center text-[13px] text-faint">読み込んでいます</p>
             ) : versions.length === 0 ? (
-                <p className="px-4 py-10 text-center text-sm text-faint">
+                <p className="px-4 py-10 text-center text-[13px] text-faint">
                     まだ履歴がありません。
                     <br />
                     執筆中に自動で残るほか、上のボタンでも残せます。
@@ -102,7 +102,7 @@ export default function VersionHistoryPanel({ episode, onClose, onRestored }: Pr
                                     type="button"
                                     onClick={() => setSelected(version)}
                                     className={[
-                                        "flex w-full items-center gap-3 px-4 py-2.5 text-left",
+                                        "flex w-full items-center gap-2.5 px-4 py-2 text-left",
                                         selected?.id === version.id
                                             ? "bg-forest-tint"
                                             : "hover:bg-canvas",
@@ -127,18 +127,18 @@ export default function VersionHistoryPanel({ episode, onClose, onRestored }: Pr
 
                     {selected && (
                         <div className="flex min-h-0 flex-1 flex-col">
-                            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 py-3">
+                            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-3.5 py-2.5">
                                 <p className="whitespace-pre-wrap text-xs leading-relaxed text-muted">
                                     {selected.body.slice(0, 1200) ||
                                         "（この版の本文は空です）"}
                                     {selected.body.length > 1200 && "\n……"}
                                 </p>
                             </div>
-                            <div className="border-t border-line px-4 py-3">
+                            <div className="border-t border-line px-3.5 py-2.5">
                                 <button
                                     type="button"
                                     onClick={() => void handleRestore(selected)}
-                                    className="w-full rounded-md bg-forest px-4 py-2 text-sm text-white hover:bg-forest-dark"
+                                    className="w-full rounded-md bg-forest px-4 py-2 text-[13px] text-white hover:bg-forest-dark"
                                 >
                                     {selected.label} の本文に戻す
                                 </button>

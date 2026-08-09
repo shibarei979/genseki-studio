@@ -60,8 +60,8 @@ export default function EpisodeList({
 
     return (
         <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between px-4 py-3">
-                <h2 className="text-sm font-medium text-ink">エピソード</h2>
+            <div className="flex items-center justify-between px-3.5 py-2.5">
+                <h2 className="text-[13px] font-medium text-ink">エピソード</h2>
                 <button
                     type="button"
                     onClick={onCreate}
@@ -109,7 +109,7 @@ export default function EpisodeList({
                                 onClick={() => onSelect(episode.id)}
                                 className="min-w-0 flex-1 text-left"
                             >
-                                <span className="block truncate text-sm text-ink">
+                                <span className="block truncate text-[13px] text-ink">
                                     {formatEpisodeLabel(episode)}
                                 </span>
                                 <span className="mt-0.5 block text-xs text-faint">
@@ -141,7 +141,7 @@ export default function EpisodeList({
             )}
 
             {episodes.length > 1 && (
-                <p className="border-t border-line px-4 py-3 text-xs text-faint">
+                <p className="border-t border-line px-3.5 py-2 text-[11px] text-faint">
                     ドラッグ＆ドロップで並び替えできます
                 </p>
             )}

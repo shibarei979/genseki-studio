@@ -75,26 +75,26 @@ export default function MentionPanel({ workId, episodeId, selection, onClose }: 
 
     return (
         <div className="flex h-full w-[320px] shrink-0 flex-col rounded-lg border border-line bg-surface">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-                <h2 className="text-sm font-medium text-ink">資料へのリンク</h2>
+            <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
+                <h2 className="text-[13px] font-medium text-ink">資料へのリンク</h2>
                 <button
                     type="button"
                     onClick={onClose}
                     aria-label="閉じる"
-                    className="px-1 text-sm text-faint hover:text-ink"
+                    className="px-1 text-[13px] text-faint hover:text-ink"
                 >
                     ✕
                 </button>
             </div>
 
-            <div className="border-b border-line px-4 py-3">
+            <div className="border-b border-line px-3.5 py-2.5">
                 <input
                     type="text"
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                     placeholder="本文で言葉を選ぶか、ここに入力"
                     aria-label="資料を探す"
-                    className="w-full rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
+                    className="w-full rounded-md border border-line px-3 py-1.5 text-[13px] outline-none focus:border-forest"
                 />
                 {selection && (
                     <p className="mt-1.5 text-xs text-forest">
@@ -138,7 +138,7 @@ export default function MentionPanel({ workId, episodeId, selection, onClose }: 
                                     className="w-full rounded-md px-3 py-2 text-left hover:bg-canvas"
                                 >
                                     <span className="flex items-center gap-2">
-                                        <span className="truncate text-sm text-ink">
+                                        <span className="truncate text-[13px] text-ink">
                                             {entry.name}
                                         </span>
                                         <span className="shrink-0 rounded bg-forest-tint px-1.5 py-0.5 text-[10px] text-forest">
@@ -157,7 +157,7 @@ export default function MentionPanel({ workId, episodeId, selection, onClose }: 
                 )}
             </div>
 
-            <div className="border-t border-line px-4 py-3">
+            <div className="border-t border-line px-3.5 py-2.5">
                 <p className="text-xs text-muted">この話のリンク（{mentions.length}件）</p>
                 {mentions.length === 0 ? (
                     <p className="mt-1.5 text-xs text-faint">まだありません。</p>

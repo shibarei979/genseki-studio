@@ -58,9 +58,9 @@ export default function ReadPanel({
 
     return (
         <div className="flex h-full w-[420px] shrink-0 flex-col rounded-lg border border-line bg-surface">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
+            <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
                 <div className="min-w-0">
-                    <h2 className="text-sm font-medium text-ink">通し読み</h2>
+                    <h2 className="text-[13px] font-medium text-ink">通し読み</h2>
                     <p className="text-xs text-faint">
                         {shown.length}話・{formatNumber(totalChars)}文字
                     </p>
@@ -82,7 +82,7 @@ export default function ReadPanel({
                         type="button"
                         onClick={onClose}
                         aria-label="閉じる"
-                        className="px-1 text-sm text-faint hover:text-ink"
+                        className="px-1 text-[13px] text-faint hover:text-ink"
                     >
                         ✕
                     </button>
@@ -90,7 +90,7 @@ export default function ReadPanel({
             </div>
 
             {shown.length === 0 ? (
-                <p className="py-16 text-center text-sm text-faint">読む話がありません。</p>
+                <p className="py-16 text-center text-[13px] text-faint">読む話がありません。</p>
             ) : (
                 <div
                     ref={bodyRef}

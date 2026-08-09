@@ -152,7 +152,7 @@ export default function PagedReader({
             </div>
 
             {showPager && (
-                <div className="flex items-center justify-center gap-3 py-2 text-xs opacity-60">
+                <div className="flex items-center justify-center gap-2.5 py-2 text-xs opacity-60">
                     <button
                         type="button"
                         onClick={() => turn("next")}
