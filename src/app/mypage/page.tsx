@@ -27,23 +27,52 @@ export default async function MypagePage() {
     supabase.from('follows').select('*', { count:'exact', head:true }).eq('follower_id', user.id),
   ])
 
-  const { data: followingData } = await supabase
-    .from('follows')
-    .select('following_id, profiles!follows_following_id_fkey(user_id, display_name, icon_url)')
-    .eq('follower_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(20)
+  /*
+   * 作品に依らないものは、まとめて一度に走らせる。
+   *
+   * 順に待つと、1 つずつの往復が積み上がる。
+   * 互いに関わらないものは、同時に頼んでよい。
+   */
+  const [followingRes, bookmarkRes, contestRes, entryRes, missionRes, novelRes] =
+    await Promise.all([
+      supabase
+        .from('follows')
+        .select('following_id, profiles!follows_following_id_fkey(user_id, display_name, icon_url)')
+        .eq('follower_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20),
 
-  const followingAuthors = (followingData || []).map((f: any) => f.profiles).filter(Boolean)
+      supabase
+        .from('bookmarks')
+        .select('novel_id, created_at, novels(id, title, author_id, genre, summary, published, created_at)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50),
 
-  const { data: novels } = await supabase
+      /* 開いているコンテストだけ */
+      supabase
+        .from('contests')
+        .select('id, title, deadline, is_site_contest')
+        .eq('is_published', true)
+        .eq('is_site_contest', true)
+        .or(`deadline.is.null,deadline.gt.${new Date().toISOString()}`)
+        .order('created_at', { ascending: false }),
+      supabase.from('contest_entries').select('contest_id, novel_id').eq('user_id', user.id),
+      supabase.from('user_missions').select('mission_id').eq('user_id', user.id),
+
+      supabase
     /*
      * 作品。要る列だけ。
      * select('*') は、あとで足した列も全部運ぶ。
      */
     .from('novels')
     .select('id, author_id, title, summary, genre, tags, is_serial, published, visibility, views, created_at, updated_at, novel_type, catchphrase, cover_url, serial_status, age_rating, ai_usage, deleted_at')
-    .eq('author_id', user.id).order('created_at', { ascending: false })
+        .eq('author_id', user.id).order('created_at', { ascending: false }),
+    ])
+
+  const followingData = followingRes.data
+  const novels = novelRes.data
+  const followingAuthors = (followingData || []).map((f: any) => f.profiles).filter(Boolean)
 
   // 作品ごとのいいね・コメント・閲覧数
   const novelIds = (novels || []).map((n: any) => n.id)
@@ -52,6 +81,10 @@ export default async function MypagePage() {
   const novelViewMap: Record<string,number> = {}
   const novelEpCountMap: Record<string,number> = {}
   if (novelIds.length > 0) {
+    /*
+     * 作品に依るものを、まとめて走らせる。
+     * カレンダーと閲覧履歴も、ここに混ぜてしまう。
+     */
     const [likesData, commentsData, viewsData, epsData] = await Promise.all([
       supabase.from('likes').select('novel_id').in('novel_id', novelIds),
       supabase.from('comments').select('novel_id').in('novel_id', novelIds),
@@ -64,19 +97,26 @@ export default async function MypagePage() {
     epsData.data?.forEach((e:any) => { novelEpCountMap[e.novel_id] = (novelEpCountMap[e.novel_id]||0)+1 })
   }
 
-  // カレンダー用：過去1年のエピソード投稿日
+  /*
+   * カレンダーと、自分が読んだ跡。
+   * 互いに関わらないので、同時に頼む。
+   */
   const oneYearAgo = new Date(Date.now() - 365*24*60*60*1000).toISOString()
-  const { data: calendarEps } = await supabase
-    .from('episodes').select('created_at').in('novel_id', novelIds.length > 0 ? novelIds : [''])
-    .eq('published', true).gte('created_at', oneYearAgo)
+
+  const [calendarRes, viewRes] = await Promise.all([
+    supabase
+      .from('episodes').select('created_at').in('novel_id', novelIds.length > 0 ? novelIds : [''])
+      .eq('published', true).gte('created_at', oneYearAgo),
+
+    supabase
+      .from('page_views').select('episode_id, novel_id, viewed_at')
+      .eq('user_id', user.id).order('viewed_at', { ascending: false }).limit(200),
+  ])
+
+  const calendarEps = calendarRes.data
   const postDates = (calendarEps||[]).map((e:any) => e.created_at.slice(0,10))
 
-  const { data: bookmarkedNovels } = await supabase
-    .from('bookmarks')
-    .select('novel_id, created_at, folder_id, novels(id, title, genre, is_serial, novel_type, summary, tags, author_id)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(50)
+  const bookmarkedNovels = bookmarkRes.data
 
   // 保存済み作品の作者名
   const bmAuthorIds = Array.from(new Set((bookmarkedNovels||[]).map((b:any) => b.novels?.author_id).filter(Boolean)))
@@ -86,13 +126,9 @@ export default async function MypagePage() {
     bmAuthors?.forEach((a:any) => { bmAuthorMap[a.user_id] = a.display_name })
   }
 
-  const now = new Date().toISOString()
-  const { data: contests } = await supabase
-    .from('contests').select('id, title, deadline, is_site_contest')
-    .eq('is_published', true).eq('is_site_contest', true)
-    .or(`deadline.is.null,deadline.gt.${now}`).order('created_at', { ascending: false })
+  const contests = contestRes.data
 
-  const { data: entries } = await supabase.from('contest_entries').select('contest_id, novel_id').eq('user_id', user.id)
+  const entries = entryRes.data
 
   // 未読の感想（コメント＋拡散）・未読ランクイン：read_feedbacksに無いもの＝未読
   let unreadFeedback = 0, unreadRanking = 0
@@ -112,7 +148,7 @@ export default async function MypagePage() {
     unreadRanking = (rkRes.data || []).map((r: any) => `r-${r.id}`).filter(k => !readSet.has(k)).length
   }
 
-  const { data: claimedMissions } = await supabase.from('user_missions').select('mission_id').eq('user_id', user.id)
+  const claimedMissions = missionRes.data
   const claimedMissionIds = (claimedMissions || []).map((r: any) => r.mission_id)
 
   // 活動サマリー（今月・先月比）と最近のつぶやき
@@ -155,9 +191,7 @@ export default async function MypagePage() {
   }
 
   // 閲覧履歴
-  const { data: views } = await supabase
-    .from('page_views').select('episode_id, novel_id, viewed_at')
-    .eq('user_id', user.id).order('viewed_at', { ascending: false }).limit(200)
+  const views = viewRes.data
 
   const epIds = Array.from(new Set((views||[]).map((v:any) => v.episode_id).filter(Boolean)))
   const latestViewMap: Record<string,string> = {}
@@ -227,7 +261,11 @@ export default async function MypagePage() {
     supabase.from('tweets').select('*',{count:'exact',head:true}).eq('user_id',user.id),
     supabase.from('series').select('*',{count:'exact',head:true}).eq('user_id',user.id),
   ])
-  const myNovelIds2 = (await supabase.from('novels').select('id').eq('author_id',user.id)).data?.map((n:any)=>n.id)||[]
+  /*
+   * すでに読んだ作品を使う。
+   * 同じものを 2 度読んでいた。
+   */
+  const myNovelIds2 = novelIds
   let episodeCount2 = 0
   if (myNovelIds2.length > 0) {
     const {count} = await supabase.from('episodes').select('*',{count:'exact',head:true}).in('novel_id',myNovelIds2)
