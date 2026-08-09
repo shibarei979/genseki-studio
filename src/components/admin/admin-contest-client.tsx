@@ -556,6 +556,20 @@ function ContestEditor({
 
                     {/* 応募 */}
                     <Section title={`応募 ${entries.length}件`}>
+                        {entries.length > 0 && (
+                            <div className="mb-3 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        void exportEntries(contest, entries)
+                                    }
+                                    className="rounded-md border border-line px-3.5 py-1.5 text-[11px] text-ink hover:border-forest-line hover:text-forest"
+                                >
+                                    Excel に書き出す
+                                </button>
+                            </div>
+                        )}
+
                         {entries.length === 0 ? (
                             <p className="py-6 text-center text-[11px] text-faint">
                                 まだ応募がありません。
@@ -1080,4 +1094,107 @@ function LineList({
             </button>
         </div>
     );
+}
+
+
+/**
+ * ============================================================
+ * 応募を Excel に書き出す
+ *
+ * 選考は画面の上ではやりにくい。
+ * 並べ替えたり、印を付けたり、人に渡したりする。
+ * 表計算に落としてしまうのが早い。
+ *
+ * 読み込むのは押したときだけ。
+ * 使わない人にまで運ぶ理由が無い。
+ * ============================================================
+ */
+async function exportEntries(contest: Contest, entries: ContestEntry[]) {
+    const XLSX = await import("xlsx-js-style");
+
+    const headers = [
+        "番号",
+        "作品タイトル",
+        "作者名",
+        "文字数",
+        "応募日",
+        "候補",
+        "受賞",
+        "賞の名前",
+        "覚え書き",
+    ];
+
+    const rows = entries.map((entry, index) => [
+        index + 1,
+        entry.work_title,
+        entry.author_name,
+        entry.char_count,
+        entry.entered_at.slice(0, 10).replace(/-/g, "/"),
+        entry.is_shortlisted ? "○" : "",
+        entry.is_awarded ? "○" : "",
+        entry.award_label,
+        entry.note,
+    ]);
+
+    const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+    /* 列の幅。題名とあらすじは広く取る */
+    sheet["!cols"] = [
+        { wch: 6 },
+        { wch: 34 },
+        { wch: 18 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 6 },
+        { wch: 6 },
+        { wch: 16 },
+        { wch: 40 },
+    ];
+
+    sheet["!rows"] = [{ hpt: 22 }, ...rows.map(() => ({ hpt: 18 }))];
+
+    const range = XLSX.utils.decode_range(sheet["!ref"] || "A1");
+
+    const border = {
+        top: { style: "thin", color: { rgb: "555555" } },
+        bottom: { style: "thin", color: { rgb: "555555" } },
+        left: { style: "thin", color: { rgb: "555555" } },
+        right: { style: "thin", color: { rgb: "555555" } },
+    };
+
+    /* 見出し。濃い地に白い字 */
+    for (let c = range.s.c; c <= range.e.c; c += 1) {
+        const address = XLSX.utils.encode_cell({ r: 0, c });
+        if (!sheet[address]) continue;
+
+        sheet[address].s = {
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+            fill: { patternType: "solid", fgColor: { rgb: "1F4E6B" } },
+            alignment: { horizontal: "center", vertical: "center" },
+            border,
+        };
+    }
+
+    /* 中身。1 行おきに薄く塗る。目が横に滑らない */
+    for (let r = 1; r <= rows.length; r += 1) {
+        for (let c = range.s.c; c <= range.e.c; c += 1) {
+            const address = XLSX.utils.encode_cell({ r, c });
+            if (!sheet[address]) sheet[address] = { t: "s", v: "" };
+
+            sheet[address].s = {
+                fill: {
+                    patternType: "solid",
+                    fgColor: { rgb: r % 2 === 0 ? "F2F5F7" : "FFFFFF" },
+                },
+                alignment: { vertical: "top", wrapText: c === 8 },
+                border,
+            };
+        }
+    }
+
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, sheet, "応募作品");
+
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(book, `${contest.title}_応募_${today}.xlsx`);
 }
