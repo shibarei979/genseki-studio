@@ -111,14 +111,6 @@ export default function RoomClient({ roomId }: Props) {
         const presence = createPresence(room.id);
         presenceRef.current = presence;
 
-        /*
-         * 声の支度。
-         *
-         * 在室と同じ通り道を使う。
-         * 相手を見つける合図だけが通り、声そのものは
-         * 端末どうしで直につなぐ。
-         */
-        voiceApi?.setup(room.id, identity.id, presence.voiceChannel ?? null);
 
         /*
          * 入る場所。
@@ -170,6 +162,15 @@ export default function RoomClient({ roomId }: Props) {
         };
 
         presence.join(member);
+
+        /*
+         * 声の支度。
+         *
+         * join のあとに呼ぶ。
+         * 通り道は join の中で作られるので、
+         * その前に呼んでも空のまま何も起きない。
+         */
+        voiceApi?.setup(room.id, identity.id, presence.voiceChannel ?? null);
         const unsubscribe = presence.subscribe(setState);
 
         // タブを閉じたときにも抜けたことを伝える
