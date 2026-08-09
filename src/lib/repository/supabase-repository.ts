@@ -1889,7 +1889,16 @@ export const supabaseRepository: Repository = {
     },
 
     async deleteContestEntry(entryId: string): Promise<void> {
-        await db().from("contest_entries").delete().eq("id", entryId);
+        const { error } = await db()
+            .from("contest_entries")
+            .delete()
+            .eq("id", entryId);
+
+        /*
+         * 弾かれても、Supabase は何も言わずに 0 件消したと返す。
+         * error を見ないと、消えたつもりで終わる。
+         */
+        if (error) throw new Error(describeError(error.message));
     },
 
     /**

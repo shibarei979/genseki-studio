@@ -139,9 +139,24 @@ export default function ContestEntryClient({
     async function cancelEntry() {
         if (!cancelling) return;
 
-        await getRepository().deleteContestEntry(cancelling.id);
-        setCancelling(null);
-        await load();
+        try {
+            await getRepository().deleteContestEntry(cancelling.id);
+            setCancelling(null);
+            await load();
+        } catch (caught) {
+            /*
+             * 黙って閉じない。
+             *
+             * 押しても何も起きないと、壊れていると受け取られる。
+             * 何が起きたかを見せる。
+             */
+            setCancelling(null);
+            setError(
+                caught instanceof Error
+                    ? caught.message
+                    : "取り消せませんでした。時間をおいて試してください。",
+            );
+        }
     }
 
     async function submit() {

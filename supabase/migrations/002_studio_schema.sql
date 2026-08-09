@@ -866,6 +866,13 @@ begin
   execute $i$drop policy if exists contest_entries_insert on public.contest_entries$i$;
   execute $i$create policy contest_entries_insert on public.contest_entries
   for insert with check (auth.uid() = author_id)$i$;
+
+  execute $i$drop policy if exists contest_entries_delete on public.contest_entries$i$;
+  -- 出した本人が取り消せる。運営はどれでも
+  execute $i$create policy contest_entries_delete on public.contest_entries
+  for delete using (
+    auth.uid() = author_id or auth.uid() = user_id or public.is_admin()
+  )$i$;
 exception when others then
   raise notice 'ポリシーを飛ばしました: contest_entries_insert （%）', sqlerrm;
 end $$;
