@@ -41,9 +41,25 @@ export default async function AdminPage() {
     })
   }
   const startDate = new Date(); startDate.setDate(startDate.getDate() - 365 * 5)
-  const [{ data: allUsers }, { data: allNovels }] = await Promise.all([
+  /*
+   * ここから下を一度に頼む。
+   *
+   * どれも互いに関わらないのに、3 回に分けて待っていた。
+   * 失敗しても止めないものは、後で拾う。
+   */
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [
+    { data: allUsers }, { data: allNovels },
+    loginRes, mobileRes, desktopRes,
+  ] = await Promise.all([
     supabase.from('profiles').select('created_at').gte('created_at', startDate.toISOString()),
     supabase.from('novels').select('created_at').gte('created_at', startDate.toISOString()),
+
+    /* 失敗しても止めない。数字が 0 になるだけ */
+    Promise.resolve(adminSupabase.rpc('get_login_stats')).catch(() => ({ data: null } as any)),
+    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'mobile').gte('created_at', weekAgo)).catch(() => ({ count: 0 } as any)),
+    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'desktop').gte('created_at', weekAgo)).catch(() => ({ count: 0 } as any)),
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {
@@ -63,20 +79,11 @@ export default async function AdminPage() {
   const chartData1825 = buildChartData(makeDays(365 * 5))
 
   // ログインユーザー数（今日・直近7日）とデバイス別PV（直近7日）
-  let loginToday = 0, loginWeek = 0, deviceMobile = 0, deviceDesktop = 0
-  try {
-    const { data: loginStats } = await adminSupabase.rpc('get_login_stats')
-    if (loginStats) { loginToday = loginStats.today || 0; loginWeek = loginStats.week || 0 }
-  } catch (_) {}
-  try {
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    const [{ count: mCount }, { count: dCount }] = await Promise.all([
-      adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'mobile').gte('created_at', weekAgo),
-      adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'desktop').gte('created_at', weekAgo),
-    ])
-    deviceMobile = mCount || 0
-    deviceDesktop = dCount || 0
-  } catch (_) {}
+  const loginStats = loginRes.data
+  const loginToday = loginStats?.today || 0
+  const loginWeek = loginStats?.week || 0
+  const deviceMobile = mobileRes.count || 0
+  const deviceDesktop = desktopRes.count || 0
   const deviceTotal = deviceMobile + deviceDesktop
   const mobilePct = deviceTotal > 0 ? Math.round((deviceMobile / deviceTotal) * 100) : 0
 
