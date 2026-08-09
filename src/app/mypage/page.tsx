@@ -3,13 +3,24 @@ import { redirect } from 'next/navigation'
 import MypageClient from '@/components/mypage/mypage-client'
 
 export default async function MypagePage() {
+  /*
+   * どこで時間がかかっているかを測る。
+   *
+   * Vercel の Logs に出る。
+   * 原因が分かったら消してよい。
+   */
+  const t0 = Date.now()
+  const mark = (name: string) => console.log(`[mypage] ${name}: ${Date.now() - t0}ms`)
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/auth/login?redirectTo=/mypage')
 
   /* 自分の情報は 1 行なので、そのまま */
+  mark('auth')
   const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single()
+  mark('profile')
 
   if (!profile) {
     await supabase.from('profiles').upsert({
@@ -74,6 +85,7 @@ export default async function MypagePage() {
     supabase.from('user_missions').select('mission_id').eq('user_id', user.id),
   ])
 
+  mark('batch1')
   const followingData = followingRes.data
   const novels = novelRes.data
   const bookmarkedNovels = bookmarkRes.data
@@ -130,6 +142,7 @@ export default async function MypagePage() {
       .eq('user_id', user.id).order('viewed_at', { ascending: false }).limit(60),
   ])
 
+  mark('batch2')
   const calendarEps = calendarRes.data
   const postDates = (calendarEps||[]).map((e:any) => e.created_at.slice(0,10))
 
@@ -199,6 +212,7 @@ export default async function MypagePage() {
     recentTweet = tw.data?.[0] || null
   }
 
+  mark('unread')
   // 閲覧履歴
   const views = viewRes.data
 
@@ -302,6 +316,8 @@ export default async function MypagePage() {
     email: user.email || '', icon_url: '', login_provider: 'google',
     user_number: null, bio: null, birthdate: null, age_verified: false,
   }
+
+  mark('done')
 
   return (
     <MypageClient
