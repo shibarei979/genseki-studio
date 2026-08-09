@@ -295,6 +295,43 @@ export default function EpisodeEditor({
              * よく使う「縦横」と「行番号」だけは外に出す。
              */}
             <div className="relative flex items-center gap-1.5 border-b border-line bg-canvas px-3 py-1.5 text-[11px] sm:px-5">
+                {/*
+                 * 大きさ。
+                 *
+                 * 道具の先頭に置く。
+                 * 隅に浮かせると、あることに気づかれない。
+                 */}
+                <span className="flex shrink-0 items-center rounded border border-line bg-surface">
+                    <button
+                        type="button"
+                        onClick={() => setZoom((now) => Math.max(0.7, now - 0.1))}
+                        disabled={zoom <= 0.7}
+                        aria-label="小さくする"
+                        className="px-2 py-0.5 text-muted hover:text-forest disabled:opacity-35"
+                    >
+                        −
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setZoom(1)}
+                        title="元の大きさに戻す"
+                        className="min-w-[34px] border-x border-line px-1 py-0.5 text-[10px] tabular-nums text-faint hover:text-ink"
+                    >
+                        {Math.round(zoom * 100)}%
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setZoom((now) => Math.min(1.6, now + 0.1))}
+                        disabled={zoom >= 1.6}
+                        aria-label="大きくする"
+                        className="px-2 py-0.5 text-muted hover:text-forest disabled:opacity-35"
+                    >
+                        ＋
+                    </button>
+                </span>
+
                 <button
                     type="button"
                     onClick={onToggleWritingMode}
@@ -422,52 +459,6 @@ export default function EpisodeEditor({
                         {flashLine}行目へ移動しました
                     </p>
                 )}
-
-                {/*
-                 * 大きさを変える。
-                 *
-                 * 右下に小さく置く。
-                 * 全体を見たいときは縮め、直したいときは広げる。
-                 *
-                 * 指でつまむ形にはしない。
-                 * 書いている途中に触れて、勝手に変わってしまう。
-                 */}
-                <div className="pointer-events-none sticky bottom-3 flex justify-end pr-3">
-                    <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-line bg-surface px-1 py-0.5 shadow-sm">
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setZoom((now) => Math.max(0.7, now - 0.1))
-                            }
-                            disabled={zoom <= 0.7}
-                            aria-label="小さくする"
-                            className="h-7 w-7 rounded-full text-[13px] text-muted hover:bg-canvas disabled:opacity-35"
-                        >
-                            −
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setZoom(1)}
-                            title="元の大きさに戻す"
-                            className="min-w-[38px] px-1 text-[10px] tabular-nums text-faint hover:text-ink"
-                        >
-                            {Math.round(zoom * 100)}%
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setZoom((now) => Math.min(1.6, now + 0.1))
-                            }
-                            disabled={zoom >= 1.6}
-                            aria-label="大きくする"
-                            className="h-7 w-7 rounded-full text-[13px] text-muted hover:bg-canvas disabled:opacity-35"
-                        >
-                            ＋
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     );
