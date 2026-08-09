@@ -118,7 +118,7 @@ export default function RoomClient({ roomId }: Props) {
          * 相手を見つける合図だけが通り、声そのものは
          * 端末どうしで直につなぐ。
          */
-        voiceApi?.setup(identity.id, presence.voiceChannel ?? null);
+        voiceApi?.setup(room.id, identity.id, presence.voiceChannel ?? null);
 
         /*
          * 入る場所。
@@ -180,8 +180,12 @@ export default function RoomClient({ roomId }: Props) {
             window.removeEventListener("beforeunload", handleUnload);
             unsubscribe();
 
-            /* 部屋を出たら声も切る */
-            voiceApi?.teardown();
+            /*
+             * 声は切らない。
+             *
+             * 資料を見に行っている間も話し続けられる。
+             * 切れるのは、自分でマイクを切ったときだけ。
+             */
 
             presence.dispose();
             presenceRef.current = null;
@@ -257,14 +261,14 @@ export default function RoomClient({ roomId }: Props) {
      * 文字で発言してよいか。
      * 部屋を立てた人と、その人が許した人だけ。
      *
-     * いまはログインが無く、自分の端末の部屋しか開けないので、
-     * 自分の立てた部屋では常に話せる扱いにしている。
-     * ログインが入ったら host_id と突き合わせる。
+     * 話せるのは、部屋主と、部屋主が許した人だけ。
+     *
+     * 誰でも話せる形にすると、書く場が騒がしくなる。
+     * 同時に話せるのは 4 人まで（voice.ts の MAX_SPEAKERS）。
      */
     const canSpeak =
         room !== null &&
-        room.allow_chat &&
-        (room.host_id !== null || (room.speakers ?? []).includes(identity.id));
+        (isHost || (room.speakers ?? []).includes(identity.id));
 
     /*
      * いまの時刻。
@@ -866,7 +870,7 @@ export default function RoomClient({ roomId }: Props) {
                             {voiceApi && presenceRef.current?.isNetworked && (
                                 <VoicePanel
                                     canUseVoice
-                                    canSpeak={isHost || room.allow_host_voice}
+                                    canSpeak={canSpeak}
                                     isMicOn={voiceApi.voice.isMicOn}
                                     error={voiceApi.voice.error}
                                     voiceMembers={voiceApi.voice.members}
@@ -962,17 +966,23 @@ export default function RoomClient({ roomId }: Props) {
                                  * 声と画面共有。
                                  *
                                  * 見本にはあるが、まだ動かせない。
-                                 * 端末どうしを直に繋ぐ仕組み（WebRTC）が要る。
+                                 * 端末どうしを直に繋ぐ（WebRTC）。
                                  *
-                                 * 消さずに、押せない状態で置いている。
-                                 * 後から足すと帯の並びが変わり、
-                                 * 指が覚えた位置がずれる。
+                                 * 部屋主と、部屋主が許した人だけが話せる。
+                                 * 同時に話せるのは 4 人まで。
                                  */}
                                 <ActionButton
                                     icon={<MicIcon />}
                                     label="マイク"
-                                    note="準備中"
-                                    disabled
+                                    note={
+                                        voiceApi?.voice.isMicOn
+                                            ? "入"
+                                            : canSpeak
+                                              ? "切"
+                                              : "部屋主のみ"
+                                    }
+                                    onClick={() => void voiceApi?.toggleMic()}
+                                    disabled={!voiceApi || !canSpeak}
                                 />
 
                                 <ActionButton

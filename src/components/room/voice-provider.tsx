@@ -38,7 +38,11 @@ interface VoiceContext {
      * 部屋の画面が、自分の id と通り道を渡す。
      * 通り道が無ければ（同じ端末だけの版）何もしない。
      */
-    setup: (selfId: string, channel: RealtimeChannel | null) => void;
+    setup: (
+        roomId: string,
+        selfId: string,
+        channel: RealtimeChannel | null,
+    ) => void;
 
     /** 部屋から出るときに呼ぶ */
     teardown: () => void;
@@ -59,14 +63,22 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     const [voice, setVoice] = useState<VoiceState>(IDLE);
     const roomRef = useRef<VoiceRoom | null>(null);
 
+    /* いま声を繋いでいる部屋。変わったら繋ぎ直す */
+    const roomIdRef = useRef<string | null>(null);
+
     const setup = useCallback(
-        (selfId: string, channel: RealtimeChannel | null) => {
-            /* すでに同じ相手なら作り直さない */
-            if (roomRef.current) return;
+        (roomId: string, selfId: string, channel: RealtimeChannel | null) => {
             if (!channel) return;
+
+            /* 同じ部屋なら、そのまま。資料へ行って戻っても切れない */
+            if (roomRef.current && roomIdRef.current === roomId) return;
+
+            /* 別の部屋に入った。前の繋ぎは解く */
+            roomRef.current?.dispose();
 
             const room = new VoiceRoom(selfId, channel);
             roomRef.current = room;
+            roomIdRef.current = roomId;
 
             room.subscribe(setVoice);
         },
@@ -76,6 +88,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
     const teardown = useCallback(() => {
         roomRef.current?.dispose();
         roomRef.current = null;
+        roomIdRef.current = null;
         setVoice(IDLE);
     }, []);
 
@@ -83,9 +96,18 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         const room = roomRef.current;
         if (!room) return;
 
-        /* 入っていれば切る。切れていれば入れる */
+        /*
+         * 入っていれば切る。切れていれば入れる。
+         *
+         * 切ったときは繋ぎも解く。
+         * 資料を見に行っても切れないのは、
+         * ここを通らないため。
+         */
         if (voice.isMicOn) {
-            room.stop();
+            room.dispose();
+            roomRef.current = null;
+            roomIdRef.current = null;
+            setVoice(IDLE);
             return;
         }
 

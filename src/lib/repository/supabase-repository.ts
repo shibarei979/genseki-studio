@@ -1636,10 +1636,27 @@ export const supabaseRepository: Repository = {
      */
 
     async listRooms(): Promise<WritingRoom[]> {
+        const userId = await currentUser();
+
+        /*
+         * 一覧に出すのは、誰でも入れる部屋だけ。
+         *
+         * URL 限定の部屋は、URL を渡された人だけが入れる。
+         * 一覧に出したら「限定」の意味が無くなる。
+         *
+         * ただし自分の立てた部屋は、限定でも出す。
+         * どこにも出ないと、自分で開けなくなる。
+         */
         const { data } = await db()
             .from("writing_rooms")
             .select("*")
+            .or(
+                userId
+                    ? `visibility.eq.open,host_id.eq.${userId}`
+                    : "visibility.eq.open",
+            )
             .order("created_at", { ascending: false });
+
         return rows<Record<string, unknown>>(data).map(toRoom);
     },
 
