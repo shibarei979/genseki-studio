@@ -10,8 +10,6 @@
  * ============================================================
  */
 
-import { stripHighlight } from "@/lib/manuscript/notation";
-
 export interface SplitOptions {
     /** 章見出し・シーン区切りを検出する */
     detectHeadings: boolean;
@@ -63,45 +61,9 @@ function countChars(text: string): number {
  * detectHeadings が false のとき、または見出しが 1 つも見つからないときは
  * 3 行以上の空行を区切りとして扱う。それも無ければ全体を 1 話にする。
  */
-/**
- * 手で入れた切れ目の印。
- *
- * 本文に紛れないよう、まず使われない並びにする。
- * 取り込むときに外す。
- */
-export const SPLIT_MARK = "──── ここで切る ────";
-
 export function splitManuscript(raw: string, options: SplitOptions): SplitResult[] {
     const text = raw.replace(/\r\n/g, "\n").trim();
     if (text.length === 0) return [];
-
-    /*
-     * 手で入れた切れ目があれば、それを最優先にする。
-     *
-     * 自動の見立てより、書き手が指したところが正しい。
-     */
-    if (text.includes(SPLIT_MARK)) {
-        return text
-            .split(SPLIT_MARK)
-            .map((part) => part.trim())
-            .filter((part) => part.length > 0)
-            .map((part) => {
-                /* 1 行目が見出しらしければ、題名として取る */
-                const lines = part.split("\n");
-                const head = lines[0]?.trim() ?? "";
-
-                if (isHeading(head) && lines.length > 1) {
-                    const body = lines.slice(1).join("\n").trim();
-                    return {
-                        title: toTitle(head),
-                        body,
-                        charCount: countChars(body),
-                    };
-                }
-
-                return { title: "", body: part, charCount: countChars(part) };
-            });
-    }
 
     if (options.detectHeadings) {
         const byHeading = splitByHeading(text);
@@ -169,14 +131,10 @@ export interface ExportEpisode {
  * 投稿サイトへ貼るときに必要だし、外すと読みの情報が消えてしまう。
  */
 export function buildTxt(workTitle: string, episodes: ExportEpisode[]): string {
-    /*
-     * 蛍光ペンの印は外す。
-     * 自分のための目印なので、書き出したものに残らないようにする。
-     */
     const header = `${workTitle}\n\n`;
     const chapters = episodes.map((ep) => {
         const heading = ep.title.trim() ? `第${ep.ep_number}話　${ep.title}` : `第${ep.ep_number}話`;
-        return `${heading}\n\n${stripHighlight(ep.body)}`;
+        return `${heading}\n\n${ep.body}`;
     });
     return header + chapters.join("\n\n\n");
 }

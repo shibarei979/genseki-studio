@@ -44,10 +44,5 @@ export function formatTime(iso: string): string {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "-";
     const pad = (n: number) => String(n).padStart(2, "0");
-    /*
-     * 秒は出さない。
-     * 保存の時刻に秒まで要らないし、
-     * 目に入るたびに数字が動いて落ち着かない。
-     */
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
