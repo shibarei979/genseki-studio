@@ -150,7 +150,7 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
 
             {/* ============ 顔 ============ */}
             <div className="bg-surface">
-                <div className="mx-auto grid max-w-6xl items-center gap-9 px-6 py-9 sm:px-8 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)]">
+                <div className="mx-auto grid max-w-6xl items-center gap-5 px-4 py-6 sm:gap-9 sm:px-8 sm:py-9 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)]">
                     {/*
                      * 絵。
                      *
@@ -639,7 +639,7 @@ function Section({
             /* 貼り付いた目次の下に隠れないよう、飛び先を下げる */
             className="scroll-mt-28 border-b border-line py-8 last:border-b-0"
         >
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)]">
+            <div className="grid gap-3 sm:gap-5 lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)]">
                 <h2
                     className="flex items-center gap-2.5 text-[14px] font-semibold"
                     style={{ color: C.navy }}

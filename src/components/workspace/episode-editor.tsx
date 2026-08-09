@@ -66,6 +66,14 @@ export default function EpisodeEditor({
     const [body, setBody] = useState(episode.body);
     /** 縦書き整形の直前の本文。取り消し用に 1 手ぶんだけ持つ */
     const [beforeNormalize, setBeforeNormalize] = useState<string | null>(null);
+
+    /*
+     * ほかの道具を開いているか。
+     *
+     * 狭い画面でだけ使う。
+     * 全部並べると 2 段になり、書く場所がそのぶん減る。
+     */
+    const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [notice, setNotice] = useState("");
     /*
      * 行番号。資料の「第3話 12行目」から場所を探すときに使う。
@@ -263,7 +271,15 @@ export default function EpisodeEditor({
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 border-b border-line bg-canvas px-6 py-2 text-xs">
+            {/*
+             * 道具の並び。
+             *
+             * 狭い画面では「…」に畳む。
+             * 全部並べると 2 段になり、書く場所がそのぶん減る。
+             *
+             * よく使う「縦横」と「行番号」だけは外に出す。
+             */}
+            <div className="relative flex items-center gap-2 border-b border-line bg-canvas px-3 py-2 text-xs sm:px-6">
                 <button
                     type="button"
                     onClick={onToggleWritingMode}
@@ -287,6 +303,16 @@ export default function EpisodeEditor({
                     行番号
                 </button>
 
+                {/* ここから先は、狭い画面では「…」の中 */}
+                <div
+                    className={[
+                        "flex items-center gap-2",
+                        isToolsOpen
+                            ? "absolute left-0 right-0 top-full z-20 flex-wrap border-b border-line bg-canvas px-3 py-2 shadow-sm"
+                            : "hidden",
+                        "sm:static sm:flex sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none",
+                    ].join(" ")}
+                >
                 <button
                     type="button"
                     onClick={handleRuby}
@@ -329,6 +355,24 @@ export default function EpisodeEditor({
                         整形を取り消す
                     </button>
                 )}
+
+                </div>
+
+                {/* 「…」。狭い画面だけ */}
+                <button
+                    type="button"
+                    onClick={() => setIsToolsOpen(!isToolsOpen)}
+                    aria-expanded={isToolsOpen}
+                    title="ほかの道具"
+                    className={[
+                        "ml-auto rounded-md border px-2.5 py-1 sm:hidden",
+                        isToolsOpen
+                            ? "border-forest bg-forest-tint text-forest"
+                            : "border-line bg-surface text-muted",
+                    ].join(" ")}
+                >
+                    ⋯
+                </button>
 
                 {notice && <span className="text-forest">{notice}</span>}
             </div>

@@ -281,7 +281,7 @@ export default function WorkspaceClient({ workId }: Props) {
                     <button
                         type="button"
                         onClick={() => setIsListOpen(false)}
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface py-2.5 text-[13px] text-muted hover:text-ink lg:hidden"
+                        className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-line bg-surface py-2 text-[13px] text-muted hover:text-ink lg:hidden"
                     >
                         本文にもどる
                     </button>
@@ -326,7 +326,7 @@ export default function WorkspaceClient({ workId }: Props) {
                         <button
                             type="button"
                             onClick={() => setIsListOpen(true)}
-                            className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface py-2.5 text-[13px] text-muted hover:text-ink lg:hidden"
+                            className="mb-2 flex w-full items-center justify-center gap-2 rounded-md border border-line bg-surface py-1.5 text-[12px] text-muted hover:text-ink lg:hidden"
                         >
                             話一覧をひらく
                         </button>
