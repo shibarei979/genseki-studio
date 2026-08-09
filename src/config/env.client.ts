@@ -24,3 +24,24 @@ export function hasSupabase(): boolean {
         clientEnv.supabaseUrl.length > 0 && clientEnv.supabaseAnonKey.length > 0
     );
 }
+
+/**
+ * 繋がっていない理由。
+ *
+ * 「繋がっていません」とだけ出しても、
+ * 設定を書き忘れたのか、名前を間違えたのか、
+ * サーバーを立て直していないのかが分からない。
+ *
+ * どちらの値が空かまで出せば、その場で直せる。
+ * 値そのものは出さない。鍵を画面に出すことになる。
+ */
+export function describeSupabaseGap(): string | null {
+    const missing: string[] = [];
+    if (clientEnv.supabaseUrl.length === 0) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+    if (clientEnv.supabaseAnonKey.length === 0) {
+        missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    }
+
+    if (missing.length === 0) return null;
+    return `${missing.join(" と ")} が読めていません`;
+}

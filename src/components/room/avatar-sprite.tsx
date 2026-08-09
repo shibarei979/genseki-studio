@@ -26,7 +26,7 @@ const HAIR = [
     "#5f4a70", "#7a3f42", "#3f5266", "#4f6046",
 ];
 
-const SKIN = ["#d7e3ec", "#c5d8e4", "#d9b189", "#c49a72"];
+const SKIN = ["#f2dcc4", "#e8cba8", "#d9b189", "#c49a72"];
 
 /** 髪型。前髪の形と長さで分ける */
 type HairStyle = "short" | "bob" | "long" | "tied" | "wavy" | "bun";

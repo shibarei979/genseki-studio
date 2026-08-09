@@ -10,7 +10,7 @@
 import { useRouter } from "next/navigation";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Header from "@/components/layout/header";
 import RoomFloor from "@/components/room/room-floor";
@@ -19,13 +19,13 @@ import RoomMembersCard from "@/components/room/room-members-card";
 import ReportDialog from "@/components/room/report-dialog";
 import RoomManagePanel from "@/components/room/room-manage-panel";
 import { useRoomSession } from "@/hooks/use-room-session";
-import { useAuth } from "@/hooks/use-auth";
+import { describeSupabaseGap, hasSupabase } from "@/config/env.client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+
+import { createClient } from "@/lib/supabase/client";
 import { getRepository } from "@/lib/repository";
-import VoicePanel from "@/components/room/voice-panel";
-import { useRoomVoice } from "@/components/room/voice-provider";
 import { createPresence, loadIdentity, saveIdentity } from "@/lib/room/presence";
 import { AVATAR_COLORS, assignColors, takenColors } from "@/lib/room/avatar-colors";
-import { loadLastSpot, saveLastSpot } from "@/lib/room/last-spot";
 import { backgroundFor, clampToFloor } from "@/lib/room/room-backgrounds";
 import type { Presence, RoomState } from "@/lib/room/presence";
 import type { Profile, RoomMember, WritingRoom } from "@/types";
@@ -49,21 +49,12 @@ export default function RoomClient({ roomId }: Props) {
     const [isLoading, setIsLoading] = useState(true);
     const [state, setState] = useState<RoomState>({ members: [], messages: [], isClosed: false });
     const [identity, setIdentity] = useState(() => loadIdentity());
-
-    /* 声。いちばん外に置いた受け渡しから借りる */
-    const voiceApi = useRoomVoice();
-
-    /*
-     * 話してよい人。
-     *
-     * 部屋の設定とは別に持つ。
-     * room を入れ替えると部屋に入り直してしまうため。
-     */
-    const [speakers, setSpeakers] = useState<string[]>([]);
     const [isEditingName, setIsEditingName] = useState(false);
     const [copied, setCopied] = useState(false);
 
     const presenceRef = useRef<Presence | null>(null);
+    /** 部屋そのものの変更を受け取る通り道 */
+    const roomChannelRef = useRef<RealtimeChannel | null>(null);
 
     /* 部屋が閉じられたか。閉じられていたら知らせて一覧へ戻す */
     const [isClosed, setIsClosed] = useState(false);
@@ -73,6 +64,12 @@ export default function RoomClient({ roomId }: Props) {
         () => () => {
             if (closeWatchRef.current !== null)
                 window.clearInterval(closeWatchRef.current);
+
+            /* 部屋の変更を見張るのをやめる */
+            if (roomChannelRef.current) {
+                void createClient().removeChannel(roomChannelRef.current);
+                roomChannelRef.current = null;
+            }
         },
         [],
     );
@@ -83,20 +80,45 @@ export default function RoomClient({ roomId }: Props) {
             setRoom(await repository.getRoom(roomId));
 
             /*
+             * 部屋そのものの変更を受け取る。
+             *
+             * 設定を直したときと、集中タイマーを始めたときに、
+             * いる人全員の画面へ届く必要がある。
+             * ときどき読み直す作りだと、最大で数十秒ずれる。
+             */
+            if (hasSupabase()) {
+                const supabase = createClient();
+                roomChannelRef.current = supabase
+                    .channel(`room-row:${roomId}`)
+                    .on(
+                        "postgres_changes",
+                        {
+                            event: "UPDATE",
+                            schema: "public",
+                            table: "writing_rooms",
+                            filter: `id=eq.${roomId}`,
+                        },
+                        (payload) => setRoom(payload.new as WritingRoom),
+                    )
+                    .subscribe();
+            }
+
+            /*
              * 部屋が閉じられていないか、ときどき見に行く。
              *
-             * 立てた人が閉じても、開いたままの画面には伝わらない。
-             * 無くなった部屋の中で歩き続けることになるので、
-             * 気づいたら一覧へ戻す。
+             * 繋がっているときは要らない。
+             * 部屋が消えたことは Realtime の delete で届く。
+             * 繋いでいないときだけ、8 秒ごとに確かめる。
              */
-
-            const watch = window.setInterval(async () => {
-                if ((await repository.getRoom(roomId)) === null) {
-                    window.clearInterval(watch);
-                    setIsClosed(true);
-                }
-            }, 8000);
-            closeWatchRef.current = watch;
+            if (!hasSupabase()) {
+                const watch = window.setInterval(async () => {
+                    if ((await repository.getRoom(roomId)) === null) {
+                        window.clearInterval(watch);
+                        setIsClosed(true);
+                    }
+                }, 8000);
+                closeWatchRef.current = watch;
+            }
 
             // 部屋での名前はマイページの表示名に合わせる。
             // 2 か所で別々に持つと、どちらが本当か分からなくなる
@@ -118,7 +140,7 @@ export default function RoomClient({ roomId }: Props) {
 
         const presence = createPresence(room.id);
         presenceRef.current = presence;
-
+        setIsNetworked(presence.isNetworked);
 
         /*
          * 入る場所。
@@ -130,23 +152,11 @@ export default function RoomClient({ roomId }: Props) {
          * 立てる場所へ寄せてから置く。
          */
         const background = backgroundFor(room.capacity);
-
-        /*
-         * 前にいた場所へ戻す。
-         *
-         * 資料や執筆へ移って帰ってきたとき、
-         * 別の場所に立っていると、隣にいた人と離れてしまう。
-         * 席を選んだことも無かったことになる。
-         */
-        const last = loadLastSpot(room.id);
-
-        const entrance = last
-            ? (clampToFloor(background, last.x, last.y) ?? last)
-            : (clampToFloor(
-                  background,
-                  0.44 + Math.random() * 0.12,
-                  background.floor.top + 0.04,
-              ) ?? { x: 0.5, y: background.floor.top + 0.04 });
+        const entrance = clampToFloor(
+            background,
+            0.44 + Math.random() * 0.12,
+            background.floor.top + 0.04,
+        ) ?? { x: 0.5, y: background.floor.top + 0.04 };
 
         const member: RoomMember = {
             id: identity.id,
@@ -170,32 +180,7 @@ export default function RoomClient({ roomId }: Props) {
         };
 
         presence.join(member);
-
-        /*
-         * 声の支度。
-         *
-         * join のあとに呼ぶ。
-         * 通り道は join の中で作られるので、
-         * その前に呼んでも空のまま何も起きない。
-         */
-        voiceApi?.setup(room.id, identity.id, presence.voiceChannel ?? null);
-        setSpeakers(room.speakers ?? []);
-
         const unsubscribe = presence.subscribe(setState);
-
-        /*
-         * 部屋の設定が変わったら、話してよい人だけを読み直す。
-         *
-         * room をまるごと入れ替えると、この処理そのものが
-         * やり直され、部屋に入り直してしまう。
-         * それが延々と続いて画面が固まる。
-         */
-        const unwatchRoom = presence.onRoomChanged?.(() => {
-            void (async () => {
-                const found = await getRepository().getRoom(room.id);
-                if (found) setSpeakers(found.speakers ?? []);
-            })();
-        });
 
         // タブを閉じたときにも抜けたことを伝える
         const handleUnload = () => presence.leave();
@@ -204,27 +189,10 @@ export default function RoomClient({ roomId }: Props) {
         return () => {
             window.removeEventListener("beforeunload", handleUnload);
             unsubscribe();
-            unwatchRoom?.();
-
-            /*
-             * 声は切らない。
-             *
-             * 資料を見に行っている間も話し続けられる。
-             * 切れるのは、自分でマイクを切ったときだけ。
-             */
-
             presence.dispose();
             presenceRef.current = null;
         };
-        /*
-         * 見るのは部屋の id だけ。
-         *
-         * room をまるごと見ていると、設定を変えるたびに
-         * ここがやり直され、部屋に入り直してしまう。
-         * 入り直すたびに繋ぎが増えて、画面が固まる。
-         */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [room?.id, identity.id, identity.name]);
+    }, [room, identity.id, identity.name]);
 
     /** この滞在で書いた文字数。集中の時間の記録に使う */
     const [isManaging, setIsManaging] = useState(false);
@@ -239,6 +207,60 @@ export default function RoomClient({ roomId }: Props) {
     const [isLeaving, setIsLeaving] = useState(false);
     /* 立てた人以外に出す、短い確かめ */
     const [isDoorAsking, setIsDoorAsking] = useState(false);
+
+    /*
+     * サーバーに繋がっているか。
+     *
+     * 繋いでいれば別の端末の人も見える。
+     * 繋いでいなければ、同じブラウザの別タブまで。
+     */
+    const [isNetworked, setIsNetworked] = useState(false);
+    /* 繋がっていないとき、その理由 */
+    const envGap = describeSupabaseGap();
+
+    /*
+     * 集中タイマー。
+     *
+     * 残りは部屋の sprint_started_at から毎秒計算する。
+     * 残り秒数を保存すると、書き込みが毎秒になるうえ、
+     * 途中から入った人の残りが出せない。
+     */
+    const [sprintLeft, setSprintLeft] = useState(0);
+
+    useEffect(() => {
+        if (!room?.sprint_started_at) {
+            setSprintLeft(0);
+            return;
+        }
+
+        const endsAt =
+            new Date(room.sprint_started_at).getTime() +
+            (room.sprint_minutes ?? 15) * 60 * 1000;
+
+        function tick() {
+            setSprintLeft(Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)));
+        }
+        tick();
+        const id = window.setInterval(tick, 1000);
+        return () => window.clearInterval(id);
+    }, [room?.sprint_started_at, room?.sprint_minutes]);
+
+    /** 集中タイマーを始める・止める。部屋にいる全員に伝わる */
+    async function toggleSprint() {
+        if (!room) return;
+
+        const isRunning = sprintLeft > 0;
+        const patch = isRunning
+            ? { sprint_started_at: null, sprint_by: "" }
+            : {
+                  sprint_started_at: new Date().toISOString(),
+                  sprint_minutes: 15,
+                  sprint_by: identity.name,
+              };
+
+        setRoom({ ...room, ...patch });
+        await getRepository().updateRoom(room.id, patch);
+    }
 
     /*
      * 通報の札。
@@ -258,24 +280,7 @@ export default function RoomClient({ roomId }: Props) {
      * ログインが入ったら host_id と自分の id を突き合わせる。
      * いまは端末ごとの目印で見ている。
      */
-    /*
-     * 立てた人か。
-     *
-     * host_id には、保存のときにログインの id が入る。
-     * 端末ごとの目印とは別のものなので、両方で見比べる。
-     *
-     * 片方だけだと、ログインしている人が
-     * 自分の部屋の部屋主として見なされない。
-     */
-    const { user } = useAuth();
-
-    const isHost =
-        room !== null &&
-        (room.host_id === identity.id ||
-            (user !== null && room.host_id === user.id));
-
-    /* 部屋を閉じるか尋ねている最中か */
-    const [isClosing, setIsClosing] = useState(false);
+    const isHost = room !== null && room.host_id === identity.id;
     const [profile, setProfile] = useState<Profile | null>(null);
     const router = useRouter();
     const { enter, leave } = useRoomSession();
@@ -295,13 +300,14 @@ export default function RoomClient({ roomId }: Props) {
      * 文字で発言してよいか。
      * 部屋を立てた人と、その人が許した人だけ。
      *
-     * 話せるのは、部屋主と、部屋主が許した人だけ。
-     *
-     * 誰でも話せる形にすると、書く場が騒がしくなる。
-     * 同時に話せるのは 4 人まで（voice.ts の MAX_SPEAKERS）。
+     * いまはログインが無く、自分の端末の部屋しか開けないので、
+     * 自分の立てた部屋では常に話せる扱いにしている。
+     * ログインが入ったら host_id と突き合わせる。
      */
     const canSpeak =
-        room !== null && (isHost || speakers.includes(identity.id));
+        room !== null &&
+        room.allow_chat &&
+        (room.host_id !== null || (room.speakers ?? []).includes(identity.id));
 
     /*
      * いまの時刻。
@@ -358,38 +364,14 @@ export default function RoomClient({ roomId }: Props) {
      * 扉まで歩いたときと、退出のボタンを押したときで
      * 同じ流れにしたいので、1 か所にまとめてある。
      */
-    /*
-     * useCallback で包む。
-     *
-     * 包まないと描くたびに新しいものができ、
-     * 受け取った側の処理が毎回走り直す。
-     * それが描き直しを呼び、追いつかなくなる。
-     */
-    const askToLeave = useCallback(() => {
+    function askToLeave() {
         if (isHost) {
             setHandoverTo(others[0]?.id ?? null);
             setIsLeaving(true);
         } else {
             setIsDoorAsking(true);
         }
-    }, [isHost, others]);
-
-    /*
-     * 歩いた先を伝える。
-     *
-     * useCallback で包む。
-     * 描くたびに新しいものを渡すと、
-     * 受け取った側の処理が走り直す。
-     */
-    const handleMove = useCallback(
-        (x: number, y: number) => {
-            presenceRef.current?.move(x, y);
-
-            /* 次に戻ってきたとき、ここに立っている */
-            if (roomId) saveLastSpot(roomId, x, y);
-        },
-        [roomId],
-    );
+    }
 
     /**
      * 別の人に任せて出る。
@@ -469,7 +451,7 @@ export default function RoomClient({ roomId }: Props) {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-canvas">
+            <div className="min-h-screen bg-page">
                 <Header />
                 <p className="py-24 text-center text-sm text-faint">読み込んでいます</p>
             </div>
@@ -478,7 +460,7 @@ export default function RoomClient({ roomId }: Props) {
 
     if (!room) {
         return (
-            <div className="min-h-screen bg-canvas">
+            <div className="min-h-screen bg-page">
                 <Header breadcrumbs={[{ label: "執筆室", href: "/rooms" }]} />
                 <div className="py-24 text-center">
                     <p className="text-sm text-ink">この部屋は見つかりませんでした。</p>
@@ -494,7 +476,7 @@ export default function RoomClient({ roomId }: Props) {
     }
 
     return (
-        <div className="min-h-screen bg-canvas">
+        <div className="min-h-screen bg-page">
             <Header
                 breadcrumbs={[
                     { label: "執筆室", href: "/rooms" },
@@ -703,20 +685,7 @@ export default function RoomClient({ roomId }: Props) {
                         room={room}
                         members={state.members}
                         onChange={async (patch) => {
-                            const updated = await getRepository().updateRoom(
-                                room.id,
-                                patch,
-                            );
-
-                            /*
-                             * 話してよい人は別に持つ。
-                             * room をまるごと入れ替えると部屋に入り直す。
-                             */
-                            setSpeakers(updated.speakers ?? []);
-                            setRoom(updated);
-
-                            /* 中にいる人の画面にも伝える */
-                            presenceRef.current?.announceRoomChanged?.();
+                            setRoom(await getRepository().updateRoom(room.id, patch));
                         }}
                         onClose={() => void closeAndLeave()}
                         onBack={() => setIsManaging(false)}
@@ -882,20 +851,13 @@ export default function RoomClient({ roomId }: Props) {
                                     </p>
                                 )}
 
-                                {/*
-                                 * 部屋を閉じるのも、人を誘うのも部屋主の仕事。
-                                 * ほかの人には出さない。
-                                 * 押せないものが並んでいても迷うだけ。
-                                 */}
-                                {isHost && (
                                 <div className="mt-3 flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsClosing(true)}
-                                        className="flex-1 rounded-lg border border-line py-2 text-center text-[12px] text-muted hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
+                                    <Link
+                                        href="/rooms"
+                                        className="flex-1 rounded-lg border border-line py-2 text-center text-[12px] text-muted hover:border-forest-line hover:text-forest"
                                     >
-                                        部屋を閉じる
-                                    </button>
+                                        執筆室を変更
+                                    </Link>
 
                                     {/*
                                      * 誘う先は部屋そのものなので、
@@ -923,7 +885,6 @@ export default function RoomClient({ roomId }: Props) {
                                         </button>
                                     )}
                                 </div>
-                                )}
                             </section>
 
                             <RoomMembersCard
@@ -932,37 +893,22 @@ export default function RoomClient({ roomId }: Props) {
                             />
 
                             {/*
-                             * 声。
-                             *
-                             * 部屋主と、部屋主が許した人だけが話せる。
-                             * 同時に話せるのは 4 人まで。
-                             */}
-                            {voiceApi && presenceRef.current?.isNetworked && (
-                                <VoicePanel
-                                    canUseVoice
-                                    canSpeak={canSpeak}
-                                    isMicOn={voiceApi.voice.isMicOn}
-                                    error={voiceApi.voice.error}
-                                    voiceMembers={voiceApi.voice.members}
-                                    members={state.members}
-                                    selfId={identity.id}
-                                    onToggle={() => void voiceApi.toggleMic()}
-                                />
-                            )}
-
-                            {/*
                              * 繋がり方。
                              *
-                             * 繋ぎ先があれば、別の端末の人も見える。
-                             * 無ければ、同じブラウザの別タブだけ。
+                             * サーバーに繋がっているかで書き分ける。
+                             *
+                             * 繋がっていないときに「良好」と書くと、
+                             * 別の端末の人が見えないのを不具合だと受け取られる。
+                             * 繋がっているのに注意書きを出し続けても、
+                             * 今度は使えるものを使わせないことになる。
                              */}
                             <section className="rounded-xl border border-line bg-surface px-4 py-3">
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="text-[11px] text-muted">接続状況</span>
-                                    {presenceRef.current?.isNetworked ? (
-                                        <span className="flex items-center gap-1.5 text-[11px] text-forest">
-                                            <span className="h-1.5 w-1.5 rounded-full bg-forest" />
-                                            繋がっています
+                                    {isNetworked ? (
+                                        <span className="flex items-center gap-1.5 text-[11px] text-[var(--color-leaf)]">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-leaf)]" />
+                                            他の端末とつながっています
                                         </span>
                                     ) : (
                                         <span className="flex items-center gap-1.5 text-[11px] text-amber">
@@ -980,9 +926,25 @@ export default function RoomClient({ roomId }: Props) {
                                     <span className="tabular-nums">ver {APP_VERSION}</span>
                                 </div>
 
-                                {!presenceRef.current?.isNetworked && (
-                                    <p className="mt-2 text-[11px] leading-relaxed text-faint">
-                                        別の端末の人が見えるようにするにはサーバーが要ります。
+                                <p className="mt-2 text-[11px] leading-relaxed text-faint">
+                                    {isNetworked
+                                        ? "URL を渡した相手も、同じ部屋に入れます。"
+                                        : "別の端末の人は見えません。"}
+                                </p>
+
+                                {/*
+                                 * 繋がっていない理由をそのまま出す。
+                                 *
+                                 * 「サーバーが要ります」とだけ書くと、
+                                 * 設定したつもりの人が原因を探せない。
+                                 * どの値が読めていないかまで出す。
+                                 */}
+                                {!isNetworked && envGap && (
+                                    <p className="mt-1.5 rounded-md bg-amber-tint px-2.5 py-1.5 text-[10px] leading-relaxed text-amber">
+                                        {envGap}
+                                        <br />
+                                        .env.local に書いたあとは、開発サーバーを
+                                        立て直してください。
                                     </p>
                                 )}
                             </section>
@@ -1010,7 +972,7 @@ export default function RoomClient({ roomId }: Props) {
                                 /* 集中モード中は床に吹き出しを出さない */
                                 messages={isFocusing ? [] : state.messages}
                                 selfId={identity.id}
-                                onMove={handleMove}
+                                onMove={(x, y) => presenceRef.current?.move(x, y)}
                             />
 
                             {/*
@@ -1032,23 +994,17 @@ export default function RoomClient({ roomId }: Props) {
                                  * 声と画面共有。
                                  *
                                  * 見本にはあるが、まだ動かせない。
-                                 * 端末どうしを直に繋ぐ（WebRTC）。
+                                 * 端末どうしを直に繋ぐ仕組み（WebRTC）が要る。
                                  *
-                                 * 部屋主と、部屋主が許した人だけが話せる。
-                                 * 同時に話せるのは 4 人まで。
+                                 * 消さずに、押せない状態で置いている。
+                                 * 後から足すと帯の並びが変わり、
+                                 * 指が覚えた位置がずれる。
                                  */}
                                 <ActionButton
                                     icon={<MicIcon />}
                                     label="マイク"
-                                    note={
-                                        voiceApi?.voice.isMicOn
-                                            ? "入"
-                                            : canSpeak
-                                              ? "切"
-                                              : "部屋主のみ"
-                                    }
-                                    onClick={() => void voiceApi?.toggleMic()}
-                                    disabled={!voiceApi || !canSpeak}
+                                    note="準備中"
+                                    disabled
                                 />
 
                                 <ActionButton
@@ -1080,6 +1036,26 @@ export default function RoomClient({ roomId }: Props) {
                                             isFocusing ? null : Date.now() + 15 * 60 * 1000,
                                         )
                                     }
+                                />
+
+                                {/*
+                                 * 集中タイマー。
+                                 * 部屋にいる全員で同じ時計を見る。
+                                 * ひとりで測ると、始めた人以外には
+                                 * いま集中している時間だと分からない。
+                                 */}
+                                <ActionButton
+                                    icon={<ClockIcon large />}
+                                    label="集中の時間"
+                                    note={
+                                        sprintLeft > 0
+                                            ? `${Math.floor(sprintLeft / 60)}:${String(
+                                                  sprintLeft % 60,
+                                              ).padStart(2, "0")}`
+                                            : "15分"
+                                    }
+                                    isOn={sprintLeft > 0}
+                                    onClick={() => void toggleSprint()}
                                 />
 
                                 <ActionButton
@@ -1191,47 +1167,6 @@ export default function RoomClient({ roomId }: Props) {
                     </div>
                 )}
             </div>
-            {/*
-             * 部屋を閉じる。
-             *
-             * 中にいる人がいるので、押した瞬間には閉じない。
-             * 何が起きるかを伝えてから尋ねる。
-             */}
-            {isClosing && room && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-6">
-                    <div className="w-full max-w-sm rounded-xl bg-surface px-6 py-5">
-                        <p className="text-sm font-medium text-ink">
-                            この部屋を閉じますか
-                        </p>
-                        <p className="mt-2 text-xs leading-relaxed text-muted">
-                            いま入っている人は、部屋から出ることになります。
-                            閉じた部屋には、もう誰も入れません。
-                        </p>
-
-                        <div className="mt-4 flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setIsClosing(false)}
-                                className="flex-1 rounded-lg border border-line py-2.5 text-xs text-ink hover:bg-canvas"
-                            >
-                                やめる
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    await getRepository().deleteRoom(room.id);
-                                    router.push("/rooms");
-                                }}
-                                className="flex-1 rounded-lg bg-[var(--color-danger)] py-2.5 text-xs font-medium text-white hover:opacity-90"
-                            >
-                                閉じる
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
         </div>
     );
 }
@@ -1493,9 +1428,10 @@ function RuleIcon({ name }: { name: RuleIconName }) {
     );
 }
 
-function ClockIcon() {
+function ClockIcon({ large = false }: { large?: boolean }) {
+    const size = large ? 18 : 12;
     return (
-        <svg width="12" height="12" viewBox="0 0 24 24" {...stroke(2)}>
+        <svg width={size} height={size} viewBox="0 0 24 24" {...stroke(2)}>
             <circle cx="12" cy="12" r="8.5" />
             <path d="M12 7.5V12l3 1.8" />
         </svg>

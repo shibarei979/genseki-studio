@@ -127,17 +127,12 @@ export const ROOM_BACKGROUNDS: RoomBackground[] = [
         blocked: [
             /* 奥の壁と本棚の列。両端の鉢と灯りも含む */
             { left: 0, top: 0, right: 1, bottom: 0.33 },
-            /* 左の作業机。椅子（x=0.137）の上は歩ける */
-            { left: 0, top: 0.33, right: 0.105, bottom: 0.82 },
+            /* 左の作業机と椅子、その下の鉢 */
+            { left: 0, top: 0.33, right: 0.16, bottom: 0.82 },
             /* 右の飾り棚 */
             { left: 0.9, top: 0.3, right: 1, bottom: 1 },
-            /*
-             * 中央の机だけ。椅子の上は歩ける。
-             *
-             * 椅子まで塞ぐと、席に近づけない。
-             * 座るには、その場所へ行けなければならない。
-             */
-            { left: 0.398, top: 0.44, right: 0.578, bottom: 0.735 },
+            /* 中央の机と椅子。ラグの上は歩ける */
+            { left: 0.34, top: 0.42, right: 0.64, bottom: 0.78 },
             /* 手前の飾り棚 */
             { left: 0.12, top: 0.86, right: 0.31, bottom: 1 },
         ],
@@ -161,19 +156,12 @@ export const ROOM_BACKGROUNDS: RoomBackground[] = [
         blocked: [
             /* 奥の壁と本棚の列 */
             { left: 0, top: 0, right: 1, bottom: 0.27 },
-            /* 左右の袖机。椅子（x=0.103 / 0.897）の上は歩ける */
-            { left: 0, top: 0.27, right: 0.07, bottom: 0.87 },
-            { left: 0.93, top: 0.27, right: 1, bottom: 0.87 },
-            /*
-             * 長机 2 卓。天板だけ塞ぐ。
-             *
-             * 椅子は机の中心から ±0.097 の位置にある。
-             * 天板はその内側ぎりぎりまで。
-             * 狭すぎると机の上に立ててしまい、
-             * 広すぎると椅子に近づけない。
-             */
-            { left: 0.262, top: 0.386, right: 0.408, bottom: 0.733 },
-            { left: 0.574, top: 0.386, right: 0.72, bottom: 0.733 },
+            /* 左右の袖机と椅子 */
+            { left: 0, top: 0.27, right: 0.155, bottom: 0.87 },
+            { left: 0.845, top: 0.27, right: 1, bottom: 0.87 },
+            /* 長机 2 卓。椅子の外側まで塞ぐ */
+            { left: 0.22, top: 0.32, right: 0.47, bottom: 0.79 },
+            { left: 0.53, top: 0.32, right: 0.76, bottom: 0.79 },
             /* 手前の飾り棚 */
             { left: 0.15, top: 0.89, right: 0.34, bottom: 1 },
         ],
@@ -199,13 +187,13 @@ export const ROOM_BACKGROUNDS: RoomBackground[] = [
         blocked: [
             /* 奥の壁と本棚の列 */
             { left: 0, top: 0, right: 1, bottom: 0.19 },
-            /* 左右の壁ぎわの机。椅子の上は歩ける */
-            { left: 0, top: 0.19, right: 0.055, bottom: 0.82 },
-            { left: 0.945, top: 0.19, right: 1, bottom: 0.82 },
-            /* 長机 3 卓。天板だけ塞ぐ */
-            { left: 0.205, top: 0.305, right: 0.315, bottom: 0.71 },
-            { left: 0.445, top: 0.305, right: 0.555, bottom: 0.71 },
-            { left: 0.672, top: 0.305, right: 0.792, bottom: 0.71 },
+            /* 左右の壁ぎわに並んだ個人席 */
+            { left: 0, top: 0.19, right: 0.115, bottom: 0.82 },
+            { left: 0.885, top: 0.19, right: 1, bottom: 0.82 },
+            /* 長机 3 卓 */
+            { left: 0.185, top: 0.26, right: 0.335, bottom: 0.75 },
+            { left: 0.425, top: 0.26, right: 0.575, bottom: 0.75 },
+            { left: 0.65, top: 0.26, right: 0.815, bottom: 0.75 },
             /* 手前に並んだ棚・掲示板・給湯まわり */
             { left: 0, top: 0.85, right: 0.3, bottom: 1 },
             { left: 0.62, top: 0.85, right: 1, bottom: 1 },

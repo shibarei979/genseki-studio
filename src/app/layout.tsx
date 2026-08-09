@@ -1,5 +1,4 @@
 import AuthGate from "@/components/auth/auth-gate";
-import { VoiceProvider } from "@/components/room/voice-provider";
 import type { Metadata } from "next";
 import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
 
@@ -31,15 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
         <html lang="ja" className={`${notoSans.variable} ${notoSerif.variable}`}>
             <body>
-                {/*
-                 * 声の受け渡し。
-                 *
-                 * 執筆室から出ても切れないよう、いちばん外に置く。
-                 * 資料を見に行っている間も、話し続けられる。
-                 */}
-                <VoiceProvider>
-                    <AuthGate>{children}</AuthGate>
-                </VoiceProvider>
+                <AuthGate>{children}</AuthGate>
             </body>
         </html>
     );

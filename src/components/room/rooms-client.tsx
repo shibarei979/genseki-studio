@@ -57,7 +57,7 @@ export default function RoomsClient() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-canvas">
+        <div className="min-h-screen bg-page">
             <Header breadcrumbs={[{ label: "執筆室" }]} />
 
             <main className="mx-auto max-w-6xl px-6 py-6">
@@ -231,8 +231,10 @@ export default function RoomsClient() {
                 </ul>
 
                 <p className="mt-5 text-[11px] leading-relaxed text-faint">
-                    ここに出るのは、誰でも入れる部屋だけです。
-                    URL 限定の部屋は、URL を受け取った人だけが入れます。
+                    いまは同じブラウザの別タブどうしでのみ繋がります。
+                    タブを 2 つ開くと、人形が 2 つ現れて実際に動きます。
+                    別の端末の人と繋がるにはサーバーが必要で、
+                    その差し替えは通信部分の 1 ファイルだけで済むように作ってあります。
                 </p>
             </main>
         </div>
@@ -402,7 +404,8 @@ function RoomCard({ room, onDelete }: { room: WritingRoom; onDelete?: () => void
                         {/*
                          * 見本では顔が数人ぶん並び「+28」と出ている。
                          * いまは在室数を外から数える手段が無い。
-                         * 入ってみるまで、誰がいるかは分からない。
+                         * 同じブラウザの中でしか繋がっていないので、
+                         * 別の部屋に誰がいるかは分からない。
                          *
                          * 数を偽って出すと、入った瞬間に誰もいなくて
                          * 「壊れている」と受け取られる。ここは席の数だけ出す。

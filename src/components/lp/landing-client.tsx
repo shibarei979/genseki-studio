@@ -1,20 +1,27 @@
 /**
  * ============================================================
  * 原石航路 Studio
- * LandingClient — 案内
+ * LandingClient — ログインする前の案内
  *
- * 作りはコトノハに倣う。
- *   見出し 1 つに、画面写し 1 枚。文章は 3 行まで。
- *   説明を並べるのではなく、実物を見せる。
+ * まだ何も知らない人に、上から順に読ませる。
  *
- * 見出しは「何ができるか」ではなく「どうなるか」を書く。
- *   ×「執筆室は、書くための空間です」
- *   ○「誰かの気配が、書く手を止めない」
+ *   顔      … 何のサイトか、一文で
+ *   できること … 4 つだけ。並べすぎると何も残らない
+ *   機能    … 道具の中身
+ *   コンテスト … 書いたあとに何があるか
+ *   理由    … なぜこの場所を作ったか
+ *   締め    … もう一度だけ入口を出す
  *
- * 画面写しはまだ無いので、ScreenSlot が空の枠を出す。
- * 絵で見立てを描かない。作っていないものを描くのは嘘になる。
+ * ------------------------------------------------------------
+ * 色について
  *
- * 航路を主に。夜明けの海の色で通す。
+ * ここだけ紺を基調にする。アプリの中は橙だが、
+ * ロゴが紺で、案内は「海と航路」の顔で見せたい。
+ * 押してほしいボタンだけ橙にして、紺の中で 1 か所だけ光らせる。
+ *
+ * 紺はこのファイルの中だけで持つ。
+ * トークンに足すとアプリ全体に影響するが、
+ * 使うのはこの 1 枚だけなので、ここに閉じておく。
  * ============================================================
  */
 
@@ -23,84 +30,91 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import ScreenSlot from "@/components/lp/screen-slot";
+/** 案内でだけ使う紺 */
+const NAVY = {
+    deep: "#12294a",
+    base: "#1e3a5f",
+    soft: "#2c4d78",
+    line: "#c7d5e6",
+    tint: "#eef3f9",
+    ink: "#1a3557",
+};
 
-export default function LandingClient() {
+interface Props {
+    /**
+     * 「無料で始める」を押したときの行き先。
+     *
+     * 渡されなければ /login へ送る。
+     * 渡されたときは、その場で棚へ入れる。
+     * Supabase に繋いでいないとログインの仕組みが無いので、
+     * ログイン画面へ送っても行き止まりになる。
+     */
+    onStart?: () => void;
+}
+
+export default function LandingClient({ onStart }: Props) {
     return (
-        <div className="min-h-screen" style={{ background: "var(--color-chart)" }}>
-            <Nav />
-            <Hero />
-
-            {/* ---- 売り。1 つずつ、大きく見せる ---- */}
-            <Feature
-                index="01"
-                title={<>誰かの気配が、
-書く手を止めない。</>}
-                body="同じ時間に、誰かも書いている。それが分かるだけで、机に戻れます。"
-                slot={{ label: "執筆室の画面" }}
-                notes={[
-                    "家具を置いて、自分だけの部屋に",
-                    "招く相手を選べます",
-                    "集中の時間を区切れます",
-                ]}
-                isDark
-            />
-
-            <Feature
-                index="02"
-                title={<>設定が、
-本文からひとりでに立ち上がる。</>}
-                body="人物も、土地も、書いたそばから資料になります。あなたは選ぶだけです。"
-                slot={{ label: "資料の候補が出ている画面" }}
-                notes={[
-                    "人物・場所・組織・用語・アイテム・事件",
-                    "「律さん」と「律」をひとつに",
-                    "資料から本文の行へ飛べます",
-                ]}
-                isFlipped
-            />
-
-            <Feature
-                index="03"
-                title={<>誰と誰が、
-いつ交わったか。</>}
-                body="関係図と時系列。長くなるほど、頭の中だけでは持てなくなります。"
-                slot={{ label: "関係図の画面" }}
-                notes={["線を引くだけで繋がります", "時系列は物語順と暦順で持てます"]}
-            />
-
-            <Feature
-                index="04"
-                title={<>縦書きのまま、
-書き上がりを確かめる。</>}
-                body="書きながら横書きへ切り替えられます。ルビも傍点も、記号ひとつで。"
-                slot={{ label: "執筆画面（縦書き）" }}
-                notes={["30版までさかのぼれます", "推敲チェックは7種類"]}
-                isFlipped
-            />
-
-            <NoAiOnBody />
-            <OtherFeatures />
-            <Pricing />
-            <Faq />
-            <Closing />
+        <div className="min-h-screen bg-white">
+            <Nav onStart={onStart} />
+            <Hero onStart={onStart} />
+            <WhatYouCanDo />
+            <Features />
+            <Contests />
+            <Why />
+            <Closing onStart={onStart} />
             <Footer />
         </div>
     );
 }
 
-function Nav() {
-    /*
-     * 上に貼り付いて付いてくる。
-     *
-     * 冒頭は暗い海なので、最初は透かして白抜き。
-     * 下へ送ると白い面になる。ずっと不透明だと絵を遮る。
-     */
+/**
+ * 「無料で始める」。
+ *
+ * 行き先が 2 通りあるので、押す先だけを差し替えられるようにする。
+ * 3 か所に同じ分岐を書くと、片方を直し忘れる。
+ */
+function StartButton({
+    onStart,
+    className,
+    style,
+    children,
+}: {
+    onStart?: () => void;
+    className: string;
+    style?: React.CSSProperties;
+    children: React.ReactNode;
+}) {
+    if (onStart) {
+        return (
+            <button type="button" onClick={onStart} className={className} style={style}>
+                {children}
+            </button>
+        );
+    }
+
+    return (
+        <Link href="/login" className={className} style={style}>
+            {children}
+        </Link>
+    );
+}
+
+/**
+ * ============================================================
+ * 上の帯
+ *
+ * 下へ送ると白い地になるので、最初から白で貼り付ける。
+ * 透明から白へ変えると、境目で文字の色が入れ替わって
+ * 一瞬読めなくなる。
+ * ============================================================
+ */
+
+function Nav({ onStart }: { onStart?: () => void }) {
     const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
         function onScroll() {
-            setIsScrolled(window.scrollY > 80);
+            setIsScrolled(window.scrollY > 8);
         }
         onScroll();
         window.addEventListener("scroll", onScroll, { passive: true });
@@ -108,148 +122,37 @@ function Nav() {
     }, []);
 
     return (
-        <nav
-            className="fixed inset-x-0 top-0 z-40 transition-colors duration-300"
-            style={{
-                background: isScrolled ? "rgba(247,244,236,0.55)" : "transparent",
-                backdropFilter: isScrolled ? "blur(14px)" : undefined,
-                borderBottom: isScrolled
-                    ? "1px solid rgba(180,206,222,0.5)"
-                    : "1px solid transparent",
-            }}
+        <header
+            className="sticky top-0 z-40 bg-white/95 backdrop-blur transition-shadow"
+            style={{ boxShadow: isScrolled ? "0 1px 0 rgba(0,0,0,0.07)" : "none" }}
         >
-            <div className="mx-auto flex max-w-5xl items-center gap-6 px-6 py-4 sm:px-10">
-                <Link href="/lp" className="flex shrink-0 items-center gap-2.5">
-                    {/*
-                     * 暗い海の上では、そのままだとロゴが沈む。
-                     * 白に寄せて浮かせ、下げたら元の色へ戻す。
-                     */}
+            <div className="mx-auto flex h-16 max-w-6xl items-center px-5 sm:px-8">
+                <Link href="/" aria-label="原石航路" className="shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        src="/logo.svg"
-                        alt="原石航路"
-                        className="h-14 w-auto transition-[filter] duration-300"
-                        style={{
-                            filter: isScrolled
-                                ? "none"
-                                : "brightness(0) invert(1) drop-shadow(0 1px 3px rgba(0,0,0,0.35))",
-                        }}
-                    />
-                    <span
-                        className="text-[10px] tracking-[0.24em] transition-colors"
-                        style={{
-                            color: isScrolled
-                                ? "var(--color-faint)"
-                                : "rgba(255,255,255,0.7)",
-                        }}
-                    >
-                        STUDIO
-                    </span>
+                    <img src="/logo.svg" alt="原石航路" className="h-11 w-auto" />
                 </Link>
 
-                <span className="ml-auto flex items-center gap-2">
-                    <Link
-                        href="/login"
-                        className="rounded-full px-4 py-2 text-xs transition-colors"
-                        style={{
-                            color: isScrolled
-                                ? "var(--color-muted)"
-                                : "rgba(255,255,255,0.85)",
-                        }}
+                <div className="ml-auto flex items-center gap-2">
+                    <StartButton
+                        onStart={onStart}
+                        className="rounded-md px-4 py-2 text-[12px] font-medium text-white hover:opacity-90"
+                        style={{ background: NAVY.deep }}
                     >
-                        ログイン
-                    </Link>
-
-                    <Link
-                        href="/login"
-                        className="rounded-full px-5 py-2 text-xs font-medium transition-colors"
-                        style={
-                            isScrolled
-                                ? { background: "var(--color-sea)", color: "#fff" }
-                                : { background: "#fff", color: "var(--color-sea)" }
-                        }
-                    >
-                        新規登録
-                    </Link>
-                </span>
-            </div>
-        </nav>
-    );
-}
-
-/**
- * ============================================================
- * 冒頭
- *
- * 一文と、大きな画面写し。
- * 説明はここではしない。下で 1 つずつ見せる。
- * ============================================================
- */
-
-function Hero() {
-    return (
-        <header className="relative overflow-hidden">
-            {/* 夜明けの海 */}
-            <div
-                className="absolute inset-0"
-                style={{
-                    background:
-                        "linear-gradient(180deg, #14384e 0%, #1f4e6b 45%, #3c7fa3 100%)",
-                }}
-            />
-            <div
-                className="absolute inset-0"
-                style={{
-                    background:
-                        "radial-gradient(110% 70% at 80% 12%, rgba(232,183,105,0.5) 0%, rgba(232,183,105,0) 55%)",
-                }}
-            />
-            {/* 水平線 */}
-            <div
-                className="absolute inset-x-0"
-                style={{
-                    top: "58%",
-                    height: 1,
-                    background:
-                        "linear-gradient(to right, transparent, rgba(255,255,255,0.45), transparent)",
-                }}
-            />
-
-            <div className="relative mx-auto max-w-4xl px-6 pb-16 pt-36 text-center sm:px-10">
-                <h1 className="text-[32px] font-semibold leading-[1.4] text-white sm:text-[40px]">
-                    ひとりで書く時間に、
-                    <br />
-                    誰かの気配を。
-                </h1>
-
-                <p className="mx-auto mt-5 max-w-md text-sm leading-loose text-white/75">
-                    書く、調べる、集まる。
-                    小説のための制作道具です。
-                </p>
-
-                <div className="mt-8 flex flex-wrap justify-center gap-3">
-                    <Link
-                        href="/login"
-                        className="rounded-full bg-white px-8 py-3 text-sm font-medium shadow-lg"
-                        style={{ color: "var(--color-sea)" }}
-                    >
-                        無料ではじめる
-                    </Link>
-                    <a
-                        href="#features"
-                        className="rounded-full border border-white/40 px-8 py-3 text-sm text-white/90 hover:bg-white/10"
-                    >
-                        できることを見る
-                    </a>
-                </div>
-
-                <p className="mt-4 text-[11px] text-white/45">
-                    登録は1分／縦書き・横書き／スマホでも
-                </p>
-
-                {/* 大きな画面写し。ここが顔になる */}
-                <div className="mt-14">
-                    <ScreenSlot label="執筆画面" ratio="16 / 9" onDark />
+                        無料で始める
+                    </StartButton>
+                    {/*
+                     * ログインの仕組みが無いときは出さない。
+                     * 押しても何もできない画面へ送ることになる。
+                     */}
+                    {!onStart && (
+                        <Link
+                            href="/login"
+                            className="rounded-md border px-4 py-2 text-[12px] hover:bg-black/[0.03]"
+                            style={{ borderColor: NAVY.line, color: NAVY.ink }}
+                        >
+                            ログイン
+                        </Link>
+                    )}
                 </div>
             </div>
         </header>
@@ -258,183 +161,117 @@ function Hero() {
 
 /**
  * ============================================================
- * 売りひとつぶん
+ * 顔
  *
- * 見出し・一文・画面写し。それだけ。
- * 細かい話は小さく添えるに留める。
+ * 左に言葉、右に絵。
+ * 絵の左端は白へ溶かす。境目をはっきり切ると、
+ * 貼り付けた四角に見えて安っぽくなる。
  * ============================================================
  */
 
-function Feature({
-    index,
-    title,
-    body,
-    slot,
-    notes,
-    isDark = false,
-    isFlipped = false,
-}: {
-    index: string;
-    title: React.ReactNode;
-    body: string;
-    slot: { label: string; src?: string };
-    notes?: string[];
-    /** 濃い面にするか。続くと単調になるので、たまに挟む */
-    isDark?: boolean;
-    /** 写しを左に置くか */
-    isFlipped?: boolean;
-}) {
-    const text = (
-        <div className="min-w-0">
-            <p
-                className="text-[11px] tracking-[0.28em]"
-                style={{ color: isDark ? "rgba(255,255,255,0.45)" : "var(--color-sea-light)" }}
-            >
-                {index}
-            </p>
+/**
+ * ============================================================
+ * 案内に置く絵
+ *
+ * public/images/lp/ に、下の名前で置く。
+ * 置けばそのまま出る。コードを直す必要はない。
+ *
+ *   hero    … 顔の右側に敷く大きな絵
+ *   editor  … 執筆エディターの画面写し
+ *   plot    … プロット機能の画面写し
+ *   room    … 執筆室の画面写し
+ *
+ * 拡張子は png / jpg / jpeg / webp のどれでもよい。
+ * 上から順に探して、見つかったものを使う。
+ * 毎回ここを直さずに済むよう、候補を並べてある。
+ *
+ * どれも無ければ、線で描いた見立てが出る。
+ * 空白にはしない。何が入る場所なのか分からなくなる。
+ * ============================================================
+ */
+const LP_IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp"];
 
-            <h2
-                className="mt-4 whitespace-pre-line text-[24px] font-semibold leading-[1.6] sm:text-[27px]"
-                style={{ color: isDark ? "#fff" : "var(--color-ink)" }}
-            >
-                {title}
-            </h2>
+function lpImages(name: string): string[] {
+    return LP_IMAGE_EXTENSIONS.map((ext) => `/images/lp/${name}.${ext}`);
+}
 
-            <p
-                className="mt-4 text-sm leading-loose"
-                style={{ color: isDark ? "rgba(255,255,255,0.75)" : "var(--color-muted)" }}
-            >
-                {body}
-            </p>
+/** 顔に敷く絵。無ければ手元の水彩を使う */
+const HERO_IMAGES = [...lpImages("hero"), "/images/hero-lighthouse.webp"];
 
-            {notes && (
-                <ul className="mt-5 space-y-2">
-                    {notes.map((note) => (
-                        <li
-                            key={note}
-                            className="flex gap-2.5 text-[12px] leading-relaxed"
-                            style={{
-                                color: isDark
-                                    ? "rgba(255,255,255,0.6)"
-                                    : "var(--color-faint)",
-                            }}
-                        >
-                            <span
-                                className="mt-1.5 h-1 w-1 shrink-0 rounded-full"
-                                style={{
-                                    background: isDark
-                                        ? "var(--color-dawn)"
-                                        : "var(--color-sea-light)",
-                                }}
-                            />
-                            {note}
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    );
-
-    const picture = <ScreenSlot label={slot.label} src={slot.src} onDark={isDark} />;
+function Hero({ onStart }: { onStart?: () => void }) {
+    const [heroIndex, setHeroIndex] = useState(0);
 
     return (
-        <section
-            id={index === "01" ? "features" : undefined}
-            className="relative scroll-mt-16 overflow-hidden py-24"
-            style={isDark ? { background: "var(--color-sea)" } : undefined}
-        >
-            {isDark && (
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        background:
-                            "radial-gradient(90% 60% at 15% 0%, rgba(232,183,105,0.2) 0%, rgba(232,183,105,0) 60%)",
-                    }}
+        <section className="relative overflow-hidden bg-white">
+            {/*
+             * 顔の絵。
+             *
+             * 背景ではなく img で敷く。
+             * background-image は読めなくても何も知らせてこないので、
+             * 次の候補へ送れない。
+             */}
+            <div className="absolute inset-y-0 right-0 hidden w-[58%] overflow-hidden md:block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src={HERO_IMAGES[heroIndex]}
+                    alt=""
+                    draggable={false}
+                    onError={() =>
+                        setHeroIndex((current) =>
+                            Math.min(current + 1, HERO_IMAGES.length - 1),
+                        )
+                    }
+                    className="h-full w-full object-cover"
+                    aria-hidden="true"
                 />
-            )}
-
-            <div className="relative mx-auto grid max-w-5xl items-center gap-12 px-6 sm:px-10 lg:grid-cols-2">
-                {isFlipped ? (
-                    <>
-                        <div className="order-2 lg:order-1">{picture}</div>
-                        <div className="order-1 lg:order-2">{text}</div>
-                    </>
-                ) : (
-                    <>
-                        {text}
-                        {picture}
-                    </>
-                )}
             </div>
-        </section>
-    );
-}
+            <div
+                className="absolute inset-0 hidden md:block"
+                style={{
+                    background:
+                        "linear-gradient(90deg, #ffffff 0%, #ffffff 40%, rgba(255,255,255,0.88) 52%, rgba(255,255,255,0) 74%)",
+                }}
+                aria-hidden="true"
+            />
 
-/**
- * ============================================================
- * 約束 — 本文には触らせない
- *
- * ここが一番の差になる。数字より前に置く。
- * ============================================================
- */
+            <div className="relative mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
+                <h1
+                    className="text-[26px] leading-[1.65] tracking-[0.02em] sm:text-[34px]"
+                    style={{ color: NAVY.ink }}
+                >
+                    物語を生み出すすべての人のための、
+                    <br />
+                    創作活動プラットフォーム
+                </h1>
 
-function NoAiOnBody() {
-    return (
-        <section
-            className="border-y py-24"
-            style={{
-                background: "var(--color-surface)",
-                borderColor: "var(--color-line)",
-            }}
-        >
-            <div className="mx-auto max-w-xl px-6 text-center sm:px-10">
-                <p className="text-[11px] tracking-[0.28em] text-[var(--color-sea-light)]">
-                    PROMISE
+                <p className="mt-7 text-[13px] leading-[2.2] text-[#4a5a6e]">
+                    原石航路は、あなたのアイデアを形にし、
+                    <br />
+                    物語を深め、作品を飛躍させるための場所です。
+                    <br />
+                    書くことに集中できる環境と、
+                    <br />
+                    仲間やチャンスに出会える仕組みをそろえました。
                 </p>
 
-                <h2 className="mt-4 text-[26px] font-semibold leading-relaxed text-ink">
-                    本文には、AIを触らせません。
-                </h2>
-
-                <p className="mt-5 text-sm leading-loose text-muted">
-                    書くのはあなたです。
-                    AIが手伝うのは、書いたものを整理することだけ。
-                    本文を書く仕組みを、そもそも作っていません。
-                </p>
-
-                <div className="mx-auto mt-9 grid max-w-md gap-3 text-left sm:grid-cols-2">
-                    <div
-                        className="rounded-xl border px-5 py-4"
-                        style={{ borderColor: "var(--color-sea-line)" }}
+                <div className="mt-9 flex flex-wrap gap-3">
+                    <StartButton
+                        onStart={onStart}
+                        className="rounded-md px-9 py-3.5 text-[13px] font-medium text-white hover:opacity-90"
+                        style={{ background: NAVY.deep }}
                     >
-                        <p className="text-xs font-medium text-[var(--color-sea)]">
-                            やること
-                        </p>
-                        <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-muted">
-                            <li>本文から人物や場所を拾う</li>
-                            <li>資料に添える図案を作る</li>
-                            <li>表記ゆれを見つける</li>
-                        </ul>
-                    </div>
-
-                    <div
-                        className="rounded-xl border px-5 py-4"
-                        style={{ borderColor: "var(--color-danger-tint)" }}
-                    >
-                        <p className="text-xs font-medium text-[var(--color-danger)]">
-                            やらないこと
-                        </p>
-                        <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-muted">
-                            <li>本文を書く</li>
-                            <li>本文を書き換える</li>
-                            <li>文章の良し悪しを言う</li>
-                        </ul>
-                    </div>
+                        無料で始める
+                    </StartButton>
+                    {!onStart && (
+                        <Link
+                            href="/login"
+                            className="rounded-md border bg-white px-9 py-3.5 text-[13px] hover:bg-black/[0.03]"
+                            style={{ borderColor: NAVY.line, color: NAVY.ink }}
+                        >
+                            ログイン
+                        </Link>
+                    )}
                 </div>
-
-                <p className="mt-5 text-[11px] text-faint">
-                    推敲チェックも、AIではなく決められた規則で動いています。
-                </p>
             </div>
         </section>
     );
@@ -442,37 +279,64 @@ function NoAiOnBody() {
 
 /**
  * ============================================================
- * そのほか
+ * できること
+ *
+ * 4 つに絞る。
+ * 全部を並べると、どれも同じ重さになって何も残らない。
  * ============================================================
  */
 
-function OtherFeatures() {
+function WhatYouCanDo() {
     const items = [
-        { title: "30版までさかのぼれる", body: "消してしまった一文も戻せます。" },
-        { title: "プロットと時系列", body: "骨組みと出来事を分けて持てます。" },
-        { title: "コンテスト", body: "書きあがった物語を、そのまま応募。" },
-        { title: "集中の時間", body: "15分・25分・45分で区切れます。" },
-        { title: "通し読み", body: "全話を続けて読み返せます。" },
-        { title: "書き出せる", body: "抱え込みません。いつでも持ち出せます。" },
+        {
+            icon: <QuillIcon />,
+            title: "書く",
+            body: "シンプルで集中できる執筆環境で、物語の世界を自由に描けます。",
+        },
+        {
+            icon: <BoxIcon />,
+            title: "整理する",
+            body: "プロットや設定、メモを整理して、創作の全体像を見わたせます。",
+        },
+        {
+            icon: <PeopleIcon />,
+            title: "コミュニティー",
+            body: "執筆仲間とつながり、刺激し合いながら創作を続けられます。",
+        },
+        {
+            icon: <TrophyIcon />,
+            title: "イベント（コンテスト）",
+            body: "定期的にコンテストを開催。あなたの物語が評価され、新しいチャンスにつながります。",
+        },
     ];
 
     return (
-        <section className="mx-auto max-w-4xl px-6 py-24 sm:px-10">
-            <h2 className="text-center text-[20px] font-semibold text-ink">
-                書き続けるための、細かな道具。
-            </h2>
+        <section id="about" className="scroll-mt-16 bg-white py-20">
+            <SectionTitle>原石航路でできること</SectionTitle>
 
-            <ul className="mt-10 grid gap-x-10 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => (
-                    <li key={item.title}>
-                        <p className="flex items-center gap-2 text-[13px] font-medium text-ink">
-                            <span
-                                className="h-3 w-0.5 rounded-full"
-                                style={{ background: "var(--color-sea)" }}
-                            />
+            <ul className="mx-auto mt-12 grid max-w-6xl gap-y-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-4">
+                {items.map((item, index) => (
+                    <li
+                        key={item.title}
+                        className="px-6 text-center lg:border-l"
+                        style={{
+                            /* 1 つ目の左には線を引かない */
+                            borderColor: index === 0 ? "transparent" : NAVY.line,
+                        }}
+                    >
+                        <span
+                            className="mx-auto flex h-16 w-16 items-center justify-center rounded-full"
+                            style={{ background: NAVY.tint, color: NAVY.base }}
+                        >
+                            {item.icon}
+                        </span>
+                        <h3
+                            className="mt-5 text-[15px] tracking-[0.08em]"
+                            style={{ color: NAVY.ink }}
+                        >
                             {item.title}
-                        </p>
-                        <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
+                        </h3>
+                        <p className="mt-3 text-[12px] leading-[2] text-[#5a6a7c]">
                             {item.body}
                         </p>
                     </li>
@@ -484,116 +348,130 @@ function OtherFeatures() {
 
 /**
  * ============================================================
- * 料金
+ * 機能
+ *
+ * 上に説明と画面写し、下に 4 つ並べる。
  * ============================================================
  */
 
-function Pricing() {
-    return (
-        <section
-            className="border-y py-20"
-            style={{
-                background: "var(--color-surface)",
-                borderColor: "var(--color-line)",
-            }}
-        >
-            <div className="mx-auto max-w-sm px-6 text-center sm:px-10">
-                <h2 className="text-[20px] font-semibold text-ink">料金</h2>
-
-                <div
-                    className="mt-7 rounded-2xl border px-8 py-9"
-                    style={{ borderColor: "var(--color-sea-line)" }}
-                >
-                    <p className="text-sm text-muted">いまはすべて</p>
-                    <p
-                        className="mt-1 text-[42px] font-semibold leading-none"
-                        style={{ color: "var(--color-sea)" }}
-                    >
-                        無料
-                    </p>
-                    <p className="mt-4 text-[12px] leading-relaxed text-muted">
-                        執筆・資料・執筆室・コンテスト。すべて使えます。
-                    </p>
-
-                    <Link
-                        href="/login"
-                        className="mt-7 block rounded-full py-3 text-sm font-medium text-white"
-                        style={{ background: "var(--color-sea)" }}
-                    >
-                        無料ではじめる
-                    </Link>
-                </div>
-
-                <p className="mt-3 text-[10px] leading-relaxed text-faint">
-                    今後、一部の機能が有料になる場合があります。
-                    その際も、書いたものは必ず持ち出せます。
-                </p>
-            </div>
-        </section>
-    );
-}
-
-/**
- * ============================================================
- * よくある問い
- * ============================================================
- */
-
-function Faq() {
-    const rows = [
+function Features() {
+    const items = [
         {
-            q: "本当に無料ですか",
-            a: "いまは全機能が無料です。今後一部が有料になる場合も、書いたものは必ず書き出せます。",
+            icon: <PenIcon />,
+            title: "執筆エディター",
+            body: "見やすく、書きやすいエディターで思考を止めずに執筆できます。",
+            figure: <Figure name="editor" fallback={<PaneMock rows={9} />} />,
         },
         {
-            q: "AIに小説を書かせますか",
-            a: "書かせません。AIが手伝うのは資料の整理と図案だけで、本文を書く仕組みそのものがありません。",
+            icon: <GridIcon />,
+            title: "プロット機能",
+            body: "物語の流れや構成を整理し、視点を俯瞰も管理できます。",
+            figure: <Figure name="plot" fallback={<CardsMock />} />,
         },
         {
-            q: "書いたものは誰かに見られますか",
-            a: "作品と資料は本人だけが読めます。執筆室で公開されるのは、いる・書いている、という状態だけです。",
+            icon: <PeopleIcon small />,
+            title: "執筆室（オンラインスペース）",
+            body: "仲間と集まり、静かな空間で一緒に執筆できます。",
+            /*
+             * 執筆室だけは、置かなくても実物の部屋の絵が出る。
+             * 画面写しを置けばそちらが優先される。
+             */
+            figure: (
+                <Figure
+                    name="room"
+                    fallback={
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src="/images/rooms/room-medium.png"
+                            alt="執筆室の中"
+                            className="h-full w-full object-cover"
+                            style={{ objectPosition: "center 40%" }}
+                        />
+                    }
+                />
+            ),
         },
         {
-            q: "縦書きで書けますか",
-            a: "書けます。書きながら横書きと切り替えられます。ルビと傍点にも対応しています。",
-        },
-        {
-            q: "ほかのサイトに投稿できますか",
-            a: "テキストで書き出せます。投稿サイトとの連携も準備しています。",
-        },
-        {
-            q: "スマホでも使えますか",
-            a: "使えます。移動中に少し書き足す、という使い方もできます。",
+            icon: <CloudIcon />,
+            title: "自動保存機能",
+            body: "大切な原稿を自動で安全に保存。いつでも復元できます。",
+            figure: <SavedMock />,
         },
     ];
 
     return (
-        <section className="mx-auto max-w-2xl px-6 py-24 sm:px-10">
-            <h2 className="text-center text-[20px] font-semibold text-ink">
-                よくある問い
-            </h2>
-
-            <ul className="mt-9">
-                {rows.map((row) => (
-                    <li
-                        key={row.q}
-                        className="border-t"
-                        style={{ borderColor: "var(--color-line)" }}
+        <section
+            id="features"
+            className="scroll-mt-16 py-20"
+            style={{ background: NAVY.tint }}
+        >
+            <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 sm:px-8 lg:grid-cols-2">
+                <div>
+                    <h2
+                        className="text-[24px] leading-[1.6] tracking-[0.03em] sm:text-[27px]"
+                        style={{ color: NAVY.ink }}
                     >
-                        <details className="group">
-                            <summary className="flex cursor-pointer items-center gap-3 py-4 text-[14px] text-ink">
-                                {row.q}
-                                <span className="ml-auto text-lg text-faint group-open:hidden">
-                                    ＋
-                                </span>
-                                <span className="ml-auto hidden text-lg text-faint group-open:inline">
-                                    −
-                                </span>
-                            </summary>
-                            <p className="pb-4 text-[12px] leading-loose text-muted">
-                                {row.a}
-                            </p>
-                        </details>
+                        充実の機能で、
+                        <br />
+                        創作を支える
+                    </h2>
+                    <p className="mt-5 text-[13px] leading-[2.1] text-[#4a5a6e]">
+                        原稿の執筆から管理、共存、公開まで、
+                        <br />
+                        創作活動に必要な機能をひとつにまとめました。
+                    </p>
+
+                    <a
+                        href="#features"
+                        className="mt-7 inline-flex items-center gap-2 rounded-md border bg-white px-6 py-3 text-[12px] hover:bg-black/[0.03]"
+                        style={{ borderColor: NAVY.line, color: NAVY.ink }}
+                    >
+                        機能をすべて見る
+                        <span aria-hidden="true">→</span>
+                    </a>
+                </div>
+
+                <DeviceFrame />
+            </div>
+
+            {/* 4 つの機能 */}
+            <ul className="mx-auto mt-12 grid max-w-6xl gap-y-9 rounded-xl bg-white px-5 py-10 sm:px-8 md:grid-cols-2 lg:grid-cols-4">
+                {items.map((item, index) => (
+                    <li
+                        key={item.title}
+                        className="px-6 text-center lg:border-l"
+                        style={{
+                            borderColor: index === 0 ? "transparent" : NAVY.line,
+                        }}
+                    >
+                        <span
+                            className="mx-auto flex h-10 w-10 items-center justify-center"
+                            style={{ color: NAVY.base }}
+                        >
+                            {item.icon}
+                        </span>
+                        <h3
+                            className="mt-3 text-[13px] tracking-[0.06em]"
+                            style={{ color: NAVY.ink }}
+                        >
+                            {item.title}
+                        </h3>
+                        <p className="mt-2.5 text-[11px] leading-[1.9] text-[#5a6a7c]">
+                            {item.body}
+                        </p>
+
+                        {/*
+                         * 図。
+                         *
+                         * 高さを揃える。中身の縦幅がまちまちだと、
+                         * 4 つ並べたときに下端が階段になる。
+                         */}
+                        <div
+                            className="mt-4 overflow-hidden rounded-md"
+                            style={{ height: 122, background: NAVY.tint }}
+                        >
+                            {item.figure}
+                        </div>
                     </li>
                 ))}
             </ul>
@@ -603,79 +481,716 @@ function Faq() {
 
 /**
  * ============================================================
- * 締め
+ * 小さな図
+ *
+ * 画面写しの代わり。実物を撮るまでのつなぎ。
+ *
+ * 中身の文字は書かない。読める字を入れると、
+ * 実物に無い文言を約束したことになる。
+ * 形だけを見せて、何の画面かが分かればよい。
  * ============================================================
  */
 
-function Closing() {
+/**
+ * 画面写しの枠。
+ *
+ * public/images/lp/ にその名前の絵があれば出す。
+ * 無ければ、線で描いた見立てを出す。
+ *
+ * 拡張子ちがいを順に試すのは、
+ * png で置いたか jpg で置いたかを気にせずに済ませるため。
+ */
+function Figure({
+    name,
+    fallback,
+}: {
+    name: string;
+    fallback: React.ReactNode;
+}) {
+    const candidates = lpImages(name);
+    const [index, setIndex] = useState(0);
+    const [hasFailed, setHasFailed] = useState(false);
+
+    if (hasFailed) return <>{fallback}</>;
+
     return (
-        <section className="relative overflow-hidden py-24">
-            <div
-                className="absolute inset-0"
-                style={{
-                    background:
-                        "linear-gradient(180deg, #14384e 0%, #1f4e6b 60%, #2a6183 100%)",
-                }}
-            />
-            <div
-                className="absolute inset-0"
-                style={{
-                    background:
-                        "radial-gradient(90% 60% at 50% 120%, rgba(232,183,105,0.32) 0%, rgba(232,183,105,0) 60%)",
-                }}
-            />
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+            src={candidates[index]}
+            alt=""
+            draggable={false}
+            onError={() => {
+                if (index + 1 < candidates.length) setIndex(index + 1);
+                else setHasFailed(true);
+            }}
+            className="h-full w-full object-cover"
+        />
+    );
+}
 
-            <div className="relative mx-auto max-w-lg px-6 text-center sm:px-10">
-                <h2 className="text-[26px] font-semibold leading-relaxed text-white">
-                    まずは、一行だけでも。
-                </h2>
-                <p className="mt-4 text-sm leading-loose text-white/70">
-                    登録は1分。書きはじめてから、道具のことは考えてください。
-                </p>
+function PaneMock({ rows }: { rows: number }) {
+    return (
+        <div className="flex h-full w-full gap-2 bg-white p-3">
+            <div
+                className="w-[22%] shrink-0 rounded-sm"
+                style={{ background: NAVY.tint }}
+            />
+            <div className="flex min-w-0 flex-1 flex-col justify-start gap-[5px] pt-1">
+                {Array.from({ length: rows }).map((_, index) => (
+                    <span
+                        key={index}
+                        className="block h-[4px] rounded-full"
+                        style={{
+                            background: NAVY.line,
+                            /* 行末を揃えない。揃うと表に見える */
+                            width: `${[92, 78, 88, 62, 84, 70, 90][index % 7]}%`,
+                        }}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
 
-                <Link
-                    href="/login"
-                    className="mt-8 inline-block rounded-full bg-white px-9 py-3.5 text-sm font-medium shadow-lg"
-                    style={{ color: "var(--color-sea)" }}
+function CardsMock() {
+    return (
+        <div className="grid h-full w-full grid-cols-3 gap-2 bg-white p-3">
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+                <span
+                    key={index}
+                    className="rounded-sm"
+                    style={{
+                        background: index % 3 === 1 ? NAVY.line : NAVY.tint,
+                        border: `1px solid ${NAVY.line}`,
+                    }}
+                />
+            ))}
+        </div>
+    );
+}
+
+function SavedMock() {
+    return (
+        <div className="flex h-full w-full items-center justify-center bg-white px-3">
+            <div
+                className="flex w-full items-center gap-2.5 rounded-lg border bg-white px-3.5 py-3 shadow-sm"
+                style={{ borderColor: NAVY.line }}
+            >
+                <span className="min-w-0 flex-1">
+                    <span
+                        className="block text-[11px]"
+                        style={{ color: NAVY.ink }}
+                    >
+                        自動保存しました
+                    </span>
+                    <span className="mt-1 block text-[10px] text-[#8a97a6]">
+                        最終保存 10:23
+                    </span>
+                </span>
+                <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white"
+                    style={{ background: "var(--color-leaf)" }}
                 >
-                    無料ではじめる
-                </Link>
+                    <svg width="12" height="12" viewBox="0 0 24 24" {...stroke(3)}>
+                        <path d="m5 12.5 4.5 4.5L19 7" />
+                    </svg>
+                </span>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * 画面写しの枠。
+ *
+ * 中身の絵はまだ無い。
+ * 作っていない画面を描いて見せると、入ったあとで違うことになる。
+ * 枠だけ置いて、写しが撮れたら差し替える。
+ */
+function DeviceFrame() {
+    return (
+        <div className="relative">
+            {/* ノート型 */}
+            <div
+                className="relative rounded-xl border-[10px] border-b-[16px] bg-white shadow-xl"
+                style={{ borderColor: "#2b3440", aspectRatio: "16 / 10" }}
+            >
+                <div
+                    className="flex h-full w-full items-center justify-center rounded-sm"
+                    style={{ background: NAVY.tint }}
+                >
+                    <span className="text-[11px]" style={{ color: NAVY.soft }}>
+                        執筆画面（準備中）
+                    </span>
+                </div>
+            </div>
+
+            {/* 手のひら型。右下に重ねる */}
+            <div
+                className="absolute -bottom-6 -right-2 hidden w-[22%] rounded-[14px] border-[6px] bg-white shadow-lg sm:block"
+                style={{ borderColor: "#2b3440", aspectRatio: "9 / 17" }}
+            >
+                <div
+                    className="h-full w-full rounded-[6px]"
+                    style={{ background: NAVY.tint }}
+                />
+            </div>
+        </div>
+    );
+}
+
+/**
+ * ============================================================
+ * コンテスト
+ * ============================================================
+ */
+
+function Contests() {
+    const cards = [
+        {
+            title: "新人賞コンテスト",
+            latin: "Rookie Award",
+            body: "未来のヒット作家を発掘する登竜門。大賞には豪華特典をご用意。",
+            notes: ["年2回開催", "大賞・各賞あり", "上位は特設ページで紹介"],
+        },
+        {
+            title: "テーマ別コンテスト",
+            latin: "Theme Contest",
+            body: "毎月変わるテーマで、あなたの創作を試そう。",
+            notes: ["毎月開催", "短編／長編／エッセイなど多彩", "参加は自由、誰でも挑戦可能"],
+        },
+    ];
+
+    return (
+        <section id="contest" className="scroll-mt-16 bg-white py-20">
+            <div className="mx-auto grid max-w-6xl items-start gap-10 px-5 sm:px-8 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+                <div>
+                    <h2
+                        className="text-[24px] leading-[1.6] tracking-[0.03em] sm:text-[27px]"
+                        style={{ color: NAVY.ink }}
+                    >
+                        創作を加速させる、
+                        <br />
+                        イベントとコンテスト
+                    </h2>
+                    <p className="mt-5 text-[13px] leading-[2.1] text-[#4a5a6e]">
+                        新人賞やテーマ別コンテストを定期開催。
+                        あなたの物語が評価されるチャンスが、ここにはたくさんあります。
+                    </p>
+
+                    <Link
+                        href="/contest"
+                        className="mt-7 inline-flex items-center gap-2 rounded-md border bg-white px-6 py-3 text-[12px] hover:bg-black/[0.03]"
+                        style={{ borderColor: NAVY.line, color: NAVY.ink }}
+                    >
+                        コンテスト一覧を見る
+                        <span aria-hidden="true">→</span>
+                    </Link>
+                </div>
+
+                <div>
+                    <ul className="grid gap-5 sm:grid-cols-2">
+                        {cards.map((card) => (
+                            <li
+                                key={card.title}
+                                className="relative overflow-hidden rounded-xl px-6 py-7"
+                                style={{
+                                    background: `linear-gradient(160deg, ${NAVY.base} 0%, ${NAVY.deep} 100%)`,
+                                }}
+                            >
+                                {/* 遠くの灯り。紺だけだと沈む */}
+                                <span
+                                    className="absolute inset-0"
+                                    style={{
+                                        background:
+                                            "radial-gradient(70% 50% at 80% 15%, rgba(255,214,150,0.22) 0%, rgba(255,214,150,0) 60%)",
+                                    }}
+                                    aria-hidden="true"
+                                />
+
+                                <div className="relative">
+                                    <h3 className="text-[16px] tracking-[0.06em] text-white">
+                                        {card.title}
+                                    </h3>
+                                    <p className="mt-1 text-[11px] tracking-[0.14em] text-white/45">
+                                        {card.latin}
+                                    </p>
+
+                                    <p className="mt-4 text-[12px] leading-[2] text-white/75">
+                                        {card.body}
+                                    </p>
+
+                                    <ul className="mt-5 space-y-2.5">
+                                        {card.notes.map((note) => (
+                                            <li
+                                                key={note}
+                                                className="flex gap-2.5 text-[11px] leading-relaxed text-white/70"
+                                            >
+                                                <span
+                                                    className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full"
+                                                    style={{ background: "#e8b769" }}
+                                                />
+                                                {note}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+
+                    <p className="mt-6 text-center">
+                        <Link
+                            href="/contest"
+                            className="inline-flex items-center gap-2 text-[12px] hover:opacity-70"
+                            style={{ color: NAVY.ink }}
+                        >
+                            すべてのコンテストを見る
+                            <span aria-hidden="true">→</span>
+                        </Link>
+                    </p>
+                </div>
             </div>
         </section>
     );
 }
 
+/**
+ * ============================================================
+ * この場所をつくった理由
+ *
+ * 機能の話をやめて、なぜ作ったかを書く。
+ * 道具は他にもあるので、選ぶ理由はここにしか無い。
+ * ============================================================
+ */
+
+function Why() {
+    const points = [
+        {
+            icon: <CompassIcon />,
+            title: "埋もれた原石を見つける",
+            body: "優れた作品や才能を持つ書き手を、発掘・応援します。",
+        },
+        {
+            icon: <LighthouseIcon />,
+            title: "創作を支える、最高の環境",
+            body: "書くことに集中できるツールと、仲間とつながる場を提供します。",
+        },
+        {
+            icon: <TelescopeIcon />,
+            title: "物語が未来をつくる",
+            body: "あなたの物語が、誰かの心を動かし、世界を変える一歩になる。",
+        },
+    ];
+
+    return (
+        <section
+            id="why"
+            className="scroll-mt-16 py-20"
+            /* 地よりわずかに濃くして、前後の節と切る */
+            style={{ background: "linear-gradient(180deg, #f6f6f4 0%, #ecedea 100%)" }}
+        >
+            <div className="mx-auto grid max-w-6xl gap-12 px-5 sm:px-8 lg:grid-cols-2">
+                <div>
+                    <SectionTitle align="left">この場所をつくった理由</SectionTitle>
+
+                    <div
+                        className="mt-8 border-l-2 pl-6 text-[13px] leading-[2.3]"
+                        style={{ borderColor: NAVY.line, color: "#4a5a6e" }}
+                    >
+                        <p>
+                            才能は、正しい場所に出会えれば、必ず開ける。
+                            <br />
+                            けれど現実には、埋もれてしまう作品や、
+                            <br />
+                            誰にも届かないまま諦め続けている人がたくさんいます。
+                        </p>
+                        <p className="mt-6">
+                            原石航路は、そんな &quot;原石&quot; を見つけ、育て、
+                            <br />
+                            次の時代へつないでいくために生まれました。
+                        </p>
+                        <p className="mt-6">
+                            ここが、あなたの物語を渡る航路の始まりになりますように。
+                        </p>
+                    </div>
+                </div>
+
+                <ul className="space-y-8">
+                    {points.map((point) => (
+                        <li key={point.title} className="flex gap-5">
+                            <span
+                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white"
+                                style={{ color: NAVY.base }}
+                            >
+                                {point.icon}
+                            </span>
+                            <div className="min-w-0">
+                                <h3
+                                    className="text-[15px] tracking-[0.05em]"
+                                    style={{ color: NAVY.ink }}
+                                >
+                                    {point.title}
+                                </h3>
+                                <p className="mt-2 text-[12px] leading-[2] text-[#5a6a7c]">
+                                    {point.body}
+                                </p>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </section>
+    );
+}
+
+/**
+ * ============================================================
+ * 締め
+ *
+ * ここだけ橙のボタンを置く。
+ * 紺の面に紺のボタンでは沈むし、
+ * 画面の中で 1 か所だけ違う色があると、そこへ目が行く。
+ * ============================================================
+ */
+
+function Closing({ onStart }: { onStart?: () => void }) {
+    return (
+        <section
+            className="relative overflow-hidden py-16"
+            style={{
+                background: `linear-gradient(160deg, ${NAVY.base} 0%, ${NAVY.deep} 100%)`,
+            }}
+        >
+            <span
+                className="absolute inset-0"
+                style={{
+                    background:
+                        "radial-gradient(60% 60% at 82% 20%, rgba(255,214,150,0.24) 0%, rgba(255,214,150,0) 60%)",
+                }}
+                aria-hidden="true"
+            />
+
+            <div className="relative mx-auto max-w-2xl px-5 text-center sm:px-8">
+                <h2 className="text-[22px] leading-[1.7] tracking-[0.04em] text-white sm:text-[26px]">
+                    さあ、あなたの物語の航海をはじめよう。
+                </h2>
+                <p className="mt-4 text-[12px] leading-relaxed text-white/70">
+                    原石航路で、すべての機能をすぐに体験できます。
+                </p>
+
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
+                    <StartButton
+                        onStart={onStart}
+                        className="rounded-md px-10 py-3.5 text-[13px] font-medium text-white hover:opacity-90"
+                        style={{ background: "var(--color-forest-dark)" }}
+                    >
+                        無料で始める
+                    </StartButton>
+                    {!onStart && (
+                        <Link
+                            href="/login"
+                            className="rounded-md border border-white/40 px-10 py-3.5 text-[13px] text-white/90 hover:bg-white/10"
+                        >
+                            ログイン
+                        </Link>
+                    )}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+/**
+ * ============================================================
+ * 足元
+ * ============================================================
+ */
+
+/**
+ * ============================================================
+ * 足元
+ *
+ * 濃い地に白抜き。
+ * 本文と同じ白のまま終わると、どこまでが読むところか
+ * 分からないまま画面が切れる。色を変えて終わりを示す。
+ *
+ * ------------------------------------------------------------
+ * 行き先が無い項目について
+ *
+ * 規約も問い合わせも、まだ中身がない。
+ * 押しても何も起きないものは、少し薄くして押せなくする。
+ *
+ * 隠さないのは、これから用意するものが分かるほうが
+ * 見る人にとって親切だから。
+ * 中身ができたら href を足すだけで、そのまま押せるようになる。
+ * ============================================================
+ */
+
+interface FootLink {
+    label: string;
+    /** 無ければ準備中として薄く出す */
+    href?: string;
+}
+
+const FOOT_COLUMNS: { title: string; links: FootLink[] }[] = [
+    {
+        title: "はじめての方へ",
+        links: [
+            { label: "原石航路とは", href: "#about" },
+            { label: "投稿ガイド" },
+            { label: "よくある質問" },
+        ],
+    },
+    {
+        title: "サポート",
+        links: [
+            { label: "ヘルプ・FAQ" },
+            { label: "お問い合わせ" },
+            { label: "ご意見・ご要望" },
+        ],
+    },
+    {
+        title: "規約・ガイドライン",
+        links: [
+            { label: "利用規約" },
+            { label: "プライバシーポリシー" },
+            { label: "投稿ガイドライン" },
+        ],
+    },
+];
+
 function Footer() {
     return (
-        <footer
-            className="px-6 py-8 sm:px-10"
-            style={{ background: "var(--color-sea-dark)" }}
-        >
-            <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3">
-                <span className="flex items-center gap-2.5">
+        <footer className="px-6 py-16 sm:px-10" style={{ background: "#33302b" }}>
+            <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+                <div>
+                    {/*
+                     * ロゴ。
+                     * 濃い地なので、白抜きにして少しだけ落とす。
+                     * 真っ白だと、見出しより強く光る。
+                     */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                         src="/logo.svg"
                         alt="原石航路"
-                        className="h-11 w-auto"
-                        style={{ filter: "brightness(0) invert(1)", opacity: 0.85 }}
+                        className="h-12 w-auto"
+                        style={{ filter: "brightness(0) invert(1)", opacity: 0.92 }}
                     />
-                    <span className="text-[10px] tracking-[0.24em] text-white/50">
-                        STUDIO
-                    </span>
-                </span>
 
-                <nav className="flex flex-wrap gap-4 text-[11px] text-white/55">
-                    <Link href="/login" className="hover:text-white">
-                        ログイン
-                    </Link>
-                    <Link href="/login" className="hover:text-white">
-                        新規登録
-                    </Link>
-                </nav>
+                    <p className="mt-6 text-[13px] leading-[2.1] text-white/70">
+                        原石航路は、書き手と読み手をつなぐ場所。
+                        <br />
+                        あなたの物語が、誰かの心を照らします。
+                    </p>
+                </div>
 
-                <span className="ml-auto text-[10px] text-white/35">© 原石航路</span>
+                <div className="grid gap-10 sm:grid-cols-3">
+                    {FOOT_COLUMNS.map((column) => (
+                        <div key={column.title}>
+                            <h3 className="text-[13px] font-semibold text-white">
+                                {column.title}
+                            </h3>
+
+                            <ul className="mt-5 space-y-4">
+                                {column.links.map((link) => (
+                                    <li key={link.label}>
+                                        {link.href ? (
+                                            <Link
+                                                href={link.href}
+                                                className="text-[13px] text-white/75 hover:text-white"
+                                            >
+                                                {link.label}
+                                            </Link>
+                                        ) : (
+                                            /*
+                                             * 行き先がまだ無い項目。
+                                             *
+                                             * 押せる見た目にはしない。
+                                             * 押して何も起きないと、壊れていると受け取られる。
+                                             *
+                                             * ただし落としすぎない。
+                                             * 薄すぎると、そこに何が来るのかも読めなくなる。
+                                             */
+                                            <span
+                                                title={`${link.label}（準備中）`}
+                                                className="cursor-default text-[13px] text-white/45"
+                                            >
+                                                {link.label}
+                                            </span>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div
+                className="mx-auto mt-14 max-w-6xl border-t pt-6"
+                style={{ borderColor: "rgba(255,255,255,0.14)" }}
+            >
+                <p className="text-[12px] text-white/40">
+                    © {new Date().getFullYear()} 原石航路 All Rights Reserved.
+                </p>
             </div>
         </footer>
+    );
+}
+
+/**
+ * ============================================================
+ * 節の見出し
+ *
+ * 下に細い線と菱形を置く。
+ * 文字だけだと、どこで話が変わったのかが分かりにくい。
+ * ============================================================
+ */
+
+function SectionTitle({
+    children,
+    align = "center",
+}: {
+    children: React.ReactNode;
+    align?: "center" | "left";
+}) {
+    return (
+        <div className={align === "center" ? "text-center" : "text-left"}>
+            <h2
+                className="text-[20px] tracking-[0.1em] sm:text-[23px]"
+                style={{ color: NAVY.ink }}
+            >
+                {children}
+            </h2>
+
+            <span
+                className={`mt-4 flex items-center gap-2 ${
+                    align === "center" ? "justify-center" : ""
+                }`}
+                aria-hidden="true"
+            >
+                <span className="h-px w-10" style={{ background: NAVY.line }} />
+                <span
+                    className="h-1.5 w-1.5 rotate-45"
+                    style={{ background: NAVY.soft }}
+                />
+                <span className="h-px w-10" style={{ background: NAVY.line }} />
+            </span>
+        </div>
+    );
+}
+
+/**
+ * ============================================================
+ * 図案
+ *
+ * 線を細めにして、紺の細い明朝と釣り合わせる。
+ * 太い線だと、図案だけが前に出てくる。
+ * ============================================================
+ */
+
+function stroke(width = 1.4) {
+    return {
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: width,
+        strokeLinecap: "round" as const,
+        strokeLinejoin: "round" as const,
+        "aria-hidden": true,
+    };
+}
+
+function QuillIcon() {
+    return (
+        <svg width="26" height="26" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M4 20c0-7 4-12 12-14 1 8-3 13-9 13H4Z" />
+            <path d="M4 20c2-3 5-5 8-6.5" />
+        </svg>
+    );
+}
+
+function BoxIcon() {
+    return (
+        <svg width="26" height="26" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M12 3.5 20.5 8v8L12 20.5 3.5 16V8Z" />
+            <path d="M3.5 8 12 12.5 20.5 8M12 12.5v8" />
+        </svg>
+    );
+}
+
+function PeopleIcon({ small = false }: { small?: boolean }) {
+    const size = small ? 22 : 26;
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" {...stroke()}>
+            <circle cx="9" cy="8.5" r="3" />
+            <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+            <path d="M16 6a3 3 0 0 1 0 5M17.5 14.5c2 .6 3.5 2.3 3.5 4.5" />
+        </svg>
+    );
+}
+
+function TrophyIcon() {
+    return (
+        <svg width="26" height="26" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M7 4h10v5a5 5 0 0 1-10 0Z" />
+            <path d="M7 5.5H4.5V7a3 3 0 0 0 3 3M17 5.5h2.5V7a3 3 0 0 1-3 3" />
+            <path d="M12 14v3.5M8.5 20.5h7" />
+        </svg>
+    );
+}
+
+function PenIcon() {
+    return (
+        <svg width="22" height="22" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M4.5 19.5h3.6L19.4 8.2a2.6 2.6 0 0 0-3.6-3.6L4.5 15.9Z" />
+            <path d="m14.6 5.8 3.6 3.6" />
+        </svg>
+    );
+}
+
+function GridIcon() {
+    return (
+        <svg width="22" height="22" viewBox="0 0 24 24" {...stroke()}>
+            <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+            <path d="M3.5 9h17M9 9v10.5M14.5 9v10.5" />
+        </svg>
+    );
+}
+
+function CloudIcon() {
+    return (
+        <svg width="22" height="22" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M7 18.5h10a3.5 3.5 0 0 0 .4-7 5.5 5.5 0 0 0-10.6-1A3.75 3.75 0 0 0 7 18.5Z" />
+        </svg>
+    );
+}
+
+function CompassIcon() {
+    return (
+        <svg width="22" height="22" viewBox="0 0 24 24" {...stroke()}>
+            <circle cx="12" cy="12" r="8.5" />
+            <path d="m15.5 8.5-2 5.5-5 2 2-5.5Z" />
+        </svg>
+    );
+}
+
+function LighthouseIcon() {
+    return (
+        <svg width="22" height="22" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M9.5 9h5l1 11h-7Z" />
+            <path d="M9 9V6.5h6V9M12 3.5v3" />
+            <path d="M6 6.5 4 5M18 6.5 20 5" />
+            <path d="M6.5 20.5h11" />
+        </svg>
+    );
+}
+
+function TelescopeIcon() {
+    return (
+        <svg width="22" height="22" viewBox="0 0 24 24" {...stroke()}>
+            <path d="m3.5 13 12-6.5 3 4.5-12 6.5Z" />
+            <path d="M9 16.5 7.5 20.5M14 14l2 6.5" />
+        </svg>
     );
 }

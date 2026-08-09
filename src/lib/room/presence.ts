@@ -3,18 +3,18 @@
  * 原石航路 Studio
  * 執筆室の同期
  *
- * 【いまの実装】
- * BroadcastChannel を使い、同じブラウザの別タブどうしで同期する。
- * 本物の通信ではないが、
- *   ・アイコンが増える
- *   ・動きが伝わる
- *   ・スタンプが飛ぶ
- * は実際に起きる。作りながら確かめられる。
+ * 2 つの実装がある。どちらを使うかは createPresence が決める。
  *
- * 【本番でやること】
- * この Presence を Supabase Realtime か WebSocket で実装し直す。
+ *   Supabase に繋いでいる  … RealtimePresence（別の端末とも繋がる）
+ *   繋いでいない          … LocalPresence（同じブラウザの別タブだけ）
+ *
  * 画面側は subscribe / move / setStatus / send しか見ていないので、
- * このファイル 1 つの差し替えで別の端末とも繋がる。
+ * どちらが動いていても書き方は変わらない。
+ *
+ * 【LocalPresence を残す理由】
+ * 環境変数を設定せずに動かしたときに、
+ * 部屋が真っ白になるのではなく、ひとりぶんは動いてほしい。
+ * 作りながら確かめるときにも、繋がなくて済むぶん速い。
  *
  * 【声について】
  * 部屋主のマイクは WebRTC が要るため、まだ入れていない。
@@ -22,16 +22,40 @@
  * ============================================================
  */
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
-
 import { hasSupabase } from "@/config/env.client";
-import type { Presence, RoomState } from "@/lib/room/presence-types";
-import { SupabasePresence } from "@/lib/room/supabase-presence";
-
+import { RealtimePresence } from "@/lib/room/realtime-presence";
 import type { MemberStatus, RoomMember, RoomMessage } from "@/types";
 import { MEMBER_TIMEOUT_MS } from "@/types";
 
+export interface RoomState {
+    members: RoomMember[];
+    messages: RoomMessage[];
+    /**
+     * 部屋が閉じられたか。
+     *
+     * 立てた人が部屋ごと閉じたとき、
+     * 中にいる人の画面にも伝える必要がある。
+     * 伝えないと、消えた部屋の中を歩き続けることになる。
+     */
+    isClosed: boolean;
+}
 
+export interface Presence {
+    /** 別の端末とも繋がるか。画面に注意書きを出すために使う */
+    readonly isNetworked: boolean;
+
+    join(member: RoomMember): void;
+    leave(): void;
+    move(x: number, y: number): void;
+    setStatus(status: MemberStatus): void;
+    setColor(colorId: number): void;
+    announceClosed(): void;
+    addWrittenChars(count: number): void;
+    send(message: Omit<RoomMessage, "id" | "created_at">): void;
+    /** 状態が変わるたびに呼ばれる。戻り値で購読をやめる */
+    subscribe(handler: (state: RoomState) => void): () => void;
+    dispose(): void;
+}
 
 /**
  * ============================================================
@@ -229,16 +253,18 @@ export class LocalPresence implements Presence {
     }
 }
 
+/**
+ * どちらの実装で繋ぐかを決める。
+ *
+ * Supabase の設定があれば、別の端末とも繋がるほうを使う。
+ * 無ければ同じブラウザの中だけで動かす。
+ *
+ * 読み込みを遅らせているのは、Supabase を使わない人の
+ * 手元に Realtime の一式を落とさないため。
+ */
 export function createPresence(roomId: string): Presence {
-    /*
-     * 繋ぎ先があれば、そちらを使う。
-     *
-     * BroadcastChannel 版は、同じブラウザの別タブにしか届かない。
-     * 一人で試すぶんには足りるが、人を呼べない。
-     */
-    if (hasSupabase()) return new SupabasePresence(roomId);
-
-    return new LocalPresence(roomId);
+    if (!hasSupabase()) return new LocalPresence(roomId);
+    return new RealtimePresence(roomId);
 }
 
 /**
@@ -280,6 +306,3 @@ export function saveIdentity(identity: Identity): void {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
 }
-
-/* 型は presence-types.ts に置いてある。ここからも出す */
-export type { Presence, RoomState } from "@/lib/room/presence-types";

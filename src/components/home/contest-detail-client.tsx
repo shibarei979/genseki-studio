@@ -3,101 +3,100 @@
  * 原石航路 Studio
  * ContestDetailClient — コンテストの詳しい説明
  *
- * 上に見出しと締切、下に本文。
+ * 上から順に読ませる。
  *
- * 画像は本文の幅に収める。
- * 画面いっぱいに広げると、絵が引き伸ばされて荒くなるうえ、
- * 何のコンテストかを読む前に絵だけで一画面が終わる。
+ *   顔      … 絵・題・期日・応募のボタン
+ *   目次    … 節へ飛ぶ帯（上に貼り付く）
+ *   概要    … どんなコンテストか
+ *   各賞    … いくら貰えるか
+ *   開催期間 … いつからいつまで
+ *   応募条件 … 出せる作品の決まり
+ *   応募方法 … 何をすればよいか
+ *   応募規約 … 長いので畳んでおく
+ *   応募作品 … 自分の棚から選んで出す
+ *
+ * ------------------------------------------------------------
+ * 節の作り
+ *
+ * 左に「図案＋節の名前」、右に中身。
+ * 縦一列に並べるより、左の列が目次の代わりになって、
+ * 長い頁でもいま何の話かを見失わない。
+ *
+ * 狭い画面では上下に積む。左右に割ると、どちらも読めない幅になる。
  * ============================================================
  */
 
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import ContestBanner from "@/components/common/contest-banner";
 import Header from "@/components/layout/header";
 import { getRepository } from "@/lib/repository";
+import { loadIdentity } from "@/lib/room/presence";
 import { formatNumber } from "@/lib/utils/text";
-import {
-    daysUntil,
-    statusColor,
-    statusLabel,
-} from "@/types";
-import type {
-    ContestEntry, Contest, WorkWithStats } from "@/types";
+import type { Contest, ContestEntry, WorkWithStats } from "@/types";
+import { daysUntil, statusColor, statusLabel } from "@/types";
+
+/**
+ * この頁でだけ使う色。
+ *
+ * アプリの中は橙だが、コンテストは紺と青緑で組む。
+ * 賞や規約が並ぶ改まった頁なので、
+ * 書く画面と同じ暖色だと、軽く見える。
+ *
+ * トークンには足さない。使うのはこの 1 枚だけなので、
+ * ここに閉じておく。
+ */
+const C = {
+    /** 見出しと図案 */
+    navy: "#1e3a5f",
+    /** 押してほしいもの */
+    teal: "#2b7e91",
+    tealDark: "#236a7b",
+    /** 薄い地 */
+    tint: "#eef3f7",
+    /** 升の見出しの地 */
+    label: "#e5edf4",
+    line: "#d8e2ec",
+    body: "#4a5a6e",
+    dim: "#8496a8",
+};
+
+/** 目次に並べる節。id は飛び先と揃える */
+const TABS = [
+    { id: "about", label: "概要" },
+    { id: "prizes", label: "各賞" },
+    { id: "schedule", label: "開催期間" },
+    { id: "rules", label: "応募条件" },
+    { id: "how", label: "応募方法" },
+    { id: "terms", label: "応募規約" },
+    { id: "entries", label: "応募作品" },
+] as const;
 
 export default function ContestDetailClient({ contestId }: { contestId: string }) {
     const [contest, setContest] = useState<Contest | null>(null);
     const [works, setWorks] = useState<WorkWithStats[]>([]);
+    const [entries, setEntries] = useState<ContestEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [showsAllWorks, setShowsAllWorks] = useState(false);
 
-    useEffect(() => {
-        void (async () => {
-            const repository = getRepository();
-            setContest(await repository.getContest(contestId));
-            setWorks(await repository.listWorks());
-            setIsLoading(false);
-        })();
+    const reload = useCallback(async () => {
+        const repository = getRepository();
+        setContest(await repository.getContest(contestId));
+        setWorks(await repository.listWorks());
+        setEntries(await repository.listContestEntries(contestId));
+        setIsLoading(false);
     }, [contestId]);
 
-    /*
-     * 応募の持ち物。
-     *
-     * Hook は早い戻りより前に置く。
-     * 途中に書くと、出る回と出ない回ができて壊れる。
-     */
-    const [entries, setEntries] = useState<ContestEntry[]>([]);
-    const [notice, setNotice] = useState("");
-
     useEffect(() => {
-        if (!contest) return;
-
-        void (async () => {
-            setEntries(await getRepository().listContestEntries(contest.id));
-        })();
-    }, [contest]);
-
-    /**
-     * 作品を出す。
-     *
-     * 同じ作品は 2 度出せない。出せる数にも上限がある。
-     */
-    async function apply(workId: string, title: string) {
-        if (!contest) return;
-
-        if (entries.some((row) => row.work_id === workId)) {
-            setNotice("その作品はすでに応募しています。");
-            return;
-        }
-
-        if (contest.entry_limit > 0 && entries.length >= contest.entry_limit) {
-            setNotice(`出せるのは${contest.entry_limit}作品までです。`);
-            return;
-        }
-
-        await getRepository().createContestEntry(contest.id, {
-            work_id: workId,
-            work_title: title,
-            author_id: "",
-            author_name: "",
-            char_count: 0,
-            is_shortlisted: false,
-            is_awarded: false,
-            award_label: "",
-            note: "",
-        });
-
-        setEntries(await getRepository().listContestEntries(contest.id));
-        setNotice("応募しました。");
-        window.setTimeout(() => setNotice(""), 3000);
-    }
-
+        void reload();
+    }, [reload]);
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-canvas">
+            <div className="min-h-screen bg-page">
                 <Header />
                 <p className="py-24 text-center text-sm text-faint">読み込んでいます</p>
             </div>
@@ -106,7 +105,7 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
 
     if (!contest || contest.status === "draft") {
         return (
-            <div className="min-h-screen bg-canvas">
+            <div className="min-h-screen bg-page">
                 <Header breadcrumbs={[{ label: "コンテスト", href: "/contest" }]} />
                 <p className="py-24 text-center text-sm text-faint">
                     このコンテストは見つかりませんでした。
@@ -117,16 +116,64 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
 
     const tone = statusColor(contest.status);
     const remaining = daysUntil(contest.ends_at);
-
     const isOpen = contest.status === "open";
 
     const prizes = contest.prizes ?? [];
-    const checkpoints = contest.checkpoints ?? [];
-    const steps = contest.steps ?? [];
-    const notices = contest.notices ?? [];
+    /*
+     * 中身の無い手順は出さない。
+     *
+     * 管理画面で行を足したまま書かずに保存すると、
+     * 番号だけの空の札が並ぶ。
+     * 空欄は「まだ書いていない」であって「手順」ではない。
+     */
+    const steps = (contest.steps ?? []).filter((step) => step.trim().length > 0);
+    const notices = (contest.notices ?? []).filter(
+        (notice) => notice.trim().length > 0,
+    );
+
+    /** すでに出した作品 */
+    const enteredWorkIds = new Set(entries.map((row) => row.work_id));
+
+    /** 出せる作品。字数の下限だけで絞る */
+    const candidates = works.filter(
+        (work) =>
+            contest.min_chars === 0 || work.total_char_count >= contest.min_chars,
+    );
+    const shownWorks = showsAllWorks ? candidates : candidates.slice(0, 3);
+
+    /** あと何作品出せるか */
+    const remainingSlots =
+        contest.entry_limit === 0
+            ? Number.POSITIVE_INFINITY
+            : contest.entry_limit - entries.length;
+
+    async function enter(work: WorkWithStats) {
+        if (!contest) return;
+
+        const identity = loadIdentity();
+        await getRepository().createContestEntry(contest.id, {
+            work_id: work.id,
+            author_id: identity.id,
+            author_name: identity.name,
+            work_title: work.title || "無題",
+            char_count: work.total_char_count,
+            is_shortlisted: false,
+            is_awarded: false,
+            award_label: "",
+            note: "",
+        });
+        await reload();
+    }
+
+    async function withdraw(workId: string) {
+        const row = entries.find((entry) => entry.work_id === workId);
+        if (!row) return;
+        await getRepository().deleteContestEntry(row.id);
+        await reload();
+    }
 
     return (
-        <div className="min-h-screen bg-canvas pb-16">
+        <div className="min-h-screen bg-page pb-20">
             <Header
                 breadcrumbs={[
                     { label: "コンテスト", href: "/contest" },
@@ -134,192 +181,243 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                 ]}
             />
 
-            {/* ---- 見出し。画像と要点を横に並べる ---- */}
-            <div className="border-b border-line bg-surface">
-                <div className="mx-auto grid max-w-5xl items-center gap-6 px-8 py-8 md:grid-cols-[300px_minmax(0,1fr)]">
-                    {/*
-                     * 絵に影を落とす。
-                     * 平らに置くと、紙に刷った絵のように沈む。
-                     */}
-                    <div className="overflow-hidden rounded-xl shadow-[0_4px_16px_rgba(31,78,107,0.14)]">
+            {/* ============ 顔 ============ */}
+            <div className="bg-surface">
+                <div className="mx-auto grid max-w-5xl items-center gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+                    <div className="relative overflow-hidden rounded-xl">
                         <ContestBanner
                             contest={contest}
-                            className="aspect-video w-full"
+                            className="aspect-[4/3] w-full"
                             fallback="画像なし"
                         />
+                        <span
+                            className="absolute left-0 top-0 px-3 py-1 text-[11px] font-medium text-white"
+                            style={{ background: tone.chip }}
+                        >
+                            {statusLabel(contest.status)}
+                        </span>
                     </div>
 
                     <div className="min-w-0">
-                        {/*
-                         * 募集中の札。
-                         *
-                         * 絵の上に重ねると、絵柄に紛れて読めない。
-                         * 題名の上に置けば、まず目に入る。
-                         */}
-                        <div className="mb-2 flex flex-wrap items-center gap-2.5">
-                            <span
-                                className="rounded-full px-3.5 py-1 text-[11px] font-medium text-white"
-                                style={{ background: tone.chip }}
-                            >
-                                {statusLabel(contest.status)}
-                            </span>
-
-                            {contest.organizer && (
-                                <span className="text-[11px] text-muted">
-                                    主催：{contest.organizer}
-                                </span>
-                            )}
-                        </div>
-
-                        <h1 className="mt-1 text-[22px] font-semibold leading-snug text-ink">
+                        <h1
+                            className="text-[22px] font-semibold leading-snug sm:text-[26px]"
+                            style={{ color: C.navy }}
+                        >
                             {contest.title || "名前のないコンテスト"}
                         </h1>
 
                         {contest.catchphrase && (
-                            <p className="mt-2 text-sm text-muted">
+                            <p className="mt-2.5 text-[13px]" style={{ color: C.body }}>
                                 {contest.catchphrase}
                             </p>
                         )}
 
-                        {/* 締切。ここが一番よく見られる */}
-                        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-                            <div>
-                                <p className="text-[11px] text-faint">応募締切</p>
-                                <p className="text-sm font-medium text-ink">
-                                    {formatDate(contest.ends_at)}
+                        {/*
+                         * 札。
+                         *
+                         * 見本では「賞金総額」も並んでいるが、
+                         * 賞は自由に書ける欄なので、足し合わせて金額にできない。
+                         * 数えられるものだけを出す。
+                         */}
+                        <ul className="mt-4 flex flex-wrap gap-2">
+                            <Chip>
+                                {contest.allow_unfinished
+                                    ? "未完結OK"
+                                    : "完結作品のみ"}
+                            </Chip>
+                            <Chip>
+                                {contest.entry_limit === 0
+                                    ? "何作品でも"
+                                    : `一人${contest.entry_limit}作品まで`}
+                            </Chip>
+                            {contest.allow_published && <Chip>他所公開OK</Chip>}
+                        </ul>
+
+                        {/* 期日。ここが一番よく見られる */}
+                        <div
+                            className="mt-5 grid gap-px overflow-hidden rounded-xl border sm:grid-cols-2"
+                            style={{ borderColor: C.line, background: C.line }}
+                        >
+                            <div className="bg-surface px-4 py-3.5">
+                                <p
+                                    className="flex items-center gap-1.5 text-[11px]"
+                                    style={{ color: C.dim }}
+                                >
+                                    <span style={{ color: C.teal }}>
+                                        <CalendarIcon />
+                                    </span>
+                                    応募期間
+                                </p>
+                                <p
+                                    className="mt-1.5 text-[12px] leading-relaxed"
+                                    style={{ color: C.navy }}
+                                >
+                                    {formatLongDate(contest.starts_at)}
+                                    <br />― {formatLongDate(contest.ends_at)}
                                 </p>
                             </div>
 
-                            {isOpen && remaining >= 0 && (
-                                <div
-                                    className="rounded-lg px-4 py-1.5 text-center"
-                                    style={{ background: tone.bg }}
+                            <div className="bg-surface px-4 py-3.5">
+                                <p
+                                    className="flex items-center gap-1.5 text-[11px]"
+                                    style={{ color: C.dim }}
                                 >
-                                    <span
-                                        className="text-lg font-semibold"
-                                        style={{ color: tone.text }}
-                                    >
-                                        {remaining}
+                                    <span style={{ color: C.teal }}>
+                                        <MegaphoneIcon />
                                     </span>
-                                    <span
-                                        className="ml-1 text-[11px]"
-                                        style={{ color: tone.text }}
-                                    >
-                                        日
-                                    </span>
-                                </div>
-                            )}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    /* 下の「出せそうな作品」へ送る */
-                                    document
-                                        .getElementById("entry-works")
-                                        ?.scrollIntoView({ behavior: "smooth" });
-                                }}
-                                disabled={!isOpen}
-                                className="ml-auto rounded-lg px-6 py-2.5 text-sm font-medium text-white shadow-[0_2px_8px_rgba(31,78,107,0.25)] hover:opacity-90 disabled:opacity-45 disabled:shadow-none"
-                                style={{ background: tone.chip }}
-                            >
-                                {isOpen ? "応募する" : "受付終了"}
-                            </button>
+                                    結果発表
+                                </p>
+                                <p
+                                    className="mt-1.5 text-[12px] leading-relaxed"
+                                    style={{ color: C.navy }}
+                                >
+                                    {formatLongDate(contest.result_at)}
+                                </p>
+                            </div>
                         </div>
 
-                        {entries.length > 0 && (
-                            <p className="mt-1.5 text-right text-[10px] text-forest">
-                                {entries.length}作品を応募しています
+                        <a
+                            href="#entries"
+                            className="mt-5 flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-sm font-medium text-white hover:opacity-90"
+                            style={{
+                                background: C.teal,
+                                opacity: isOpen ? 1 : 0.5,
+                                pointerEvents: isOpen ? undefined : "none",
+                            }}
+                        >
+                            {isOpen ? "応募する" : "受付終了"}
+                            <span aria-hidden="true">›</span>
+                        </a>
+
+                        {isOpen && remaining >= 0 && (
+                            <p className="mt-2 text-center text-[11px] text-muted">
+                                締切まであと {remaining} 日
                             </p>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* ---- 本文 ---- */}
-            <main className="mx-auto max-w-3xl px-8 py-8">
-                {contest.description && (
-                    <p className="whitespace-pre-wrap text-sm leading-loose text-ink">
-                        {contest.description}
-                    </p>
-                )}
+            {/* ============ 目次 ============ */}
+            <TabBar />
 
-                {/* 求めるもの */}
-                {(contest.theme || contest.audience) && (
-                    <Section title="募集テーマ" tone={tone.chip}>
-                        {contest.theme && (
-                            <p className="whitespace-pre-wrap text-sm leading-loose text-ink">
-                                {contest.theme}
-                            </p>
-                        )}
-                        {contest.audience && (
-                            <p className="mt-3 inline-block rounded-full bg-canvas px-3.5 py-1 text-xs text-muted">
-                                読者層　{contest.audience}
+            <main className="mx-auto max-w-5xl px-6 sm:px-8">
+                <Section id="about" icon={<QuillIcon />} title="このコンテストについて">
+                    {contest.description && (
+                        <p className="whitespace-pre-wrap text-[13px] leading-[2] text-ink">
+                            {contest.description}
+                        </p>
+                    )}
+                </Section>
+
+                {contest.theme && (
+                    <Section id="theme" icon={<QuillIcon />} title="募集テーマ">
+                        <p className="text-[15px] font-semibold" style={{ color: C.navy }}>
+                            {contest.theme.split("\n")[0]}
+                        </p>
+                        {contest.theme.split("\n").length > 1 && (
+                            <p className="mt-3 whitespace-pre-wrap text-[12px] leading-[2] text-muted">
+                                {contest.theme.split("\n").slice(1).join("\n").trim()}
                             </p>
                         )}
                     </Section>
                 )}
 
-                {/* 賞 */}
                 {prizes.length > 0 && (
-                    <Section title="各賞" tone={tone.chip}>
-                        <ul className="space-y-2">
+                    <Section id="prizes" icon={<TrophyIcon />} title="各賞">
+                        <ul className="grid gap-4 sm:grid-cols-2">
                             {prizes.map((row, index) => (
                                 <li
                                     key={index}
-                                    className="flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-lg bg-surface px-4 py-3"
+                                    className="relative overflow-hidden rounded-lg border px-5 py-4"
+                                    style={{ borderColor: C.line, background: C.tint }}
                                 >
-                                    <span
-                                        className="text-sm font-semibold"
-                                        style={{ color: tone.text }}
+                                    <p
+                                        className="text-[12px] font-medium"
+                                        style={{ color: C.navy }}
                                     >
                                         {row.label}
+                                    </p>
+
+                                    {/*
+                                     * 金額を大きく出す。
+                                     *
+                                     * 賞の中身は自由に書ける欄なので、
+                                     * 「Amazonギフトカード ¥30,000」のように
+                                     * 前置きと金額が続けて書かれる。
+                                     * 数字だけを抜き出して大きくすると、
+                                     * 何の金額なのか分からなくなるので、
+                                     * 1 行目を小さく、2 行目を大きくする。
+                                     */}
+                                    <PrizeDetail detail={row.detail} />
+
+                                    <span
+                                        className="absolute bottom-3 right-4"
+                                        style={{ color: C.teal, opacity: 0.3 }}
+                                    >
+                                        <GiftIcon />
                                     </span>
-                                    <span className="text-sm text-ink">{row.detail}</span>
                                 </li>
                             ))}
                         </ul>
                     </Section>
                 )}
 
-                {/* 見るところ */}
-                {checkpoints.length > 0 && (
-                    <Section title="選考で見るところ" tone={tone.chip}>
-                        <ul className="space-y-3">
-                            {checkpoints.map((row, index) => (
-                                <li key={index}>
-                                    <p className="text-sm font-semibold text-ink">
-                                        {row.title}
-                                    </p>
-                                    <p className="mt-1 whitespace-pre-wrap text-sm leading-loose text-muted">
-                                        {row.body}
-                                    </p>
-                                </li>
-                            ))}
-                        </ul>
-                    </Section>
-                )}
+                {/*
+                 * 日どり。
+                 *
+                 * 表で 3 行並べるより、横一本の線に点を打つ。
+                 * いま全体のどのあたりにいるかが、線の長さで分かる。
+                 */}
+                <Section id="schedule" icon={<CalendarIcon large />} title="開催期間">
+                    <ol className="relative flex justify-between gap-2 pt-1">
+                        <span
+                            className="absolute left-[16%] right-[16%] top-[6px] h-[2px]"
+                            style={{ background: C.teal, opacity: 0.35 }}
+                            aria-hidden="true"
+                        />
 
-                {/* 日どり */}
-                <Section title="開催期間" tone={tone.chip}>
-                    <dl className="space-y-2.5">
-                        <Row label="募集期間">
-                            {formatLongDate(contest.starts_at)} 〜{" "}
-                            {formatLongDate(contest.ends_at)}
-                        </Row>
-                        <Row label="応募締切">
-                            {formatLongDate(contest.ends_at)}
-                        </Row>
-                        <Row label="結果発表">{formatLongDate(contest.result_at)}</Row>
-                    </dl>
+                        {[
+                            { label: "募集開始", at: contest.starts_at },
+                            { label: "応募締切", at: contest.ends_at },
+                            { label: "結果発表", at: contest.result_at },
+                        ].map((point) => (
+                            <li
+                                key={point.label}
+                                className="relative flex flex-1 flex-col items-center text-center"
+                            >
+                                <span
+                                    className="h-3.5 w-3.5 rounded-full border-[3px] bg-surface"
+                                    style={{ borderColor: C.teal }}
+                                />
+                                <span
+                                    className="mt-3 text-[12px] font-medium"
+                                    style={{ color: C.navy }}
+                                >
+                                    {point.label}
+                                </span>
+                                <span
+                                    className="mt-1 text-[11px] leading-relaxed"
+                                    style={{ color: C.body }}
+                                >
+                                    {formatLongDate(point.at)}
+                                </span>
+                            </li>
+                        ))}
+                    </ol>
                 </Section>
 
-                {/* 条件 */}
-                <Section title="応募条件" tone={tone.chip}>
-                    <dl className="space-y-2.5">
+                <Section id="rules" icon={<ListIcon />} title="応募条件">
+                    <div className="grid gap-x-4 gap-y-px sm:grid-cols-2">
                         {contest.eligibility && (
-                            <Row label="参加資格">{contest.eligibility}</Row>
+                            <Cell label="参加資格">{contest.eligibility}</Cell>
                         )}
-                        <Row label="文字数">
+                        <Cell label="完結・未完結">
+                            {contest.allow_unfinished
+                                ? "未完結でも出せます"
+                                : "完結済みのみ"}
+                        </Cell>
+                        <Cell label="文字数">
                             {contest.min_chars === 0 && contest.max_chars === 0
                                 ? "制限なし"
                                 : contest.max_chars === 0
@@ -327,147 +425,242 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                                   : contest.min_chars === 0
                                     ? `${formatNumber(contest.max_chars)}文字以下`
                                     : `${formatNumber(contest.min_chars)}〜${formatNumber(contest.max_chars)}文字`}
-                        </Row>
-                        {contest.required_materials && (
-                            <Row label="本文以外">{contest.required_materials}</Row>
-                        )}
-                        <Row label="完結・未完結">
-                            {contest.allow_unfinished
-                                ? "未完結でも出せます"
-                                : "完結済みのみ"}
-                        </Row>
-                        <Row label="出せる数">
+                        </Cell>
+                        <Cell label="出せる数">
                             {contest.entry_limit === 0
                                 ? "何作品でも"
-                                : `一人 ${contest.entry_limit} 作品まで`}
-                        </Row>
-                        <Row label="既発表作">
+                                : `一人${contest.entry_limit}作品まで`}
+                        </Cell>
+                        {contest.required_materials && (
+                            <Cell label="本文以外">{contest.required_materials}</Cell>
+                        )}
+                        <Cell label="既発表作">
                             {contest.allow_published
                                 ? "他所で公開した作品も出せます"
                                 : "未公開の作品のみ"}
-                        </Row>
-                        {contest.ai_policy && (
-                            <Row label="AIの扱い">{contest.ai_policy}</Row>
-                        )}
-                    </dl>
+                        </Cell>
+                    </div>
+
+                    {/*
+                     * AI の扱いは長いので、表から出して囲みにする。
+                     * 表の升に入れると、そこだけ何行にもなって崩れる。
+                     */}
+                    {contest.ai_policy && (
+                        <div
+                            className="mt-4 rounded-lg border px-5 py-4"
+                            style={{ borderColor: C.line, background: C.tint }}
+                        >
+                            <p
+                                className="text-[12px] font-medium"
+                                style={{ color: C.navy }}
+                            >
+                                AIの扱い
+                            </p>
+                            <p
+                                className="mt-2 whitespace-pre-wrap text-[12px] leading-[2]"
+                                style={{ color: C.body }}
+                            >
+                                {contest.ai_policy}
+                            </p>
+                        </div>
+                    )}
                 </Section>
 
-                {/* 出し方 */}
                 {steps.length > 0 && (
-                    <Section title="応募のしかた" tone={tone.chip}>
-                        <ol className="space-y-3">
+                    <Section id="how" icon={<PenIcon />} title="応募のしかた">
+                        {/*
+                         * 手順。
+                         *
+                         * 横一列に詰めない。
+                         * 手順が 5 つある部屋では 1 列あたりが細くなり、
+                         * 「コンテス／トページ／の「作品」のように
+                         * 途中で折り返して読めなくなる。
+                         *
+                         * 1 枚あたりの幅を決めて折り返す。
+                         * 行が変わっても、番号が振ってあるので順は追える。
+                         * 矢印は置かない。折り返した先で行末に残ると、
+                         * 次がどこか分からなくなる。
+                         */}
+                        <ol
+                            className="grid gap-3"
+                            style={{
+                                gridTemplateColumns:
+                                    "repeat(auto-fit, minmax(210px, 1fr))",
+                            }}
+                        >
                             {steps.map((step, index) => (
-                                <li key={index} className="flex gap-3">
-                                    <span
-                                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
-                                        style={{ background: tone.chip }}
+                                <li
+                                    key={index}
+                                    className="rounded-lg border bg-surface px-4 py-4"
+                                    style={{ borderColor: C.line }}
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <span
+                                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+                                            style={{ background: C.navy }}
+                                        >
+                                            {index + 1}
+                                        </span>
+
+                                        {index < 3 && (
+                                            <span style={{ color: C.teal }}>
+                                                <StepIcon index={index} />
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <p
+                                        className="mt-2.5 text-[12px] leading-[1.9]"
+                                        style={{ color: C.body }}
                                     >
-                                        {index + 1}
-                                    </span>
-                                    <span className="min-w-0 flex-1 text-sm leading-relaxed text-ink">
                                         {step}
-                                    </span>
+                                    </p>
                                 </li>
                             ))}
                         </ol>
                     </Section>
                 )}
 
-                {/* 注意 */}
-                {notices.length > 0 && (
-                    <Section title="注意すること" tone={tone.chip}>
-                        <ul className="space-y-2">
-                            {notices.map((notice, index) => (
-                                <li
-                                    key={index}
-                                    className="flex gap-2 text-xs leading-relaxed text-muted"
-                                >
-                                    <span className="shrink-0 text-faint">・</span>
-                                    <span className="min-w-0 flex-1">{notice}</span>
-                                </li>
-                            ))}
-                        </ul>
+                {(contest.terms || notices.length > 0) && (
+                    <Section id="terms" icon={<DocIcon />} title="応募規約">
+                        <div
+                            className="overflow-hidden rounded-lg border bg-surface"
+                            style={{ borderColor: C.line }}
+                        >
+                            {contest.terms && (
+                                <Accordion title="応募規約（必ずお読みください）">
+                                    <p className="whitespace-pre-wrap text-[12px] leading-[2] text-muted">
+                                        {contest.terms}
+                                    </p>
+                                </Accordion>
+                            )}
+
+                            {notices.length > 0 && (
+                                <Accordion title="その他の注意事項">
+                                    <ul className="space-y-2">
+                                        {notices.map((notice, index) => (
+                                            <li
+                                                key={index}
+                                                className="flex gap-2 text-[12px] leading-[1.9] text-muted"
+                                            >
+                                                <span className="shrink-0 text-faint">・</span>
+                                                <span className="min-w-0 flex-1">{notice}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </Accordion>
+                            )}
+                        </div>
                     </Section>
                 )}
 
-                {/* 規約 */}
-                {contest.terms && (
-                    <details className="mt-10 border-t border-line pt-4">
-                        <summary className="cursor-pointer text-sm font-medium text-ink">
-                            応募規約
-                        </summary>
-                        <div className="thin-scroll mt-3 max-h-96 overflow-y-auto rounded-lg bg-surface px-4 py-3">
-                            <p className="whitespace-pre-wrap text-[11px] leading-loose text-muted">
-                                {contest.terms}
-                            </p>
-                        </div>
-                    </details>
-                )}
-
-                {notice && (
-                    <p className="mt-6 rounded-lg bg-forest-tint px-4 py-3 text-center text-xs text-forest">
-                        {notice}
-                    </p>
-                )}
-
-                {/* 出せそうな作品 */}
-                {isOpen && works.length > 0 && (
-                    <div
-                        id="entry-works"
-                        className="mt-10 rounded-xl border border-line bg-surface px-5 py-4 shadow-[0_2px_10px_rgba(31,78,107,0.06)]"
-                    >
-                        <p className="text-sm font-medium text-ink">出せそうな作品</p>
-                        <p className="mt-1 text-[11px] text-muted">
-                            出したい作品の「応募する」を押してください。
-                            {contest.entry_limit > 0 &&
-                                `${contest.entry_limit}作品まで出せます。`}
+                {/* ============ 応募作品 ============ */}
+                <Section id="entries" icon={<QuillIcon />} title="出せそうな作品">
+                    {!isOpen ? (
+                        <p className="rounded-xl border border-line bg-surface px-5 py-8 text-center text-[12px] text-muted">
+                            このコンテストの受付は終わりました。
                         </p>
-                        <ul className="mt-2.5 divide-y divide-line">
-                            {works
-                                .filter(
-                                    (work) =>
-                                        contest.min_chars === 0 ||
-                                        work.total_char_count >= contest.min_chars,
-                                )
-                                .slice(0, 5)
-                                .map((work) => (
-                                    <li key={work.id}>
-                                        <div className="flex items-center gap-3 py-2">
-                                            <Link
-                                                href={`/workspace/${work.id}`}
-                                                className="min-w-0 flex-1 truncate text-xs text-ink hover:text-forest"
+                    ) : candidates.length === 0 ? (
+                        <p className="rounded-xl border border-dashed border-line px-5 py-8 text-center text-[12px] leading-relaxed text-muted">
+                            出せる作品がありません。
+                            <br />
+                            <Link href="/post" className="mt-2 inline-block text-forest hover:underline">
+                                作品を書く
+                            </Link>
+                        </p>
+                    ) : (
+                        <>
+                            <p className="text-[12px]" style={{ color: C.body }}>
+                                応募する作品を選ぶ
+                                {contest.entry_limit > 0 && (
+                                    <span className="ml-2 text-faint">
+                                        あと {Math.max(0, remainingSlots)} 作品出せます
+                                    </span>
+                                )}
+                            </p>
+
+                            <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                {shownWorks.map((work) => {
+                                    const isEntered = enteredWorkIds.has(work.id);
+                                    const isFull = !isEntered && remainingSlots <= 0;
+
+                                    return (
+                                        <li
+                                            key={work.id}
+                                            className="flex gap-3 rounded-lg border bg-surface p-3"
+                                            style={{ borderColor: C.line }}
+                                        >
+                                            {/*
+                                             * 表紙。
+                                             *
+                                             * 作品に絵を持たせる仕組みがまだ無いので、
+                                             * 題名から色を決めて敷く。
+                                             * 同じ作品はいつも同じ色になるので、
+                                             * 並んだときの目印になる。
+                                             */}
+                                            <span
+                                                className="h-[72px] w-[58px] shrink-0 rounded"
+                                                style={{ background: coverOf(work.title || work.id) }}
+                                                aria-hidden="true"
+                                            />
+
+                                            <div className="flex min-w-0 flex-1 flex-col">
+                                            <p
+                                                className="truncate text-[13px] font-medium"
+                                                style={{ color: C.navy }}
                                             >
-                                                {work.title}
-                                            </Link>
-
-                                            <span className="shrink-0 text-[11px] text-faint">
+                                                {work.title || "無題"}
+                                            </p>
+                                            <p
+                                                className="mt-1 text-[11px] tabular-nums"
+                                                style={{ color: C.dim }}
+                                            >
                                                 {formatNumber(work.total_char_count)}字
-                                            </span>
+                                            </p>
 
-                                            {/* 出す */}
-                                            {entries.some(
-                                                (row) => row.work_id === work.id,
-                                            ) ? (
-                                                <span className="shrink-0 rounded-full bg-forest-tint px-3 py-1 text-[10px] text-forest">
-                                                    応募済み
-                                                </span>
+                                            {isEntered ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void withdraw(work.id)}
+                                                    className="mt-auto rounded-md border py-1.5 text-[11px] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
+                                                    style={{
+                                                        borderColor: C.line,
+                                                        color: C.body,
+                                                    }}
+                                                >
+                                                    応募済み・取り消す
+                                                </button>
                                             ) : (
                                                 <button
                                                     type="button"
-                                                    onClick={() =>
-                                                        void apply(work.id, work.title)
-                                                    }
-                                                    className="shrink-0 rounded-full border border-forest-line px-3.5 py-1 text-[10px] text-forest hover:bg-forest-tint"
+                                                    disabled={isFull}
+                                                    onClick={() => void enter(work)}
+                                                    className="mt-auto rounded-md py-1.5 text-[11px] font-medium text-white disabled:opacity-40"
+                                                    style={{ background: C.teal }}
                                                 >
-                                                    応募する
+                                                    {isFull ? "上限に達しました" : "応募する"}
                                                 </button>
                                             )}
-                                        </div>
-                                    </li>
-                                ))}
-                        </ul>
-                    </div>
-                )}
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+
+                            {candidates.length > shownWorks.length && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowsAllWorks(true)}
+                                    className="mx-auto mt-4 flex items-center gap-2 rounded-md border bg-surface px-6 py-2 text-[12px]"
+                                    style={{ borderColor: C.line, color: C.body }}
+                                >
+                                    もっと見る
+                                    <ChevronIcon />
+                                </button>
+                            )}
+                        </>
+                    )}
+                </Section>
             </main>
         </div>
     );
@@ -475,94 +668,350 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
 
 /**
  * ============================================================
- * 部品
+ * 目次の帯
+ *
+ * 上に貼り付いて付いてくる。
+ * 長い頁なので、下まで読んでから別の節へ戻れるようにする。
+ *
+ * いまどの節にいるかは追わない。
+ * 追うと、読んでいる途中で下線が動き続けて気が散る。
  * ============================================================
  */
 
-/**
- * 話の区切り。
- * 左に色の縦線を引くだけにする。
- * 囲みを重ねると、どこからどこまでが一つの話か分からなくなる。
- */
-function Section({
-    title,
-    tone,
-    children,
-}: {
-    title: string;
-    tone: string;
-    children: React.ReactNode;
-}) {
+function TabBar() {
     return (
-        <section className="mt-10">
-            <h2 className="flex items-center gap-2.5">
-                <span
-                    className="h-4 w-1 rounded-full"
-                    style={{ background: tone }}
-                />
-                <span className="text-[15px] font-semibold text-ink">{title}</span>
-            </h2>
-            <div className="mt-4">{children}</div>
-        </section>
-    );
-}
-
-/** 見出しと中身。線を引かず、余白で仕切る */
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-            <dt className="w-28 shrink-0 text-xs leading-6 text-faint">{label}</dt>
-            <dd className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-6 text-ink">
-                {children}
-            </dd>
+        <div className="sticky top-14 z-30 border-y border-line bg-surface">
+            <nav className="thin-scroll mx-auto flex max-w-5xl gap-1 overflow-x-auto px-6 sm:px-8">
+                {TABS.map((tab) => (
+                    <a
+                        key={tab.id}
+                        href={`#${tab.id}`}
+                        className="shrink-0 px-4 py-3 text-[12px] hover:opacity-70"
+                        style={{ color: C.body }}
+                    >
+                        {tab.label}
+                    </a>
+                ))}
+            </nav>
         </div>
     );
 }
 
-/** 「2026/09/02（水）」 */
-function formatDate(text: string): string {
-    const date = toDate(text);
-    if (!date) return text;
+/**
+ * ============================================================
+ * 節
+ *
+ * 左に図案と名前、右に中身。
+ * 狭い画面では上下に積む。
+ * ============================================================
+ */
 
-    const week = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()];
+function Section({
+    id,
+    icon,
+    title,
+    children,
+}: {
+    id: string;
+    icon: React.ReactNode;
+    title: string;
+    children: React.ReactNode;
+}) {
     return (
-        `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}` +
-        `（${week}）${formatTimePart(date)}`
+        <section
+            id={id}
+            /* 貼り付いた目次の下に隠れないよう、飛び先を下げる */
+            className="scroll-mt-28 border-b border-line py-8 last:border-b-0"
+        >
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)]">
+                <h2
+                    className="flex items-center gap-2.5 text-[14px] font-semibold"
+                    style={{ color: C.navy }}
+                >
+                    <span style={{ color: C.teal }}>{icon}</span>
+                    {title}
+                </h2>
+
+                <div className="min-w-0">{children}</div>
+            </div>
+        </section>
     );
 }
 
 /**
- * 日どりを日付に直す。
+ * 賞の中身。
  *
- * 時刻まで決めてあれば、そのまま。
- * 日にちだけなら、その日の始まりとして読む。
+ * 1 行目を前置き、2 行目以降を大きく出す。
+ * 1 行しか書かれていないときは、そのまま大きくする。
  */
-function toDate(text: string): Date | null {
-    if (!text) return null;
+function PrizeDetail({ detail }: { detail: string }) {
+    const lines = detail.split("\n").filter((line) => line.trim().length > 0);
 
-    const date = new Date(text.includes("T") ? text : `${text}T00:00:00`);
-    return Number.isNaN(date.getTime()) ? null : date;
+    if (lines.length <= 1) {
+        return (
+            <p
+                className="mt-2 text-[22px] font-semibold leading-snug"
+                style={{ color: C.navy }}
+            >
+                {detail}
+            </p>
+        );
+    }
+
+    return (
+        <>
+            <p className="mt-2 text-[12px]" style={{ color: C.body }}>
+                {lines[0]}
+            </p>
+            <p
+                className="mt-0.5 text-[24px] font-semibold leading-snug"
+                style={{ color: C.navy }}
+            >
+                {lines.slice(1).join(" ")}
+            </p>
+        </>
+    );
+}
+
+/** 応募条件の 1 項目。左に見出し、右に中身 */
+function Cell({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div
+            className="flex overflow-hidden rounded-md border"
+            style={{ borderColor: C.line }}
+        >
+            <span
+                className="w-[7em] shrink-0 px-3 py-2.5 text-[11px]"
+                style={{ background: C.label, color: C.navy }}
+            >
+                {label}
+            </span>
+            <span
+                className="min-w-0 flex-1 bg-surface px-3 py-2.5 text-[12px] leading-relaxed"
+                style={{ color: C.body }}
+            >
+                {children}
+            </span>
+        </div>
+    );
+}
+
+/** 畳んでおく囲み。規約は長いので、開きたい人だけが開く */
+function Accordion({
+    title,
+    children,
+}: {
+    title: string;
+    children: React.ReactNode;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div>
+            <button
+                type="button"
+                onClick={() => setIsOpen((open) => !open)}
+                aria-expanded={isOpen}
+                className="flex w-full items-center gap-3 border-b px-5 py-3 text-left hover:opacity-80"
+                style={{ borderColor: C.line, background: C.tint }}
+            >
+                <span
+                    className="min-w-0 flex-1 text-[12px]"
+                    style={{ color: C.navy }}
+                >
+                    {title}
+                </span>
+                <span
+                    className="shrink-0 transition-transform"
+                    style={{
+                        color: C.dim,
+                        transform: isOpen ? "rotate(180deg)" : undefined,
+                    }}
+                    aria-hidden="true"
+                >
+                    <ChevronIcon />
+                </span>
+            </button>
+
+            {isOpen && (
+                <div className="thin-scroll max-h-80 overflow-y-auto px-5 py-4">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+    return (
+        <li
+            className="rounded-full border px-3.5 py-1 text-[11px]"
+            style={{ borderColor: C.line, background: C.tint, color: C.navy }}
+        >
+            {children}
+        </li>
+    );
 }
 
 /**
- * 時刻の部分。
- * 0 時ちょうどなら出さない。決めていないのと区別がつかない。
+ * 題名から表紙の色を決める。
+ * 同じ題名なら必ず同じ色になる。
  */
-function formatTimePart(date: Date): string {
-    if (date.getHours() === 0 && date.getMinutes() === 0) return "";
-
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return ` ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+function coverOf(text: string): string {
+    let value = 0;
+    for (let index = 0; index < text.length; index += 1) {
+        value = (value * 131 + text.charCodeAt(index)) % 4096;
+    }
+    const hue = Math.round(value * 137.508) % 360;
+    return `linear-gradient(155deg, hsl(${hue} 26% 62%), hsl(${(hue + 24) % 360} 28% 42%))`;
 }
 
-/** 「2026年9月2日（水）」 */
+/** 「2026年8月10日（月）12:00」の形 */
 function formatLongDate(text: string): string {
-    const date = toDate(text);
-    if (!date) return text;
+    if (!text) return "未定";
+
+    const date = new Date(text);
+    if (Number.isNaN(date.getTime())) return text;
 
     const week = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()];
+    const stamp = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${week}）`;
+
+    /* 時刻が入っていなければ日付だけ */
+    if (!text.includes("T") && !text.includes(":")) return stamp;
+
+    const time = `${String(date.getHours()).padStart(2, "0")}:${String(
+        date.getMinutes(),
+    ).padStart(2, "0")}`;
+    return `${stamp} ${time}`;
+}
+
+/**
+ * ============================================================
+ * 図案
+ * ============================================================
+ */
+
+function stroke(width = 1.8) {
+    return {
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: width,
+        strokeLinecap: "round" as const,
+        strokeLinejoin: "round" as const,
+        "aria-hidden": true,
+    };
+}
+
+function QuillIcon() {
     return (
-        `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${week}）` +
-        formatTimePart(date)
+        <svg width="16" height="16" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M4 20c0-7 4-12 12-14 1 8-3 13-9 13H4Z" />
+            <path d="M4 20c2-3 5-5 8-6.5" />
+        </svg>
+    );
+}
+
+function TrophyIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M7 4h10v5a5 5 0 0 1-10 0Z" />
+            <path d="M7 5.5H4.5V7a3 3 0 0 0 3 3M17 5.5h2.5V7a3 3 0 0 1-3 3" />
+            <path d="M12 14v3.5M8.5 20.5h7" />
+        </svg>
+    );
+}
+
+function CalendarIcon({ large = false }: { large?: boolean }) {
+    const size = large ? 16 : 13;
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" {...stroke()}>
+            <rect x="3.5" y="5" width="17" height="15" rx="2" />
+            <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" />
+        </svg>
+    );
+}
+
+function MegaphoneIcon() {
+    return (
+        <svg width="13" height="13" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M3.5 10.5v3a1.5 1.5 0 0 0 1.5 1.5h1.5l7 4.5v-16l-7 4.5H5a1.5 1.5 0 0 0-1.5 1.5Z" />
+            <path d="M17 9.5a3.5 3.5 0 0 1 0 5" />
+        </svg>
+    );
+}
+
+function ListIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M9 6.5h11M9 12h11M9 17.5h11" />
+            <path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" />
+        </svg>
+    );
+}
+
+function PenIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M4.5 19.5h3.6L19.4 8.2a2.6 2.6 0 0 0-3.6-3.6L4.5 15.9Z" />
+            <path d="m14.6 5.8 3.6 3.6" />
+        </svg>
+    );
+}
+
+function DocIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" {...stroke()}>
+            <path d="M13.5 3.5H7a1.8 1.8 0 0 0-1.8 1.8v13.4A1.8 1.8 0 0 0 7 20.5h10a1.8 1.8 0 0 0 1.8-1.8V8.8Z" />
+            <path d="M13.5 3.5v5.3h5.3" />
+        </svg>
+    );
+}
+
+/**
+ * 手順ごとの図案。
+ *
+ * 出す → 選ぶ → 終わり、の 3 つ。
+ * 手順がそれより多い部屋のために、4 つ目からは出さない。
+ */
+function StepIcon({ index }: { index: number }) {
+    if (index === 0) {
+        return (
+            <svg width="22" height="22" viewBox="0 0 24 24" {...stroke(1.6)}>
+                <path d="M7 18.5h10a3.5 3.5 0 0 0 .4-7 5.5 5.5 0 0 0-10.6-1A3.75 3.75 0 0 0 7 18.5Z" />
+                <path d="M12 15V9.5M9.5 11.5 12 9l2.5 2.5" />
+            </svg>
+        );
+    }
+    if (index === 1) {
+        return (
+            <svg width="22" height="22" viewBox="0 0 24 24" {...stroke(1.6)}>
+                <path d="M13.5 3.5H7a1.8 1.8 0 0 0-1.8 1.8v13.4A1.8 1.8 0 0 0 7 20.5h10a1.8 1.8 0 0 0 1.8-1.8V8.8Z" />
+                <path d="M13.5 3.5v5.3h5.3M8.5 13h7M8.5 16.5h4" />
+            </svg>
+        );
+    }
+    return (
+        <svg width="22" height="22" viewBox="0 0 24 24" {...stroke(1.6)}>
+            <circle cx="12" cy="12" r="8.5" />
+            <path d="m8 12.3 2.6 2.7L16 9.5" />
+        </svg>
+    );
+}
+
+function GiftIcon() {
+    return (
+        <svg width="34" height="34" viewBox="0 0 24 24" {...stroke(1.5)}>
+            <rect x="3.5" y="9" width="17" height="11.5" rx="1.5" />
+            <path d="M2.5 9h19v3.5h-19zM12 9v11.5" />
+            <path d="M12 9C10 9 8 8 8 6.2A2.2 2.2 0 0 1 12 5a2.2 2.2 0 0 1 4 1.2C16 8 14 9 12 9Z" />
+        </svg>
+    );
+}
+
+function ChevronIcon() {
+    return (
+        <svg width="14" height="14" viewBox="0 0 24 24" {...stroke(2)}>
+            <path d="m6 9.5 6 6 6-6" />
+        </svg>
     );
 }

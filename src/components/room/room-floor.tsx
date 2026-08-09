@@ -229,29 +229,17 @@ export default function RoomFloor({
      * 扉の前に立ったら知らせる。
      * 自分が動いたときだけ見る。他の人が扉に立っても関係ない。
      */
-    /*
-     * 自分。
-     *
-     * 手元で別に持たない。
-     * 送られてきた位置と食い違うと、次に押したとき
-     * 古い場所から道を探すことになり、やがて動けなくなる。
-     */
     const self = members.find((member) => member.id === selfId);
-
     const wasAtDoor = useRef(false);
 
-    const selfX = self?.x;
-    const selfY = self?.y;
-
     useEffect(() => {
-        if (selfX === undefined || selfY === undefined) return;
+        if (!self) return;
 
-        const atDoor = isAtRoomDoor(background, selfX, selfY);
-
+        const atDoor = isAtRoomDoor(background, self.x, self.y);
         // 立った瞬間だけ尋ねる。留まっているあいだ繰り返さない
         if (atDoor && !wasAtDoor.current) onReachDoor?.();
         wasAtDoor.current = atDoor;
-    }, [selfX, selfY, background, onReachDoor]);
+    }, [self?.x, self?.y, background, onReachDoor, self]);
 
     /* 画面を離れるときは歩くのをやめる */
     useEffect(
@@ -295,10 +283,6 @@ export default function RoomFloor({
         /*
          * 椅子は道の終わりに足す。
          * 机の中なので、道を探す格子には含まれていない。
-         *
-         * 椅子でないときは、押した場所そのものを終わりにする。
-         * 道は格子をたどって探すので、そのままだと
-         * 格子の中心に丸められ、押した所から少しずれる。
          */
         const steps = seat ? [...route, seat] : route;
         if (steps.length === 0) return;

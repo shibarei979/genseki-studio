@@ -48,7 +48,7 @@ export default function ContestClient() {
     });
 
     return (
-        <div className="min-h-screen bg-canvas">
+        <div className="min-h-screen bg-page">
             <Header breadcrumbs={[{ label: "コンテスト" }]} />
 
             <main className="px-8 py-7 sm:px-12">

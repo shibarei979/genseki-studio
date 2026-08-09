@@ -43,14 +43,7 @@ const DESC_MAX = 100;
 
 /** 入れる人数 */
 const CAPACITY_MIN = 1;
-/*
- * 入れる人数の上限。
- *
- * 声を繋ぐときも、居場所を送り合うときも、
- * 人が増えるほど重くなる。
- * 20 人を超えると、書く場としても騒がしい。
- */
-const CAPACITY_MAX = 20;
+const CAPACITY_MAX = 50;
 
 const STEPS = ["設定", "確認", "完了"] as const;
 
@@ -112,7 +105,7 @@ export default function RoomCreateClient() {
     }
 
     return (
-        <div className="min-h-screen bg-canvas px-4 py-6 sm:px-6 sm:py-10">
+        <div className="min-h-screen bg-page px-4 py-6 sm:px-6 sm:py-10">
             <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
                 {/* 見出しと段 */}
                 <div className="flex flex-wrap items-start gap-4 border-b border-line px-6 py-5 sm:px-8">

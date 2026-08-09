@@ -95,13 +95,12 @@ export default function RoomManagePanel({
                     <input
                         type="number"
                         min={1}
-                        max={20}
+                        max={100}
                         value={room.capacity}
                         onChange={(e) =>
                             onChange({
-                                /* 20 人まで。超えると重く、書く場としても騒がしい */
                                 capacity: Math.min(
-                                    20,
+                                    100,
                                     Math.max(1, Number(e.target.value) || 1),
                                 ),
                             })
