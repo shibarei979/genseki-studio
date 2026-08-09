@@ -211,12 +211,15 @@ function Hero({ onStart }: { onStart?: () => void }) {
              * 次の候補へ送れない。
              */}
             {/*
-             * 絵は右半分に敷く。
+             * 絵。
              *
-             * 58% だと右へ寄りすぎて、字と絵の境目が
-             * 画面の真ん中より左に来る。
+             * 広い画面では右半分に敷く。
+             * 右へ寄せすぎると、字と絵の境目が
+             * 画面の真ん中より左に来る。半分でちょうどよい。
+             *
+             * 狭い画面では上に置く。横に並べる幅が無い。
              */}
-            <div className="absolute inset-y-0 right-0 hidden w-1/2 overflow-hidden md:block">
+            <div className="relative h-44 w-full overflow-hidden sm:h-56 md:absolute md:inset-y-0 md:right-0 md:h-auto md:w-1/2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={HERO_IMAGES[heroIndex]}
@@ -240,7 +243,7 @@ function Hero({ onStart }: { onStart?: () => void }) {
                 aria-hidden="true"
             />
 
-            <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-8 sm:py-24">
+            <div className="relative mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-24">
                 {/*
                  * 見出し。
                  *
@@ -249,7 +252,7 @@ function Hero({ onStart }: { onStart?: () => void }) {
                  * ような割れ方をする。
                  */}
                 <h1
-                    className="text-[22px] leading-[1.6] tracking-[0.02em] sm:text-[34px] sm:leading-[1.65]"
+                    className="text-[19px] leading-[1.55] tracking-[0.02em] sm:text-[34px] sm:leading-[1.65]"
                     style={{ color: NAVY.ink }}
                 >
                     物語を生み出すすべての人のための、
@@ -257,7 +260,7 @@ function Hero({ onStart }: { onStart?: () => void }) {
                     創作活動プラットフォーム
                 </h1>
 
-                <p className="mt-5 text-[13px] leading-[2] text-[#4a5a6e] sm:mt-7 sm:leading-[2.2]">
+                <p className="mt-4 text-[12px] leading-[1.9] text-[#4a5a6e] sm:mt-7 sm:text-[13px] sm:leading-[2.2]">
                     原石航路は、あなたのアイデアを形にし、
                     <br className="hidden sm:inline" />
                     物語を深め、作品を飛躍させるための場所です。
@@ -273,10 +276,10 @@ function Hero({ onStart }: { onStart?: () => void }) {
                  * 狭い画面では幅いっぱいに。
                  * 指で押すものなので、小さいと外す。
                  */}
-                <div className="mt-7 flex flex-col gap-2.5 sm:mt-9 sm:flex-row sm:flex-wrap sm:gap-3">
+                <div className="mt-5 flex gap-2 sm:mt-9 sm:flex-wrap sm:gap-3">
                     <StartButton
                         onStart={onStart}
-                        className="rounded-md py-3.5 text-center text-[13px] font-medium text-white hover:opacity-90 sm:px-9"
+                        className="rounded-md py-2.5 text-center text-[12px] font-medium text-white hover:opacity-90 sm:py-3.5 sm:px-9 sm:text-[13px]"
                         style={{ background: NAVY.deep }}
                     >
                         無料で始める
@@ -284,7 +287,7 @@ function Hero({ onStart }: { onStart?: () => void }) {
                     {!onStart && (
                         <Link
                             href="/login"
-                            className="rounded-md border bg-white py-3.5 text-center text-[13px] hover:bg-black/[0.03] sm:px-9"
+                            className="rounded-md border bg-white py-2.5 text-center text-[12px] hover:bg-black/[0.03] sm:py-3.5 sm:px-9 sm:text-[13px]"
                             style={{ borderColor: NAVY.line, color: NAVY.ink }}
                         >
                             ログイン
@@ -340,29 +343,33 @@ function WhatYouCanDo() {
              * 縦に 4 つ並べると、画面 1 つぶん送ることになり、
              * 「何ができるか」が一目で分からない。
              */}
-            <ul className="mx-auto mt-8 grid max-w-6xl grid-cols-2 gap-x-3 gap-y-7 px-4 sm:mt-12 sm:gap-y-10 sm:px-8 lg:grid-cols-4">
+            <ul className="mx-auto mt-8 grid max-w-6xl grid-cols-2 gap-2.5 px-4 sm:mt-12 sm:gap-x-0 sm:gap-y-10 sm:px-8 lg:grid-cols-4">
                 {items.map((item, index) => (
                     <li
                         key={item.title}
-                        className="px-1 text-center sm:px-6 lg:border-l"
+                        /*
+                         * 狭い画面では正方形の枠に収める。
+                         * 高さが揃うので、2 × 2 が整って見える。
+                         */
+                        className="flex aspect-square flex-col items-center justify-center rounded-xl border px-2 text-center sm:aspect-auto sm:block sm:rounded-none sm:border-0 sm:px-6 lg:border-l"
                         style={{
                             /* 1 つ目の左には線を引かない */
                             borderColor: index === 0 ? "transparent" : NAVY.line,
                         }}
                     >
                         <span
-                            className="mx-auto flex h-12 w-12 items-center justify-center rounded-full sm:h-16 sm:w-16"
+                            className="mx-auto flex h-10 w-10 items-center justify-center rounded-full sm:h-16 sm:w-16"
                             style={{ background: NAVY.tint, color: NAVY.base }}
                         >
                             {item.icon}
                         </span>
                         <h3
-                            className="mt-3 text-[13px] tracking-[0.06em] sm:mt-5 sm:text-[15px] sm:tracking-[0.08em]"
+                            className="mt-2.5 text-[12px] tracking-[0.04em] sm:mt-5 sm:text-[15px] sm:tracking-[0.08em]"
                             style={{ color: NAVY.ink }}
                         >
                             {item.title}
                         </h3>
-                        <p className="mt-2 text-[11px] leading-[1.9] text-[#5a6a7c] sm:mt-3 sm:text-[12px] sm:leading-[2]">
+                        <p className="mt-1.5 line-clamp-3 text-[10px] leading-[1.7] text-[#5a6a7c] sm:mt-3 sm:line-clamp-none sm:text-[12px] sm:leading-[2]">
                             {item.body}
                         </p>
                     </li>
