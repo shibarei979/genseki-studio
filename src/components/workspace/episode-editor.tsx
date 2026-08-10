@@ -228,7 +228,7 @@ export default function EpisodeEditor({
                     className="min-w-0 flex-1 border-b border-transparent bg-transparent text-[14px] font-medium text-ink outline-none focus:border-forest-line"
                 />
 
-                <div className="thin-scroll flex w-full shrink-0 items-center gap-2 overflow-x-auto text-[11px] text-muted sm:w-auto sm:gap-2.5">
+                <div className="thin-scroll flex w-full shrink-0 items-center gap-2 overflow-x-auto text-[11px] text-muted lg:w-auto lg:gap-2.5">
                     <SaveIndicator state={state} savedAt={savedAt} />
                     <span>{formatNumber(countChars(body))}文字</span>
                     <button
@@ -301,7 +301,7 @@ export default function EpisodeEditor({
                  * 道具の先頭に置く。
                  * 隅に浮かせると、あることに気づかれない。
                  */}
-                <span className="flex shrink-0 items-center rounded border border-line bg-surface">
+                <span className="flex shrink-0 items-center rounded border border-line bg-surface lg:hidden">
                     <button
                         type="button"
                         onClick={() => setZoom((now) => Math.max(0.7, now - 0.1))}
@@ -362,7 +362,7 @@ export default function EpisodeEditor({
                         isToolsOpen
                             ? "absolute left-0 right-0 top-full z-20 flex-wrap border-b border-line bg-canvas px-3 py-2 shadow-sm"
                             : "hidden",
-                        "sm:static sm:flex sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none",
+                        "lg:static lg:flex lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none",
                     ].join(" ")}
                 >
                 <button
@@ -417,7 +417,7 @@ export default function EpisodeEditor({
                     aria-expanded={isToolsOpen}
                     title="ほかの道具"
                     className={[
-                        "ml-auto shrink-0 rounded border px-2 py-0.5 sm:hidden",
+                        "ml-auto shrink-0 rounded border px-2 py-0.5 lg:hidden",
                         isToolsOpen
                             ? "border-forest bg-forest-tint text-forest"
                             : "border-line bg-surface text-muted",
@@ -438,9 +438,9 @@ export default function EpisodeEditor({
              */}
             <div
                 ref={surfaceRef}
-                className="relative min-h-0 flex-1 overflow-auto bg-canvas p-0 sm:p-4"
+                className="relative min-h-0 flex-1 overflow-auto bg-canvas p-0 sm:p-3 lg:bg-surface lg:p-0"
             >
-                <div className="mx-auto h-full w-full max-w-[820px] bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:h-auto sm:min-h-full sm:rounded">
+                <div className="mx-auto h-full w-full bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:h-auto sm:min-h-full sm:rounded lg:shadow-none">
                 <ManuscriptSurface
                     zoom={zoom}
                     settings={settings}
