@@ -573,7 +573,7 @@ function SettingsStep({
                     <ToggleRow
                         icon={<MicIcon />}
                         title="部屋主のマイクを使う（任意）"
-                        note="声を流す仕組みは調整中です。設定だけ残せます"
+                        note="案内や読み合わせのときに、自分の声を流せます"
                         checked={allowVoice}
                         onChange={setAllowVoice}
                     />
