@@ -171,6 +171,97 @@ export default function EpisodeEditor({
         setBody(insertRuby(body, range.start, range.end, ruby.trim()));
     }
 
+    /**
+     * カーソルの所に文字を差し込む。
+     *
+     * 区切り線・一文字下げ・改行で使い回す。
+     * 差し込んだあと、その後ろにカーソルを置く。
+     * 置かないと、また先頭から探すことになる。
+     */
+    function insertAt(text: string, addsNewline = true) {
+        const area = surfaceRef.current?.querySelector("textarea");
+        const at = area?.selectionStart ?? body.length;
+
+        const inserted = addsNewline ? `${text}\n` : text;
+        const next = body.slice(0, at) + inserted + body.slice(at);
+
+        setBody(next);
+
+        window.setTimeout(() => {
+            if (!area) return;
+
+            const to = at + inserted.length;
+            area.focus();
+            area.setSelectionRange(to, to);
+        }, 0);
+    }
+
+    /**
+     * 段落の頭を下げる。
+     *
+     * カーソルの所ではなく、本文の全部に効かせる。
+     * 1 行ずつ手で下げるのは、長い話ほど大変になる。
+     *
+     * 会話文は下げない。
+     * 「」『』【】 で始まる行は、そのままのほうが読みやすい。
+     * すでに下がっている行も、二重にしない。
+     */
+    function handleIndent() {
+        const OPENERS = ["「", "『", "【"];
+
+        const next = body
+            .split("\n")
+            .map((line) => {
+                const trimmed = line.trimStart();
+
+                if (trimmed === "") return line;
+                if (line.startsWith("　")) return line;
+                if (OPENERS.some((mark) => trimmed.startsWith(mark))) return line;
+
+                return `　${line}`;
+            })
+            .join("\n");
+
+        if (next === body) {
+            setNotice("下げるところはありませんでした");
+            window.setTimeout(() => setNotice(""), 2500);
+            return;
+        }
+
+        setBeforeNormalize(body);
+        setBody(next);
+
+        setNotice("段落の頭を下げました");
+        window.setTimeout(() => setNotice(""), 6000);
+    }
+
+    /**
+     * 置き換える。
+     *
+     * 何を何に替えるかを 2 度尋ねる。
+     * 一度にまとめて替えるので、数を伝える。
+     */
+    function handleReplace() {
+        const from = window.prompt("置き換える文字を入れてください", "");
+        if (!from) return;
+
+        const to = window.prompt(`「${from}」を何に替えますか`, "");
+        if (to === null) return;
+
+        const count = body.split(from).length - 1;
+        if (count === 0) {
+            setNotice(`「${from}」は見つかりませんでした`);
+            window.setTimeout(() => setNotice(""), 2500);
+            return;
+        }
+
+        setBeforeNormalize(body);
+        setBody(body.split(from).join(to));
+
+        setNotice(`${count}か所を置き換えました`);
+        window.setTimeout(() => setNotice(""), 6000);
+    }
+
     function handleEmphasis() {
         if (range.start === range.end) {
             setNotice("傍点をつける文字を選んでください");
@@ -383,6 +474,54 @@ export default function EpisodeEditor({
                     傍点
                 </button>
 
+                {/*
+                 * 場面を分ける線。
+                 *
+                 * 罫線を 12 本つないだもの。
+                 * 中黒や星印より、切れ目だと分かりやすい。
+                 */}
+                <button
+                    type="button"
+                    onClick={() => insertAt("────────────")}
+                    title="場面の切れ目に線を入れます"
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
+                >
+                    区切り線
+                </button>
+
+                <button
+                    type="button"
+                    onClick={handleIndent}
+                    title="会話文をのぞく段落の頭に、全角の空白を入れます"
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
+                >
+                    一文字下げ
+                </button>
+
+                {/*
+                 * 空の行。
+                 *
+                 * 間を置きたいときに使う。
+                 * 改行を 2 つ入れると、1 行ぶん空く。
+                 */}
+                <button
+                    type="button"
+                    onClick={() => insertAt("", true)}
+                    title="空の行を入れます"
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
+                >
+                    改行
+                </button>
+
+                <button
+                    type="button"
+                    onClick={handleReplace}
+                    title="本文の中の文字を、まとめて置き換えます"
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
+                >
+                    置換
+                </button>
+
                 <button
                     type="button"
                     onClick={handleNormalize}
@@ -404,7 +543,7 @@ export default function EpisodeEditor({
                         onClick={handleUndoNormalize}
                         className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:text-ink"
                     >
-                        整形を取り消す
+                        取り消す
                     </button>
                 )}
 
