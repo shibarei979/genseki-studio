@@ -59,6 +59,14 @@ export interface WritingRoom {
      */
     is_official?: boolean;
     theme: RoomTheme;
+    /**
+     * 合言葉。
+     *
+     * URL 限定の部屋へ、番号だけで入れるようにするためのもの。
+     * 立てたときに 6 桁が自動で振られる。
+     */
+    room_code?: string | null;
+
     /** 立てた人。公式の部屋は null */
     host_id: string | null;
     /** 入れる人数の上限 */

@@ -54,7 +54,7 @@ const NAV_ITEMS: {
      * 読めるのは執筆室で同じ部屋にいる人の作品だけ。
      * 探す場所を出すと、何も無い一覧に行き着く。
      */
-    { href: "/rooms", label: "執筆室", icon: "book", feature: "rooms" },
+    { href: "/rooms", label: "コミュニティー", icon: "book", feature: "rooms" },
     { href: "/contest", label: "コンテスト", icon: "trophy", feature: "contest" },
 ];
 
@@ -258,15 +258,14 @@ export default function Header({ breadcrumbs = [] }: Props) {
                      * 置き場所だけ先に決めておかないと、
                      * 後から足したときに右上の並びが変わってしまう。
                      */}
-                    <button
-                        type="button"
-                        disabled
-                        title="メッセージ（準備中）"
-                        aria-label="メッセージ（準備中）"
-                        className="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-full border border-line text-faint opacity-60"
+                    <Link
+                        href="/messages"
+                        title="運営からのお知らせ"
+                        aria-label="運営からのお知らせ"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-muted hover:border-forest-line hover:text-forest"
                     >
                         <MailIcon />
-                    </button>
+                    </Link>
 
                     <div ref={noticeRef} className="relative">
                         <button

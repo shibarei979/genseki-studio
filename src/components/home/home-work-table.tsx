@@ -328,22 +328,45 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                  * どこで段が変わるかを JavaScript 側では決められない。
                  * 段の高さぶんで繰り返す背景にすれば、
                  * 何冊並ぼうと必ず本の足元に板が来る。
+                 *
+                 * 下に板の厚みぶんの余白を取る。
+                 * 段と段の隙間には板が入るが、最後の段のあとには
+                 * 隙間が無い。余白を作らないと、そこだけ板が消える。
+                 * 1 段しか無いときは、板が 1 枚も出ないことになる。
                  */
                 <ul
-                    className="mt-4 grid justify-center sm:justify-start"
+                    /*
+                     * 板を左右に少し伸ばす。
+                     *
+                     * 背景は枠の幅ぶんしか描かれない。
+                     * 本の列とぴったり同じ幅で終わると、
+                     * 板が本に切り揃えられて、棚ではなく下線に見える。
+                     */
+                    className="-mx-3 mt-4 grid justify-center px-3 sm:justify-start"
                     style={{
                         gridTemplateColumns: `repeat(auto-fill, ${BOOK_WIDTH}px)`,
                         gridAutoRows: `${BOOK_HEIGHT}px`,
                         columnGap: `${BOOK_GAP}px`,
                         rowGap: `${SHELF_THICKNESS + SHELF_GAP}px`,
+                        paddingBottom: `${SHELF_THICKNESS}px`,
+                        /*
+                         * 板の色は 3 段。
+                         *   上端  … 天板に当たる光
+                         *   中    … 木の面
+                         *   下端  … 手前の小口。ここを濃くすると厚みが出る
+                         *
+                         * 1 色の帯にすると、ただの線に見えて板にならない。
+                         */
                         background: `repeating-linear-gradient(
                             to bottom,
                             transparent 0px,
                             transparent ${BOOK_HEIGHT}px,
-                            #c9a578 ${BOOK_HEIGHT}px,
-                            #c9a578 ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
-                            #a8814f ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
-                            #a8814f ${BOOK_HEIGHT + SHELF_THICKNESS}px,
+                            #dcbc93 ${BOOK_HEIGHT}px,
+                            #dcbc93 ${BOOK_HEIGHT + 2}px,
+                            #c49a6c ${BOOK_HEIGHT + 2}px,
+                            #c49a6c ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
+                            #96693c ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
+                            #96693c ${BOOK_HEIGHT + SHELF_THICKNESS}px,
                             transparent ${BOOK_HEIGHT + SHELF_THICKNESS}px,
                             transparent ${BOOK_HEIGHT + SHELF_THICKNESS + SHELF_GAP}px
                         )`,
@@ -407,6 +430,25 @@ function Tile({
 
     return (
         <li className="group relative" style={{ height: BOOK_HEIGHT }}>
+            {/*
+             * 板に落ちる影。
+             *
+             * 本そのものの影は縁を締めるためのもので、
+             * 下へはあまり伸びない。
+             * 足元に一枚敷いて、板に載っているように見せる。
+             *
+             * 本より少し狭く、下へはみ出させる。
+             * 幅を揃えると、影ではなく台座に見える。
+             */}
+            <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-2 -bottom-1 h-2 rounded-[50%] transition-opacity group-hover:opacity-70"
+                style={{
+                    background:
+                        "radial-gradient(50% 60% at 50% 40%, rgba(70,50,30,0.34) 0%, rgba(70,50,30,0) 75%)",
+                }}
+            />
+
             <Link
                 href={`/workspace/${work.id}`}
                 title={`${work.title || "無題"}　${chip.label}　${amount}　更新 ${updated}`}

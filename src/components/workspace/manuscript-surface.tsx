@@ -175,9 +175,14 @@ export default function ManuscriptSurface({
                 style={style}
                 className={[
                     "manuscript thin-scroll h-full w-full resize-none bg-transparent outline-none placeholder:text-faint",
+                    /*
+                     * 送るのは本文欄。
+                     * 縦書きは行が右から左へ伸びるので横へ、
+                     * 横書きは上から下へ伸びるので縦へ送る。
+                     */
                     isVertical
                         ? "overflow-x-auto overflow-y-hidden px-6 py-8"
-                        : "px-8 py-6",
+                        : "overflow-y-auto overflow-x-hidden px-8 py-6",
                     // 目盛りを出すときは、そのぶん本文側の余白を詰める
                     showLineNumbers ? (isVertical ? "pt-2" : "pl-3") : "",
                 ].join(" ")}

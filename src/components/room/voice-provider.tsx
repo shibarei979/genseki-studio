@@ -76,7 +76,7 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
             /* 別の部屋に入った。前の繋ぎは解く */
             roomRef.current?.dispose();
 
-            const room = new VoiceRoom(selfId, channel);
+            const room = new VoiceRoom(selfId, roomId);
             roomRef.current = room;
             roomIdRef.current = roomId;
 
@@ -97,22 +97,15 @@ export function VoiceProvider({ children }: { children: React.ReactNode }) {
         if (!room) return;
 
         /*
-         * 入っていれば切る。切れていれば入れる。
+         * 音の流れだけを止める。繋ぎは解かない。
          *
-         * 切ったときは繋ぎも解く。
-         * 資料を見に行っても切れないのは、
-         * ここを通らないため。
+         * 以前はここで繋ぎごと切っていた。
+         * 押すたびに数秒無音になり、相手からは
+         * 出たり入ったりを繰り返しているように見えていた。
+         * 許可の問い合わせも毎回走っていた。
          */
-        if (voice.isMicOn) {
-            room.dispose();
-            roomRef.current = null;
-            roomIdRef.current = null;
-            setVoice(IDLE);
-            return;
-        }
-
-        await room.start();
-    }, [voice.isMicOn]);
+        await room.toggle();
+    }, []);
 
     /* 画面を離れるときは切る */
     useEffect(() => {

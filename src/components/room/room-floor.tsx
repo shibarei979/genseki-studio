@@ -81,6 +81,21 @@ interface Props {
     onMove: (x: number, y: number) => void;
     /** 名札から通報を開く。自分自身には出さない */
     onReport?: (member: RoomMember) => void;
+    /**
+     * いま声が出ている人。
+     *
+     * 名札の周りを光らせる。
+     * 誰の声か分からないと、返事のしようがない。
+     */
+    speakingIds?: string[];
+    /**
+     * マイクを入れている人。
+     *
+     * 話しているかとは別に持つ。
+     * 黙っていても、入っていることは見えていてほしい。
+     * 切り忘れたまま席を立つのを防ぐ。
+     */
+    micOnIds?: string[];
 }
 
 export default function RoomFloor({
@@ -91,6 +106,8 @@ export default function RoomFloor({
     onMove,
     onReachDoor,
     onReport,
+    speakingIds = [],
+    micOnIds = [],
     maxHeight = 620,
 }: Props) {
     /** 幅を測るための外枠 */
@@ -415,11 +432,21 @@ export default function RoomFloor({
                             }}
                             aria-expanded={openedId === member.id}
                             className={[
-                                "absolute bottom-full left-1/2 mb-1 max-w-[120px] -translate-x-1/2 truncate rounded-full border px-2 py-0.5 text-[10px] shadow-sm",
+                                "absolute bottom-full left-1/2 mb-1 max-w-[120px] -translate-x-1/2 truncate rounded-full border px-2 py-0.5 text-[10px] shadow-sm transition-shadow",
                                 isSelf
                                     ? "border-forest bg-forest-tint text-forest"
                                     : "border-line bg-surface text-ink hover:border-forest-line",
                             ].join(" ")}
+                            style={
+                                speakingIds.includes(member.id)
+                                    ? {
+                                          /* 話している人。緑の輪で囲む */
+                                          borderColor: "var(--color-leaf)",
+                                          boxShadow:
+                                              "0 0 0 3px color-mix(in srgb, var(--color-leaf) 35%, transparent)",
+                                      }
+                                    : undefined
+                            }
                         >
                             {member.display_name}
                         </button>
@@ -495,6 +522,47 @@ export default function RoomFloor({
                             <div className="pointer-events-none absolute bottom-full left-1/2 mb-8 -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-surface px-2 py-0.5 text-[10px] text-ink shadow-md">
                                 執筆中
                             </div>
+                        )}
+
+                        {/*
+                         * マイクの印。
+                         *
+                         * 人の右肩に出す。
+                         * 頭の真上は「執筆中」の札と吹き出しが使うので、
+                         * そこへ置くと隠れる日が出る。
+                         *
+                         * 話している間は緑に変わる。
+                         * 入れているだけの人と、いま声が出ている人を分ける。
+                         */}
+                        {micOnIds.includes(member.id) && (
+                            <span
+                                className="pointer-events-none absolute -right-1 -top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white shadow"
+                                style={{
+                                    background: speakingIds.includes(member.id)
+                                        ? "var(--color-leaf)"
+                                        : "var(--color-forest-dark)",
+                                }}
+                                title={
+                                    speakingIds.includes(member.id)
+                                        ? "話しています"
+                                        : "マイクが入っています"
+                                }
+                            >
+                                <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="#fff"
+                                    strokeWidth="2.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <rect x="9" y="3" width="6" height="11" rx="3" />
+                                    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
+                                </svg>
+                            </span>
                         )}
 
                         {/* 人の姿 */}

@@ -18,6 +18,8 @@
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
+import { createClient } from "@/lib/supabase/client";
+
 /** 同時に話せる人数 */
 export const MAX_SPEAKERS = 4;
 
@@ -89,13 +91,48 @@ export class VoiceRoom {
     private analyser: AnalyserNode | null = null;
     private levelTimer: number | null = null;
 
+    /** 声のやり取りだけに使う通り道 */
+    private channel: RealtimeChannel | null = null;
+
     constructor(
         private selfId: string,
-        private channel: RealtimeChannel,
+        private roomId: string,
     ) {
-        this.channel.on("broadcast", { event: "voice" }, ({ payload }) => {
-            void this.receive(payload as Signal);
-        });
+        const supabase = createClient();
+
+        /*
+         * 同じ名前の通り道が残っていたら、先に閉じる。
+         *
+         * channel(名前) は、同じ名前のものがあればそれを返す。
+         * 購読済みのものに .on() を足すと落ちる。
+         * 開発中は useEffect が 2 度走るので、これが無いと必ず起きる。
+         */
+        for (const opened of supabase.getChannels()) {
+            if (opened.topic === `realtime:room-voice:${roomId}`) {
+                void supabase.removeChannel(opened);
+            }
+        }
+
+        /*
+         * 部屋の同期とは別の通り道にする。
+         *
+         * 相乗りすると、あちらが購読を始めたあとに
+         * こちらが .on() を足すことになって落ちる。
+         * 声は声で 1 本持つ。
+         *
+         * 必ず .on() を全部足してから .subscribe() を呼ぶ。
+         */
+        this.channel = supabase
+            .channel(`room-voice:${roomId}`)
+            .on("broadcast", { event: "voice" }, ({ payload }) => {
+                void this.receive(payload as Signal);
+            })
+            .subscribe((status) => {
+                if (status !== "SUBSCRIBED") return;
+                this.update({ isReady: true });
+                /* 先にいる人へ、自分が来たことを伝える */
+                this.send({ kind: "join", from: this.selfId });
+            });
     }
 
     subscribe(handler: (state: VoiceState) => void): () => void {
@@ -126,12 +163,21 @@ export class VoiceRoom {
                 video: false,
             });
         } catch (caught) {
+            /*
+             * 断られた理由を分けて出す。
+             *
+             * 「使えませんでした」だけだと、
+             * 許可し忘れたのか、マイクが繋がっていないのかが分からない。
+             */
+            const name = caught instanceof DOMException ? caught.name : "";
+
             this.update({
                 error:
-                    caught instanceof DOMException &&
-                    caught.name === "NotAllowedError"
-                        ? "マイクの使用が許可されていません。ブラウザの設定を確かめてください。"
-                        : "マイクを使えませんでした。",
+                    name === "NotAllowedError"
+                        ? "マイクの使用が許可されていません。ブラウザの設定からマイクを許可してください。"
+                        : name === "NotFoundError"
+                          ? "使用できるマイクが見つかりません。"
+                          : "マイクを開始できませんでした。",
             });
             return;
         }
@@ -144,6 +190,31 @@ export class VoiceRoom {
     }
 
     /** マイクを切る。繋ぎも全部たたむ */
+    /**
+     * ミュートの入り切り。
+     *
+     * 繋ぎは解かない。音の流れだけを止める。
+     *
+     * 切るたびに繋ぎ直すと、押すたびに数秒無音になり、
+     * 相手には出たり入ったりを繰り返しているように見える。
+     * 許可の問い合わせも毎回走る。
+     *
+     * まだマイクを取っていなければ、ここで初めて許可を求める。
+     */
+    async toggle(): Promise<void> {
+        if (!this.stream) {
+            await this.start();
+            return;
+        }
+
+        const next = !this.state.isMicOn;
+        for (const track of this.stream.getAudioTracks()) {
+            track.enabled = next;
+        }
+
+        this.update({ isMicOn: next });
+    }
+
     stop(): void {
         this.send({ kind: "leave", from: this.selfId });
 
@@ -169,6 +240,19 @@ export class VoiceRoom {
 
     dispose(): void {
         this.stop();
+
+        /*
+         * 通り道も閉じる。
+         *
+         * 残すと、次に同じ部屋へ入ったとき
+         * 同じ名前のものが二重になり、合図が 2 度届く。
+         */
+        if (this.channel) {
+            this.send({ kind: "leave", from: this.selfId });
+            void createClient().removeChannel(this.channel);
+            this.channel = null;
+        }
+
         this.handlers.clear();
     }
 
@@ -179,6 +263,7 @@ export class VoiceRoom {
      */
 
     private send(signal: Signal): void {
+        if (!this.channel) return;
         void this.channel.send({
             type: "broadcast",
             event: "voice",

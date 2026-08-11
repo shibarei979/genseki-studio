@@ -272,6 +272,7 @@ export default function EpisodeEditor({
     }
 
     const otherMode = settings.writing_mode === "vertical" ? "horizontal" : "vertical";
+    const isVertical = settings.writing_mode === "vertical";
 
     /*
      * 資料から飛んできたら、その行へ動かして選ぶ。
@@ -577,9 +578,35 @@ export default function EpisodeEditor({
              */}
             <div
                 ref={surfaceRef}
-                className="relative min-h-0 flex-1 overflow-auto bg-canvas p-0 sm:p-3 lg:bg-surface lg:p-0"
+                className="relative flex min-h-0 flex-1 overflow-hidden bg-canvas p-0 sm:p-3 lg:bg-surface lg:p-0"
             >
-                <div className="mx-auto h-full w-full bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:h-auto sm:min-h-full sm:rounded lg:shadow-none">
+                {/*
+                 * 白い紙。
+                 *
+                 * 高さを必ず決める。
+                 *
+                 * 以前は広い画面で h-auto にしていた。
+                 * 高さの決まっていない親の中では、本文欄の h-full が
+                 * 効かずに既定の 2 行ぶんまで縮む。
+                 * 横書きにしたとき上の数行しか見えなかったのはこれ。
+                 *
+                 * 送るのは本文欄。紙は画面いっぱいのまま動かさない。
+                 *
+                 * ------------------------------------------------------------
+                 * 幅の決め方が、縦書きと横書きで逆になる
+                 *
+                 *   横書き … 幅は 1 行の長さ。長すぎると目が戻る先を見失う。
+                 *            820px（40字前後）で止める。
+                 *   縦書き … 幅は「何行ぶん見えるか」。狭めても 1 行は短くならず、
+                 *            見える行数が減って左右が余るだけ。
+                 *            画面いっぱいまで使う。
+                 */}
+                <div
+                    className={[
+                        "mx-auto flex h-full w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded lg:shadow-none",
+                        isVertical ? "" : "max-w-[820px]",
+                    ].join(" ")}
+                >
                 <ManuscriptSurface
                     zoom={zoom}
                     settings={settings}

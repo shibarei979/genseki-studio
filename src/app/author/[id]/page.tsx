@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import TweetSection from '@/components/tweet-section'
+import MessageButton from '@/components/community/message-button'
 import Link from 'next/link'
 import FollowButton from '@/components/follow-button'
 import BlockButton from '@/components/block-button'
@@ -223,6 +224,8 @@ export default async function AuthorPage({ params }: Props) {
                   {!isMe && user && (
                     <>
                       <FollowButton authorId={params.id} userId={user.id} initialFollowing={isFollowing} followerCount={followerCount || 0}/>
+                <MessageButton targetId={params.id} userId={user.id}/>
+                      <MessageButton targetId={params.id} userId={user.id}/>
                       <BlockButton targetId={params.id} userId={user.id} initialBlocked={isBlocked} initialMuted={isMuted}/>
                     </>
                   )}
@@ -264,6 +267,7 @@ export default async function AuthorPage({ params }: Props) {
             {!isMe && user && (
               <div style={{flexShrink:0,display:'flex',gap:6}}>
                 <FollowButton authorId={params.id} userId={user.id} initialFollowing={isFollowing} followerCount={followerCount || 0}/>
+                <MessageButton targetId={params.id} userId={user.id}/>
                 <BlockButton targetId={params.id} userId={user.id} initialBlocked={isBlocked} initialMuted={isMuted}/>
               </div>
             )}
