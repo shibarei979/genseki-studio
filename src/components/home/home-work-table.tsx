@@ -105,8 +105,8 @@ const BOOK_WIDTH = 128;
 const BOOK_HEIGHT = 166;
 /** 本と本の間 */
 const BOOK_GAP = 24;
-/** 棚板の厚み */
-const SHELF_THICKNESS = 9;
+/** 棚板の厚み。薄いと線に見える */
+const SHELF_THICKNESS = 12;
 /** 棚板から次の段の本までの空き */
 const SHELF_GAP = 34;
 
@@ -269,48 +269,104 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                         const hash = hashOf(work.title || work.id);
                         const cover = COVERS[hash % COVERS.length];
 
+                        const newest = [...own].sort(
+                            (a, b) => b.ep_number - a.ep_number,
+                        )[0];
+
                         return (
-                            <li key={work.id}>
+                            <li key={work.id} className="relative">
                                 <Link
                                     href={`/workspace/${work.id}`}
-                                    className="flex items-center gap-3.5 px-4 py-3 hover:bg-canvas"
+                                    className="flex items-center gap-3.5 py-3 pl-4 pr-12 hover:bg-canvas"
                                 >
-                                    {/* 背表紙。棚の色をそのまま使う */}
-                                    <span
-                                        className="h-9 w-[26px] shrink-0 rounded-sm"
-                                        style={{
-                                            background: cover.base,
-                                            boxShadow:
-                                                "inset -1px 0 0 rgba(0,0,0,0.08)",
-                                        }}
-                                    />
+                                    {/*
+                                     * 小さな本。
+                                     *
+                                     * 平らな色板ではなく、棚と同じ作りを縮めて置く。
+                                     * 綴じ側の陰・紙の束・縁の線まで同じにすると、
+                                     * 棚と一覧を行き来しても同じ本に見える。
+                                     */}
+                                    <span className="relative h-12 w-[34px] shrink-0">
+                                        <span
+                                            className="absolute bottom-[1px] right-0 top-[1px] w-[4px] rounded-r-[2px]"
+                                            style={{
+                                                background:
+                                                    "repeating-linear-gradient(90deg, #ebe4d5 0 1px, #f8f4ec 1px 2px)",
+                                                boxShadow:
+                                                    "inset -1px 0 0 rgba(0,0,0,0.10)",
+                                            }}
+                                        />
+                                        <span
+                                            className="absolute inset-y-0 left-0 right-[3px] overflow-hidden rounded-l-[1px] rounded-r-[2px]"
+                                            style={{
+                                                background: cover.base,
+                                                boxShadow:
+                                                    "inset 0 0 0 1px rgba(0,0,0,0.07), 0 3px 6px -4px rgba(60,45,30,0.45)",
+                                            }}
+                                        >
+                                            <span
+                                                className="absolute inset-y-0 left-0 w-[4px]"
+                                                style={{
+                                                    background:
+                                                        "linear-gradient(90deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.05) 60%, rgba(255,255,255,0.30) 100%)",
+                                                }}
+                                            />
+                                            <span
+                                                className="absolute inset-0"
+                                                style={{
+                                                    background:
+                                                        "linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.06) 100%)",
+                                                }}
+                                            />
+                                        </span>
+                                    </span>
 
                                     <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-[13px] text-ink">
-                                            {work.title || "無題"}
+                                        <span className="flex items-center gap-2">
+                                            <span className="truncate text-[13px] font-medium text-ink">
+                                                {work.title || "無題"}
+                                            </span>
+                                            <span
+                                                className={`shrink-0 rounded px-1.5 py-px text-[10px] ${chip.className}`}
+                                            >
+                                                {chip.label}
+                                            </span>
                                         </span>
 
-                                        <span className="mt-0.5 flex items-center gap-2 text-[11px] text-muted">
+                                        {/* いま何話まで来ているか。棚では見えない情報 */}
+                                        <span className="mt-1 block truncate text-[11px] text-muted">
+                                            {newest
+                                                ? `第${newest.ep_number}話　${newest.title || "無題"}`
+                                                : "まだ話がありません"}
+                                        </span>
+
+                                        <span className="mt-0.5 flex items-center gap-2 text-[10px] text-faint">
                                             <span>
                                                 {own.length > 0
                                                     ? `全${own.length}話`
                                                     : `${formatNumber(work.total_char_count)}字`}
                                             </span>
-                                            <span className="text-faint">·</span>
-                                            <span className="text-faint">
+                                            <span>·</span>
+                                            <span className="tabular-nums">
+                                                更新{" "}
                                                 {work.updated_at
                                                     .slice(0, 10)
                                                     .replace(/-/g, "/")}
                                             </span>
                                         </span>
                                     </span>
-
-                                    <span
-                                        className={`shrink-0 rounded px-2 py-0.5 text-[10px] ${chip.className}`}
-                                    >
-                                        {chip.label}
-                                    </span>
                                 </Link>
+
+                                {/*
+                                 * 「⋮」。棚では出るのに一覧では消せなかった。
+                                 * 押す所の外に置き、行の押し先と混ざらないようにする。
+                                 */}
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                                    <RowMenu
+                                        work={work}
+                                        onDelete={() => void onDelete(work)}
+                                    />
+                                </span>
                             </li>
                         );
                     })}
@@ -348,26 +404,34 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                         gridAutoRows: `${BOOK_HEIGHT}px`,
                         columnGap: `${BOOK_GAP}px`,
                         rowGap: `${SHELF_THICKNESS + SHELF_GAP}px`,
-                        paddingBottom: `${SHELF_THICKNESS}px`,
+                        // 板の下へ落ちる影のぶん、最後の段のあとを広めに取る
+                        paddingBottom: `${SHELF_THICKNESS + 8}px`,
                         /*
-                         * 板の色は 3 段。
-                         *   上端  … 天板に当たる光
-                         *   中    … 木の面
-                         *   下端  … 手前の小口。ここを濃くすると厚みが出る
+                         * 板は 5 つの層で描く。
+                         *   光る縁    … 天板の角に当たる光。ここが無いと面から始まって平たい
+                         *   面        … 奥を明るく、手前へ向けて陰らせる。奥行きはこの傾き
+                         *   境の影線  … 天板と小口の折れ目。1px 暗くすると角が立つ
+                         *   小口      … 手前の厚み。面より濃い茶
+                         *   落ちる影  … 板の下へ淡くにじませる。浮いて見えるのはこれが無いから
                          *
-                         * 1 色の帯にすると、ただの線に見えて板にならない。
+                         * 同じ色を 2 度書かない所は、間がなだらかに混ざる。
+                         * 面の奥行きはそれで出している。
                          */
                         background: `repeating-linear-gradient(
                             to bottom,
                             transparent 0px,
                             transparent ${BOOK_HEIGHT}px,
-                            #dcbc93 ${BOOK_HEIGHT}px,
-                            #dcbc93 ${BOOK_HEIGHT + 2}px,
-                            #c49a6c ${BOOK_HEIGHT + 2}px,
-                            #c49a6c ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
-                            #96693c ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
-                            #96693c ${BOOK_HEIGHT + SHELF_THICKNESS}px,
-                            transparent ${BOOK_HEIGHT + SHELF_THICKNESS}px,
+                            #ecd3ab ${BOOK_HEIGHT}px,
+                            #e3c091 ${BOOK_HEIGHT + 2}px,
+                            #d8b488 ${BOOK_HEIGHT + 3}px,
+                            #c0925e ${BOOK_HEIGHT + SHELF_THICKNESS - 4}px,
+                            #855b30 ${BOOK_HEIGHT + SHELF_THICKNESS - 4}px,
+                            #855b30 ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
+                            #a5713d ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
+                            #8b5e32 ${BOOK_HEIGHT + SHELF_THICKNESS}px,
+                            rgba(70, 45, 20, 0.30) ${BOOK_HEIGHT + SHELF_THICKNESS}px,
+                            rgba(70, 45, 20, 0) ${BOOK_HEIGHT + SHELF_THICKNESS + 8}px,
+                            transparent ${BOOK_HEIGHT + SHELF_THICKNESS + 8}px,
                             transparent ${BOOK_HEIGHT + SHELF_THICKNESS + SHELF_GAP}px
                         )`,
                     }}
