@@ -105,10 +105,21 @@ const BOOK_WIDTH = 128;
 const BOOK_HEIGHT = 166;
 /** 本と本の間 */
 const BOOK_GAP = 24;
-/** 棚板の厚み。薄いと線に見える */
-const SHELF_THICKNESS = 12;
-/** 棚板から次の段の本までの空き */
-const SHELF_GAP = 34;
+/*
+ * 棚板の各面の高さ。
+ *
+ * 板は 3 つの面で出来ている。
+ *   上面 … 本が載る奥の板。明るい
+ *   前面 … 手前に見える木。明→中間→暗→最暗の 4 段
+ *   下面 … 板の裏。暗く、下へ溶ける
+ * 木目を描き込むより、面を分けるほうが板になる。
+ */
+const SHELF_TOP = 7;
+const SHELF_FRONT = 16;
+const SHELF_UNDER = 5;
+const SHELF_THICKNESS = SHELF_TOP + SHELF_FRONT + SHELF_UNDER;
+/** 棚板から次の段の本までの空き。板が厚くなったぶん詰めてある */
+const SHELF_GAP = 26;
 
 /**
  * 表紙の中の寸法。
@@ -407,30 +418,40 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                         // 板の下へ落ちる影のぶん、最後の段のあとを広めに取る
                         paddingBottom: `${SHELF_THICKNESS + 8}px`,
                         /*
-                         * 板は 5 つの層で描く。
-                         *   光る縁    … 天板の角に当たる光。ここが無いと面から始まって平たい
-                         *   面        … 奥を明るく、手前へ向けて陰らせる。奥行きはこの傾き
-                         *   境の影線  … 天板と小口の折れ目。1px 暗くすると角が立つ
-                         *   小口      … 手前の厚み。面より濃い茶
-                         *   落ちる影  … 板の下へ淡くにじませる。浮いて見えるのはこれが無いから
+                         * 面ごとの色。
                          *
-                         * 同じ色を 2 度書かない所は、間がなだらかに混ざる。
-                         * 面の奥行きはそれで出している。
+                         *   上面   光の線 1px → 明るい木（#efd19b→#d7a665）
+                         *   前面   細いハイライト 1px →
+                         *          明 #d8ae70 → 中間 #c58f4f(35%)
+                         *          → 暗 #a96f35(75%) → 最暗 #8b5728
+                         *          → 締めの線 #74451f 1px
+                         *   下面   #805026 から透明へ
+                         *   影     さらに下へ淡くにじませる
+                         *
+                         * 段ごとの要素に ::before/::after で面を付ける代わりに、
+                         * 同じ構造を繰り返し背景の色の段で描いている。
+                         * 段の折り返しが画面幅で変わるため、要素は置けない。
                          */
                         background: `repeating-linear-gradient(
                             to bottom,
                             transparent 0px,
                             transparent ${BOOK_HEIGHT}px,
-                            #ecd3ab ${BOOK_HEIGHT}px,
-                            #e3c091 ${BOOK_HEIGHT + 2}px,
-                            #d8b488 ${BOOK_HEIGHT + 3}px,
-                            #c0925e ${BOOK_HEIGHT + SHELF_THICKNESS - 4}px,
-                            #855b30 ${BOOK_HEIGHT + SHELF_THICKNESS - 4}px,
-                            #855b30 ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
-                            #a5713d ${BOOK_HEIGHT + SHELF_THICKNESS - 3}px,
-                            #8b5e32 ${BOOK_HEIGHT + SHELF_THICKNESS}px,
-                            rgba(70, 45, 20, 0.30) ${BOOK_HEIGHT + SHELF_THICKNESS}px,
-                            rgba(70, 45, 20, 0) ${BOOK_HEIGHT + SHELF_THICKNESS + 8}px,
+                            rgba(255, 255, 255, 0.8) ${BOOK_HEIGHT}px,
+                            rgba(255, 255, 255, 0.8) ${BOOK_HEIGHT + 1}px,
+                            #efd19b ${BOOK_HEIGHT + 1}px,
+                            #d7a665 ${BOOK_HEIGHT + SHELF_TOP}px,
+                            rgba(255, 255, 255, 0.7) ${BOOK_HEIGHT + SHELF_TOP}px,
+                            rgba(255, 255, 255, 0.7) ${BOOK_HEIGHT + SHELF_TOP + 1}px,
+                            #d8ae70 ${BOOK_HEIGHT + SHELF_TOP + 1}px,
+                            #c58f4f ${Math.round(BOOK_HEIGHT + SHELF_TOP + 1 + (SHELF_FRONT - 2) * 0.35)}px,
+                            #a96f35 ${Math.round(BOOK_HEIGHT + SHELF_TOP + 1 + (SHELF_FRONT - 2) * 0.75)}px,
+                            #8b5728 ${BOOK_HEIGHT + SHELF_TOP + SHELF_FRONT - 1}px,
+                            #74451f ${BOOK_HEIGHT + SHELF_TOP + SHELF_FRONT - 1}px,
+                            #74451f ${BOOK_HEIGHT + SHELF_TOP + SHELF_FRONT}px,
+                            #805026 ${BOOK_HEIGHT + SHELF_TOP + SHELF_FRONT}px,
+                            rgba(75, 42, 20, 0.15) ${BOOK_HEIGHT + SHELF_THICKNESS}px,
+                            rgba(50, 30, 15, 0.14) ${BOOK_HEIGHT + SHELF_THICKNESS}px,
+                            rgba(50, 30, 15, 0) ${BOOK_HEIGHT + SHELF_THICKNESS + 8}px,
                             transparent ${BOOK_HEIGHT + SHELF_THICKNESS + 8}px,
                             transparent ${BOOK_HEIGHT + SHELF_THICKNESS + SHELF_GAP}px
                         )`,
@@ -503,12 +524,17 @@ function Tile({
              * 本より少し狭く、下へはみ出させる。
              * 幅を揃えると、影ではなく台座に見える。
              */}
+            {/*
+             * 接地の影。
+             * 光は左上からなので、左を広く右を狭く敷く。
+             * ぼかして、本の底が板に触れている感じを出す。
+             */}
             <span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-x-2 -bottom-1 h-2 rounded-[50%] transition-opacity group-hover:opacity-70"
+                className="pointer-events-none absolute -bottom-1 left-[8%] right-[4%] h-[5px] transition-opacity group-hover:opacity-60"
                 style={{
-                    background:
-                        "radial-gradient(50% 60% at 50% 40%, rgba(70,50,30,0.34) 0%, rgba(70,50,30,0) 75%)",
+                    background: "rgba(70, 45, 25, 0.16)",
+                    filter: "blur(3px)",
                 }}
             />
 
@@ -517,7 +543,13 @@ function Tile({
                 title={`${work.title || "無題"}　${chip.label}　${amount}　更新 ${updated}`}
                 className="block h-full"
             >
-                <span className="relative block h-full transition-transform duration-200 group-hover:-translate-y-1">
+                <span
+                    className="relative block h-full transition-transform duration-200 group-hover:-translate-y-1"
+                    // 本そのものの影。左上からの光に合わせて右下へ落とす
+                    style={{
+                        filter: "drop-shadow(3px 3px 2px rgba(40, 35, 25, 0.12))",
+                    }}
+                >
                     {/*
                      * 小口（紙の束）。
                      *
@@ -549,8 +581,8 @@ function Tile({
                              * 縁の細い線で形を締め、下に落ちる影で棚に載せる。
                              * 1 枚で済ませると、濃くすれば汚れ、薄くすれば浮く。
                              */
-                            boxShadow:
-                                "inset 0 0 0 1px rgba(0,0,0,0.07), 0 6px 10px -6px rgba(60,45,30,0.45)",
+                            // 落ちる影は本全体の drop-shadow に譲った。ここは縁の線だけ
+                            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.07)",
                         }}
                     >
                         {/*
