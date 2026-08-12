@@ -127,17 +127,7 @@ export default function HomeClient() {
         void reload();
     }, [reload]);
 
-    const latest = [...works].sort((a, b) =>
-        compareDate(b.updated_at, a.updated_at),
-    )[0];
-
-    const side = (
-        <HomeSideCards
-            contests={contests}
-            notices={notices}
-            latestWorkId={latest?.id ?? null}
-        />
-    );
+    const side = <HomeSideCards contests={contests} notices={notices} />;
 
     return (
         <div className="page-with-footer bg-canvas">

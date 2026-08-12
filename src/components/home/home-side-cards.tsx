@@ -9,9 +9,9 @@
  * ヘッダーを端から端まで通したので、柱の上にもう一度置くと
  * 同じものが二段になって見える。
  *
- * 執筆室はここから外した。
- * 部屋は絵を見て選ぶものなので、右の広いところへ移した。
- * ここに残すのは「文字だけで足りるもの」に限る。
+ * 「執筆室に入る」はコミュニティー（/rooms）への入口。
+ * 前は「作品の続きを書く」だったが、続きは作品の一覧からも
+ * 入れるので、ここは部屋への近道に譲った。
  * ============================================================
  */
 
@@ -38,8 +38,6 @@ interface Props {
     contests: Contest[];
     /** 新しい順に並んだお知らせ */
     notices: SideNotice[];
-    /** 続きを書ける作品。無ければ「続きを書く」は出さない */
-    latestWorkId: string | null;
 }
 
 /** 「2026-07-18」も「2026/07/18」も「07/18」にする */
@@ -54,20 +52,20 @@ function dotDate(value: string | null | undefined): string {
     return value.slice(0, 10).replace(/-/g, ".");
 }
 
-export default function HomeSideCards({ contests, notices, latestWorkId }: Props) {
+export default function HomeSideCards({ contests, notices }: Props) {
     // 締切が近いものを先に出す
     const contest = [...contests].sort((a, b) =>
         compareDate(a.ends_at, b.ends_at),
     )[0];
 
     return (
-        <div className="space-y-5">
+        // pt-3: 柱の頭を少し下げ、右の作品の並びと目の高さを揃える
+        <div className="space-y-5 pt-3">
             {/*
              * 書きはじめる入口。
              *
-             * 新しく作るほうを濃く、続きを書くほうを白抜きにする。
+             * 新しく作るほうを濃く、部屋へ行くほうを白抜きにする。
              * 二つとも濃くすると、どちらを押すか一瞬迷う。
-             * 続きが無い人には二つ目を出さない。押せない入口は要らない。
              */}
             <div className="space-y-2">
                 <Link
@@ -78,15 +76,13 @@ export default function HomeSideCards({ contests, notices, latestWorkId }: Props
                     作品を描く
                 </Link>
 
-                {latestWorkId && (
-                    <Link
-                        href={`/workspace/${latestWorkId}`}
-                        className="flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-sm font-medium text-ink hover:border-forest-line hover:text-forest"
-                    >
-                        <BookIcon />
-                        作品の続きを書く
-                    </Link>
-                )}
+                <Link
+                    href="/rooms"
+                    className="flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-sm font-medium text-ink hover:border-forest-line hover:text-forest"
+                >
+                    <BookIcon />
+                    執筆室に入る
+                </Link>
             </div>
 
             {/* コンテスト */}
@@ -102,7 +98,7 @@ export default function HomeSideCards({ contests, notices, latestWorkId }: Props
                 ) : (
                     <Link
                         href={`/contest/${contest.id}`}
-                        className="relative mt-3 block overflow-hidden rounded-xl bg-forest-dark hover:opacity-95"
+                        className="group relative mt-3 block overflow-hidden rounded-xl bg-forest-dark"
                     >
                         {contest.banner_url && (
                             <ContestBanner
@@ -111,15 +107,15 @@ export default function HomeSideCards({ contests, notices, latestWorkId }: Props
                             />
                         )}
                         {/*
-                         * 絵の上に文字を置くので、必ず暗く伏せる。
-                         * 絵が無いときも同じ濃さになるよう、地色を濃紺にしてある。
+                         * 覆い。
+                         *
+                         * ふだんは単色で伏せ、文字だけを見せる。
+                         * 指を当てると覆いが薄くなり、下の絵が透けて見える。
+                         * 全部は透かさない。文字が絵に呑まれて読めなくなる。
+                         * 絵が無いときは下も同じ濃紺なので、何も変わらない。
                          */}
                         <span
-                            className="absolute inset-0"
-                            style={{
-                                background:
-                                    "linear-gradient(180deg, rgba(20,56,78,0.82) 0%, rgba(20,56,78,0.92) 100%)",
-                            }}
+                            className="absolute inset-0 bg-forest-dark transition-opacity duration-300 group-hover:opacity-40"
                             aria-hidden="true"
                         />
 
