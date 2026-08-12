@@ -458,6 +458,29 @@ export default function EpisodeEditor({
                 >
                 <button
                     type="button"
+                    onClick={handleNormalize}
+                    title={
+                        settings.writing_mode === "vertical"
+                            ? "半角英数字を全角に、... を …… に直し、段落の頭を字下げします"
+                            : "全角英数字を半角に、…… を ... に直します"
+                    }
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
+                >
+                    {settings.writing_mode === "vertical"
+                        ? "縦書き用に整える"
+                        : "横書き用に整える"}
+                </button>
+
+                {/*
+                 * 縦線。
+                 *
+                 * 左は書き方まわり、右は文字への加工。
+                 * 境目が無いと、どこまでが何の仲間か分からない。
+                 */}
+                <span aria-hidden className="h-4 w-px shrink-0 bg-line" />
+
+                <button
+                    type="button"
                     onClick={handleRuby}
                     title="選んだ文字にルビを振ります（｜親文字《ルビ》）"
                     className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
@@ -520,21 +543,6 @@ export default function EpisodeEditor({
                     className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
                 >
                     置換
-                </button>
-
-                <button
-                    type="button"
-                    onClick={handleNormalize}
-                    title={
-                        settings.writing_mode === "vertical"
-                            ? "半角英数字を全角に、... を …… に直し、段落の頭を字下げします"
-                            : "全角英数字を半角に、…… を ... に直します"
-                    }
-                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
-                >
-                    {settings.writing_mode === "vertical"
-                        ? "縦書き用に整える"
-                        : "横書き用に整える"}
                 </button>
 
                 {beforeNormalize !== null && (
