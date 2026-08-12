@@ -203,16 +203,19 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                 {/*
                  * 机の絵。
                  *
-                 * 札の右下の角へ、床ごと沈むように大きく置く。
-                 * mix-blend-multiply で絵の白い地を札の色に溶かす。
-                 * 枠の中に四角い絵が浮いて見えないようにするため。
+                 * 大きさは数字で決めない。札の高さに絵を合わせる。
+                 * 決め打ちの高さだと、文の行数が変わるたびに
+                 * はみ出したり小さすぎたりする。
+                 *
+                 * mix-blend-multiply で絵の白い地を札の色に溶かし、
+                 * 四角い絵が枠の中に浮いて見えないようにする。
                  */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src="/images/room-desk.webp"
                     alt=""
                     draggable={false}
-                    className="pointer-events-none absolute -right-2 bottom-0 h-[120px] w-auto select-none object-contain mix-blend-multiply"
+                    className="pointer-events-none absolute inset-y-1.5 right-1.5 h-[calc(100%-12px)] w-auto select-none object-contain object-right mix-blend-multiply"
                     aria-hidden="true"
                 />
             </Link>
@@ -246,7 +249,7 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                                     <Link
                                         href={`/contest/${contest.id}`}
                                         title={contest.title || "コンテスト"}
-                                        className="group/card relative block w-[200px] overflow-hidden rounded-lg border border-line"
+                                        className="group/card relative mx-auto block w-[200px] max-w-full overflow-hidden rounded-lg border border-line"
                                     >
                                         <span className="block aspect-video">
                                             <ContestBanner
