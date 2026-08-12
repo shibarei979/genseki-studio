@@ -144,30 +144,41 @@ export default function HomeBannerCarousel({ contests }: Props) {
                         {slide.kind === "contest" ? (
                             <Link
                                 href={`/contest/${slide.contest.id}`}
-                                className="relative block aspect-video"
+                                className="group/slide relative block aspect-video"
                             >
                                 <ContestBanner
                                     contest={slide.contest}
                                     className="absolute inset-0 h-full w-full"
                                 />
                                 {/*
-                                 * 下の縁だけ暗くして、題と締切を乗せる。
-                                 * 絵の全体は伏せない。ここは絵を見せる場所。
+                                 * 題と締切は、ふだんは出さない。絵だけを見せる。
+                                 * カーソルが乗ったら絵を少し暗くして、文字を出す。
+                                 * この幅（300px）に常時乗せると、絵も文字も窮屈になる。
+                                 *
+                                 * group/slide と名前を付けるのは、外の枠の group
+                                 * （矢印を出すためのもの）と混ざらないようにするため。
+                                 * 名前が無いと、枠に触れただけで文字まで出てしまう。
                                  */}
                                 <span
-                                    className="absolute inset-x-0 bottom-0"
-                                    style={{
-                                        background:
-                                            "linear-gradient(180deg, rgba(20,56,78,0) 0%, rgba(20,56,78,0.72) 100%)",
-                                    }}
+                                    className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/slide:opacity-100"
                                     aria-hidden="true"
-                                />
-                                <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 px-4 py-3 sm:px-5">
-                                    <span className="min-w-0 truncate text-[13px] font-semibold text-white sm:text-[14px]">
-                                        {slide.contest.title || "名前のないコンテスト"}
-                                    </span>
-                                    <span className="shrink-0 text-[11px] text-white/85">
-                                        応募締切：{dotDate(slide.contest.ends_at)}
+                                >
+                                    {/* 絵を少し暗くする。文字が絵に沈まない程度 */}
+                                    <span className="absolute inset-0 bg-[rgba(20,56,78,0.35)]" />
+                                    <span
+                                        className="absolute inset-x-0 bottom-0 h-16"
+                                        style={{
+                                            background:
+                                                "linear-gradient(180deg, rgba(20,56,78,0) 0%, rgba(20,56,78,0.7) 100%)",
+                                        }}
+                                    />
+                                    <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 px-3 py-2.5">
+                                        <span className="min-w-0 truncate text-[12px] font-semibold text-white">
+                                            {slide.contest.title || "名前のないコンテスト"}
+                                        </span>
+                                        <span className="shrink-0 text-[10px] text-white/85">
+                                            応募締切：{dotDate(slide.contest.ends_at)}
+                                        </span>
                                     </span>
                                 </span>
                             </Link>
