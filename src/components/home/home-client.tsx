@@ -19,7 +19,6 @@
 
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import Footer from "@/components/layout/footer";
@@ -27,28 +26,13 @@ import Header from "@/components/layout/header";
 import LoadError from "@/components/common/load-error";
 import HomeSideCards from "@/components/home/home-side-cards";
 import type { SideNotice } from "@/components/home/home-side-cards";
+import HomeBannerCarousel from "@/components/home/home-banner-carousel";
 import HomeHero from "@/components/home/home-hero";
 import HomeWorkTable from "@/components/home/home-work-table";
 import { getRepository } from "@/lib/repository";
 import { compareDate, NOTICES } from "@/types";
 import type { Contest, Episode, WorkWithStats } from "@/types";
 
-function PlusIcon() {
-    return (
-        <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            aria-hidden="true"
-        >
-            <path d="M12 5.5v13M5.5 12h13" />
-        </svg>
-    );
-}
 
 export default function HomeClient() {
     const [works, setWorks] = useState<WorkWithStats[]>([]);
@@ -127,7 +111,14 @@ export default function HomeClient() {
         void reload();
     }, [reload]);
 
-    const side = <HomeSideCards contests={contests} notices={notices} />;
+    const side = (
+        <HomeSideCards
+            contests={contests}
+            notices={notices}
+            works={works}
+            episodes={episodes}
+        />
+    );
 
     return (
         <div className="page-with-footer bg-canvas">
@@ -158,39 +149,13 @@ export default function HomeClient() {
                             <HomeHero />
 
                             {/*
-                             * はじめる。
+                             * 流れる帯。
                              *
-                             * 棚の上に置く。
-                             * 棚は「もう書いたもの」の場所なので、
-                             * 新しく始める入口を混ぜると、
-                             * 1 冊目を作るのに棚を探すことになる。
-                             *
-                             * 白い枠で囲まない。
-                             * 中身が札 1 枚しかないのに全幅の枠を引くと、
-                             * 右側が丸ごと空いて、置き忘れのように見える。
+                             * コンテストと運営のお知らせの絵をここで流す。
+                             * 「新しく書く」の札は柱に移したので、
+                             * 棚の上は知らせる場所に使う。
                              */}
-                            <section>
-                                <h2 className="text-[13px] font-semibold tracking-wide text-ink">
-                                    はじめる
-                                </h2>
-
-                                <Link
-                                    href="/post"
-                                    className="mt-2 flex w-[176px] flex-col items-center justify-center gap-1.5 rounded-xl border border-line bg-surface py-5 text-center hover:border-forest-line hover:bg-canvas"
-                                >
-                                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-tint text-forest">
-                                        <PlusIcon />
-                                    </span>
-                                    <span className="text-[13px] font-semibold text-ink">
-                                        新しく書く
-                                    </span>
-                                    <span className="text-[10px] leading-relaxed text-muted">
-                                        新しい物語を
-                                        <br />
-                                        はじめましょう
-                                    </span>
-                                </Link>
-                            </section>
+                            <HomeBannerCarousel contests={contests} />
 
                             {/*
                              * 作品を先に出す。
