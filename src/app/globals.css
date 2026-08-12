@@ -267,6 +267,39 @@ body {
 
 /*
  * ------------------------------------------------------------
+ * 縦書きの送り（横に動かすつまみ）
+ *
+ * 縦書きの本文はこれで動かすのに、細い線では気づかれない。
+ * 太くして、掴むと色が濃くなるようにする。
+ * ------------------------------------------------------------
+ */
+.page-scroll {
+    scrollbar-width: auto;
+    scrollbar-color: var(--color-forest-line) var(--color-canvas);
+}
+
+.page-scroll::-webkit-scrollbar {
+    height: 14px;
+    width: 8px;
+}
+
+.page-scroll::-webkit-scrollbar-track {
+    background: var(--color-canvas);
+    border-radius: 7px;
+}
+
+.page-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-forest-line);
+    border-radius: 7px;
+}
+
+.page-scroll::-webkit-scrollbar-thumb:hover,
+.page-scroll::-webkit-scrollbar-thumb:active {
+    background: var(--color-forest);
+}
+
+/*
+ * ------------------------------------------------------------
  * ミッションの「クリア！」ボタン
  *
  * 押せる状態のものだけをゆっくり光らせる。

@@ -356,6 +356,8 @@ export default function WorkspaceClient({ workId }: Props) {
                                 void recordProgress();
                             }}
                             onToggleWritingMode={() => void handleToggleWritingMode()}
+                            isFocusMode={isFocusMode}
+                            onToggleFocus={() => setIsFocusMode((on) => !on)}
                             onOpenHistory={() => {
                                 setIsHistoryOpen((open) => !open);
                                 setIsMentionsOpen(false);
@@ -438,14 +440,6 @@ export default function WorkspaceClient({ workId }: Props) {
                     )}
                 </main>
             </div>
-
-            <button
-                type="button"
-                onClick={() => setIsFocusMode((on) => !on)}
-                className="fixed bottom-5 right-5 rounded-full border border-line bg-surface px-4 py-2 text-[13px] text-muted shadow-sm hover:border-forest-line hover:text-forest"
-            >
-                {isFocusMode ? "集中モードを解除" : "集中モード"}
-            </button>
         </div>
     );
 }

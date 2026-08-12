@@ -42,6 +42,9 @@ interface Props {
     isReadOpen: boolean;
     /** 推敲パネルからの一括修正を受け取るための橋渡し */
     onRegisterBody: (body: string, apply: (next: string) => void) => void;
+    /** 集中モード。一覧やまわりを隠して本文だけにする */
+    isFocusMode?: boolean;
+    onToggleFocus?: () => void;
 }
 
 export default function EpisodeEditor({
@@ -61,6 +64,8 @@ export default function EpisodeEditor({
     onOpenRead,
     isReadOpen,
     onRegisterBody,
+    isFocusMode = false,
+    onToggleFocus,
 }: Props) {
     const [title, setTitle] = useState(episode.title);
     const [body, setBody] = useState(episode.body);
@@ -574,6 +579,33 @@ export default function EpisodeEditor({
                 </button>
 
                 {notice && <span className="text-forest">{notice}</span>}
+
+                {/*
+                 * 集中モード。
+                 *
+                 * 隅に浮かべていた頃は、本文やつまみに重なって邪魔だった。
+                 * 道具の列の右端に、拡大の印として置く。
+                 */}
+                {onToggleFocus && (
+                    <button
+                        type="button"
+                        onClick={onToggleFocus}
+                        aria-pressed={isFocusMode}
+                        title={
+                            isFocusMode
+                                ? "集中モードを解除します"
+                                : "一覧やまわりを隠して、本文だけにします"
+                        }
+                        className={[
+                            "shrink-0 rounded border p-1.5 lg:ml-auto",
+                            isFocusMode
+                                ? "border-forest bg-forest-tint text-forest"
+                                : "border-line bg-surface text-muted hover:border-forest-line hover:text-forest",
+                        ].join(" ")}
+                    >
+                        <FocusIcon on={isFocusMode} />
+                    </button>
+                )}
             </div>
 
             {/*
@@ -632,4 +664,29 @@ function SaveIndicator({ state, savedAt }: { state: string; savedAt: string | nu
     if (state === "pending") return <span className="text-faint">未保存の変更</span>;
     if (state === "saved" && savedAt) return <span>自動保存済み {formatTime(savedAt)}</span>;
     return <span className="text-faint">自動保存</span>;
+}
+
+/** 拡大の印。四隅のかぎ。集中モード中は内向きにして「戻す」を表す */
+function FocusIcon({ on = false }: { on?: boolean }) {
+    return (
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            {on ? (
+                <path
+                    d="M5 1v4H1M9 1v4h4M5 13V9H1M9 13V9h4"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            ) : (
+                <path
+                    d="M1 5V1h4M13 5V1H9M1 9v4h4M13 9v4H9"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            )}
+        </svg>
+    );
 }

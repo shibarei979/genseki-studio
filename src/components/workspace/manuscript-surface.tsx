@@ -117,6 +117,15 @@ export default function ManuscriptSurface({
                 <div
                     ref={gutterRef}
                     aria-hidden="true"
+                    /*
+                     * 縦書きの目盛りは、動かす箱そのものを rtl にする。
+                     *
+                     * 中身だけ rtl にすると、箱は ltr のまま数を数え、
+                     * 本文（右端が 0）と目盛り（左端が 0）で
+                     * scrollLeft の基準がずれる。
+                     * 目盛りが左端に張り付いて動かなかったのはこれ。
+                     */
+                    style={isVertical ? { direction: "rtl" } : undefined}
                     className={[
                         "shrink-0 select-none overflow-hidden text-faint",
                         isVertical
@@ -127,12 +136,17 @@ export default function ManuscriptSurface({
                     <div
                         style={{
                             fontSize: `${Math.max(9, scaled - 5)}px`,
-                            lineHeight: `${lineHeightPx}px`,
-                            writingMode: isVertical ? "vertical-rl" : "horizontal-tb",
-                            // 縦書きは右から始まるので、目盛りも右端から
-                            direction: isVertical ? "rtl" : "ltr",
+                            /*
+                             * 数字は縦に組まない。
+                             *
+                             * 本文と同じ vertical-rl にすると、数字まで縦に流れ、
+                             * 高さ 24px の帯の中で潰れて読めなくなる。
+                             * 帯は横のまま、並び順だけ右から左（rtl）にすれば、
+                             * 1 列目の番号が本文の 1 行目（右端）の上に来る。
+                             */
+                            lineHeight: isVertical ? "24px" : `${lineHeightPx}px`,
                         }}
-                        className={isVertical ? "h-6" : "pr-2"}
+                        className={isVertical ? "h-6 whitespace-nowrap" : "pr-2"}
                     >
                         {Array.from({ length: lineCount }, (_, index) => (
                             <div
@@ -174,15 +188,18 @@ export default function ManuscriptSurface({
                 wrap="soft"
                 style={style}
                 className={[
-                    "manuscript thin-scroll h-full w-full resize-none bg-transparent outline-none placeholder:text-faint",
+                    "manuscript h-full w-full resize-none bg-transparent outline-none placeholder:text-faint",
                     /*
                      * 送るのは本文欄。
                      * 縦書きは行が右から左へ伸びるので横へ、
                      * 横書きは上から下へ伸びるので縦へ送る。
+                     *
+                     * 縦書きのつまみは page-scroll（太いもの）。
+                     * 細い線だと気づかれず、掴みにくい。
                      */
                     isVertical
-                        ? "overflow-x-auto overflow-y-hidden px-6 py-8"
-                        : "overflow-y-auto overflow-x-hidden px-8 py-6",
+                        ? "page-scroll overflow-x-auto overflow-y-hidden px-6 py-8"
+                        : "thin-scroll overflow-y-auto overflow-x-hidden px-8 py-6",
                     // 目盛りを出すときは、そのぶん本文側の余白を詰める
                     showLineNumbers ? (isVertical ? "pt-2" : "pl-3") : "",
                 ].join(" ")}
