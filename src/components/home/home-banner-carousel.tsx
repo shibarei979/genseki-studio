@@ -112,7 +112,12 @@ export default function HomeBannerCarousel({ contests }: Props) {
     return (
         <section
             aria-label="コンテストとお知らせ"
-            className="group relative overflow-hidden rounded-xl border border-line bg-surface"
+            /*
+             * 大きさは縦横 9:16、幅は 480px まで。
+             * 端から端まで広げると画面の主役が帯になってしまう。
+             * 知らせは目に入る大きさで足りる。
+             */
+            className="group relative max-w-[480px] overflow-hidden rounded-xl border border-line bg-surface"
             onPointerEnter={() => {
                 pausedRef.current = true;
             }}
@@ -139,7 +144,7 @@ export default function HomeBannerCarousel({ contests }: Props) {
                         {slide.kind === "contest" ? (
                             <Link
                                 href={`/contest/${slide.contest.id}`}
-                                className="relative block aspect-[16/7] sm:aspect-[16/5]"
+                                className="relative block aspect-video"
                             >
                                 <ContestBanner
                                     contest={slide.contest}
@@ -170,7 +175,7 @@ export default function HomeBannerCarousel({ contests }: Props) {
                             <Link
                                 href={slide.banner.link_url}
                                 title={slide.banner.title}
-                                className="block aspect-[16/7] sm:aspect-[16/5]"
+                                className="block aspect-video"
                             >
                                 <EntryImage
                                     src={slide.banner.image_url}
@@ -180,7 +185,7 @@ export default function HomeBannerCarousel({ contests }: Props) {
                                 />
                             </Link>
                         ) : (
-                            <span className="block aspect-[16/7] sm:aspect-[16/5]">
+                            <span className="block aspect-video">
                                 <EntryImage
                                     src={slide.banner.image_url}
                                     alt={slide.banner.title}
