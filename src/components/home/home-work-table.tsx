@@ -133,7 +133,7 @@ const BOOK = {
  * 12 冊並んだときに画面が重くなる。
  * 棚に挿さった本は、背が明るいほうが探しやすい。
  */
-const COVERS = [
+export const COVERS = [
     { base: "#f4f1e8", ink: "#4a4238" },
     { base: "#2f3f5c", ink: "#f0ece2" },
     { base: "#dfe8db", ink: "#3f5040" },
@@ -420,7 +420,6 @@ function Tile({
 
     const hash = hashOf(work.title || work.id);
     const cover = COVERS[hash % COVERS.length];
-    const mark = MARKS[(hash >> 3) % MARKS.length];
 
     const updated = work.updated_at.slice(0, 10).replace(/-/g, "/");
     const amount =
@@ -528,17 +527,6 @@ function Tile({
                             </span>
                         </span>
 
-                        {/* 印 */}
-                        <span
-                            className="absolute left-1/2 -translate-x-1/2 opacity-60"
-                            style={{
-                                top: Math.round(BOOK_HEIGHT * 0.52),
-                                color: cover.ink,
-                            }}
-                        >
-                            <CoverMark name={mark} />
-                        </span>
-
                         {/*
                          * 状態と更新日。
                          * 読ませるためではなく、棚を眺めたときに
@@ -578,130 +566,11 @@ function Tile({
  * 意味は持たせない。題名から機械的に選ぶだけ。
  * 内容と合っていなくても、置き場所の目印にはなる。
  */
-type MarkName =
-    | "snow"
-    | "mountain"
-    | "moon"
-    | "star"
-    | "lamp"
-    | "line"
-    | "wave"
-    | "leaf"
-    | "gate"
-    | "compass"
-    | "drop"
-    | "key";
-
-const MARKS: MarkName[] = [
-    "snow",
-    "mountain",
-    "moon",
-    "star",
-    "lamp",
-    "line",
-    "wave",
-    "leaf",
-    "gate",
-    "compass",
-    "drop",
-    "key",
-];
-
-function CoverMark({ name }: { name: MarkName }) {
-    const common = {
-        width: 18,
-        height: 18,
-        viewBox: "0 0 24 24",
-        fill: "none",
-        stroke: "currentColor",
-        strokeWidth: 1.5,
-        strokeLinecap: "round" as const,
-        strokeLinejoin: "round" as const,
-        "aria-hidden": true,
-    };
-
-    if (name === "snow")
-        return (
-            <svg {...common}>
-                <path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9" />
-            </svg>
-        );
-    if (name === "mountain")
-        return (
-            <svg {...common}>
-                <path d="M3 18.5 9.5 7l4 6.5 2.5-3.5 5 8.5Z" />
-            </svg>
-        );
-    if (name === "moon")
-        return (
-            <svg {...common}>
-                <path d="M19 14.5A8 8 0 0 1 9.5 5a8 8 0 1 0 9.5 9.5Z" />
-            </svg>
-        );
-    if (name === "star")
-        return (
-            <svg {...common}>
-                <path d="m12 3.5 2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.9l6-.8Z" />
-            </svg>
-        );
-    if (name === "lamp")
-        return (
-            <svg {...common}>
-                <rect x="7" y="4" width="10" height="12" rx="1.5" />
-                <path d="M9.5 20.5h5M12 16v4.5M9.5 8h5" />
-            </svg>
-        );
-    if (name === "line")
-        return (
-            <svg {...common}>
-                <path d="M5 12h14" />
-            </svg>
-        );
-    if (name === "wave")
-        return (
-            <svg {...common}>
-                <path d="M3 10c2.5-3 4.5-3 7 0s4.5 3 7 0M3 16c2.5-3 4.5-3 7 0s4.5 3 7 0" />
-            </svg>
-        );
-    if (name === "leaf")
-        return (
-            <svg {...common}>
-                <path d="M5 19c0-8 5-13 14-14 1 9-4 14-11 14H5Z" />
-                <path d="M8 16c2-3 5-5 8-6" />
-            </svg>
-        );
-    if (name === "gate")
-        return (
-            <svg {...common}>
-                <path d="M3.5 6.5h17M5 9.5h14M7 9.5v11M17 9.5v11" />
-            </svg>
-        );
-    if (name === "compass")
-        return (
-            <svg {...common}>
-                <circle cx="12" cy="12" r="8.5" />
-                <path d="m15 9-2 5-4 1 2-5Z" />
-            </svg>
-        );
-    if (name === "drop")
-        return (
-            <svg {...common}>
-                <path d="M12 3.5c3.5 4.2 5.5 6.8 5.5 9.5a5.5 5.5 0 0 1-11 0c0-2.7 2-5.3 5.5-9.5Z" />
-            </svg>
-        );
-    return (
-        <svg {...common}>
-            <circle cx="8.5" cy="8.5" r="4" />
-            <path d="m11.5 11.5 8 8M16.5 16.5l-2 2M19 19l-1.5 1.5" />
-        </svg>
-    );
-}
-
 /**
  * 題名から数を作る。同じ題名なら必ず同じ数になる。
  * 表紙の色と印を選ぶのに使う。
  */
-function hashOf(text: string): number {
+export function hashOf(text: string): number {
     let value = 0;
     for (let index = 0; index < text.length; index += 1) {
         value = (value * 131 + text.charCodeAt(index)) % 100003;

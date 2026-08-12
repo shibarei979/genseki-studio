@@ -23,6 +23,7 @@ import Link from "next/link";
 import { compareDate } from "@/types";
 import type { Contest, Episode, WorkWithStats } from "@/types";
 import { formatNumber } from "@/lib/utils/text";
+import { COVERS, hashOf } from "@/components/home/home-work-table";
 
 /** ホームで出すお知らせ。運営のものと組み込みのものを同じ形にして受ける */
 export interface SideNotice {
@@ -69,24 +70,6 @@ function slashDate(value: string): string {
     return value.slice(0, 10).replace(/-/g, "/");
 }
 
-/**
- * 小さな表紙の色。
- *
- * 表紙の絵は柱には小さすぎるので、色と頭文字で見分ける。
- * 棚と同じく、淡い紙の色から作品ごとに 1 つ選ぶ。
- */
-const COVER_TONES = [
-    { base: "#e3e8dc", ink: "#4c5a3f" },
-    { base: "#dde7ec", ink: "#37505f" },
-    { base: "#f0e3e0", ink: "#6b4a44" },
-    { base: "#efe9d9", ink: "#5a4e30" },
-];
-
-function coverTone(id: string) {
-    let sum = 0;
-    for (const ch of id) sum = (sum + ch.charCodeAt(0)) % COVER_TONES.length;
-    return COVER_TONES[sum];
-}
 
 export default function HomeSideCards({ contests, notices, works, episodes }: Props) {
     // いちばん最近さわった作品
@@ -113,28 +96,31 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
     return (
         // pt-3: 柱の頭を少し下げ、右の並びと目の高さを揃える
         <div className="space-y-5 pt-3">
-            {/* つづきから書く */}
+            {/* つづきから書く。見出しは置かない。札を見れば分かる */}
             <section>
-                <h2 className="text-[13px] font-semibold tracking-wide text-ink">
-                    つづきから書く <span aria-hidden="true">〜</span>
-                </h2>
-
-                <div className="mt-2.5 rounded-xl border border-line bg-surface p-3.5">
+                <div className="rounded-xl border border-line bg-surface p-3.5">
                     {latest && (
                         <>
                             <div className="flex gap-3">
-                                {/* 小さな表紙。色と頭文字で見分ける */}
+                                {/*
+                                 * 小さな表紙。
+                                 * 棚と同じ式で色を選ぶので、柱の本と棚の本が
+                                 * 必ず同じ色になる。字は入れない。
+                                 * この大きさに入れても読めず、汚れて見える。
+                                 */}
                                 <span
-                                    className="flex h-14 w-10 shrink-0 items-center justify-center rounded-[3px] border border-black/5 text-[12px] font-medium"
+                                    className="h-14 w-10 shrink-0 rounded-[3px]"
                                     style={{
-                                        backgroundColor: coverTone(latest.id).base,
-                                        color: coverTone(latest.id).ink,
-                                        writingMode: "vertical-rl",
+                                        background:
+                                            COVERS[
+                                                hashOf(latest.title || latest.id) %
+                                                    COVERS.length
+                                            ].base,
+                                        boxShadow:
+                                            "inset 0 0 0 1px rgba(0,0,0,0.07), inset 3px 0 0 rgba(0,0,0,0.10)",
                                     }}
                                     aria-hidden="true"
-                                >
-                                    {latest.title.slice(0, 3)}
-                                </span>
+                                />
 
                                 <div className="min-w-0 flex-1">
                                     <p className="truncate text-[13px] font-semibold text-ink">
@@ -231,12 +217,18 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                 </div>
             </Link>
 
-            {/* コンテスト。ここは文字だけ。絵は右の流れる帯に出ている */}
-            <section>
+            {/*
+             * コンテストとお知らせ。
+             *
+             * もらった絵のとおり、2 つで 1 枚の白い札にまとめる。
+             * 見出しは札の中に置く。絵はここには出さない。
+             * 絵は右の流れる帯にある。
+             */}
+            <section className="rounded-xl border border-line bg-surface p-3.5">
                 <SectionHead title="開催中のコンテスト" href="/contest" />
 
                 {shownContests.length === 0 ? (
-                    <p className="mt-2.5 rounded-xl border border-line bg-surface px-4 py-4 text-[11px] leading-relaxed text-muted">
+                    <p className="mt-2.5 text-[11px] leading-relaxed text-muted">
                         現在開催中のコンテストはございません。
                         <br />
                         開始しましたら通知にてお知らせいたします。
@@ -247,18 +239,18 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                             <li key={contest.id}>
                                 <Link
                                     href={`/contest/${contest.id}`}
-                                    className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-3 hover:border-forest-line"
+                                    className="flex items-center gap-2 rounded-lg border border-line px-3.5 py-2.5 hover:border-forest-line"
                                 >
                                     <span className="min-w-0 flex-1">
                                         <span className="block truncate text-[12px] font-semibold text-ink">
                                             {contest.title || "名前のないコンテスト"}
                                         </span>
                                         {contest.catchphrase && (
-                                            <span className="mt-1 block truncate text-[11px] text-muted">
+                                            <span className="mt-0.5 block truncate text-[11px] text-muted">
                                                 {contest.catchphrase}
                                             </span>
                                         )}
-                                        <span className="mt-1 block text-[11px] text-muted">
+                                        <span className="mt-0.5 block text-[11px] text-muted">
                                             応募締切 {dotDate(contest.ends_at)}
                                         </span>
                                     </span>
@@ -273,19 +265,16 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                         ))}
                     </ul>
                 )}
-            </section>
 
-            {/* お知らせ */}
-            <section>
-                <SectionHead title="お知らせ" href="/notices" />
+                <div className="mt-4 border-t border-line/70 pt-3.5">
+                    <SectionHead title="お知らせ" href="/notices" />
 
-                <div className="mt-2.5 rounded-xl border border-line bg-surface px-4 py-3.5">
                     {notices.length === 0 ? (
-                        <p className="py-2 text-xs leading-relaxed text-muted">
+                        <p className="mt-2 text-xs leading-relaxed text-muted">
                             まだお知らせはありません。
                         </p>
                     ) : (
-                        <ul className="divide-y divide-line/70">
+                        <ul className="mt-1.5 divide-y divide-line/70">
                             {notices.slice(0, 4).map((notice) => {
                                 const inner = (
                                     <>
@@ -299,7 +288,7 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                                 );
 
                                 return (
-                                    <li key={notice.id} className="py-2 first:pt-0 last:pb-0">
+                                    <li key={notice.id} className="py-2 last:pb-0">
                                         {notice.link ? (
                                             <Link
                                                 href={notice.link}
@@ -319,6 +308,7 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                     )}
                 </div>
             </section>
+
         </div>
     );
 }
