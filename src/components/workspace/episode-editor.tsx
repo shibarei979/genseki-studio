@@ -304,7 +304,13 @@ export default function EpisodeEditor({
     }, [jumpToLine, onJumped]);
 
     return (
-        <div className="flex h-full flex-col overflow-hidden rounded-lg border border-line bg-surface">
+        <div
+            className={[
+                "flex h-full flex-col overflow-hidden bg-surface",
+                // 集中モードは画面の端まで使う。枠と角丸は普段だけ
+                isFocusMode ? "" : "rounded-lg border border-line",
+            ].join(" ")}
+        >
             {/*
              * 上の帯。
              *

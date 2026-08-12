@@ -251,15 +251,29 @@ export default function WorkspaceClient({ workId }: Props) {
 
     return (
         <div className="flex h-screen flex-col bg-page">
-            <Header
-                breadcrumbs={[
-                    { label: "作品一覧", href: "/" },
-                    { label: "ワークスペース" },
-                    { label: "執筆" },
-                ]}
-            />
+            {/*
+             * 集中モードでは、ヘッダーごと消す。
+             *
+             * 「書く所だけを映す」がこのモードの約束。
+             * 周りの余白も詰めて、画面の端まで紙にする。
+             * 戻る道は道具の列の拡大の印（同じボタン）。
+             */}
+            {!isFocusMode && (
+                <Header
+                    breadcrumbs={[
+                        { label: "作品一覧", href: "/" },
+                        { label: "ワークスペース" },
+                        { label: "執筆" },
+                    ]}
+                />
+            )}
 
-            <div className="flex min-h-0 flex-1 gap-2.5 p-2.5 sm:gap-4 sm:p-3">
+            <div
+                className={[
+                    "flex min-h-0 flex-1",
+                    isFocusMode ? "" : "gap-2.5 p-2.5 sm:gap-4 sm:p-3",
+                ].join(" ")}
+            >
                 {/*
                  * 話の一覧。
                  *
