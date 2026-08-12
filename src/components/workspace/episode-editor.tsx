@@ -272,7 +272,6 @@ export default function EpisodeEditor({
     }
 
     const otherMode = settings.writing_mode === "vertical" ? "horizontal" : "vertical";
-    const isVertical = settings.writing_mode === "vertical";
 
     /*
      * 資料から飛んできたら、その行へ動かして選ぶ。
@@ -592,21 +591,11 @@ export default function EpisodeEditor({
                  *
                  * 送るのは本文欄。紙は画面いっぱいのまま動かさない。
                  *
-                 * ------------------------------------------------------------
-                 * 幅の決め方が、縦書きと横書きで逆になる
-                 *
-                 *   横書き … 幅は 1 行の長さ。長すぎると目が戻る先を見失う。
-                 *            820px（40字前後）で止める。
-                 *   縦書き … 幅は「何行ぶん見えるか」。狭めても 1 行は短くならず、
-                 *            見える行数が減って左右が余るだけ。
-                 *            画面いっぱいまで使う。
+                 * 幅は縦書きも横書きも画面いっぱい。
+                 * 以前は横書きだけ 820px で止めていたが、
+                 * 広く書きたいとの声で外した。
                  */}
-                <div
-                    className={[
-                        "mx-auto flex h-full w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded",
-                        isVertical ? "" : "max-w-[820px]",
-                    ].join(" ")}
-                >
+                <div className="mx-auto flex h-full w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded">
                 <ManuscriptSurface
                     zoom={zoom}
                     settings={settings}
