@@ -164,19 +164,17 @@ export default function HomeBannerCarousel({ contests }: Props) {
                                     aria-hidden="true"
                                 >
                                     {/* 絵を少し暗くする。文字が絵に沈まない程度 */}
-                                    <span className="absolute inset-0 bg-[rgba(20,56,78,0.35)]" />
-                                    <span
-                                        className="absolute inset-x-0 bottom-0 h-16"
-                                        style={{
-                                            background:
-                                                "linear-gradient(180deg, rgba(20,56,78,0) 0%, rgba(20,56,78,0.7) 100%)",
-                                        }}
-                                    />
-                                    <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 px-3 py-2.5">
-                                        <span className="min-w-0 truncate text-[12px] font-semibold text-white">
+                                    <span className="absolute inset-0 bg-[rgba(20,56,78,0.45)]" />
+                                    {/*
+                                     * 文字は絵の真ん中に置く。
+                                     * 下の縁に寄せると、この幅では題が途中で切れる。
+                                     * 真ん中なら 2 行まで折り返せる。
+                                     */}
+                                    <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 text-center">
+                                        <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-white">
                                             {slide.contest.title || "名前のないコンテスト"}
                                         </span>
-                                        <span className="shrink-0 text-[10px] text-white/85">
+                                        <span className="text-[10px] text-white/85">
                                             応募締切：{dotDate(slide.contest.ends_at)}
                                         </span>
                                     </span>

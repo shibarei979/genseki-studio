@@ -59,12 +59,6 @@ function shortDate(value: string): string {
     return parts.length >= 3 ? `${parts[1]}/${parts[2]}` : value;
 }
 
-/** 締切の見せ方。点で区切ると日付として読みやすい */
-function dotDate(value: string | null | undefined): string {
-    if (!value) return "未定";
-    return value.slice(0, 10).replace(/-/g, ".");
-}
-
 /** 更新日の見せ方。斜線で区切る */
 function slashDate(value: string): string {
     return value.slice(0, 10).replace(/-/g, "/");
@@ -227,38 +221,30 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
             <section className="rounded-xl border border-line bg-surface p-3.5">
                 <SectionHead title="開催中のコンテスト" href="/contest" />
 
+                {/*
+                 * お知らせと同じ、線で仕切った行の形にする。
+                 * 枠で囲った札より静かで、柱の中で顔が揃う。
+                 * 左の日付は締切。書かないと何の日か分からない。
+                 */}
                 {shownContests.length === 0 ? (
-                    <p className="mt-2.5 text-[11px] leading-relaxed text-muted">
+                    <p className="mt-2 text-xs leading-relaxed text-muted">
                         現在開催中のコンテストはございません。
                         <br />
                         開始しましたら通知にてお知らせいたします。
                     </p>
                 ) : (
-                    <ul className="mt-2.5 space-y-2">
+                    <ul className="mt-1.5 divide-y divide-line/70">
                         {shownContests.map((contest) => (
-                            <li key={contest.id}>
+                            <li key={contest.id} className="py-2 last:pb-0">
                                 <Link
                                     href={`/contest/${contest.id}`}
-                                    className="flex items-center gap-2 rounded-lg border border-line px-3.5 py-2.5 hover:border-forest-line"
+                                    className="flex items-center gap-2.5 hover:text-forest"
                                 >
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-[12px] font-semibold text-ink">
-                                            {contest.title || "名前のないコンテスト"}
-                                        </span>
-                                        {contest.catchphrase && (
-                                            <span className="mt-0.5 block truncate text-[11px] text-muted">
-                                                {contest.catchphrase}
-                                            </span>
-                                        )}
-                                        <span className="mt-0.5 block text-[11px] text-muted">
-                                            応募締切 {dotDate(contest.ends_at)}
-                                        </span>
+                                    <span className="shrink-0 text-[11px] tabular-nums text-faint">
+                                        {shortDate(contest.ends_at)}締切
                                     </span>
-                                    <span
-                                        className="shrink-0 text-muted"
-                                        aria-hidden="true"
-                                    >
-                                        ›
+                                    <span className="min-w-0 flex-1 truncate text-[12px] text-ink">
+                                        {contest.title || "名前のないコンテスト"}
                                     </span>
                                 </Link>
                             </li>
