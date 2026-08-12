@@ -24,6 +24,7 @@ import { compareDate } from "@/types";
 import type { Contest, Episode, WorkWithStats } from "@/types";
 import { formatNumber } from "@/lib/utils/text";
 import { COVERS, hashOf } from "@/components/home/home-work-table";
+import ContestBanner from "@/components/common/contest-banner";
 
 /** ホームで出すお知らせ。運営のものと組み込みのものを同じ形にして受ける */
 export interface SideNotice {
@@ -183,32 +184,37 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
              */}
             <Link
                 href="/rooms"
-                className="block overflow-hidden rounded-xl border border-forest-line/60 bg-forest-tint/60 hover:border-forest-line"
+                className="relative block overflow-hidden rounded-xl border border-forest-line/60 bg-forest-tint/60 hover:border-forest-line"
             >
-                <div className="flex items-center gap-3 p-3.5">
-                    <div className="min-w-0 flex-1">
-                        <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
-                            <RoomIcon />
-                            執筆室に入る
-                        </p>
-                        <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-                            静かな部屋で、
-                            <br />
-                            誰かと一緒に書く
-                        </p>
-                        <span className="mt-2.5 inline-flex items-center gap-1 rounded-md border border-line bg-surface px-3 py-1.5 text-[11px] text-ink">
-                            執筆室へ <span aria-hidden="true">→</span>
-                        </span>
-                    </div>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        src="/images/room-desk.webp"
-                        alt=""
-                        draggable={false}
-                        className="h-24 w-24 shrink-0 object-contain"
-                        aria-hidden="true"
-                    />
+                <div className="relative z-10 p-3.5 pr-28">
+                    <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+                        <RoomIcon />
+                        執筆室に入る
+                    </p>
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+                        静かな部屋で、
+                        <br />
+                        誰かと一緒に書く
+                    </p>
+                    <span className="mt-2.5 inline-flex items-center gap-1 rounded-md border border-line bg-surface px-3 py-1.5 text-[11px] text-ink">
+                        執筆室へ <span aria-hidden="true">→</span>
+                    </span>
                 </div>
+                {/*
+                 * 机の絵。
+                 *
+                 * 札の右下の角へ、床ごと沈むように大きく置く。
+                 * mix-blend-multiply で絵の白い地を札の色に溶かす。
+                 * 枠の中に四角い絵が浮いて見えないようにするため。
+                 */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src="/images/room-desk.webp"
+                    alt=""
+                    draggable={false}
+                    className="pointer-events-none absolute -right-2 bottom-0 h-[120px] w-auto select-none object-contain mix-blend-multiply"
+                    aria-hidden="true"
+                />
             </Link>
 
             {/*
@@ -222,9 +228,9 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                 <SectionHead title="開催中のコンテスト" href="/contest" />
 
                 {/*
-                 * お知らせと同じ、線で仕切った行の形にする。
-                 * 枠で囲った札より静かで、柱の中で顔が揃う。
-                 * 左の日付は締切。書かないと何の日か分からない。
+                 * 絵で見せる。右の流れる帯と同じ置き方の小さい版（幅 200px）。
+                 * カーソルを当てると少し暗くなり、押せるものだと分かる。
+                 * 絵の無いコンテストは、締切と題の行で出す。
                  */}
                 {shownContests.length === 0 ? (
                     <p className="mt-2 text-xs leading-relaxed text-muted">
@@ -233,20 +239,39 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                         開始しましたら通知にてお知らせいたします。
                     </p>
                 ) : (
-                    <ul className="mt-1.5 divide-y divide-line/70">
+                    <ul className="mt-2.5 space-y-2.5">
                         {shownContests.map((contest) => (
-                            <li key={contest.id} className="py-2 last:pb-0">
-                                <Link
-                                    href={`/contest/${contest.id}`}
-                                    className="flex items-center gap-2.5 hover:text-forest"
-                                >
-                                    <span className="shrink-0 text-[11px] tabular-nums text-faint">
-                                        {shortDate(contest.ends_at)}締切
-                                    </span>
-                                    <span className="min-w-0 flex-1 truncate text-[12px] text-ink">
-                                        {contest.title || "名前のないコンテスト"}
-                                    </span>
-                                </Link>
+                            <li key={contest.id}>
+                                {contest.banner_url ? (
+                                    <Link
+                                        href={`/contest/${contest.id}`}
+                                        title={contest.title || "コンテスト"}
+                                        className="group/card relative block w-[200px] overflow-hidden rounded-lg border border-line"
+                                    >
+                                        <span className="block aspect-video">
+                                            <ContestBanner
+                                                contest={contest}
+                                                className="h-full w-full"
+                                            />
+                                        </span>
+                                        <span
+                                            className="absolute inset-0 bg-[rgba(20,56,78,0.28)] opacity-0 transition-opacity duration-300 group-hover/card:opacity-100"
+                                            aria-hidden="true"
+                                        />
+                                    </Link>
+                                ) : (
+                                    <Link
+                                        href={`/contest/${contest.id}`}
+                                        className="flex items-center gap-2.5 py-1 hover:text-forest"
+                                    >
+                                        <span className="shrink-0 text-[11px] tabular-nums text-faint">
+                                            {shortDate(contest.ends_at)}締切
+                                        </span>
+                                        <span className="min-w-0 flex-1 truncate text-[12px] text-ink">
+                                            {contest.title || "名前のないコンテスト"}
+                                        </span>
+                                    </Link>
+                                )}
                             </li>
                         ))}
                     </ul>
