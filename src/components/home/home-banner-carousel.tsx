@@ -113,11 +113,11 @@ export default function HomeBannerCarousel({ contests }: Props) {
         <section
             aria-label="コンテストとお知らせ"
             /*
-             * 大きさは縦横 9:16、幅は 480px まで。
+             * 大きさは縦横 9:16、幅は 300px まで。
              * 端から端まで広げると画面の主役が帯になってしまう。
              * 知らせは目に入る大きさで足りる。
              */
-            className="group relative max-w-[480px] overflow-hidden rounded-xl border border-line bg-surface"
+            className="group relative max-w-[300px] overflow-hidden rounded-xl border border-line bg-surface"
             onPointerEnter={() => {
                 pausedRef.current = true;
             }}
