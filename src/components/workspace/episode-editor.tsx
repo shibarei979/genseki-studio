@@ -578,7 +578,7 @@ export default function EpisodeEditor({
              */}
             <div
                 ref={surfaceRef}
-                className="relative flex min-h-0 flex-1 overflow-hidden bg-canvas p-0 sm:p-3 lg:bg-surface lg:p-0"
+                className="relative flex min-h-0 flex-1 overflow-hidden bg-canvas p-0 sm:p-4"
             >
                 {/*
                  * 白い紙。
@@ -603,7 +603,7 @@ export default function EpisodeEditor({
                  */}
                 <div
                     className={[
-                        "mx-auto flex h-full w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded lg:shadow-none",
+                        "mx-auto flex h-full w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded",
                         isVertical ? "" : "max-w-[820px]",
                     ].join(" ")}
                 >
