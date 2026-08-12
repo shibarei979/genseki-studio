@@ -184,9 +184,35 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
              */}
             <Link
                 href="/rooms"
-                className="relative block overflow-hidden rounded-xl border border-forest-line/60 bg-forest-tint/60 hover:border-forest-line"
+                className="relative block overflow-hidden rounded-xl border border-forest-line/60 bg-surface hover:border-forest-line"
             >
-                <div className="relative z-10 p-3.5 pr-28">
+                {/*
+                 * 机の絵は札いっぱいに敷く。
+                 * 収めようとするから余りが出る。地にしてしまえば余りは無い。
+                 * 右寄せで切り出し、机と窓が残るようにする。
+                 */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src="/images/room-desk.webp"
+                    alt=""
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full select-none object-cover object-right"
+                    aria-hidden="true"
+                />
+                {/*
+                 * 白のかぶせ。
+                 * 文字の側を白く塗り、絵との境目はなだらかに透かす。
+                 * 端をくっきり切ると、絵を白い紙で隠したように見える。
+                 */}
+                <span
+                    className="absolute inset-0"
+                    style={{
+                        background:
+                            "linear-gradient(90deg, #ffffff 0%, #ffffff 42%, rgba(255,255,255,0) 80%)",
+                    }}
+                    aria-hidden="true"
+                />
+                <div className="relative z-10 p-3.5 pr-24">
                     <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                         <RoomIcon />
                         執筆室に入る
@@ -200,24 +226,6 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                         執筆室へ <span aria-hidden="true">→</span>
                     </span>
                 </div>
-                {/*
-                 * 机の絵。
-                 *
-                 * 大きさは数字で決めない。札の高さに絵を合わせる。
-                 * 決め打ちの高さだと、文の行数が変わるたびに
-                 * はみ出したり小さすぎたりする。
-                 *
-                 * mix-blend-multiply で絵の白い地を札の色に溶かし、
-                 * 四角い絵が枠の中に浮いて見えないようにする。
-                 */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                    src="/images/room-desk.webp"
-                    alt=""
-                    draggable={false}
-                    className="pointer-events-none absolute inset-y-1.5 right-1.5 h-[calc(100%-12px)] w-auto select-none object-contain object-right mix-blend-multiply"
-                    aria-hidden="true"
-                />
             </Link>
 
             {/*
