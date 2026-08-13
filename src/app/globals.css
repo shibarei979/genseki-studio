@@ -445,6 +445,14 @@ body {
 .leaf-page {
     position: relative;
     isolation: isolate;
+    /*
+     * page-with-footer と同じ骨組みにする。
+     * 縦に積んで中身を伸ばせば、短いページでも
+     * フッターまでの余白は footer-below-fold の 18rem に揃う。
+     * これが無いと、画面の高さの余りと余白が二重に足される。
+     */
+    display: flex;
+    flex-direction: column;
     min-height: calc(100vh - 72px);
 
     /* 完全な白ではなく、ごくわずかに温かい地の色 */
@@ -503,6 +511,7 @@ body {
  */
 
 .leaf-page__content {
+    flex: 1 0 auto;
     width: min(1200px, calc(100% - 48px));
     margin-inline: auto;
     padding-top: 58px;
@@ -843,12 +852,13 @@ body {
 }
 
 /*
- * フッターは必ず最後に。
- * 中身が短くても、上の余りに押し下げられる。
+ * ここに「.page-with-footer > footer { margin-top: auto; }」を
+ * 置いてはいけない。
+ *
+ * auto は footer-below-fold の余白（18rem）より強く、
+ * ホーム系のページだけ余白が消えていた。
+ * フッターの押し下げは、中身側の flex: 1 0 auto が既に担っている。
  */
-.page-with-footer > footer {
-    margin-top: auto;
-}
 
 /**
  * ============================================================
