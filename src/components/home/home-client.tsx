@@ -135,8 +135,17 @@ export default function HomeClient() {
                      * ヘッダー（高さ 56px）のすぐ下に貼りつけ、
                      * 柱の中身が画面より長くなったときは柱の中だけを送る。
                      */}
-                    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[300px] shrink-0 overflow-y-auto border-r border-line bg-surface px-5 py-5 xl:block">
-                        {side}
+                    {/*
+                     * 白い地と縦の線は外側の aside に持たせ、
+                     * 頁の下（フッターの手前）まで伸ばす。
+                     * 貼りつくのは中の箱だけ。
+                     * 貼りつく箱に地を持たせると、中身の高さで白が切れて、
+                     * 柱の下だけ灰色が覗く。
+                     */}
+                    <aside className="hidden w-[300px] shrink-0 border-r border-line bg-surface xl:block">
+                        <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
+                            {side}
+                        </div>
                     </aside>
 
                     {/* 右 */}
