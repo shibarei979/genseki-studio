@@ -436,10 +436,13 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                         }
 
                         return rows.map((row, rowIndex) => (
-                            <div key={rowIndex} className="book-shelf-area">
+                            <div
+                                key={rowIndex}
+                                className="book-shelf-area mx-auto sm:mx-0"
+                            >
                                 {/* 本は板より前（z-3）。板が本の前に出ないように */}
                                 <ul
-                                    className="relative z-[3] flex items-end justify-center sm:justify-start"
+                                    className="relative z-[3] flex items-end"
                                     style={{
                                         columnGap: `${BOOK_GAP}px`,
                                         minHeight: `${BOOK_HEIGHT}px`,
