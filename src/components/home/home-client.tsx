@@ -142,7 +142,7 @@ export default function HomeClient() {
                      * 貼りつく箱に地を持たせると、中身の高さで白が切れて、
                      * 柱の下だけ灰色が覗く。
                      */}
-                    <aside className="hidden w-[300px] shrink-0 border-r border-line bg-surface xl:block">
+                    <aside className="hidden w-[200px] shrink-0 border-r border-line bg-surface xl:block">
                         <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
                             {side}
                         </div>
