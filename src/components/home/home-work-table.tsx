@@ -465,6 +465,32 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                             onDelete={() => void onDelete(work)}
                         />
                     ))}
+
+                    {/*
+                     * 新しい本の置き場。
+                     *
+                     * 並びの最後に、点線の枠で 1 冊ぶん空けておく。
+                     * 「ここに次の本が入る」という誘い。
+                     * 本と同じ棚に立たせるので、大きさも 1 冊と同じ。
+                     */}
+                    <li>
+                        <Link
+                            href="/post"
+                            className="flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-md border-2 border-dashed border-line/80 px-2 text-muted hover:border-forest-line hover:text-forest"
+                        >
+                            <span
+                                aria-hidden="true"
+                                className="text-[26px] font-light leading-none"
+                            >
+                                +
+                            </span>
+                            <span className="text-center text-[11px] leading-snug">
+                                新しい作品を
+                                <br />
+                                書く
+                            </span>
+                        </Link>
+                    </li>
                 </ul>
             )}
         </section>

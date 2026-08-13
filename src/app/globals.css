@@ -721,7 +721,8 @@ body {
  */
 
 .footer-below-fold {
-    margin-top: 4rem;
+    /* 8rem: 本文とフッターの間は大きく空ける。詰まると頁の終わりが急に来る */
+    margin-top: 8rem;
 }
 
 /*
