@@ -300,6 +300,90 @@ body {
 
 /*
  * ------------------------------------------------------------
+ * ホームの本棚の板
+ *
+ * 1 段 = .book-shelf-area、板 = .book-shelf-board。
+ * 板は 3 つの部品で出来ている。
+ *   ::before  本の後ろに奥へ寝ている斜めの板（台形）
+ *   本体      手前の正面板
+ *   ::after   板の下に落ちる影
+ * 本の側は z-index: 3 で板より前に置く（home-work-table）。
+ * 高さを変えるときは、あちらの余白の数字と一緒に見ること。
+ * ------------------------------------------------------------
+ */
+.book-shelf-area {
+    position: relative;
+    /* 正面板の高さぶん。本の底が板の上端に着く */
+    padding-bottom: 18px;
+    overflow: visible;
+}
+
+/* 段と段の間。板の影（12px）が次の段の本に触れない空き */
+.book-shelf-area + .book-shelf-area {
+    margin-top: 38px;
+}
+
+.book-shelf-board {
+    position: absolute;
+    /* 本の列より少し左右に伸ばす。本で切り揃うと下線に見える */
+    left: -14px;
+    right: -14px;
+    bottom: 0;
+    height: 18px;
+    z-index: 1;
+
+    /* 手前の正面板 */
+    background: linear-gradient(
+        to bottom,
+        #d8a764 0%,
+        #c98b47 45%,
+        #a86830 100%
+    );
+
+    border-top: 1px solid rgba(255, 255, 255, 0.55);
+    border-bottom: 1px solid rgba(98, 58, 27, 0.8);
+
+    box-shadow: 0 4px 8px rgba(70, 40, 20, 0.22);
+}
+
+/* 本の後ろに見える、奥へ寝ている斜めの板 */
+.book-shelf-board::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 16px;
+    z-index: 0;
+
+    background: linear-gradient(to bottom, #f4ddb6 0%, #e6c28f 45%, #d6a261 100%);
+
+    /* 端を内へ絞ると、奥に向かって寝ている板に見える */
+    clip-path: polygon(0 100%, 100% 100%, 98% 0, 2% 0);
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        inset 0 -1px 0 rgba(120, 75, 35, 0.18);
+}
+
+/* 板の下の影 */
+.book-shelf-board::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 12px;
+    background: linear-gradient(
+        to bottom,
+        rgba(90, 55, 25, 0.22),
+        rgba(90, 55, 25, 0)
+    );
+    filter: blur(2px);
+}
+
+/*
+ * ------------------------------------------------------------
  * ミッションの「クリア！」ボタン
  *
  * 押せる状態のものだけをゆっくり光らせる。

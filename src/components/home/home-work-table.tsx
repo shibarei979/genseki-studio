@@ -106,20 +106,10 @@ const BOOK_HEIGHT = 166;
 /** 本と本の間 */
 const BOOK_GAP = 24;
 /*
- * 棚板の各面の高さ。
- *
- * 板は 3 つの面で出来ている。
- *   上面 … 本が載る奥の板。明るい
- *   前面 … 手前に見える木。明→中間→暗→最暗の 4 段
- *   下面 … 板の裏。暗く、下へ溶ける
- * 木目を描き込むより、面を分けるほうが板になる。
+ * 板の絵は globals.css の .book-shelf-board にある。
+ * 前面 18px・奥の斜めの板 16px・下の影 12px。
+ * 段の下の空きを変えるときは、あちらの数字と一緒に見ること。
  */
-const SHELF_TOP = 7;
-const SHELF_FRONT = 16;
-const SHELF_UNDER = 5;
-const SHELF_THICKNESS = SHELF_TOP + SHELF_FRONT + SHELF_UNDER;
-/** 棚板から次の段の本までの空き。板が厚くなったぶん詰めてある */
-const SHELF_GAP = 26;
 
 /**
  * 表紙の中の寸法。
@@ -170,6 +160,35 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
 
     /* 棚で見るか、一覧で見るか */
     const [view, setView] = useState<"shelf" | "list">("shelf");
+
+    /*
+     * 1 段に何冊入るかを測る。
+     *
+     * 板を段ごとの要素にしたので（奥の斜めの板を描くため）、
+     * 折り返しを CSS に任せられなくなった。
+     * 枠の幅から自分で割り、段ごとに本を配る。
+     */
+    const shelfRef = useRef<HTMLDivElement>(null);
+    const [cols, setCols] = useState(0);
+
+    useEffect(() => {
+        const el = shelfRef.current;
+        if (!el) return;
+
+        const measure = () => {
+            setCols(
+                Math.max(
+                    1,
+                    Math.floor((el.clientWidth + BOOK_GAP) / (BOOK_WIDTH + BOOK_GAP)),
+                ),
+            );
+        };
+        measure();
+
+        const watcher = new ResizeObserver(measure);
+        watcher.observe(el);
+        return () => watcher.disconnect();
+    }, [view]);
 
     const shown = [...works].sort((a, b) => {
         if (sort === "title")
@@ -401,97 +420,78 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                  * 隙間が無い。余白を作らないと、そこだけ板が消える。
                  * 1 段しか無いときは、板が 1 枚も出ないことになる。
                  */
-                <ul
-                    /*
-                     * 板を左右に少し伸ばす。
-                     *
-                     * 背景は枠の幅ぶんしか描かれない。
-                     * 本の列とぴったり同じ幅で終わると、
-                     * 板が本に切り揃えられて、棚ではなく下線に見える。
-                     */
-                    className="-mx-3 mt-4 grid justify-center px-3 sm:justify-start"
-                    style={{
-                        gridTemplateColumns: `repeat(auto-fill, ${BOOK_WIDTH}px)`,
-                        gridAutoRows: `${BOOK_HEIGHT}px`,
-                        columnGap: `${BOOK_GAP}px`,
-                        rowGap: `${SHELF_THICKNESS + SHELF_GAP}px`,
-                        // 板の下へ落ちる影のぶん、最後の段のあとを広めに取る
-                        paddingBottom: `${SHELF_THICKNESS + 8}px`,
+                <div ref={shelfRef} className="mt-4">
+                    {(() => {
                         /*
-                         * 面ごとの色。
-                         *
-                         *   上面   光の線 1px → 明るい木（#efd19b→#d7a665）
-                         *   前面   細いハイライト 1px →
-                         *          明 #d8ae70 → 中間 #c58f4f(35%)
-                         *          → 暗 #a96f35(75%) → 最暗 #8b5728
-                         *          → 締めの線 #74451f 1px
-                         *   下面   #805026 から透明へ
-                         *   影     さらに下へ淡くにじませる
-                         *
-                         * 段ごとの要素に ::before/::after で面を付ける代わりに、
-                         * 同じ構造を繰り返し背景の色の段で描いている。
-                         * 段の折り返しが画面幅で変わるため、要素は置けない。
+                         * 本の並びに「新しい作品を書く」を足してから、
+                         * 段の幅で切り分ける。
+                         * 測り終わる前の一瞬は 1 段に全部並べておき、
+                         * 測れたら組み直す。
                          */
-                        background: `repeating-linear-gradient(
-                            to bottom,
-                            transparent 0px,
-                            transparent ${BOOK_HEIGHT}px,
-                            rgba(255, 255, 255, 0.8) ${BOOK_HEIGHT}px,
-                            rgba(255, 255, 255, 0.8) ${BOOK_HEIGHT + 1}px,
-                            #efd19b ${BOOK_HEIGHT + 1}px,
-                            #d7a665 ${BOOK_HEIGHT + SHELF_TOP}px,
-                            rgba(255, 255, 255, 0.7) ${BOOK_HEIGHT + SHELF_TOP}px,
-                            rgba(255, 255, 255, 0.7) ${BOOK_HEIGHT + SHELF_TOP + 1}px,
-                            #d8ae70 ${BOOK_HEIGHT + SHELF_TOP + 1}px,
-                            #c58f4f ${Math.round(BOOK_HEIGHT + SHELF_TOP + 1 + (SHELF_FRONT - 2) * 0.35)}px,
-                            #a96f35 ${Math.round(BOOK_HEIGHT + SHELF_TOP + 1 + (SHELF_FRONT - 2) * 0.75)}px,
-                            #8b5728 ${BOOK_HEIGHT + SHELF_TOP + SHELF_FRONT - 1}px,
-                            #74451f ${BOOK_HEIGHT + SHELF_TOP + SHELF_FRONT - 1}px,
-                            #74451f ${BOOK_HEIGHT + SHELF_TOP + SHELF_FRONT}px,
-                            #805026 ${BOOK_HEIGHT + SHELF_TOP + SHELF_FRONT}px,
-                            rgba(75, 42, 20, 0.15) ${BOOK_HEIGHT + SHELF_THICKNESS}px,
-                            rgba(50, 30, 15, 0.14) ${BOOK_HEIGHT + SHELF_THICKNESS}px,
-                            rgba(50, 30, 15, 0) ${BOOK_HEIGHT + SHELF_THICKNESS + 8}px,
-                            transparent ${BOOK_HEIGHT + SHELF_THICKNESS + 8}px,
-                            transparent ${BOOK_HEIGHT + SHELF_THICKNESS + SHELF_GAP}px
-                        )`,
-                    }}
-                >
-                    {shown.map((work) => (
-                        <Tile
-                            key={work.id}
-                            work={work}
-                            episodes={episodesOf(work.id)}
-                            onDelete={() => void onDelete(work)}
-                        />
-                    ))}
+                        const perRow = cols || shown.length + 1;
+                        const rows: (WorkWithStats | null)[][] = [];
+                        const items: (WorkWithStats | null)[] = [...shown, null];
+                        for (let i = 0; i < items.length; i += perRow) {
+                            rows.push(items.slice(i, i + perRow));
+                        }
 
-                    {/*
-                     * 新しい本の置き場。
-                     *
-                     * 並びの最後に、点線の枠で 1 冊ぶん空けておく。
-                     * 「ここに次の本が入る」という誘い。
-                     * 本と同じ棚に立たせるので、大きさも 1 冊と同じ。
-                     */}
-                    <li>
-                        <Link
-                            href="/post"
-                            className="flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-md border-2 border-dashed border-line/80 px-2 text-muted hover:border-forest-line hover:text-forest"
-                        >
-                            <span
-                                aria-hidden="true"
-                                className="text-[26px] font-light leading-none"
-                            >
-                                +
-                            </span>
-                            <span className="text-center text-[11px] leading-snug">
-                                新しい作品を
-                                <br />
-                                書く
-                            </span>
-                        </Link>
-                    </li>
-                </ul>
+                        return rows.map((row, rowIndex) => (
+                            <div key={rowIndex} className="book-shelf-area">
+                                {/* 本は板より前（z-3）。板が本の前に出ないように */}
+                                <ul
+                                    className="relative z-[3] flex items-end justify-center sm:justify-start"
+                                    style={{
+                                        columnGap: `${BOOK_GAP}px`,
+                                        minHeight: `${BOOK_HEIGHT}px`,
+                                    }}
+                                >
+                                    {row.map((item) =>
+                                        item ? (
+                                            <Tile
+                                                key={item.id}
+                                                work={item}
+                                                episodes={episodesOf(item.id)}
+                                                onDelete={() => void onDelete(item)}
+                                            />
+                                        ) : (
+                                            /*
+                                             * 新しい本の置き場。
+                                             * 並びの最後に点線の枠で 1 冊ぶん空けておく。
+                                             */
+                                            <li
+                                                key="add"
+                                                style={{
+                                                    width: `${BOOK_WIDTH}px`,
+                                                    height: `${BOOK_HEIGHT}px`,
+                                                }}
+                                            >
+                                                <Link
+                                                    href="/post"
+                                                    className="flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-md border-2 border-dashed border-line/80 px-2 text-muted hover:border-forest-line hover:text-forest"
+                                                >
+                                                    <span
+                                                        aria-hidden="true"
+                                                        className="text-[26px] font-light leading-none"
+                                                    >
+                                                        +
+                                                    </span>
+                                                    <span className="text-center text-[11px] leading-snug">
+                                                        新しい作品を
+                                                        <br />
+                                                        書く
+                                                    </span>
+                                                </Link>
+                                            </li>
+                                        ),
+                                    )}
+                                </ul>
+
+                                {/* 板。奥の斜めの板と下の影は globals.css で描く */}
+                                <div className="book-shelf-board" aria-hidden="true" />
+                            </div>
+                        ));
+                    })()}
+                </div>
             )}
         </section>
     );
@@ -539,7 +539,10 @@ function Tile({
             : `${formatNumber(work.total_char_count)}字`;
 
     return (
-        <li className="group relative" style={{ height: BOOK_HEIGHT }}>
+        <li
+            className="group relative"
+            style={{ width: BOOK_WIDTH, height: BOOK_HEIGHT }}
+        >
             {/*
              * 板に落ちる影。
              *
