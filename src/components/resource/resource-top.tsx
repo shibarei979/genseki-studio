@@ -142,6 +142,8 @@ export default function ResourceTop({
     const [focusOrigin, setFocusOrigin] = useState({ x: 50, y: 47 });
     /* 中の項目たちを飛び出させる合図。入った一拍あとに立てる */
     const [isInnerSpread, setIsInnerSpread] = useState(false);
+    /* 札を開いている項目。丸のすぐ下（下の段は上）に情報が出る */
+    const [openItemId, setOpenItemId] = useState<string | null>(null);
 
     /*
      * 頁に来た瞬間、世界がひとりでに開く。
@@ -169,6 +171,7 @@ export default function ResourceTop({
         setFocusedId(pageId);
         setPanelQuery("");
         setHoveredId(null);
+        setOpenItemId(null);
     }
 
     function slotOf(index: number) {
@@ -259,19 +262,28 @@ export default function ResourceTop({
         if (!focused) return [];
         const needle = panelQuery.trim().toLowerCase();
 
-        let items: { id: string; name: string; sub: string }[];
+        let items: {
+            id: string;
+            name: string;
+            sub: string;
+            entry?: ResourceEntry;
+            relation?: ResourceRelation;
+            stage?: PlotStage;
+        }[];
 
         if (focused.builtin_key === "relation") {
             items = relations.map((row) => ({
                 id: row.id,
                 name: `${entryNameOf(row.from_entry_id)} × ${entryNameOf(row.to_entry_id)}`,
                 sub: row.label,
+                relation: row,
             }));
         } else if (focused.builtin_key === "plot") {
             items = stages.map((row) => ({
                 id: row.id,
                 name: row.title,
                 sub: row.episode_range,
+                stage: row,
             }));
         } else {
             items = entries
@@ -281,7 +293,12 @@ export default function ResourceTop({
                         row.candidate_status !== "pending",
                 )
                 .sort((a, b) => b.created_at.localeCompare(a.created_at))
-                .map((row) => ({ id: row.id, name: row.name, sub: row.summary }));
+                .map((row) => ({
+                    id: row.id,
+                    name: row.name,
+                    sub: row.summary,
+                    entry: row,
+                }));
         }
 
         if (needle) {
@@ -812,6 +829,8 @@ export default function ResourceTop({
                                         key={item.id}
                                         className="absolute transition-all duration-300"
                                         style={{
+                                            zIndex:
+                                                openItemId === item.id ? 30 : 1,
                                             left: isInnerSpread
                                                 ? `${slot.x}%`
                                                 : "50%",
@@ -838,14 +857,24 @@ export default function ResourceTop({
                                             <button
                                                 type="button"
                                                 onClick={() =>
-                                                    onOpen(focused.id)
+                                                    setOpenItemId((current) =>
+                                                        current === item.id
+                                                            ? null
+                                                            : item.id,
+                                                    )
                                                 }
                                                 title={
                                                     item.sub || item.name
                                                 }
+                                                aria-expanded={
+                                                    openItemId === item.id
+                                                }
                                                 className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full border bg-surface px-2 text-center shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-md"
                                                 style={{
-                                                    borderColor: accent.line,
+                                                    borderColor:
+                                                        openItemId === item.id
+                                                            ? accent.ink
+                                                            : accent.line,
                                                     background: `radial-gradient(circle at 50% 30%, #ffffff 0%, ${accent.tint} 100%)`,
                                                 }}
                                             >
@@ -859,6 +888,31 @@ export default function ResourceTop({
                                                 )}
                                             </button>
                                         </div>
+
+                                        {/*
+                                         * 情報の札。押した丸のすぐ下に開く。
+                                         * 下の段（y が深い）の丸は、画面から
+                                         * はみ出すので上に開く。
+                                         */}
+                                        {openItemId === item.id && (
+                                            <div
+                                                className="satellite absolute left-1/2 z-30 w-[230px] -translate-x-1/2 rounded-xl border bg-surface p-3 text-left shadow-xl"
+                                                style={{
+                                                    borderColor: accent.line,
+                                                    ...(slot.y > 58
+                                                        ? { bottom: "calc(50% + 54px)" }
+                                                        : { top: "calc(50% + 54px)" }),
+                                                }}
+                                            >
+                                                <ItemCard
+                                                    item={item}
+                                                    page={focused}
+                                                    onOpenList={() =>
+                                                        onOpen(focused.id)
+                                                    }
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -905,6 +959,116 @@ export default function ResourceTop({
                     </span>
                 )}
             </p>
+        </div>
+    );
+}
+
+/**
+ * 項目の情報の札。
+ *
+ * 持ち物は分類で違う。
+ *   項目      一言説明・欄の値(3つまで)・別名・主要の印
+ *   関係      間柄と、そのおぼえがき
+ *   プロット  話の範囲と、あらまし
+ * 全部は出さない。ここは立ち読み。深くは「くわしく開く」。
+ */
+function ItemCard({
+    item,
+    page,
+    onOpenList,
+}: {
+    item: {
+        name: string;
+        sub: string;
+        entry?: ResourceEntry;
+        relation?: ResourceRelation;
+        stage?: PlotStage;
+    };
+    page: ResourcePage;
+    onOpenList: () => void;
+}) {
+    const entry = item.entry;
+
+    /* 欄の値。書いてあるものだけ、3つまで */
+    const filled = entry
+        ? page.fields
+              .map((field) => {
+                  const value = entry.values[field.key];
+                  const text = Array.isArray(value)
+                      ? value.join("、")
+                      : value === true
+                        ? "はい"
+                        : value === false || value == null
+                          ? ""
+                          : String(value);
+                  return { label: field.label, text: text.trim() };
+              })
+              .filter((row) => row.text)
+              .slice(0, 3)
+        : [];
+
+    return (
+        <div>
+            <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink">
+                {item.name}
+                {entry?.is_major && (
+                    <span className="rounded bg-forest-tint px-1 text-[9px] font-medium text-forest">
+                        主要
+                    </span>
+                )}
+            </p>
+
+            {item.sub && (
+                <p className="mt-1 text-[10px] leading-relaxed text-muted">
+                    {item.sub}
+                </p>
+            )}
+
+            {filled.length > 0 && (
+                <dl className="mt-2 space-y-1">
+                    {filled.map((row) => (
+                        <div key={row.label} className="flex gap-2 text-[10px]">
+                            <dt className="shrink-0 text-faint">{row.label}</dt>
+                            <dd className="min-w-0 flex-1 truncate text-ink">
+                                {row.text}
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
+            )}
+
+            {entry && entry.aliases.length > 0 && (
+                <p className="mt-2 flex flex-wrap gap-1">
+                    {entry.aliases.slice(0, 4).map((alias) => (
+                        <span
+                            key={alias}
+                            className="rounded-full bg-canvas px-2 py-0.5 text-[9px] text-muted"
+                        >
+                            {alias}
+                        </span>
+                    ))}
+                </p>
+            )}
+
+            {item.relation?.note && (
+                <p className="mt-2 text-[10px] leading-relaxed text-muted">
+                    {item.relation.note}
+                </p>
+            )}
+
+            {item.stage?.description && (
+                <p className="mt-2 line-clamp-3 text-[10px] leading-relaxed text-muted">
+                    {item.stage.description}
+                </p>
+            )}
+
+            <button
+                type="button"
+                onClick={onOpenList}
+                className="mt-2.5 w-full rounded-lg bg-forest-dark py-1.5 text-[11px] font-medium text-white hover:opacity-90"
+            >
+                くわしく開く
+            </button>
         </div>
     );
 }
