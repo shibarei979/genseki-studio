@@ -40,7 +40,6 @@ const NAV: { group: string; items: NavItem[] }[] = [
             { href: "/admin/contest", label: "コンテスト", note: "立てて、選ぶ" },
             { href: "/admin/banners", label: "バナー", note: "ホームに出す帯" },
             { href: "/admin/rooms", label: "公式の部屋", note: "誰でも入れる執筆室" },
-            { href: "/admin/announcements", label: "お知らせ（サイト）", note: "ホームに並ぶもの" },
         ],
     },
     {

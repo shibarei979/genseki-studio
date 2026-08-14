@@ -1,24 +1,20 @@
-import AdminShell from '@/components/admin/admin-shell'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import AnnouncementManager from '@/components/admin/announcements/announcement-manager'
+/**
+ * ============================================================
+ * 原石航路 Studio
+ * /admin/announcements — 引退した頁
+ *
+ * お知らせの運営画面は「お知らせ（ベル）」に一本化した。
+ * ベルの一覧は 2 つの表（admin_notices と announcements）を
+ * 混ぜて出すので、ここで書いていた古いものも
+ * あちらから直せる・消せる（an: の印で行き先が分かれる）。
+ *
+ * 古いしおり（ブックマーク）で来た人のために、
+ * 頁は消さず、ベルへ送るだけにしてある。
+ * ============================================================
+ */
 
-export default async function AdminAnnouncementsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
-  const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single()
-  if (!profile?.is_admin) redirect('/')
+import { redirect } from "next/navigation";
 
-  const { data: announcements } = await supabase
-    .from('announcements')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  return (
-    <AdminShell title="お知らせ（サイト）" description="ホームの「お知らせ」に並ぶもの">
-        <AnnouncementManager initialAnnouncements={announcements||[]} />
-    </AdminShell>
-  )
+export default function RetiredAnnouncementsPage() {
+    redirect("/admin/notices");
 }
