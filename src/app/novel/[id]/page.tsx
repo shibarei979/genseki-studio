@@ -5,10 +5,43 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
   const { data: novel } = await supabase
-    .from('novels').select('title, summary').eq('id', params.id).maybeSingle()
+    .from('novels')
+    .select('title, summary, cover_url, visibility, deleted_at')
+    .eq('id', params.id).maybeSingle()
+
+  /*
+   * 題の「| 原石航路」は layout の型が付けるので、ここでは付けない。
+   * 二重に付くと「作品名 | 原石航路 | 原石航路」になる。
+   */
+  const title = novel?.title || '作品'
+  const description =
+    novel?.summary?.slice(0, 120) ||
+    '原石航路で公開されている作品です。'
+  // 表紙が無い作品は、サイトの顔の絵で代える
+  const image = novel?.cover_url || '/images/HERO_IMAGE.jpg'
+  const isOpen = novel?.visibility === 'public' && !novel?.deleted_at
+
   return {
-    title: novel?.title ? `${novel.title} | 原石航路` : '原石航路',
-    description: novel?.summary || 'ライトノベル投稿サイト「原石航路」',
+    title,
+    description,
+    // 下書きと限定公開は検索に載せない
+    robots: isOpen ? undefined : { index: false, follow: false },
+    alternates: { canonical: `/novel/${params.id}` },
+    openGraph: {
+      type: 'book',
+      url: `/novel/${params.id}`,
+      title,
+      description,
+      siteName: '原石航路',
+      locale: 'ja_JP',
+      images: [{ url: image, alt: `${title} 表紙` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
   }
 }
 
@@ -244,6 +277,32 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
   return (
     <div style={{minHeight:'100vh'}}>
+      {/*
+       * 構造化データ。
+       * 「これは本で、作者は誰で、いつからあるか」を
+       * 検索エンジンに機械の言葉（schema.org）で伝える。
+       * 公開中の作品だけ。下書きは名乗らない。
+       */}
+      {isOpen && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Book',
+              name: novel.title,
+              description: novel.summary || undefined,
+              author: authorRes.data?.display_name
+                ? { '@type': 'Person', name: authorRes.data.display_name }
+                : undefined,
+              image: novel.cover_url || undefined,
+              genre: novel.genre || undefined,
+              inLanguage: 'ja',
+              dateCreated: novel.created_at || undefined,
+            }),
+          }}
+        />
+      )}
       <Header />
 
       <div style={{maxWidth:1200,margin:'0 auto',padding:'20px 32px',display:'flex',gap:20,alignItems:'flex-start'}}>
