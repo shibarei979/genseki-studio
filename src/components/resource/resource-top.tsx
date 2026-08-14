@@ -5,18 +5,17 @@
  *
  * 「整った一覧」ではなく「育っていく世界」に見せる。
  *
- *   核        真ん中は押しボタンではなく、作品の核。
- *             題名を抱いて、ゆっくり息をしている。
- *             まわりを小さな星が静かに巡る
- *   断片      分類の丸は、件数が増えるほど大きくなる。
- *             空のページは点線の「まだ白紙」の地
- *   発見      丸に手をかざすと、最近の項目が衛星になって
- *             浮かび出る。押せばそのまま掘れる
- *   育ち      「この7日で 人物2・場所1 が増えました」と
- *             核の下で世界が語る。今週増えた丸には芽の印
+ *   核        真ん中は作品の核。題名を抱いて息をしている
+ *   断片      分類の丸は件数が増えるほど大きくなり、
+ *             1 つずつ拍をずらして呼吸する。空のページは点線
+ *   入れ子    丸を押すと、世界がその丸へ吸い込まれてズームし、
+ *             中の項目たちがまた同じように飛び出してくる。
+ *             どの分類でも同じ。核を押せば世界へ戻る
+ *   発見      丸に手をかざすと、最近の項目が衛星になって浮かぶ
+ *   育ち      「この7日で 人物2・場所1 が増えました」と核の下で
+ *             世界が語る。今週増えた丸には芽の印
  *   糸        線は開いた瞬間に中央から伸びて描かれる。
- *             人物と関係図、場所と出来事の間にも薄い糸を張り、
- *             メニューではなく網に見せる
+ *             分類同士にも薄い糸を張り、メニューではなく網に見せる
  * ============================================================
  */
 
@@ -126,6 +125,23 @@ export default function ResourceTop({
     onOpenAdd,
 }: Props) {
     const [isSpread, setIsSpread] = useState(false);
+    const [hoveredId, setHoveredId] = useState<string | null>(null);
+    const [query, setQuery] = useState("");
+    const [panelQuery, setPanelQuery] = useState("");
+
+    /*
+     * 中へ入っている分類。
+     * 押した丸へ地図ごとズームし、その中の項目たちが
+     * また同じように飛び出してくる。世界の入れ子。
+     */
+    const [focusedId, setFocusedId] = useState<string | null>(null);
+    /*
+     * ズームの吸い込まれる先（%）。
+     * 出るときも同じ点へ戻るよう、離れたあとも覚えておく。
+     */
+    const [focusOrigin, setFocusOrigin] = useState({ x: 50, y: 47 });
+    /* 中の項目たちを飛び出させる合図。入った一拍あとに立てる */
+    const [isInnerSpread, setIsInnerSpread] = useState(false);
 
     /*
      * 頁に来た瞬間、世界がひとりでに開く。
@@ -137,10 +153,27 @@ export default function ResourceTop({
         const timer = window.setTimeout(() => setIsSpread(true), 200);
         return () => window.clearTimeout(timer);
     }, []);
-    const [hoveredId, setHoveredId] = useState<string | null>(null);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [query, setQuery] = useState("");
-    const [panelQuery, setPanelQuery] = useState("");
+
+    /* 中に入ったら、一拍おいて項目たちを飛び出させる */
+    useEffect(() => {
+        if (!focusedId) {
+            setIsInnerSpread(false);
+            return;
+        }
+        const timer = window.setTimeout(() => setIsInnerSpread(true), 180);
+        return () => window.clearTimeout(timer);
+    }, [focusedId]);
+
+    function focusPage(pageId: string, slot: { x: number; y: number }) {
+        setFocusOrigin(slot);
+        setFocusedId(pageId);
+        setPanelQuery("");
+        setHoveredId(null);
+    }
+
+    function slotOf(index: number) {
+        return SLOTS[index % SLOTS.length];
+    }
 
     function countOf(page: ResourcePage): number {
         if (page.builtin_key === "relation") return relations.length;
@@ -210,30 +243,55 @@ export default function ResourceTop({
             .slice(0, 10);
     }, [entries, query]);
 
-    const selected = pages.find((row) => row.id === selectedId) ?? null;
+    const focused = pages.find((row) => row.id === focusedId) ?? null;
 
-    const selectedEntries = useMemo(() => {
-        if (!selected) return [];
+    function entryNameOf(entryId: string): string {
+        return entries.find((row) => row.id === entryId)?.name ?? "？";
+    }
+
+    /*
+     * 中で見せる項目。分類ごとに形が違う。
+     *   関係図    誰×誰と、その間柄
+     *   プロット  段の題と、話の範囲
+     *   その他    項目の名前と一言説明
+     */
+    const focusedItems = useMemo(() => {
+        if (!focused) return [];
         const needle = panelQuery.trim().toLowerCase();
 
-        return entries
-            .filter(
-                (row) =>
-                    row.page_id === selected.id &&
-                    row.candidate_status !== "pending" &&
-                    (!needle ||
-                        [row.name, row.summary, ...row.aliases]
-                            .join(" ")
-                            .toLowerCase()
-                            .includes(needle)),
-            )
-            .sort((a, b) => b.created_at.localeCompare(a.created_at))
-            .slice(0, 8);
-    }, [entries, selected, panelQuery]);
+        let items: { id: string; name: string; sub: string }[];
 
-    function pageOf(entry: ResourceEntry): ResourcePage | undefined {
-        return pages.find((row) => row.id === entry.page_id);
-    }
+        if (focused.builtin_key === "relation") {
+            items = relations.map((row) => ({
+                id: row.id,
+                name: `${entryNameOf(row.from_entry_id)} × ${entryNameOf(row.to_entry_id)}`,
+                sub: row.label,
+            }));
+        } else if (focused.builtin_key === "plot") {
+            items = stages.map((row) => ({
+                id: row.id,
+                name: row.title,
+                sub: row.episode_range,
+            }));
+        } else {
+            items = entries
+                .filter(
+                    (row) =>
+                        row.page_id === focused.id &&
+                        row.candidate_status !== "pending",
+                )
+                .sort((a, b) => b.created_at.localeCompare(a.created_at))
+                .map((row) => ({ id: row.id, name: row.name, sub: row.summary }));
+        }
+
+        if (needle) {
+            items = items.filter((row) =>
+                `${row.name} ${row.sub}`.toLowerCase().includes(needle),
+            );
+        }
+        return items;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [focused, entries, relations, stages, panelQuery]);
 
     /** かざした丸の衛星。最近の項目 3 つ */
     function satellitesOf(pageId: string): ResourceEntry[] {
@@ -247,13 +305,13 @@ export default function ResourceTop({
             .slice(0, 3);
     }
 
+    function pageOf(entry: ResourceEntry): ResourcePage | undefined {
+        return pages.find((row) => row.id === entry.page_id);
+    }
+
     /* 件数で丸が育つ。0件=88px、増えるほど最大132pxまで */
     function sizeOf(count: number): number {
         return 88 + Math.min(44, Math.round(Math.log2(count + 1) * 11));
-    }
-
-    function slotOf(index: number) {
-        return SLOTS[index % SLOTS.length];
     }
 
     /* 分類同士の糸。両方のページがあるときだけ */
@@ -264,359 +322,579 @@ export default function ResourceTop({
         return [{ from: slotOf(ia), to: slotOf(ib), key: `${a}-${b}` }];
     });
 
+    /* 中で並べる項目は 11 個まで。残りは「他◯件」の丸に */
+    const shownItems = focusedItems.slice(0, 11);
+    const restCount = focusedItems.length - shownItems.length;
+
     return (
         <div className="relative overflow-hidden">
             <div className="relative min-h-[540px] lg:min-h-[620px]">
-                {/* 背景で漂う塵。動きはごく小さく */}
-                {DUST.map((dust, index) => (
-                    <span
-                        key={index}
-                        aria-hidden="true"
-                        className="map-drift absolute h-1.5 w-1.5 rounded-full bg-forest-line/50"
-                        style={{
-                            left: `${dust.x}%`,
-                            top: `${dust.y}%`,
-                            animationDelay: `${dust.delay}s`,
-                        }}
-                    />
-                ))}
-
-                {/* ---- 糸 ---- */}
-                <svg
-                    className="pointer-events-none absolute inset-0 h-full w-full"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    aria-hidden="true"
+                {/* ================= 外の世界 ================= */}
+                <div
+                    className="absolute inset-0 transition-all duration-500"
+                    style={{
+                        /*
+                         * ズームは世界ごと。押した丸の場所を
+                         * 起点にして拡大しながら薄れると、
+                         * その丸へ吸い込まれたように見える。
+                         */
+                        transformOrigin: `${focusOrigin.x}% ${focusOrigin.y}%`,
+                        transform: focused ? "scale(2.1)" : "scale(1)",
+                        opacity: focused ? 0 : 1,
+                        pointerEvents: focused ? "none" : "auto",
+                    }}
                 >
-                    {/* 分類同士の薄い糸。網に見せる */}
-                    {threads.map((thread) => (
-                        <path
-                            key={thread.key}
-                            d={`M ${thread.from.x} ${thread.from.y} Q ${
-                                (thread.from.x + thread.to.x) / 2 + 3
-                            } ${(thread.from.y + thread.to.y) / 2 - 3} ${
-                                thread.to.x
-                            } ${thread.to.y}`}
-                            fill="none"
-                            stroke="#c9d4dc"
-                            strokeWidth="1"
-                            strokeDasharray="2 5"
-                            vectorEffect="non-scaling-stroke"
-                            className="transition-opacity duration-700"
-                            opacity={isSpread ? 0.35 : 0}
+                    {DUST.map((dust, index) => (
+                        <span
+                            key={index}
+                            aria-hidden="true"
+                            className="map-drift absolute h-1.5 w-1.5 rounded-full bg-forest-line/50"
+                            style={{
+                                left: `${dust.x}%`,
+                                top: `${dust.y}%`,
+                                animationDelay: `${dust.delay}s`,
+                            }}
                         />
                     ))}
 
-                    {/*
-                     * 中央からの糸。開いた瞬間、中央から先へ
-                     * 伸びて「描かれる」。少し曲げて生き物らしく。
-                     */}
-                    {pages.map((page, index) => {
-                        const slot = slotOf(index);
-                        const isHovered = hoveredId === page.id;
-                        const bend = index % 2 === 0 ? 3.5 : -3.5;
-                        return (
+                    <svg
+                        className="pointer-events-none absolute inset-0 h-full w-full"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                        aria-hidden="true"
+                    >
+                        {threads.map((thread) => (
                             <path
-                                key={page.id}
-                                d={`M 50 47 Q ${(50 + slot.x) / 2 + bend} ${
-                                    (47 + slot.y) / 2 + bend
-                                } ${slot.x} ${slot.y}`}
+                                key={thread.key}
+                                d={`M ${thread.from.x} ${thread.from.y} Q ${
+                                    (thread.from.x + thread.to.x) / 2 + 3
+                                } ${(thread.from.y + thread.to.y) / 2 - 3} ${
+                                    thread.to.x
+                                } ${thread.to.y}`}
                                 fill="none"
-                                pathLength={1}
-                                strokeDasharray="1"
-                                stroke={
-                                    isHovered
-                                        ? "var(--color-forest)"
-                                        : accentOf(page).line
-                                }
-                                strokeWidth={isHovered ? 1.6 : 1}
+                                stroke="#c9d4dc"
+                                strokeWidth="1"
+                                strokeDasharray="2 5"
                                 vectorEffect="non-scaling-stroke"
-                                style={{
-                                    strokeDashoffset: isSpread ? 0 : 1,
-                                    transition: `stroke-dashoffset 500ms ease ${index * 45}ms, opacity 300ms, stroke 200ms`,
-                                }}
-                                opacity={isSpread ? (isHovered ? 0.95 : 0.55) : 0}
+                                className="transition-opacity duration-700"
+                                opacity={isSpread ? 0.35 : 0}
                             />
-                        );
-                    })}
-                </svg>
+                        ))}
 
-                {/* ---- 核 ---- */}
-                <div
-                    className="absolute left-1/2 top-[47%] z-10 -translate-x-1/2 -translate-y-1/2 text-center"
-                    style={{ width: 230 }}
-                >
-                    <div className="relative mx-auto h-36 w-36">
-                        {/* 暈。核が静かに灯っている */}
-                        <span
-                            aria-hidden="true"
-                            className="core-halo absolute -inset-5 rounded-full"
-                            style={{
-                                background:
-                                    "radial-gradient(circle, rgba(31,78,107,0.14) 0%, rgba(31,78,107,0) 70%)",
-                            }}
-                        />
+                        {pages.map((page, index) => {
+                            const slot = slotOf(index);
+                            const isHovered = hoveredId === page.id;
+                            const bend = index % 2 === 0 ? 3.5 : -3.5;
+                            return (
+                                <path
+                                    key={page.id}
+                                    d={`M 50 47 Q ${(50 + slot.x) / 2 + bend} ${
+                                        (47 + slot.y) / 2 + bend
+                                    } ${slot.x} ${slot.y}`}
+                                    fill="none"
+                                    pathLength={1}
+                                    strokeDasharray="1"
+                                    stroke={
+                                        isHovered
+                                            ? "var(--color-forest)"
+                                            : accentOf(page).line
+                                    }
+                                    strokeWidth={isHovered ? 1.6 : 1}
+                                    vectorEffect="non-scaling-stroke"
+                                    style={{
+                                        strokeDashoffset: isSpread ? 0 : 1,
+                                        transition: `stroke-dashoffset 500ms ease ${index * 45}ms, opacity 300ms, stroke 200ms`,
+                                    }}
+                                    opacity={
+                                        isSpread ? (isHovered ? 0.95 : 0.55) : 0
+                                    }
+                                />
+                            );
+                        })}
+                    </svg>
 
-                        {/* 巡る星。世界に時間が流れている */}
-                        <span
-                            aria-hidden="true"
-                            className="core-orbit absolute -inset-3 rounded-full border border-forest-line/25"
-                        >
-                            <span className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-forest/50" />
-                            <span className="absolute right-[7%] top-[72%] h-1 w-1 rounded-full bg-forest/35" />
-                            <span className="absolute left-[4%] top-[38%] h-1 w-1 rounded-full bg-forest-line" />
-                        </span>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsSpread((on) => !on);
-                                setSelectedId(null);
-                                setQuery("");
-                            }}
-                            aria-expanded={isSpread}
-                            className="core-breathe relative flex h-36 w-36 flex-col items-center justify-center rounded-full border border-forest-line/70 text-forest shadow-[0_14px_36px_-14px_rgba(31,78,107,0.4)] transition-transform duration-200 hover:scale-[1.04]"
-                            style={{
-                                background:
-                                    "radial-gradient(circle at 50% 36%, #ffffff 0%, #f2f7fb 68%, #e6eef5 100%)",
-                            }}
-                        >
-                            <BrainIcon />
-                            {/* 核は記号ではなく、この作品そのもの */}
-                            <span className="mt-1 max-w-[112px] truncate px-1 text-[11px] font-medium text-ink">
-                                {workTitle || "無題の世界"}
-                            </span>
-                        </button>
-                    </div>
-
-                    {!isSpread ? (
-                        <p className="mt-3 text-[12px] text-muted">
-                            作品世界を探索する
-                        </p>
-                    ) : (
-                        <div className="mt-3">
-                            <input
-                                type="text"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder="何を探しますか？"
-                                className="w-full rounded-full border border-line bg-surface px-4 py-2 text-center text-[12px] text-ink outline-none placeholder:text-faint focus:border-forest-line"
-                            />
-                        </div>
-                    )}
-
-                    {/* 世界が語る。この7日で何が増えたか */}
-                    <p className="mt-1.5 text-[11px] text-faint">
-                        {growthWords
-                            ? `この7日で ${growthWords} が増えました`
-                            : "本文を書くほど、ここに世界が集まります"}
-                    </p>
-
-                    {/* 横断検索の答え */}
-                    {isSpread && query.trim() && (
-                        <ul className="relative z-10 mt-2 max-h-56 overflow-y-auto rounded-xl border border-line bg-surface p-1.5 text-left shadow-lg">
-                            {found.length === 0 ? (
-                                <li className="px-3 py-2 text-[11px] text-faint">
-                                    見つかりませんでした
-                                </li>
-                            ) : (
-                                found.map((entry) => {
-                                    const page = pageOf(entry);
-                                    const accent = page
-                                        ? accentOf(page)
-                                        : DEFAULT_ACCENT;
-                                    return (
-                                        <li key={entry.id}>
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    page && onOpen(page.id)
-                                                }
-                                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-canvas"
-                                            >
-                                                <span
-                                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                                                    style={{
-                                                        background: accent.tint,
-                                                        color: accent.ink,
-                                                    }}
-                                                >
-                                                    <ResourceIcon
-                                                        builtinKey={
-                                                            page?.builtin_key ??
-                                                            null
-                                                        }
-                                                        size={12}
-                                                    />
-                                                </span>
-                                                <span className="min-w-0 flex-1">
-                                                    <span className="block truncate text-[12px] text-ink">
-                                                        {entry.name}
-                                                        {entry.candidate_status ===
-                                                            "pending" && (
-                                                            <span className="ml-1 text-[10px] text-amber">
-                                                                候補
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                    {entry.summary && (
-                                                        <span className="block truncate text-[10px] text-faint">
-                                                            {entry.summary}
-                                                        </span>
-                                                    )}
-                                                </span>
-                                            </button>
-                                        </li>
-                                    );
-                                })
-                            )}
-                        </ul>
-                    )}
-                </div>
-
-                {/* ---- 分類の丸 ---- */}
-                {pages.map((page, index) => {
-                    const slot = slotOf(index);
-                    const accent = accentOf(page);
-                    const count = countOf(page);
-                    const pending = pendingOf(page);
-                    const added = newOf(page);
-                    const size = sizeOf(count);
-                    const isHovered = hoveredId === page.id;
-                    const satellites = isHovered ? satellitesOf(page.id) : [];
-
-                    return (
-                        <div
-                            key={page.id}
-                            onMouseEnter={() => setHoveredId(page.id)}
-                            onMouseLeave={() => setHoveredId(null)}
-                            className="absolute transition-all duration-300"
-                            style={{
-                                left: isSpread ? `${slot.x}%` : "50%",
-                                top: isSpread ? `${slot.y}%` : "47%",
-                                transform: `translate(-50%, -50%) scale(${isSpread ? 1 : 0.2})`,
-                                opacity: isSpread ? 1 : 0,
-                                pointerEvents: isSpread ? "auto" : "none",
-                                transitionDelay: isSpread
-                                    ? `${index * 30}ms`
-                                    : "0ms",
-                                zIndex: isHovered ? 20 : 1,
-                            }}
-                        >
-                            {/*
-                             * 呼吸の層。
-                             * 位置決め(外)・呼吸(ここ)・押した拡大(内)を
-                             * 別の箱に分ける。1 つの箱に重ねると
-                             * transform が奪い合って動きが消える。
-                             * 周期と拍を 1 つずつずらし、揃って動く
-                             * 機械らしさを消す。
-                             */}
-                            <div
-                                className="node-breathe"
+                    {/* ---- 核 ---- */}
+                    <div
+                        className="absolute left-1/2 top-[47%] z-10 -translate-x-1/2 -translate-y-1/2 text-center"
+                        style={{ width: 230 }}
+                    >
+                        <div className="relative mx-auto h-36 w-36">
+                            <span
+                                aria-hidden="true"
+                                className="core-halo absolute -inset-5 rounded-full"
                                 style={{
-                                    animationDuration: `${4 + (index % 3) * 0.8}s`,
-                                    animationDelay: `${(index * 0.53) % 3}s`,
+                                    background:
+                                        "radial-gradient(circle, rgba(31,78,107,0.14) 0%, rgba(31,78,107,0) 70%)",
                                 }}
+                            />
+                            <span
+                                aria-hidden="true"
+                                className="core-orbit absolute -inset-3 rounded-full border border-forest-line/25"
                             >
+                                <span className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-forest/50" />
+                                <span className="absolute right-[7%] top-[72%] h-1 w-1 rounded-full bg-forest/35" />
+                                <span className="absolute left-[4%] top-[38%] h-1 w-1 rounded-full bg-forest-line" />
+                            </span>
+
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setSelectedId(page.id);
-                                    setPanelQuery("");
+                                    setIsSpread((on) => !on);
+                                    setQuery("");
                                 }}
-                                tabIndex={isSpread ? 0 : -1}
-                                className="flex flex-col items-center justify-center rounded-full text-center shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-md"
+                                aria-expanded={isSpread}
+                                className="core-breathe relative flex h-36 w-36 flex-col items-center justify-center rounded-full border border-forest-line/70 text-forest shadow-[0_14px_36px_-14px_rgba(31,78,107,0.4)] transition-transform duration-200 hover:scale-[1.04]"
                                 style={{
-                                    width: size,
-                                    height: size,
-                                    /* 白紙の地は点線。まだ誰も踏み入れていない */
-                                    border: `${count === 0 ? "1.5px dashed" : "1px solid"} ${accent.line}`,
-                                    background: `radial-gradient(circle at 50% 30%, #ffffff 0%, ${accent.tint} 100%)`,
+                                    background:
+                                        "radial-gradient(circle at 50% 36%, #ffffff 0%, #f2f7fb 68%, #e6eef5 100%)",
                                 }}
                             >
-                                <span style={{ color: accent.ink }}>
-                                    <ResourceIcon
-                                        builtinKey={page.builtin_key}
-                                        size={19}
-                                    />
+                                <BrainIcon />
+                                <span className="mt-1 max-w-[112px] truncate px-1 text-[11px] font-medium text-ink">
+                                    {workTitle || "無題の世界"}
                                 </span>
-                                <span className="mt-0.5 px-2 text-[12px] font-medium leading-tight text-ink">
-                                    {page.label}
-                                </span>
-                                <span className="text-[10px] text-muted">
-                                    {count > 0 ? `${count}件` : "まだ白紙"}
-                                </span>
-                                {/* 今週の芽 */}
-                                {added > 0 && (
-                                    <span className="mt-0.5 rounded-full bg-forest-tint px-1.5 text-[9px] font-medium text-forest">
-                                        今週 +{added}
-                                    </span>
-                                )}
-
-                                {pending > 0 && (
-                                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber px-1 text-[10px] font-medium text-white">
-                                        {pending}
-                                    </span>
-                                )}
                             </button>
-                            </div>
+                        </div>
 
-                            {/*
-                             * 衛星。かざした分類の最近の項目が浮かび出る。
-                             * 探索の「発見」はここで起きる。
-                             */}
-                            {satellites.map((entry, i) => {
-                                const spots = [
-                                    { x: 0, y: -(size / 2 + 26) },
-                                    { x: size / 2 + 34, y: -(size / 4) },
-                                    { x: -(size / 2 + 34), y: -(size / 4) },
-                                ];
-                                const spot = spots[i];
-                                return (
+                        {!isSpread ? (
+                            <p className="mt-3 text-[12px] text-muted">
+                                作品世界を探索する
+                            </p>
+                        ) : (
+                            <div className="mt-3">
+                                <input
+                                    type="text"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    placeholder="何を探しますか？"
+                                    className="w-full rounded-full border border-line bg-surface px-4 py-2 text-center text-[12px] text-ink outline-none placeholder:text-faint focus:border-forest-line"
+                                />
+                            </div>
+                        )}
+
+                        <p className="mt-1.5 text-[11px] text-faint">
+                            {growthWords
+                                ? `この7日で ${growthWords} が増えました`
+                                : "本文を書くほど、ここに世界が集まります"}
+                        </p>
+
+                        {isSpread && query.trim() && (
+                            <ul className="relative z-10 mt-2 max-h-56 overflow-y-auto rounded-xl border border-line bg-surface p-1.5 text-left shadow-lg">
+                                {found.length === 0 ? (
+                                    <li className="px-3 py-2 text-[11px] text-faint">
+                                        見つかりませんでした
+                                    </li>
+                                ) : (
+                                    found.map((entry) => {
+                                        const page = pageOf(entry);
+                                        const accent = page
+                                            ? accentOf(page)
+                                            : DEFAULT_ACCENT;
+                                        const index = page
+                                            ? pages.findIndex(
+                                                  (row) => row.id === page.id,
+                                              )
+                                            : 0;
+                                        return (
+                                            <li key={entry.id}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        page &&
+                                                        focusPage(
+                                                            page.id,
+                                                            slotOf(index),
+                                                        )
+                                                    }
+                                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left hover:bg-canvas"
+                                                >
+                                                    <span
+                                                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                                                        style={{
+                                                            background:
+                                                                accent.tint,
+                                                            color: accent.ink,
+                                                        }}
+                                                    >
+                                                        <ResourceIcon
+                                                            builtinKey={
+                                                                page?.builtin_key ??
+                                                                null
+                                                            }
+                                                            size={12}
+                                                        />
+                                                    </span>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className="block truncate text-[12px] text-ink">
+                                                            {entry.name}
+                                                            {entry.candidate_status ===
+                                                                "pending" && (
+                                                                <span className="ml-1 text-[10px] text-amber">
+                                                                    候補
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                        {entry.summary && (
+                                                            <span className="block truncate text-[10px] text-faint">
+                                                                {entry.summary}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                </button>
+                                            </li>
+                                        );
+                                    })
+                                )}
+                            </ul>
+                        )}
+                    </div>
+
+                    {/* ---- 分類の丸 ---- */}
+                    {pages.map((page, index) => {
+                        const slot = slotOf(index);
+                        const accent = accentOf(page);
+                        const count = countOf(page);
+                        const pending = pendingOf(page);
+                        const added = newOf(page);
+                        const size = sizeOf(count);
+                        const isHovered = hoveredId === page.id;
+                        const satellites = isHovered
+                            ? satellitesOf(page.id)
+                            : [];
+
+                        return (
+                            <div
+                                key={page.id}
+                                onMouseEnter={() => setHoveredId(page.id)}
+                                onMouseLeave={() => setHoveredId(null)}
+                                className="absolute transition-all duration-300"
+                                style={{
+                                    left: isSpread ? `${slot.x}%` : "50%",
+                                    top: isSpread ? `${slot.y}%` : "47%",
+                                    transform: `translate(-50%, -50%) scale(${isSpread ? 1 : 0.2})`,
+                                    opacity: isSpread ? 1 : 0,
+                                    pointerEvents: isSpread ? "auto" : "none",
+                                    transitionDelay: isSpread
+                                        ? `${index * 30}ms`
+                                        : "0ms",
+                                    zIndex: isHovered ? 20 : 1,
+                                }}
+                            >
+                                {/*
+                                 * 呼吸の層。
+                                 * 位置決め(外)・呼吸(ここ)・押した拡大(内)を
+                                 * 別の箱に分ける。1 つの箱に重ねると
+                                 * transform が奪い合って動きが消える。
+                                 */}
+                                <div
+                                    className="node-breathe"
+                                    style={{
+                                        animationDuration: `${4 + (index % 3) * 0.8}s`,
+                                        animationDelay: `${(index * 0.53) % 3}s`,
+                                    }}
+                                >
                                     <button
-                                        key={entry.id}
                                         type="button"
-                                        onClick={() => {
-                                            setSelectedId(page.id);
-                                            setPanelQuery("");
-                                        }}
-                                        className="satellite absolute left-1/2 top-1/2 max-w-[104px] truncate rounded-full border bg-surface px-2.5 py-1 text-[10px] text-ink shadow-md"
+                                        onClick={() =>
+                                            focusPage(page.id, slot)
+                                        }
+                                        tabIndex={isSpread ? 0 : -1}
+                                        className="relative flex flex-col items-center justify-center rounded-full text-center shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-md"
                                         style={{
-                                            borderColor: accent.line,
-                                            transform: `translate(calc(-50% + ${spot.x}px), calc(-50% + ${spot.y}px))`,
-                                            animationDelay: `${i * 60}ms`,
+                                            width: size,
+                                            height: size,
+                                            border: `${count === 0 ? "1.5px dashed" : "1px solid"} ${accent.line}`,
+                                            background: `radial-gradient(circle at 50% 30%, #ffffff 0%, ${accent.tint} 100%)`,
                                         }}
                                     >
-                                        {entry.name}
+                                        <span style={{ color: accent.ink }}>
+                                            <ResourceIcon
+                                                builtinKey={page.builtin_key}
+                                                size={19}
+                                            />
+                                        </span>
+                                        <span className="mt-0.5 px-2 text-[12px] font-medium leading-tight text-ink">
+                                            {page.label}
+                                        </span>
+                                        <span className="text-[10px] text-muted">
+                                            {count > 0
+                                                ? `${count}件`
+                                                : "まだ白紙"}
+                                        </span>
+                                        {added > 0 && (
+                                            <span className="mt-0.5 rounded-full bg-forest-tint px-1.5 text-[9px] font-medium text-forest">
+                                                今週 +{added}
+                                            </span>
+                                        )}
+
+                                        {pending > 0 && (
+                                            <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber px-1 text-[10px] font-medium text-white">
+                                                {pending}
+                                            </span>
+                                        )}
                                     </button>
+                                </div>
+
+                                {satellites.map((entry, i) => {
+                                    const spots = [
+                                        { x: 0, y: -(size / 2 + 26) },
+                                        { x: size / 2 + 34, y: -(size / 4) },
+                                        { x: -(size / 2 + 34), y: -(size / 4) },
+                                    ];
+                                    const spot = spots[i];
+                                    return (
+                                        <button
+                                            key={entry.id}
+                                            type="button"
+                                            onClick={() =>
+                                                focusPage(page.id, slot)
+                                            }
+                                            className="satellite absolute left-1/2 top-1/2 max-w-[104px] truncate rounded-full border bg-surface px-2.5 py-1 text-[10px] text-ink shadow-md"
+                                            style={{
+                                                borderColor: accent.line,
+                                                transform: `translate(calc(-50% + ${spot.x}px), calc(-50% + ${spot.y}px))`,
+                                                animationDelay: `${i * 60}ms`,
+                                            }}
+                                        >
+                                            {entry.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })}
+
+                    {/* ページを追加 */}
+                    <button
+                        type="button"
+                        onClick={onOpenAdd}
+                        tabIndex={isSpread ? 0 : -1}
+                        className="absolute flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-line bg-surface/70 text-muted transition-all duration-300 hover:border-forest-line hover:text-forest"
+                        style={{
+                            left: "50%",
+                            top: isSpread ? "94%" : "47%",
+                            transform: `translate(-50%, -50%) scale(${isSpread ? 1 : 0.2})`,
+                            opacity: isSpread ? 1 : 0,
+                            pointerEvents: isSpread ? "auto" : "none",
+                            transitionDelay: isSpread
+                                ? `${pages.length * 30}ms`
+                                : "0ms",
+                        }}
+                        title="資料ページを追加します"
+                    >
+                        <span className="text-xl font-light" aria-hidden="true">
+                            +
+                        </span>
+                    </button>
+                </div>
+
+                {/* ================= 分類の中 ================= */}
+                <div
+                    className="absolute inset-0 transition-all duration-500"
+                    style={{
+                        transform: focused ? "scale(1)" : "scale(0.55)",
+                        opacity: focused ? 1 : 0,
+                        pointerEvents: focused ? "auto" : "none",
+                        transitionDelay: focused ? "120ms" : "0ms",
+                    }}
+                >
+                    {focused && (
+                        <>
+                            {/* 世界へ戻る道。迷子にしない */}
+                            <button
+                                type="button"
+                                onClick={() => setFocusedId(null)}
+                                className="absolute left-1 top-1 z-20 rounded-full border border-line bg-surface px-3 py-1.5 text-[11px] text-muted shadow-sm hover:border-forest-line hover:text-forest"
+                            >
+                                ← {workTitle || "作品"}の世界へ
+                            </button>
+
+                            {/* 中の糸 */}
+                            <svg
+                                className="pointer-events-none absolute inset-0 h-full w-full"
+                                viewBox="0 0 100 100"
+                                preserveAspectRatio="none"
+                                aria-hidden="true"
+                            >
+                                {shownItems.map((item, index) => {
+                                    const slot = slotOf(index);
+                                    const bend = index % 2 === 0 ? 3 : -3;
+                                    return (
+                                        <path
+                                            key={item.id}
+                                            d={`M 50 47 Q ${(50 + slot.x) / 2 + bend} ${
+                                                (47 + slot.y) / 2 + bend
+                                            } ${slot.x} ${slot.y}`}
+                                            fill="none"
+                                            pathLength={1}
+                                            strokeDasharray="1"
+                                            stroke={accentOf(focused).line}
+                                            strokeWidth="1"
+                                            vectorEffect="non-scaling-stroke"
+                                            style={{
+                                                strokeDashoffset: isInnerSpread
+                                                    ? 0
+                                                    : 1,
+                                                transition: `stroke-dashoffset 450ms ease ${index * 40}ms, opacity 300ms`,
+                                            }}
+                                            opacity={isInnerSpread ? 0.5 : 0}
+                                        />
+                                    );
+                                })}
+                            </svg>
+
+                            {/* 分類の核。押すと世界へ戻る */}
+                            <div
+                                className="absolute left-1/2 top-[47%] z-10 -translate-x-1/2 -translate-y-1/2 text-center"
+                                style={{ width: 220 }}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => setFocusedId(null)}
+                                    title="世界へ戻ります"
+                                    className="core-breathe mx-auto flex h-32 w-32 flex-col items-center justify-center rounded-full border shadow-[0_14px_36px_-14px_rgba(31,78,107,0.35)] transition-transform duration-200 hover:scale-[1.04]"
+                                    style={{
+                                        borderColor: accentOf(focused).line,
+                                        color: accentOf(focused).ink,
+                                        background: `radial-gradient(circle at 50% 36%, #ffffff 0%, ${accentOf(focused).tint} 100%)`,
+                                    }}
+                                >
+                                    <ResourceIcon
+                                        builtinKey={focused.builtin_key}
+                                        size={26}
+                                    />
+                                    <span className="mt-1 px-2 text-[12px] font-semibold text-ink">
+                                        {focused.label}
+                                    </span>
+                                    <span className="text-[10px] text-muted">
+                                        {countOf(focused)}件
+                                    </span>
+                                </button>
+
+                                <div className="mt-3">
+                                    <input
+                                        type="text"
+                                        value={panelQuery}
+                                        onChange={(e) =>
+                                            setPanelQuery(e.target.value)
+                                        }
+                                        placeholder={`${focused.label}の中を探す`}
+                                        className="w-full rounded-full border border-line bg-surface px-4 py-2 text-center text-[12px] text-ink outline-none placeholder:text-faint focus:border-forest-line"
+                                    />
+                                </div>
+
+                                <div className="mt-2 flex items-center justify-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpen(focused.id)}
+                                        className="rounded-full bg-forest-dark px-4 py-1.5 text-[11px] font-medium text-white hover:opacity-90"
+                                    >
+                                        一覧を開く
+                                    </button>
+                                    {pendingOf(focused) > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => onOpen(focused.id)}
+                                            className="rounded-full bg-amber-tint px-3 py-1.5 text-[11px] text-amber"
+                                        >
+                                            未整理 {pendingOf(focused)}件
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 中の項目たち。世界と同じ作法で飛び出す */}
+                            {shownItems.map((item, index) => {
+                                const slot = slotOf(index);
+                                const accent = accentOf(focused);
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="absolute transition-all duration-300"
+                                        style={{
+                                            left: isInnerSpread
+                                                ? `${slot.x}%`
+                                                : "50%",
+                                            top: isInnerSpread
+                                                ? `${slot.y}%`
+                                                : "47%",
+                                            transform: `translate(-50%, -50%) scale(${isInnerSpread ? 1 : 0.2})`,
+                                            opacity: isInnerSpread ? 1 : 0,
+                                            pointerEvents: isInnerSpread
+                                                ? "auto"
+                                                : "none",
+                                            transitionDelay: isInnerSpread
+                                                ? `${index * 28}ms`
+                                                : "0ms",
+                                        }}
+                                    >
+                                        <div
+                                            className="node-breathe"
+                                            style={{
+                                                animationDuration: `${4 + (index % 3) * 0.8}s`,
+                                                animationDelay: `${(index * 0.61) % 3}s`,
+                                            }}
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    onOpen(focused.id)
+                                                }
+                                                title={
+                                                    item.sub || item.name
+                                                }
+                                                className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full border bg-surface px-2 text-center shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-md"
+                                                style={{
+                                                    borderColor: accent.line,
+                                                    background: `radial-gradient(circle at 50% 30%, #ffffff 0%, ${accent.tint} 100%)`,
+                                                }}
+                                            >
+                                                <span className="line-clamp-2 text-[11px] font-medium leading-tight text-ink">
+                                                    {item.name}
+                                                </span>
+                                                {item.sub && (
+                                                    <span className="mt-0.5 line-clamp-1 text-[9px] text-faint">
+                                                        {item.sub}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
                                 );
                             })}
-                        </div>
-                    );
-                })}
 
-                {/* ページを追加。点線の丸で、地図の一員として */}
-                <button
-                    type="button"
-                    onClick={onOpenAdd}
-                    tabIndex={isSpread ? 0 : -1}
-                    className="absolute flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-line bg-surface/70 text-muted transition-all duration-300 hover:border-forest-line hover:text-forest"
-                    style={{
-                        left: isSpread ? "50%" : "50%",
-                        top: isSpread ? "94%" : "47%",
-                        transform: `translate(-50%, -50%) scale(${isSpread ? 1 : 0.2})`,
-                        opacity: isSpread ? 1 : 0,
-                        pointerEvents: isSpread ? "auto" : "none",
-                        transitionDelay: isSpread
-                            ? `${pages.length * 30}ms`
-                            : "0ms",
-                    }}
-                    title="資料ページを追加します"
-                >
-                    <span className="text-xl font-light" aria-hidden="true">
-                        +
-                    </span>
-                </button>
+                            {/* あふれたぶん */}
+                            {restCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => onOpen(focused.id)}
+                                    className="absolute flex h-[76px] w-[76px] flex-col items-center justify-center rounded-full border-2 border-dashed border-line bg-surface/70 text-muted transition-all duration-300 hover:border-forest-line hover:text-forest"
+                                    style={{
+                                        left: `${slotOf(11).x}%`,
+                                        top: `${slotOf(11).y}%`,
+                                        transform: `translate(-50%, -50%) scale(${isInnerSpread ? 1 : 0.2})`,
+                                        opacity: isInnerSpread ? 1 : 0,
+                                        transitionDelay: `${shownItems.length * 28}ms`,
+                                    }}
+                                >
+                                    <span className="text-[11px]">
+                                        他{restCount}件
+                                    </span>
+                                    <span className="text-[9px]">一覧へ</span>
+                                </button>
+                            )}
+
+                            {/* まだ何も無い分類 */}
+                            {focusedItems.length === 0 && (
+                                <p className="absolute left-1/2 top-[76%] -translate-x-1/2 text-[11px] text-faint">
+                                    {panelQuery.trim()
+                                        ? "見つかりませんでした"
+                                        : "まだ何もいません。一覧から書き足せます"}
+                                </p>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
 
             <p className="mt-2 text-center text-[11px] text-faint">
@@ -627,100 +905,6 @@ export default function ResourceTop({
                     </span>
                 )}
             </p>
-
-            {/* ---- 右の引き出し ---- */}
-            <div
-                className={[
-                    "absolute inset-y-0 right-0 z-30 w-[290px] border-l border-line bg-surface shadow-xl transition-transform duration-300",
-                    selected ? "translate-x-0" : "translate-x-full",
-                ].join(" ")}
-            >
-                {selected && (
-                    <div className="flex h-full flex-col p-4">
-                        <div className="flex items-center gap-2.5">
-                            <span
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                                style={{
-                                    background: accentOf(selected).tint,
-                                    color: accentOf(selected).ink,
-                                }}
-                            >
-                                <ResourceIcon
-                                    builtinKey={selected.builtin_key}
-                                    size={16}
-                                />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate text-[13px] font-semibold text-ink">
-                                    {selected.label}
-                                </p>
-                                <p className="text-[10px] text-muted">
-                                    {countOf(selected)}件
-                                    {pendingOf(selected) > 0 &&
-                                        ` ・ 未整理 ${pendingOf(selected)}件`}
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedId(null)}
-                                aria-label="閉じる"
-                                className="shrink-0 rounded p-1 text-faint hover:text-ink"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <input
-                            type="text"
-                            value={panelQuery}
-                            onChange={(e) => setPanelQuery(e.target.value)}
-                            placeholder={`${selected.label}の中を探す`}
-                            className="mt-3 w-full rounded-lg border border-line bg-canvas px-3 py-2 text-[12px] text-ink outline-none placeholder:text-faint focus:border-forest-line"
-                        />
-
-                        <p className="mt-3 text-[10px] font-medium text-faint">
-                            {panelQuery.trim() ? "見つかったもの" : "最近の項目"}
-                        </p>
-
-                        <ul className="thin-scroll mt-1.5 min-h-0 flex-1 space-y-1 overflow-y-auto">
-                            {selectedEntries.length === 0 ? (
-                                <li className="py-3 text-[11px] text-faint">
-                                    {panelQuery.trim()
-                                        ? "見つかりませんでした"
-                                        : "まだ項目がありません"}
-                                </li>
-                            ) : (
-                                selectedEntries.map((entry) => (
-                                    <li key={entry.id}>
-                                        <button
-                                            type="button"
-                                            onClick={() => onOpen(selected.id)}
-                                            className="w-full rounded-lg px-2.5 py-2 text-left hover:bg-canvas"
-                                        >
-                                            <span className="block truncate text-[12px] text-ink">
-                                                {entry.name}
-                                            </span>
-                                            {entry.summary && (
-                                                <span className="block truncate text-[10px] text-faint">
-                                                    {entry.summary}
-                                                </span>
-                                            )}
-                                        </button>
-                                    </li>
-                                ))
-                            )}
-                        </ul>
-
-                        <button
-                            type="button"
-                            onClick={() => onOpen(selected.id)}
-                            className="mt-3 w-full rounded-lg bg-forest-dark py-2.5 text-[12px] font-medium text-white hover:opacity-90"
-                        >
-                            一覧を開く
-                        </button>
-                    </div>
-                )}
-            </div>
         </div>
     );
 }
