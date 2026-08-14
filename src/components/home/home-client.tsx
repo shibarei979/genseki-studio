@@ -148,7 +148,7 @@ export default function HomeClient() {
                      * これが無いと、柱とフッターの間だけ頁の灰色が挟まる。
                      * 余白の rem を変えたら h-72 も揃えること。
                      */}
-                    <aside className="relative hidden w-[200px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
+                    <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
                         <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
                             {side}
                         </div>
