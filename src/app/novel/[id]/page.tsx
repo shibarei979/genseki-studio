@@ -17,8 +17,8 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const description =
     novel?.summary?.slice(0, 120) ||
     '原石航路で公開されている作品です。'
-  // 表紙が無い作品は、サイトの顔の絵で代える
-  const image = novel?.cover_url || '/images/HERO_IMAGE.jpg'
+  // 表紙が無い作品は、LP の一番上と同じ共有カードで代える
+  const image = novel?.cover_url || '/og.jpg'
   const isOpen = novel?.visibility === 'public' && !novel?.deleted_at
 
   return {

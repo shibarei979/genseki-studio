@@ -60,10 +60,11 @@ export const metadata: Metadata = {
         locale: "ja_JP",
         images: [
             {
-                url: "/images/HERO_IMAGE.jpg",
-                width: 3840,
-                height: 2160,
-                alt: "原石航路 — 書くことが、あなたの物語になる。",
+                // LP の一番上と同じ構図で作った共有カード用の1枚
+                url: "/og.jpg",
+                width: 1200,
+                height: 630,
+                alt: "原石航路 — 物語を生み出すすべての人のための、創作活動プラットフォーム",
             },
         ],
     },
@@ -75,7 +76,7 @@ export const metadata: Metadata = {
         card: "summary_large_image",
         title: appConfig.title,
         description: appConfig.description,
-        images: ["/images/HERO_IMAGE.jpg"],
+        images: ["/og.jpg"],
     },
 };
 
