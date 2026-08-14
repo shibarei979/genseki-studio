@@ -276,6 +276,12 @@ export default function AdminNoticesClient() {
                                                                 e.target.files?.[0];
                                                             if (!file) return;
                                                             /*
+                                                             * 失敗したら理由を画面に出す。
+                                                             * 黙って止まると「一切反映されない」
+                                                             * ようにしか見えず、原因を探させてしまう。
+                                                             */
+                                                            try {
+                                                            /*
                                                              * 端末の中（IndexedDB）ではなく、
                                                              * 外の置き場（Storage）へ上げる。
                                                              * 端末の中に置くと、貼った本人にしか
@@ -310,6 +316,21 @@ export default function AdminNoticesClient() {
                                                             await patch(notice.id, {
                                                                 image_url: url,
                                                             });
+                                                            } catch (caught) {
+                                                                console.error(
+                                                                    "[notice-image]",
+                                                                    caught,
+                                                                );
+                                                                setNotice2(
+                                                                    caught instanceof Error
+                                                                        ? `画像を置けませんでした：${caught.message}`
+                                                                        : "画像を置けませんでした",
+                                                                );
+                                                                window.setTimeout(
+                                                                    () => setNotice2(""),
+                                                                    8000,
+                                                                );
+                                                            }
                                                         }}
                                                         className="hidden"
                                                     />
