@@ -225,17 +225,18 @@ function Hero({ onStart }: { onStart?: () => void }) {
                 /*
                  * 絵は顔の全体に敷き、左を斜めに溶かす。
                  *
-                 * 右半分に収めて縦の線で切るのをやめた。
-                 * 白は字の足場のぶん（左 12%）だけ残し、
-                 * そこから 58% にかけて斜め（105度）に立ち上げる。
+                 * 真っ白の場所は作らない。
+                 * 字の後ろでも絵が 18% だけ透けて見えるところから始め、
+                 * 58% にかけて斜め（105度）に立ち上げる。
+                 * 18% は「絵があるのは分かるが、字の邪魔はしない」濃さ。
                  * 覆いではなく mask なのは、下の地の色が
                  * 何色でも同じに効くようにするため。
                  */
                 style={{
                     maskImage:
-                        "linear-gradient(105deg, transparent 12%, black 58%)",
+                        "linear-gradient(105deg, rgba(0,0,0,0.18) 0%, black 58%)",
                     WebkitMaskImage:
-                        "linear-gradient(105deg, transparent 12%, black 58%)",
+                        "linear-gradient(105deg, rgba(0,0,0,0.18) 0%, black 58%)",
                 }}
             >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
