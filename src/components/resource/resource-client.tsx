@@ -847,11 +847,6 @@ export default function ResourceClient({ workId }: Props) {
                             logs={logs}
                             onOpen={setView}
                             onOpenAdd={() => setView("add")}
-                            onAddBuiltin={async (key) => {
-                                const page = await repository.addBuiltinPage(workId, key);
-                                await reload();
-                                setView(page.id);
-                            }}
                         />
                     )}
 
