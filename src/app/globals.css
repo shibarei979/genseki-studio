@@ -300,6 +300,47 @@ body {
 
 /*
  * ------------------------------------------------------------
+ * ホームの流れる帯
+ *
+ * 同じ並びを 2 回つなげ、半分ぶん左へ動かし続ける。
+ * 半分まで来たら頭へ戻るが、絵柄が同じなので継ぎ目は見えない。
+ * 速さは枚数に合わせて JS 側（animationDuration）で決める。
+ * ------------------------------------------------------------
+ */
+.banner-flow {
+    overflow: hidden;
+}
+
+.banner-flow__track {
+    display: flex;
+    width: max-content;
+    animation: banner-flow linear infinite;
+}
+
+/* 乗せている間は止める。読んでいる最中に押す先が逃げないように */
+.banner-flow:hover .banner-flow__track {
+    animation-play-state: paused;
+}
+
+@keyframes banner-flow {
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+/* 動きを減らす設定の人には流さず、手で横に送れる形にする */
+@media (prefers-reduced-motion: reduce) {
+    .banner-flow {
+        overflow-x: auto;
+    }
+
+    .banner-flow__track {
+        animation: none;
+    }
+}
+
+/*
+ * ------------------------------------------------------------
  * ホームの本棚の板
  *
  * 1 段 = .book-shelf-area、板 = .book-shelf-board。

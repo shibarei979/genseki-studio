@@ -3,24 +3,22 @@
  * 原石航路 Studio
  * HomeBannerCarousel — 流れる帯
  *
- * コンテストと運営のお知らせの絵を、順に流して見せる。
- * 前は「今日の執筆」を置く案だったが、続きへの入口は
- * 左の柱と棚に既にあるので、ここは知らせる場所に使う。
+ * コンテスト・お知らせ・運営の帯の絵を、
+ * 何枚も横に並べて、右から左へ絶え間なく流す。
  *
- * 絵の出どころは 2 つ。
- *   コンテスト   banner_url のあるもの
- *   運営の帯     管理画面の「ホームの左」に出しているもの
- *              （柱から外し、ここへ移した。2 か所に出さない）
+ * 1 枚ずつ矢印で送る形はやめた。
+ * 小さな札が次々に通り過ぎる、掲示板の前を歩くような形。
+ * カーソルを乗せている間は止まる（読んでいる最中に逃げない）。
  *
- * 流すものが無ければ、何も出さない。空の枠を残さない。
- * 1 枚しか無ければ、流さずに置くだけにする。
+ * 仕組み: 同じ並びを 2 回つなげて、半分ぶん左へ動かし続ける。
+ * 半分まで来たら頭に戻るが、絵柄が同じなので継ぎ目は見えない。
  * ============================================================
  */
 
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import ContestBanner from "@/components/common/contest-banner";
 import EntryImage from "@/components/common/entry-image";
@@ -28,13 +26,17 @@ import { getRepository } from "@/lib/repository";
 import { IDB_PREFIX } from "@/lib/storage/image-store";
 import type { AdminBanner, AdminNotice, Contest } from "@/types";
 
+/** 札 1 枚の幅。なろうの帯くらいの小ささ */
+const CARD_WIDTH = 300;
+/** 札と札の間 */
+const CARD_GAP = 14;
+/** 1 枚が通り過ぎるのにかける秒。小さいほど速い */
+const SECONDS_PER_CARD = 5;
+
 interface Props {
     /** 開催中のコンテスト */
     contests: Contest[];
 }
-
-/** 次の絵へ送るまでの間。読み終える前に流れると急かされる */
-const FLOW_INTERVAL_MS = 5000;
 
 type Slide =
     | { kind: "contest"; id: string; contest: Contest }
@@ -64,28 +66,18 @@ export default function HomeBannerCarousel({ contests }: Props) {
                         (row) =>
                             row.is_active &&
                             row.place === "home-side" &&
-                            /* 運営の帯も、端末の中の絵は流さない（同じ理由） */
+                            /* 端末の中の絵は流さない。他の人には無い */
                             !!row.image_url &&
                             !row.image_url.startsWith(IDB_PREFIX),
                     )
                     .sort((a, b) => a.sort_order - b.sort_order),
             );
-            /*
-             * 絵の付いたお知らせもここで流す。
-             * 文字だけのものは左の柱に出ているので、帯には出さない。
-             * 並びは運営の決めた順（listNotices の順）のまま。
-             */
             setNotices(
                 noticeRows.filter(
                     (row) =>
                         row.is_published &&
                         row.published_at <= today &&
                         row.image_url &&
-                        /*
-                         * idb: は端末の中の絵。貼った本人にしか無いので、
-                         * 帯に出しても他の人には抜けた枠が流れるだけ。
-                         * 選び直して外の置き場に上がったものだけ流す。
-                         */
                         !row.image_url.startsWith(IDB_PREFIX) &&
                         row.show_on_home !== false,
                 ),
@@ -113,108 +105,58 @@ export default function HomeBannerCarousel({ contests }: Props) {
         })),
     ];
 
-    const trackRef = useRef<HTMLDivElement>(null);
-    const [index, setIndex] = useState(0);
-
-    /*
-     * 指が乗っている間は流さない。
-     * 読んでいる最中に流れると、押す先が逃げる。
-     * state にしないのは、止め外しのたびに描き直さないため。
-     */
-    const pausedRef = useRef(false);
-
-    useEffect(() => {
-        if (slides.length < 2) return;
-
-        const timer = window.setInterval(() => {
-            if (pausedRef.current || document.hidden) return;
-            const track = trackRef.current;
-            if (!track) return;
-            const current = Math.round(track.scrollLeft / track.clientWidth);
-            const next = (current + 1) % slides.length;
-            track.scrollTo({ left: next * track.clientWidth, behavior: "smooth" });
-        }, FLOW_INTERVAL_MS);
-
-        return () => window.clearInterval(timer);
-    }, [slides.length]);
-
     if (slides.length === 0) return null;
 
-    function goTo(target: number) {
-        const track = trackRef.current;
-        if (!track) return;
-        const count = slides.length;
-        const next = (target + count) % count;
-        track.scrollTo({ left: next * track.clientWidth, behavior: "smooth" });
-    }
+    /*
+     * 枚数が少ないと、流れの中に空白ができる。
+     * 並びを繰り返して、半分だけでも画面幅より長くしておく。
+     * （半分 = 継ぎ目なく回すための単位。下の注釈を参照）
+     */
+    const repeat = Math.max(1, Math.ceil(5 / slides.length));
+    const half: Slide[] = Array.from({ length: repeat }, () => slides).flat();
 
     return (
-        <section
-            aria-label="コンテストとお知らせ"
-            /*
-             * 大きさは縦横 9:16、幅は 300px まで。
-             * 端から端まで広げると画面の主役が帯になってしまう。
-             * 知らせは目に入る大きさで足りる。
-             */
-            className="group relative max-w-[300px] overflow-hidden rounded-xl border border-line bg-surface"
-            onPointerEnter={() => {
-                pausedRef.current = true;
-            }}
-            onPointerLeave={() => {
-                pausedRef.current = false;
-            }}
-        >
+        <section aria-label="コンテストとお知らせ" className="banner-flow">
             <div
-                ref={trackRef}
-                onScroll={(event) => {
-                    const track = event.currentTarget;
-                    setIndex(Math.round(track.scrollLeft / track.clientWidth));
+                className="banner-flow__track"
+                style={{
+                    /* 半分（half 1 組）を流し切る時間。枚数に比例させる */
+                    animationDuration: `${half.length * SECONDS_PER_CARD}s`,
                 }}
-                /*
-                 * つまみは出さない。
-                 * 自分で流れる帯につまみが付くと、送る道具が 2 つになる。
-                 * 手で送るのは矢印と点、指では横になぞる。
-                 */
-                style={{ scrollbarWidth: "none" }}
-                className="flex snap-x snap-mandatory overflow-x-auto [&::-webkit-scrollbar]:hidden"
             >
-                {slides.map((slide) => (
-                    <div key={slide.id} className="w-full shrink-0 snap-start">
+                {[...half, ...half].map((slide, index) => (
+                    <div
+                        key={`${slide.id}:${index}`}
+                        className="shrink-0 overflow-hidden rounded-lg border border-line bg-surface"
+                        style={{
+                            width: CARD_WIDTH,
+                            marginRight: CARD_GAP,
+                        }}
+                    >
                         {slide.kind === "contest" ? (
                             <Link
                                 href={`/contest/${slide.contest.id}`}
-                                className="group/slide relative block aspect-video"
+                                title={slide.contest.title || "コンテスト"}
+                                className="group/card relative block aspect-video"
                             >
                                 <ContestBanner
                                     contest={slide.contest}
                                     className="absolute inset-0 h-full w-full"
                                 />
-                                {/*
-                                 * 題と締切は、ふだんは出さない。絵だけを見せる。
-                                 * カーソルが乗ったら絵を少し暗くして、文字を出す。
-                                 * この幅（300px）に常時乗せると、絵も文字も窮屈になる。
-                                 *
-                                 * group/slide と名前を付けるのは、外の枠の group
-                                 * （矢印を出すためのもの）と混ざらないようにするため。
-                                 * 名前が無いと、枠に触れただけで文字まで出てしまう。
-                                 */}
+                                {/* 題と締切は、乗せたときだけ。絵を主役に */}
                                 <span
-                                    className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/slide:opacity-100"
+                                    className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/card:opacity-100"
                                     aria-hidden="true"
                                 >
-                                    {/* 絵を少し暗くする。文字が絵に沈まない程度 */}
                                     <span className="absolute inset-0 bg-[rgba(20,56,78,0.45)]" />
-                                    {/*
-                                     * 文字は絵の真ん中に置く。
-                                     * 下の縁に寄せると、この幅では題が途中で切れる。
-                                     * 真ん中なら 2 行まで折り返せる。
-                                     */}
                                     <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 text-center">
-                                        <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-white">
-                                            {slide.contest.title || "名前のないコンテスト"}
+                                        <span className="line-clamp-2 text-[12px] font-semibold leading-snug text-white">
+                                            {slide.contest.title ||
+                                                "名前のないコンテスト"}
                                         </span>
                                         <span className="text-[10px] text-white/85">
-                                            応募締切：{dotDate(slide.contest.ends_at)}
+                                            応募締切：
+                                            {dotDate(slide.contest.ends_at)}
                                         </span>
                                     </span>
                                 </span>
@@ -258,46 +200,6 @@ export default function HomeBannerCarousel({ contests }: Props) {
                     </div>
                 ))}
             </div>
-
-            {slides.length >= 2 && (
-                <>
-                    {/* 手で送る矢印。指を乗せたときだけ見せる */}
-                    <button
-                        type="button"
-                        aria-label="前へ"
-                        onClick={() => goTo(index - 1)}
-                        className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm hover:bg-white group-hover:flex"
-                    >
-                        ‹
-                    </button>
-                    <button
-                        type="button"
-                        aria-label="次へ"
-                        onClick={() => goTo(index + 1)}
-                        className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-ink shadow-sm hover:bg-white group-hover:flex"
-                    >
-                        ›
-                    </button>
-
-                    {/* いま何枚目か。点を押せばそこへ飛べる */}
-                    <div className="absolute inset-x-0 bottom-1.5 flex justify-center gap-1.5">
-                        {slides.map((slide, i) => (
-                            <button
-                                key={slide.id}
-                                type="button"
-                                aria-label={`${i + 1}枚目へ`}
-                                onClick={() => goTo(i)}
-                                className={[
-                                    "h-1.5 rounded-full transition-all",
-                                    i === index
-                                        ? "w-4 bg-white"
-                                        : "w-1.5 bg-white/55 hover:bg-white/80",
-                                ].join(" ")}
-                            />
-                        ))}
-                    </div>
-                </>
-            )}
         </section>
     );
 }
