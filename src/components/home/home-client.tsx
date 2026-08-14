@@ -142,7 +142,13 @@ export default function HomeClient() {
                      * 貼りつく箱に地を持たせると、中身の高さで白が切れて、
                      * 柱の下だけ灰色が覗く。
                      */}
-                    <aside className="hidden w-[200px] shrink-0 border-r border-line bg-surface xl:block">
+                    {/*
+                     * after: の帯は、フッター手前の余白（footer-below-fold の
+                     * 18rem = h-72）を白でまたぐためのもの。
+                     * これが無いと、柱とフッターの間だけ頁の灰色が挟まる。
+                     * 余白の rem を変えたら h-72 も揃えること。
+                     */}
+                    <aside className="relative hidden w-[200px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
                         <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
                             {side}
                         </div>
