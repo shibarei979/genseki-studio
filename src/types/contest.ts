@@ -74,6 +74,8 @@ export interface Contest {
     catchphrase: string;
     description: string;
     status: ContestStatus;
+    /** 表示順。小さいものが上。空なら今までどおりの順 */
+    sort_order?: number | null;
 
     /** 主催。誰が開いているか */
     organizer: string;

@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import ContestBanner from "@/components/common/contest-banner";
 import AdminShell from "@/components/admin/admin-shell";
+import { useReorder } from "@/components/admin/use-reorder";
 import { getRepository } from "@/lib/repository";
 import { shrinkImage } from "@/lib/storage/image-store";
 import { removeImage, uploadImage } from "@/lib/storage/remote-image";
@@ -63,6 +64,34 @@ export default function AdminContestClient() {
 
     const selected = contests.find((row) => row.id === selectedId) ?? null;
 
+    /* 長押しで並べ替え。仕組みはお知らせと同じ */
+    const reorder = useReorder({
+        onMove: (fromId, toId) => {
+            setContests((current) => {
+                const next = [...current];
+                const from = next.findIndex((row) => row.id === fromId);
+                const to = next.findIndex((row) => row.id === toId);
+                if (from < 0 || to < 0) return current;
+                const [moved] = next.splice(from, 1);
+                next.splice(to, 0, moved);
+                return next;
+            });
+        },
+        onCommit: () => {
+            void Promise.all(
+                contests.map((row, index) =>
+                    row.sort_order === index
+                        ? Promise.resolve()
+                        : getRepository().updateContest(row.id, {
+                              sort_order: index,
+                          }),
+                ),
+            ).catch(() => {
+                /* 保存に失敗しても、開き直せば元の並びに戻るだけ */
+            });
+        },
+    });
+
     async function patch(contestId: string, next: Partial<Contest>) {
         await getRepository().updateContest(contestId, next);
         await reload();
@@ -103,9 +132,22 @@ export default function AdminContestClient() {
                 ) : (
                     <div className="grid items-start gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
                         {/* 一覧 */}
-                        <ul className="space-y-2">
+                        <ul
+                            ref={reorder.listRef}
+                            {...reorder.listProps}
+                            className="space-y-2"
+                        >
                             {contests.map((contest) => (
-                                <li key={contest.id}>
+                                <li
+                                    key={contest.id}
+                                    {...reorder.itemProps(contest.id)}
+                                    title="長押しでつかんで、上下に動かすと並べ替えられます"
+                                    className={
+                                        reorder.heldId === contest.id
+                                            ? "select-none rounded-xl shadow-lg ring-1 ring-forest"
+                                            : ""
+                                    }
+                                >
                                     <button
                                         type="button"
                                         onClick={() => setSelectedId(contest.id)}

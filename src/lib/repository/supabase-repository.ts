@@ -1724,7 +1724,21 @@ export const supabaseRepository: Repository = {
             .from("contests")
             .select("*")
             .order("created_at", { ascending: false });
-        return rows<Record<string, unknown>>(data).map(toContest);
+        /*
+         * 並びは JS 側で決める。
+         * DB に order by sort_order と頼むと、列がまだ無い環境で
+         * 1 行も返らなくなる（表の列が古い件と同じ穴）。
+         * 番号のあるものが上、無いものは新しい順のまま後ろ。
+         */
+        return rows<Record<string, unknown>>(data)
+            .map((row) => ({
+                ...toContest(row),
+                sort_order: (row.sort_order as number | null) ?? null,
+            }))
+            .sort(
+                (a, b) =>
+                    (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity),
+            );
     },
 
     async getContest(contestId: string): Promise<Contest | null> {
@@ -2107,6 +2121,7 @@ export const supabaseRepository: Repository = {
             link: String(row.link ?? ""),
             image_url: (row.image_url as string) ?? null,
             is_published: row.is_published !== false,
+            sort_order: (row.sort_order as number | null) ?? null,
             published_at: String(
                 row.published_at ?? row.created_at ?? "",
             ).slice(0, 10),
@@ -2118,9 +2133,14 @@ export const supabaseRepository: Repository = {
              */
         })).map((row) => ({ ...row, id: `${ANNOUNCE_PREFIX}${row.id}` })) as AdminNotice[];
 
-        /* 新しい順に混ぜる */
-        return [...notices, ...announcements].sort((a, b) =>
-            (b.published_at ?? "").localeCompare(a.published_at ?? ""),
+        /*
+         * 混ぜて並べる。番号のあるものが上、無いものは新しい順。
+         * 2 つの表をまたいでも、番号は 1 つの並びとして扱う。
+         */
+        return [...notices, ...announcements].sort(
+            (a, b) =>
+                (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity) ||
+                (b.published_at ?? "").localeCompare(a.published_at ?? ""),
         );
     },
 

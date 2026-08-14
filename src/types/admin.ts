@@ -88,6 +88,8 @@ export interface AdminNotice {
      * ベルの一覧では小さく、詳しく見るときは大きく出す。
      */
     image_url: string | null;
+    /** 表示順。小さいものが上。空なら日付の順で後ろ */
+    sort_order?: number | null;
     is_published: boolean;
     /** 表に出す日。未来の日付なら、その日まで出さない */
     published_at: string;

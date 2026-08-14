@@ -85,9 +85,14 @@ export default function HomeClient() {
          * まだ何も立てていなければ、組み込みの案内で埋める。
          */
         const today = new Date().toISOString().slice(0, 10);
-        const published = (await repository.listNotices())
-            .filter((row) => row.is_published && row.published_at <= today)
-            .sort((a, b) => compareDate(b.published_at, a.published_at));
+        /*
+         * 並べ直さない。listNotices が
+         * 「運営の決めた順 → 新しい順」で返してくる。
+         * ここで日付で並べ直すと、決めた順が消える。
+         */
+        const published = (await repository.listNotices()).filter(
+            (row) => row.is_published && row.published_at <= today,
+        );
 
         setNotices(
             published.length > 0

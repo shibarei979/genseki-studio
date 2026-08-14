@@ -44,7 +44,12 @@ export default function ContestClient() {
      */
     const sorted = (contests ?? []).sort((a, b) => {
         const rank = (row: Contest) => (row.status === "open" ? 0 : row.status === "judging" ? 1 : 2);
-        return rank(a) - rank(b) || compareDate(a.ends_at, b.ends_at);
+        /* 状態の組の中では、運営の決めた順 → 締切の近い順 */
+        return (
+            rank(a) - rank(b) ||
+            (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity) ||
+            compareDate(a.ends_at, b.ends_at)
+        );
     });
 
     return (

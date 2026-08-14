@@ -83,10 +83,11 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
         ? Math.min(1, latestEpisode.char_count / EPISODE_GOAL_CHARS)
         : 0;
 
-    // 締切が近いものを先に出す
-    const shownContests = [...contests]
-        .sort((a, b) => compareDate(a.ends_at, b.ends_at))
-        .slice(0, 2);
+    /*
+     * 並べ直さない。運営が決めた順（listContests の順）の
+     * 先頭 2 つを出す。柱に何を出すかは運営が並びで決められる。
+     */
+    const shownContests = contests.slice(0, 2);
 
     return (
         // pt-3: 柱の頭を少し下げ、右の並びと目の高さを揃える

@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import AdminShell from "@/components/admin/admin-shell";
+import { useReorder } from "@/components/admin/use-reorder";
 import EntryImage from "@/components/common/entry-image";
 import { getRepository } from "@/lib/repository";
 import { deleteImage, putImage, shrinkImage } from "@/lib/storage/image-store";
@@ -45,6 +46,51 @@ export default function AdminNoticesClient() {
      * 失敗しても何も出ないと、打ち直すことになる。
      */
     const [notice2, setNotice2] = useState("");
+
+    /*
+     * 長押しで並べ替え。
+     *
+     * つかんで動かしている間は手元の並びだけを替え、
+     * 離したときに、見えている順そのままを番号にして保存する。
+     * お知らせは 2 つの表に分かれているが、保存は updateNotice が
+     * an: の印で行き先を分けるので、ここでは並びだけ考えればよい。
+     */
+    const reorder = useReorder({
+        onMove: (fromId, toId) => {
+            setNotices((current) => {
+                const next = [...current];
+                const from = next.findIndex((row) => row.id === fromId);
+                const to = next.findIndex((row) => row.id === toId);
+                if (from < 0 || to < 0) return current;
+                const [moved] = next.splice(from, 1);
+                next.splice(to, 0, moved);
+                return next;
+            });
+        },
+        onCommit: () => {
+            void (async () => {
+                try {
+                    await Promise.all(
+                        notices.map((row, index) =>
+                            row.sort_order === index
+                                ? Promise.resolve()
+                                : getRepository().updateNotice(row.id, {
+                                      sort_order: index,
+                                  }),
+                        ),
+                    );
+                    setNotice2("並び順を保存しました");
+                } catch (caught) {
+                    setNotice2(
+                        caught instanceof Error
+                            ? caught.message
+                            : "並び順を保存できませんでした",
+                    );
+                }
+                window.setTimeout(() => setNotice2(""), 2500);
+            })();
+        },
+    });
 
     async function patch(id: string, next: Partial<AdminNotice>) {
         try {
@@ -89,15 +135,28 @@ export default function AdminNoticesClient() {
             {notices.length === 0 ? (
                 <Empty>まだお知らせがありません。</Empty>
             ) : (
-                <ul className="space-y-2">
+                <ul
+                    ref={reorder.listRef}
+                    {...reorder.listProps}
+                    className="space-y-2"
+                >
                     {notices.map((notice) => {
                         const isOpen = openId === notice.id;
                         const tone = noticeColor(notice.type);
+                        const isHeld = reorder.heldId === notice.id;
 
                         return (
                             <li
                                 key={notice.id}
-                                className="overflow-hidden rounded-xl border border-line bg-surface"
+                                {...reorder.itemProps(notice.id)}
+                                title="長押しでつかんで、上下に動かすと並べ替えられます"
+                                className={[
+                                    "overflow-hidden rounded-xl border bg-surface",
+                                    // つかんでいる行は浮かせて、どれを持っているか見せる
+                                    isHeld
+                                        ? "select-none border-forest shadow-lg"
+                                        : "border-line",
+                                ].join(" ")}
                             >
                                 <button
                                     type="button"
