@@ -25,6 +25,7 @@ import { useEffect, useRef, useState } from "react";
 import ContestBanner from "@/components/common/contest-banner";
 import EntryImage from "@/components/common/entry-image";
 import { getRepository } from "@/lib/repository";
+import { IDB_PREFIX } from "@/lib/storage/image-store";
 import type { AdminBanner, AdminNotice, Contest } from "@/types";
 
 interface Props {
@@ -59,7 +60,14 @@ export default function HomeBannerCarousel({ contests }: Props) {
             ]);
             setBanners(
                 bannerRows
-                    .filter((row) => row.is_active && row.place === "home-side")
+                    .filter(
+                        (row) =>
+                            row.is_active &&
+                            row.place === "home-side" &&
+                            /* 運営の帯も、端末の中の絵は流さない（同じ理由） */
+                            !!row.image_url &&
+                            !row.image_url.startsWith(IDB_PREFIX),
+                    )
                     .sort((a, b) => a.sort_order - b.sort_order),
             );
             /*
@@ -72,7 +80,14 @@ export default function HomeBannerCarousel({ contests }: Props) {
                     (row) =>
                         row.is_published &&
                         row.published_at <= today &&
-                        row.image_url,
+                        row.image_url &&
+                        /*
+                         * idb: は端末の中の絵。貼った本人にしか無いので、
+                         * 帯に出しても他の人には抜けた枠が流れるだけ。
+                         * 選び直して外の置き場に上がったものだけ流す。
+                         */
+                        !row.image_url.startsWith(IDB_PREFIX) &&
+                        row.show_on_home !== false,
                 ),
             );
         })();

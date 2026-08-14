@@ -2122,6 +2122,7 @@ export const supabaseRepository: Repository = {
             image_url: (row.image_url as string) ?? null,
             is_published: row.is_published !== false,
             sort_order: (row.sort_order as number | null) ?? null,
+            show_on_home: row.show_on_home !== false,
             published_at: String(
                 row.published_at ?? row.created_at ?? "",
             ).slice(0, 10),

@@ -18,7 +18,8 @@ import AdminShell from "@/components/admin/admin-shell";
 import { useReorder } from "@/components/admin/use-reorder";
 import EntryImage from "@/components/common/entry-image";
 import { getRepository } from "@/lib/repository";
-import { deleteImage, putImage, shrinkImage } from "@/lib/storage/image-store";
+import { IDB_PREFIX, deleteImage, shrinkImage } from "@/lib/storage/image-store";
+import { removeImage, uploadImage } from "@/lib/storage/remote-image";
 import type { AdminNotice, NoticeType } from "@/types";
 import {
     NOTICE_TYPE_COLOR,
@@ -274,17 +275,40 @@ export default function AdminNoticesClient() {
                                                             const file =
                                                                 e.target.files?.[0];
                                                             if (!file) return;
+                                                            /*
+                                                             * 端末の中（IndexedDB）ではなく、
+                                                             * 外の置き場（Storage）へ上げる。
+                                                             * 端末の中に置くと、貼った本人にしか
+                                                             * 見えず、帯にも出せない。
+                                                             */
                                                             const shrunk =
-                                                                await shrinkImage(file);
-                                                            const ref =
-                                                                await putImage(shrunk);
-                                                            if (notice.image_url) {
-                                                                await deleteImage(
-                                                                    notice.image_url,
+                                                                await shrinkImage(
+                                                                    file,
+                                                                    true,
                                                                 );
+                                                            const url =
+                                                                await uploadImage(
+                                                                    shrunk,
+                                                                    "notices",
+                                                                );
+                                                            /* 前の絵は置き場に応じて片づける */
+                                                            if (notice.image_url) {
+                                                                if (
+                                                                    notice.image_url.startsWith(
+                                                                        IDB_PREFIX,
+                                                                    )
+                                                                ) {
+                                                                    await deleteImage(
+                                                                        notice.image_url,
+                                                                    );
+                                                                } else {
+                                                                    await removeImage(
+                                                                        notice.image_url,
+                                                                    );
+                                                                }
                                                             }
                                                             await patch(notice.id, {
-                                                                image_url: ref,
+                                                                image_url: url,
                                                             });
                                                         }}
                                                         className="hidden"
@@ -302,9 +326,17 @@ export default function AdminNoticesClient() {
                                                         <button
                                                             type="button"
                                                             onClick={async () => {
-                                                                await deleteImage(
-                                                                    notice.image_url as string,
-                                                                );
+                                                                const old =
+                                                                    notice.image_url as string;
+                                                                if (
+                                                                    old.startsWith(
+                                                                        IDB_PREFIX,
+                                                                    )
+                                                                ) {
+                                                                    await deleteImage(old);
+                                                                } else {
+                                                                    await removeImage(old);
+                                                                }
                                                                 await patch(notice.id, {
                                                                     image_url: null,
                                                                 });
@@ -315,8 +347,38 @@ export default function AdminNoticesClient() {
                                                         </button>
                                                     )}
 
+                                                    {/*
+                                                     * 帯に出すかは運営が選ぶ。
+                                                     * 知らせによっては、ベルだけで
+                                                     * 済ませたいものもある。
+                                                     */}
+                                                    {notice.image_url && (
+                                                        <label className="mt-2 flex items-center gap-2 text-[11px] text-ink">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={
+                                                                    notice.show_on_home !==
+                                                                    false
+                                                                }
+                                                                onChange={(e) =>
+                                                                    void patch(
+                                                                        notice.id,
+                                                                        {
+                                                                            show_on_home:
+                                                                                e.target
+                                                                                    .checked,
+                                                                        },
+                                                                    )
+                                                                }
+                                                            />
+                                                            ホームの流れる帯にも出す
+                                                        </label>
+                                                    )}
+
                                                     <p className="mt-1 text-[10px] leading-relaxed text-faint">
                                                         ベルの中では小さく出ます。
+                                                        端末の中の古い画像（idb:）は、
+                                                        選び直すと帯に出せる形になります。
                                                     </p>
                                                 </div>
                                             </div>
