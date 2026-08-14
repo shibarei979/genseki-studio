@@ -23,6 +23,23 @@ import type { Profile } from "@/types";
 import { NOTICES } from "@/types";
 
 /** 読んだお知らせの記録。ここより新しいものに点をつける */
+/** 「何分前」の言い方。時刻が読めなければ何も出さない */
+function timeAgo(iso: string): string {
+    const then = new Date(iso).getTime();
+    if (!Number.isFinite(then)) return "";
+
+    const minutes = Math.floor((Date.now() - then) / 60000);
+    if (minutes < 1) return "たった今";
+    if (minutes < 60) return `${minutes}分前`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}時間前`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}日前`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}か月前`;
+    return `${Math.floor(months / 12)}年前`;
+}
+
 const SEEN_KEY = "genseki:notices-seen-at";
 
 type IconName = "home" | "pen" | "search" | "book" | "trophy";
@@ -101,6 +118,8 @@ export default function Header({ breadcrumbs = [] }: Props) {
             id: string;
             date: string;
             label: string;
+            /** 作られた時刻。「何分前」に使う */
+            at: string;
             kind: string;
             body?: string;
             image?: string | null;
@@ -127,6 +146,7 @@ export default function Header({ breadcrumbs = [] }: Props) {
                     id: row.id,
                     date: row.published_at,
                     label: row.title,
+                    at: row.created_at,
                     kind:
                         row.type === "release"
                             ? "release"
@@ -165,6 +185,8 @@ export default function Header({ breadcrumbs = [] }: Props) {
         id: string;
         date: string;
         label: string;
+        /** 作られた時刻。「何分前」に使う。既定のものは日付しか無い */
+        at: string;
         kind: string;
         body?: string;
         image?: string | null;
@@ -176,6 +198,7 @@ export default function Header({ breadcrumbs = [] }: Props) {
                   id: row.id,
                   date: row.date,
                   label: row.label,
+                  at: row.date,
                   kind: row.kind,
               }));
     const unread = shown.filter((notice) => !seenAt || notice.date > seenAt);
@@ -300,40 +323,19 @@ export default function Header({ breadcrumbs = [] }: Props) {
                                         const isUnread = unread.some(
                                             (row) => row.id === notice.id,
                                         );
+                                        /*
+                                         * 出すのは内容と「何分前」だけ。
+                                         * 日付・本文・画像は枠を太らせるのでやめた。
+                                         * 収まらない内容は後半を…で切る。
+                                         */
                                         const inner = (
                                             <>
-                                                <span
-                                                    className={[
-                                                        "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
-                                                        notice.kind === "release"
-                                                            ? "bg-forest"
-                                                            : notice.kind === "maintenance"
-                                                              ? "bg-[var(--color-amber)]"
-                                                              : "bg-[var(--color-faint)]",
-                                                    ].join(" ")}
-                                                />
-
-                                                <span className="min-w-0 flex-1">
-                                                    <span className="block text-[11px] text-faint">
-                                                        {notice.date}
-                                                    </span>
-                                                    <span className="mt-0.5 block text-[13px] leading-relaxed text-ink">
-                                                        {notice.label}
-                                                    </span>
-                                                    {notice.body && (
-                                                        <span className="mt-0.5 line-clamp-2 block text-[11px] leading-relaxed text-muted">
-                                                            {notice.body}
-                                                        </span>
-                                                    )}
+                                                <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                                                    {notice.label}
                                                 </span>
-
-                                                {/* 画像があれば右に小さく添える */}
-                                                {notice.image && (
-                                                    <EntryImage
-                                                        src={notice.image}
-                                                        className="aspect-video w-16 shrink-0 rounded border border-line object-cover"
-                                                    />
-                                                )}
+                                                <span className="shrink-0 text-[11px] text-faint">
+                                                    {timeAgo(notice.at)}
+                                                </span>
                                             </>
                                         );
 
@@ -347,12 +349,12 @@ export default function Header({ breadcrumbs = [] }: Props) {
                                                 {notice.link ? (
                                                     <Link
                                                         href={notice.link}
-                                                        className="flex gap-2.5 px-4 py-3 hover:bg-canvas"
+                                                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-canvas"
                                                     >
                                                         {inner}
                                                     </Link>
                                                 ) : (
-                                                    <span className="flex gap-2.5 px-4 py-3">
+                                                    <span className="flex items-center gap-3 px-4 py-2.5">
                                                         {inner}
                                                     </span>
                                                 )}
