@@ -375,10 +375,24 @@ export default function AdminNoticesClient() {
                                                         </label>
                                                     )}
 
+                                                    {/*
+                                                     * 出ない理由は黙らずに書く。
+                                                     * 黙って出さないと、壊れたと
+                                                     * 思われて原因を探させてしまう。
+                                                     */}
+                                                    {notice.image_url?.startsWith(
+                                                        IDB_PREFIX,
+                                                    ) && (
+                                                        <p className="mt-1 rounded bg-amber-tint px-2 py-1.5 text-[10px] leading-relaxed text-amber">
+                                                            この画像はこの端末の中にしか
+                                                            ありません。ホームの帯には
+                                                            出ないので、「差し替える」で
+                                                            同じ画像を選び直してください。
+                                                        </p>
+                                                    )}
+
                                                     <p className="mt-1 text-[10px] leading-relaxed text-faint">
                                                         ベルの中では小さく出ます。
-                                                        端末の中の古い画像（idb:）は、
-                                                        選び直すと帯に出せる形になります。
                                                     </p>
                                                 </div>
                                             </div>
