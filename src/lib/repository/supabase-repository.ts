@@ -2108,7 +2108,19 @@ export const supabaseRepository: Repository = {
             ).catch(() => ({ data: [] } as any)),
         ]);
 
-        const notices = rows<AdminNotice>(noticeRes.data);
+        /*
+         * 日付は必ず 10 文字（YYYY-MM-DD）に切る。
+         *
+         * 本番の表が古い版だと、published_at が時刻付きの
+         * 長い形で返る（表の列が古い件）。そのまま
+         * 「今日以前か」を文字で比べると必ず落ち、
+         * ベルのお知らせだけがどこにも出なくなる。
+         * announcements 側は前から切っている。こちらも揃える。
+         */
+        const notices = rows<AdminNotice>(noticeRes.data).map((row) => ({
+            ...row,
+            published_at: String(row.published_at ?? "").slice(0, 10),
+        }));
 
         /* announcements を、ベルの形に合わせる */
         const announcements = rows<Record<string, unknown>>(
