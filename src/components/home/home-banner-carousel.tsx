@@ -25,7 +25,7 @@ import { useEffect, useRef, useState } from "react";
 import ContestBanner from "@/components/common/contest-banner";
 import EntryImage from "@/components/common/entry-image";
 import { getRepository } from "@/lib/repository";
-import type { AdminBanner, Contest } from "@/types";
+import type { AdminBanner, AdminNotice, Contest } from "@/types";
 
 interface Props {
     /** 開催中のコンテスト */
@@ -37,6 +37,7 @@ const FLOW_INTERVAL_MS = 5000;
 
 type Slide =
     | { kind: "contest"; id: string; contest: Contest }
+    | { kind: "notice"; id: string; notice: AdminNotice }
     | { kind: "banner"; id: string; banner: AdminBanner };
 
 /** 締切の見せ方。点で区切ると日付として読みやすい */
@@ -47,14 +48,32 @@ function dotDate(value: string | null | undefined): string {
 
 export default function HomeBannerCarousel({ contests }: Props) {
     const [banners, setBanners] = useState<AdminBanner[]>([]);
+    const [notices, setNotices] = useState<AdminNotice[]>([]);
 
     useEffect(() => {
         void (async () => {
-            const rows = await getRepository().listBanners();
+            const today = new Date().toISOString().slice(0, 10);
+            const [bannerRows, noticeRows] = await Promise.all([
+                getRepository().listBanners(),
+                getRepository().listNotices(),
+            ]);
             setBanners(
-                rows
+                bannerRows
                     .filter((row) => row.is_active && row.place === "home-side")
                     .sort((a, b) => a.sort_order - b.sort_order),
+            );
+            /*
+             * 絵の付いたお知らせもここで流す。
+             * 文字だけのものは左の柱に出ているので、帯には出さない。
+             * 並びは運営の決めた順（listNotices の順）のまま。
+             */
+            setNotices(
+                noticeRows.filter(
+                    (row) =>
+                        row.is_published &&
+                        row.published_at <= today &&
+                        row.image_url,
+                ),
             );
         })();
     }, []);
@@ -67,6 +86,11 @@ export default function HomeBannerCarousel({ contests }: Props) {
                 id: `contest:${contest.id}`,
                 contest,
             })),
+        ...notices.map((notice) => ({
+            kind: "notice" as const,
+            id: `notice:${notice.id}`,
+            notice,
+        })),
         ...banners.map((banner) => ({
             kind: "banner" as const,
             id: `banner:${banner.id}`,
@@ -179,6 +203,19 @@ export default function HomeBannerCarousel({ contests }: Props) {
                                         </span>
                                     </span>
                                 </span>
+                            </Link>
+                        ) : slide.kind === "notice" ? (
+                            <Link
+                                href={slide.notice.link || "/notices"}
+                                title={slide.notice.title}
+                                className="block aspect-video"
+                            >
+                                <EntryImage
+                                    src={slide.notice.image_url}
+                                    alt={slide.notice.title}
+                                    className="h-full w-full object-cover"
+                                    fallback={slide.notice.title || "お知らせ"}
+                                />
                             </Link>
                         ) : slide.banner.link_url ? (
                             <Link
