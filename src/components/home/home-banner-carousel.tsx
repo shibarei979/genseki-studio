@@ -6,11 +6,11 @@
  * コンテスト・お知らせ・運営の帯の絵を、横に並べて掲示する。
  *
  * 勝手には動かさない。読んでいる横で流れると落ち着かない。
- *   4 枚まで  … そのまま並べる。矢印は出さない
- *   5 枚以上  … 左右に矢印を置き、押すと 1 枚ぶんずれる
  *
- * 1 枚の幅は決め打ちにしない。枠の幅から
- * 「同時に見せる枚数」で割って決める（広い画面 4、狭い画面 2）。
+ * 札の幅は 240px の決め打ち。枠に入るだけ並べて、
+ * 入りきらなくなったら左右に矢印が出る。
+ * 押すと 1 枚ぶんずれる。
+ * 何枚で矢印が出るかは、画面の幅で決まる。
  * ============================================================
  */
 
@@ -25,6 +25,8 @@ import { getRepository } from "@/lib/repository";
 import { IDB_PREFIX } from "@/lib/storage/image-store";
 import type { AdminBanner, AdminNotice, Contest } from "@/types";
 
+/** 札 1 枚の幅 */
+const CARD_WIDTH = 240;
 /** 札と札の間 */
 const CARD_GAP = 14;
 
@@ -81,22 +83,25 @@ export default function HomeBannerCarousel({ contests }: Props) {
     }, []);
 
     /*
-     * 枠の幅から札の幅を割り出す。
-     * 決め打ちの幅だと、4 枚がちょうど収まらない。
+     * 枠に何枚入るかを測る。
+     * 入りきる間は矢印を出さず、あふれたら出す。
      */
     const viewportRef = useRef<HTMLDivElement>(null);
     const [perView, setPerView] = useState(4);
-    const [cardWidth, setCardWidth] = useState(0);
 
     useEffect(() => {
         const el = viewportRef.current;
         if (!el) return;
 
         const measure = () => {
-            const width = el.clientWidth;
-            const count = width < 640 ? 2 : 4;
-            setPerView(count);
-            setCardWidth((width - (count - 1) * CARD_GAP) / count);
+            setPerView(
+                Math.max(
+                    1,
+                    Math.floor(
+                        (el.clientWidth + CARD_GAP) / (CARD_WIDTH + CARD_GAP),
+                    ),
+                ),
+            );
         };
         measure();
 
@@ -141,18 +146,14 @@ export default function HomeBannerCarousel({ contests }: Props) {
                     className="flex transition-transform duration-300"
                     style={{
                         gap: `${CARD_GAP}px`,
-                        transform: `translateX(-${offset * (cardWidth + CARD_GAP)}px)`,
+                        transform: `translateX(-${offset * (CARD_WIDTH + CARD_GAP)}px)`,
                     }}
                 >
                     {slides.map((slide) => (
                         <div
                             key={slide.id}
                             className="shrink-0 overflow-hidden rounded-lg border border-line bg-surface"
-                            style={
-                                cardWidth > 0
-                                    ? { width: `${cardWidth}px` }
-                                    : undefined
-                            }
+                            style={{ width: `${CARD_WIDTH}px` }}
                         >
                             {slide.kind === "contest" ? (
                                 <Link
