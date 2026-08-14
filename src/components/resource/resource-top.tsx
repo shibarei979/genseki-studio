@@ -22,7 +22,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import ResourceIcon from "@/components/resource/resource-icons";
 import { formatNumber } from "@/lib/utils/text";
@@ -126,6 +126,17 @@ export default function ResourceTop({
     onOpenAdd,
 }: Props) {
     const [isSpread, setIsSpread] = useState(false);
+
+    /*
+     * 頁に来た瞬間、世界がひとりでに開く。
+     * 一拍(0.2秒)置くのは、畳んだ状態から広がる動きを
+     * 目に見せるため。最初から開いていると、ただの配置になる。
+     * 核を押せば畳める。静かに眺めたい人の道も残す。
+     */
+    useEffect(() => {
+        const timer = window.setTimeout(() => setIsSpread(true), 200);
+        return () => window.clearTimeout(timer);
+    }, []);
     const [hoveredId, setHoveredId] = useState<string | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [query, setQuery] = useState("");
@@ -492,6 +503,21 @@ export default function ResourceTop({
                                 zIndex: isHovered ? 20 : 1,
                             }}
                         >
+                            {/*
+                             * 呼吸の層。
+                             * 位置決め(外)・呼吸(ここ)・押した拡大(内)を
+                             * 別の箱に分ける。1 つの箱に重ねると
+                             * transform が奪い合って動きが消える。
+                             * 周期と拍を 1 つずつずらし、揃って動く
+                             * 機械らしさを消す。
+                             */}
+                            <div
+                                className="node-breathe"
+                                style={{
+                                    animationDuration: `${4 + (index % 3) * 0.8}s`,
+                                    animationDelay: `${(index * 0.53) % 3}s`,
+                                }}
+                            >
                             <button
                                 type="button"
                                 onClick={() => {
@@ -533,6 +559,7 @@ export default function ResourceTop({
                                     </span>
                                 )}
                             </button>
+                            </div>
 
                             {/*
                              * 衛星。かざした分類の最近の項目が浮かび出る。

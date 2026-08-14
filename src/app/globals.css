@@ -375,13 +375,29 @@ body {
     animation: satellite-in 180ms ease-out both;
 }
 
+/* 丸の呼吸。核より小さく、ふくらみは 4% まで */
+@keyframes node-breathe {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.04);
+    }
+}
+
+.node-breathe {
+    animation: node-breathe 4s ease-in-out infinite;
+}
+
 /* 動きを減らす設定の人には、全部止めて出す */
 @media (prefers-reduced-motion: reduce) {
     .core-breathe,
     .core-halo,
     .core-orbit,
     .map-drift,
-    .satellite {
+    .satellite,
+    .node-breathe {
         animation: none;
     }
 }
