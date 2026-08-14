@@ -220,7 +220,24 @@ function Hero({ onStart }: { onStart?: () => void }) {
              * 狭い画面では全体に敷き、その上に字を載せる。
              * 横に並べる幅が無いので、重ねる。
              */}
-            <div className="absolute inset-0 overflow-hidden md:inset-y-0 md:left-auto md:right-0 md:w-1/2">
+            <div
+                className="absolute inset-0 overflow-hidden md:inset-y-0 md:left-auto md:right-0 md:w-1/2"
+                /*
+                 * 広い画面では、絵の左端をなだらかに消す。
+                 *
+                 * 真ん中でぷつりと切ると、写真を貼った境目が見える。
+                 * mask で左 22% までを透明から立ち上げ、
+                 * 白い地へ溶け込ませる。
+                 * 覆いではなく mask なのは、下の地の色が
+                 * 何色でも同じに効くようにするため。
+                 */
+                style={{
+                    maskImage:
+                        "linear-gradient(to right, transparent 0%, black 22%)",
+                    WebkitMaskImage:
+                        "linear-gradient(to right, transparent 0%, black 22%)",
+                }}
+            >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={HERO_IMAGES[heroIndex]}
