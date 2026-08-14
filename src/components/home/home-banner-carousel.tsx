@@ -26,7 +26,7 @@ import { IDB_PREFIX } from "@/lib/storage/image-store";
 import type { AdminBanner, AdminNotice, Contest } from "@/types";
 
 /** 札 1 枚の幅 */
-const CARD_WIDTH = 240;
+const CARD_WIDTH = 270;
 /** 札と札の間 */
 const CARD_GAP = 14;
 
