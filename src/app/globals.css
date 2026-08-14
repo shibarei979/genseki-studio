@@ -300,6 +300,94 @@ body {
 
 /*
  * ------------------------------------------------------------
+ * 資料の地図
+ *
+ * 核は息をし、星が巡り、塵が漂う。
+ * どれも動きはごく小さく。世界が生きて見える最小限。
+ * ------------------------------------------------------------
+ */
+@keyframes core-breathe {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.03);
+    }
+}
+
+@keyframes core-halo {
+    0%,
+    100% {
+        opacity: 0.45;
+    }
+    50% {
+        opacity: 0.85;
+    }
+}
+
+@keyframes core-orbit {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes map-drift {
+    0%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.35;
+    }
+    50% {
+        transform: translateY(-7px);
+        opacity: 0.6;
+    }
+}
+
+@keyframes satellite-in {
+    from {
+        opacity: 0;
+        scale: 0.7;
+    }
+    to {
+        opacity: 1;
+        scale: 1;
+    }
+}
+
+.core-breathe {
+    animation: core-breathe 4.5s ease-in-out infinite;
+}
+
+.core-halo {
+    animation: core-halo 4.5s ease-in-out infinite;
+}
+
+.core-orbit {
+    animation: core-orbit 70s linear infinite;
+}
+
+.map-drift {
+    animation: map-drift 7s ease-in-out infinite;
+}
+
+.satellite {
+    animation: satellite-in 180ms ease-out both;
+}
+
+/* 動きを減らす設定の人には、全部止めて出す */
+@media (prefers-reduced-motion: reduce) {
+    .core-breathe,
+    .core-halo,
+    .core-orbit,
+    .map-drift,
+    .satellite {
+        animation: none;
+    }
+}
+
+/*
+ * ------------------------------------------------------------
  * ホームの本棚の板
  *
  * 1 段 = .book-shelf-area、板 = .book-shelf-board。

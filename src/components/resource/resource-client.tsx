@@ -840,6 +840,7 @@ export default function ResourceClient({ workId }: Props) {
                 <main className="min-w-0 flex-1">
                     {view === "top" && (
                         <ResourceTop
+                            workTitle={work.title}
                             pages={pages}
                             entries={entries}
                             relations={relations}

@@ -3,17 +3,20 @@
  * 原石航路 Studio
  * ResourceTop — 資料の地図
  *
- * 数字の札を並べる画面をやめ、作品世界を探索する地図にした。
+ * 「整った一覧」ではなく「育っていく世界」に見せる。
  *
- *   ふだん      真ん中に脳の印。まわりは薄い点だけ
- *   押すと      分類の丸が中央から放射状に広がる（0.25秒）
- *   丸を押すと  右から引き出しが開き、最近の項目・検索・
- *              未整理が見える。頁を離れずに掘っていける
- *   真ん中の下  横断検索。「王都」「リオ」など、名前・別名・
- *              一言説明をまたいで全部の分類から探す
- *
- * 分類の丸は決め打ちにしない。実際にある資料ページから作る。
- * 自作のページも同じ地図に乗る。
+ *   核        真ん中は押しボタンではなく、作品の核。
+ *             題名を抱いて、ゆっくり息をしている。
+ *             まわりを小さな星が静かに巡る
+ *   断片      分類の丸は、件数が増えるほど大きくなる。
+ *             空のページは点線の「まだ白紙」の地
+ *   発見      丸に手をかざすと、最近の項目が衛星になって
+ *             浮かび出る。押せばそのまま掘れる
+ *   育ち      「この7日で 人物2・場所1 が増えました」と
+ *             核の下で世界が語る。今週増えた丸には芽の印
+ *   糸        線は開いた瞬間に中央から伸びて描かれる。
+ *             人物と関係図、場所と出来事の間にも薄い糸を張り、
+ *             メニューではなく網に見せる
  * ============================================================
  */
 
@@ -32,6 +35,8 @@ import type {
 } from "@/types";
 
 interface Props {
+    /** 作品の題名。核に抱かせる */
+    workTitle: string;
     pages: ResourcePage[];
     entries: ResourceEntry[];
     relations: ResourceRelation[];
@@ -43,9 +48,7 @@ interface Props {
 
 /*
  * 分類ごとの淡い色。
- *
  * 彩度は低く。派手にすると資料ではなく玩具に見える。
- * 自作のページには既定の青鼠を使う。
  */
 const ACCENTS: Record<string, { line: string; tint: string; ink: string }> = {
     character: { line: "#b9cfe8", tint: "#f3f7fc", ink: "#4a6b96" },
@@ -66,37 +69,54 @@ function accentOf(page: ResourcePage) {
 
 /*
  * 丸の置き場所（%）。
- *
- * 完全な正円にはしない。少し崩すと「知識が広がっている」
- * 形に見える。ただし読み順（上から時計回り）は保つ。
- * 11 個目からは 2 周目として内側へ。
+ * 完全な正円にはしない。少し崩すと知識が広がって見える。
  */
 const SLOTS: { x: number; y: number }[] = [
-    { x: 50, y: 15 },
-    { x: 72, y: 22 },
-    { x: 85, y: 46 },
-    { x: 76, y: 74 },
-    { x: 56, y: 86 },
-    { x: 33, y: 80 },
-    { x: 15, y: 60 },
-    { x: 13, y: 32 },
-    { x: 31, y: 17 },
-    { x: 91, y: 22 },
+    { x: 50, y: 14 },
+    { x: 72, y: 21 },
+    { x: 86, y: 45 },
+    { x: 77, y: 74 },
+    { x: 57, y: 87 },
+    { x: 33, y: 81 },
+    { x: 14, y: 60 },
+    { x: 12, y: 31 },
+    { x: 30, y: 16 },
+    { x: 92, y: 22 },
     { x: 35, y: 44 },
     { x: 65, y: 58 },
 ];
 
-/* 飾りの小さな点。将来「主人公」「最近の人物」などへ育てる足場 */
-const DOTS: { x: number; y: number; icon: string }[] = [
-    { x: 42, y: 27, icon: "character" },
-    { x: 63, y: 33, icon: "term" },
-    { x: 68, y: 66, icon: "memo" },
-    { x: 40, y: 68, icon: "relation" },
-    { x: 24, y: 45, icon: "place" },
-    { x: 79, y: 35, icon: "event" },
+/*
+ * 分類同士の糸。世界は放射ではなく網でつながっている。
+ * 実在するページ同士のときだけ張る。
+ */
+const THREADS: [string, string][] = [
+    ["character", "relation"],
+    ["character", "organization"],
+    ["place", "event"],
+    ["event", "plot"],
+    ["term", "memo"],
 ];
 
+/* 背景で漂う塵。世界に空気を入れる */
+const DUST: { x: number; y: number; delay: number }[] = [
+    { x: 22, y: 24, delay: 0 },
+    { x: 62, y: 12, delay: 1.4 },
+    { x: 88, y: 34, delay: 2.6 },
+    { x: 80, y: 62, delay: 0.8 },
+    { x: 44, y: 76, delay: 2.1 },
+    { x: 12, y: 46, delay: 3.2 },
+    { x: 56, y: 40, delay: 1.0 },
+];
+
+/** 今日から数えて n 日以内か */
+function withinDays(iso: string, days: number): boolean {
+    const then = new Date(iso).getTime();
+    return Number.isFinite(then) && Date.now() - then <= days * 24 * 60 * 60 * 1000;
+}
+
 export default function ResourceTop({
+    workTitle,
     pages,
     entries,
     relations,
@@ -126,7 +146,28 @@ export default function ResourceTop({
         ).length;
     }
 
-    /* 育ちの数字。札はやめたが、数字そのものは下に静かに残す */
+    /* この7日で増えたもの。世界が語る材料 */
+    function newOf(page: ResourcePage): number {
+        return entries.filter(
+            (row) =>
+                row.page_id === page.id &&
+                row.candidate_status !== "pending" &&
+                withinDays(row.created_at, 7),
+        ).length;
+    }
+
+    const growthWords = useMemo(() => {
+        const grown = pages
+            .map((page) => ({ label: page.label, added: newOf(page) }))
+            .filter((row) => row.added > 0)
+            .sort((a, b) => b.added - a.added)
+            .slice(0, 3);
+
+        if (grown.length === 0) return null;
+        return grown.map((row) => `${row.label}${row.added}`).join("・");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pages, entries]);
+
     const grew = useMemo(() => {
         let sum = 0;
         for (let i = 13; i >= 0; i -= 1) {
@@ -139,33 +180,27 @@ export default function ResourceTop({
         return sum;
     }, [logs]);
 
-    const fromBody = entries.filter((row) => row.candidate_source).length;
     const pendingTotal = entries.filter(
         (row) => row.candidate_status === "pending",
     ).length;
 
-    /*
-     * 横断検索。
-     * 名前・別名・一言説明を、全部の分類をまたいで探す。
-     * 承認待ちの候補も（印を付けて）出す。拾ったものも世界の一部。
-     */
+    /* 横断検索。名前・別名・一言説明を全分類またいで */
     const found = useMemo(() => {
         const needle = query.trim().toLowerCase();
         if (!needle) return [];
 
         return entries
-            .filter((row) => {
-                const haystack = [row.name, row.summary, ...row.aliases]
+            .filter((row) =>
+                [row.name, row.summary, ...row.aliases]
                     .join(" ")
-                    .toLowerCase();
-                return haystack.includes(needle);
-            })
+                    .toLowerCase()
+                    .includes(needle),
+            )
             .slice(0, 10);
     }, [entries, query]);
 
     const selected = pages.find((row) => row.id === selectedId) ?? null;
 
-    /* 引き出しの中身。最近のもの・その場の絞り込み */
     const selectedEntries = useMemo(() => {
         if (!selected) return [];
         const needle = panelQuery.trim().toLowerCase();
@@ -189,30 +224,95 @@ export default function ResourceTop({
         return pages.find((row) => row.id === entry.page_id);
     }
 
+    /** かざした丸の衛星。最近の項目 3 つ */
+    function satellitesOf(pageId: string): ResourceEntry[] {
+        return entries
+            .filter(
+                (row) =>
+                    row.page_id === pageId &&
+                    row.candidate_status !== "pending",
+            )
+            .sort((a, b) => b.created_at.localeCompare(a.created_at))
+            .slice(0, 3);
+    }
+
+    /* 件数で丸が育つ。0件=88px、増えるほど最大132pxまで */
+    function sizeOf(count: number): number {
+        return 88 + Math.min(44, Math.round(Math.log2(count + 1) * 11));
+    }
+
+    function slotOf(index: number) {
+        return SLOTS[index % SLOTS.length];
+    }
+
+    /* 分類同士の糸。両方のページがあるときだけ */
+    const threads = THREADS.flatMap(([a, b]) => {
+        const ia = pages.findIndex((row) => row.builtin_key === a);
+        const ib = pages.findIndex((row) => row.builtin_key === b);
+        if (ia < 0 || ib < 0) return [];
+        return [{ from: slotOf(ia), to: slotOf(ib), key: `${a}-${b}` }];
+    });
+
     return (
         <div className="relative overflow-hidden">
-            {/* ---- 地図 ---- */}
             <div className="relative min-h-[540px] lg:min-h-[620px]">
-                {/*
-                 * つなぎの線。丸と同じ %座標で引けば、
-                 * 画面の大きさが変わっても丸の中心を外さない。
-                 */}
+                {/* 背景で漂う塵。動きはごく小さく */}
+                {DUST.map((dust, index) => (
+                    <span
+                        key={index}
+                        aria-hidden="true"
+                        className="map-drift absolute h-1.5 w-1.5 rounded-full bg-forest-line/50"
+                        style={{
+                            left: `${dust.x}%`,
+                            top: `${dust.y}%`,
+                            animationDelay: `${dust.delay}s`,
+                        }}
+                    />
+                ))}
+
+                {/* ---- 糸 ---- */}
                 <svg
                     className="pointer-events-none absolute inset-0 h-full w-full"
                     viewBox="0 0 100 100"
                     preserveAspectRatio="none"
                     aria-hidden="true"
                 >
+                    {/* 分類同士の薄い糸。網に見せる */}
+                    {threads.map((thread) => (
+                        <path
+                            key={thread.key}
+                            d={`M ${thread.from.x} ${thread.from.y} Q ${
+                                (thread.from.x + thread.to.x) / 2 + 3
+                            } ${(thread.from.y + thread.to.y) / 2 - 3} ${
+                                thread.to.x
+                            } ${thread.to.y}`}
+                            fill="none"
+                            stroke="#c9d4dc"
+                            strokeWidth="1"
+                            strokeDasharray="2 5"
+                            vectorEffect="non-scaling-stroke"
+                            className="transition-opacity duration-700"
+                            opacity={isSpread ? 0.35 : 0}
+                        />
+                    ))}
+
+                    {/*
+                     * 中央からの糸。開いた瞬間、中央から先へ
+                     * 伸びて「描かれる」。少し曲げて生き物らしく。
+                     */}
                     {pages.map((page, index) => {
-                        const slot = SLOTS[index % SLOTS.length];
+                        const slot = slotOf(index);
                         const isHovered = hoveredId === page.id;
+                        const bend = index % 2 === 0 ? 3.5 : -3.5;
                         return (
-                            <line
+                            <path
                                 key={page.id}
-                                x1="50"
-                                y1="47"
-                                x2={slot.x}
-                                y2={slot.y}
+                                d={`M 50 47 Q ${(50 + slot.x) / 2 + bend} ${
+                                    (47 + slot.y) / 2 + bend
+                                } ${slot.x} ${slot.y}`}
+                                fill="none"
+                                pathLength={1}
+                                strokeDasharray="1"
                                 stroke={
                                     isHovered
                                         ? "var(--color-forest)"
@@ -220,52 +320,63 @@ export default function ResourceTop({
                                 }
                                 strokeWidth={isHovered ? 1.6 : 1}
                                 vectorEffect="non-scaling-stroke"
-                                className="transition-opacity duration-300"
-                                opacity={isSpread ? (isHovered ? 0.9 : 0.45) : 0}
+                                style={{
+                                    strokeDashoffset: isSpread ? 0 : 1,
+                                    transition: `stroke-dashoffset 500ms ease ${index * 45}ms, opacity 300ms, stroke 200ms`,
+                                }}
+                                opacity={isSpread ? (isHovered ? 0.95 : 0.55) : 0}
                             />
                         );
                     })}
                 </svg>
 
-                {/* 飾りの点。ふだんは 2〜3 個だけ薄く見えている */}
-                {DOTS.map((dot, index) => (
-                    <span
-                        key={index}
-                        data-seed={dot.icon}
-                        aria-hidden="true"
-                        className="absolute flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line/60 bg-surface text-faint shadow-sm transition-all duration-300"
-                        style={{
-                            left: `${dot.x}%`,
-                            top: `${dot.y}%`,
-                            opacity: isSpread ? 0.75 : index < 3 ? 0.3 : 0,
-                            transform: `translate(-50%, -50%) scale(${isSpread ? 1 : 0.7})`,
-                        }}
-                    >
-                        <ResourceIcon builtinKey={dot.icon} size={14} />
-                    </span>
-                ))}
-
-                {/* ---- 真ん中の脳 ---- */}
+                {/* ---- 核 ---- */}
                 <div
-                    className="absolute left-1/2 top-[47%] -translate-x-1/2 -translate-y-1/2 text-center"
-                    style={{ width: 210 }}
+                    className="absolute left-1/2 top-[47%] z-10 -translate-x-1/2 -translate-y-1/2 text-center"
+                    style={{ width: 230 }}
                 >
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setIsSpread((on) => !on);
-                            setSelectedId(null);
-                            setQuery("");
-                        }}
-                        aria-expanded={isSpread}
-                        className="group mx-auto flex h-32 w-32 items-center justify-center rounded-full border border-forest-line/70 bg-surface text-forest shadow-[0_10px_30px_-12px_rgba(31,78,107,0.35)] transition-transform duration-200 hover:scale-105"
-                        style={{
-                            background:
-                                "radial-gradient(circle at 50% 38%, #ffffff 0%, #f2f7fb 70%, #e8f0f6 100%)",
-                        }}
-                    >
-                        <BrainIcon />
-                    </button>
+                    <div className="relative mx-auto h-36 w-36">
+                        {/* 暈。核が静かに灯っている */}
+                        <span
+                            aria-hidden="true"
+                            className="core-halo absolute -inset-5 rounded-full"
+                            style={{
+                                background:
+                                    "radial-gradient(circle, rgba(31,78,107,0.14) 0%, rgba(31,78,107,0) 70%)",
+                            }}
+                        />
+
+                        {/* 巡る星。世界に時間が流れている */}
+                        <span
+                            aria-hidden="true"
+                            className="core-orbit absolute -inset-3 rounded-full border border-forest-line/25"
+                        >
+                            <span className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-forest/50" />
+                            <span className="absolute right-[7%] top-[72%] h-1 w-1 rounded-full bg-forest/35" />
+                            <span className="absolute left-[4%] top-[38%] h-1 w-1 rounded-full bg-forest-line" />
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsSpread((on) => !on);
+                                setSelectedId(null);
+                                setQuery("");
+                            }}
+                            aria-expanded={isSpread}
+                            className="core-breathe relative flex h-36 w-36 flex-col items-center justify-center rounded-full border border-forest-line/70 text-forest shadow-[0_14px_36px_-14px_rgba(31,78,107,0.4)] transition-transform duration-200 hover:scale-[1.04]"
+                            style={{
+                                background:
+                                    "radial-gradient(circle at 50% 36%, #ffffff 0%, #f2f7fb 68%, #e6eef5 100%)",
+                            }}
+                        >
+                            <BrainIcon />
+                            {/* 核は記号ではなく、この作品そのもの */}
+                            <span className="mt-1 max-w-[112px] truncate px-1 text-[11px] font-medium text-ink">
+                                {workTitle || "無題の世界"}
+                            </span>
+                        </button>
+                    </div>
 
                     {!isSpread ? (
                         <p className="mt-3 text-[12px] text-muted">
@@ -283,7 +394,14 @@ export default function ResourceTop({
                         </div>
                     )}
 
-                    {/* 横断検索の答え。分類をまたいで、出どころの色付きで */}
+                    {/* 世界が語る。この7日で何が増えたか */}
+                    <p className="mt-1.5 text-[11px] text-faint">
+                        {growthWords
+                            ? `この7日で ${growthWords} が増えました`
+                            : "本文を書くほど、ここに世界が集まります"}
+                    </p>
+
+                    {/* 横断検索の答え */}
                     {isSpread && query.trim() && (
                         <ul className="relative z-10 mt-2 max-h-56 overflow-y-auto rounded-xl border border-line bg-surface p-1.5 text-left shadow-lg">
                             {found.length === 0 ? (
@@ -347,84 +465,123 @@ export default function ResourceTop({
 
                 {/* ---- 分類の丸 ---- */}
                 {pages.map((page, index) => {
-                    const slot = SLOTS[index % SLOTS.length];
+                    const slot = slotOf(index);
                     const accent = accentOf(page);
                     const count = countOf(page);
                     const pending = pendingOf(page);
+                    const added = newOf(page);
+                    const size = sizeOf(count);
+                    const isHovered = hoveredId === page.id;
+                    const satellites = isHovered ? satellitesOf(page.id) : [];
 
                     return (
-                        <button
+                        <div
                             key={page.id}
-                            type="button"
-                            onClick={() => {
-                                setSelectedId(page.id);
-                                setPanelQuery("");
-                            }}
                             onMouseEnter={() => setHoveredId(page.id)}
                             onMouseLeave={() => setHoveredId(null)}
-                            tabIndex={isSpread ? 0 : -1}
-                            className="absolute flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full border bg-surface text-center shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md lg:h-[118px] lg:w-[118px]"
+                            className="absolute transition-all duration-300"
                             style={{
-                                left: `${slot.x}%`,
-                                top: `${slot.y}%`,
-                                borderColor: accent.line,
-                                background: `radial-gradient(circle at 50% 30%, #ffffff 0%, ${accent.tint} 100%)`,
-                                /*
-                                 * 畳んでいる間は中央に集めて消しておく。
-                                 * 開いた瞬間、中央から持ち場へ滑っていく。
-                                 */
-                                transform: isSpread
-                                    ? "translate(-50%, -50%) scale(1)"
-                                    : "translate(-50%, -50%) scale(0.2)",
-                                ...(isSpread
-                                    ? {}
-                                    : { left: "50%", top: "47%" }),
+                                left: isSpread ? `${slot.x}%` : "50%",
+                                top: isSpread ? `${slot.y}%` : "47%",
+                                transform: `translate(-50%, -50%) scale(${isSpread ? 1 : 0.2})`,
                                 opacity: isSpread ? 1 : 0,
                                 pointerEvents: isSpread ? "auto" : "none",
                                 transitionDelay: isSpread
-                                    ? `${index * 25}ms`
+                                    ? `${index * 30}ms`
                                     : "0ms",
+                                zIndex: isHovered ? 20 : 1,
                             }}
                         >
-                            <span style={{ color: accent.ink }}>
-                                <ResourceIcon
-                                    builtinKey={page.builtin_key}
-                                    size={20}
-                                />
-                            </span>
-                            <span className="mt-1 px-2 text-[12px] font-medium leading-tight text-ink">
-                                {page.label}
-                            </span>
-                            <span className="mt-0.5 text-[10px] text-muted">
-                                {count > 0 ? `${count}件` : "まだありません"}
-                            </span>
-
-                            {/* 未整理があるものには、気づける印を */}
-                            {pending > 0 && (
-                                <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber px-1 text-[10px] font-medium text-white">
-                                    {pending}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedId(page.id);
+                                    setPanelQuery("");
+                                }}
+                                tabIndex={isSpread ? 0 : -1}
+                                className="flex flex-col items-center justify-center rounded-full text-center shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-md"
+                                style={{
+                                    width: size,
+                                    height: size,
+                                    /* 白紙の地は点線。まだ誰も踏み入れていない */
+                                    border: `${count === 0 ? "1.5px dashed" : "1px solid"} ${accent.line}`,
+                                    background: `radial-gradient(circle at 50% 30%, #ffffff 0%, ${accent.tint} 100%)`,
+                                }}
+                            >
+                                <span style={{ color: accent.ink }}>
+                                    <ResourceIcon
+                                        builtinKey={page.builtin_key}
+                                        size={19}
+                                    />
                                 </span>
-                            )}
-                        </button>
+                                <span className="mt-0.5 px-2 text-[12px] font-medium leading-tight text-ink">
+                                    {page.label}
+                                </span>
+                                <span className="text-[10px] text-muted">
+                                    {count > 0 ? `${count}件` : "まだ白紙"}
+                                </span>
+                                {/* 今週の芽 */}
+                                {added > 0 && (
+                                    <span className="mt-0.5 rounded-full bg-forest-tint px-1.5 text-[9px] font-medium text-forest">
+                                        今週 +{added}
+                                    </span>
+                                )}
+
+                                {pending > 0 && (
+                                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber px-1 text-[10px] font-medium text-white">
+                                        {pending}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/*
+                             * 衛星。かざした分類の最近の項目が浮かび出る。
+                             * 探索の「発見」はここで起きる。
+                             */}
+                            {satellites.map((entry, i) => {
+                                const spots = [
+                                    { x: 0, y: -(size / 2 + 26) },
+                                    { x: size / 2 + 34, y: -(size / 4) },
+                                    { x: -(size / 2 + 34), y: -(size / 4) },
+                                ];
+                                const spot = spots[i];
+                                return (
+                                    <button
+                                        key={entry.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedId(page.id);
+                                            setPanelQuery("");
+                                        }}
+                                        className="satellite absolute left-1/2 top-1/2 max-w-[104px] truncate rounded-full border bg-surface px-2.5 py-1 text-[10px] text-ink shadow-md"
+                                        style={{
+                                            borderColor: accent.line,
+                                            transform: `translate(calc(-50% + ${spot.x}px), calc(-50% + ${spot.y}px))`,
+                                            animationDelay: `${i * 60}ms`,
+                                        }}
+                                    >
+                                        {entry.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     );
                 })}
 
-                {/* ページを追加。地図の一員として、点線の丸で */}
+                {/* ページを追加。点線の丸で、地図の一員として */}
                 <button
                     type="button"
                     onClick={onOpenAdd}
                     tabIndex={isSpread ? 0 : -1}
                     className="absolute flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-line bg-surface/70 text-muted transition-all duration-300 hover:border-forest-line hover:text-forest"
                     style={{
-                        left: "50%",
-                        top: "84%",
-                        transform: isSpread
-                            ? "translate(-50%, -50%) scale(1)"
-                            : "translate(-50%, -50%) scale(0.2)",
+                        left: isSpread ? "50%" : "50%",
+                        top: isSpread ? "94%" : "47%",
+                        transform: `translate(-50%, -50%) scale(${isSpread ? 1 : 0.2})`,
                         opacity: isSpread ? 1 : 0,
                         pointerEvents: isSpread ? "auto" : "none",
                         transitionDelay: isSpread
-                            ? `${pages.length * 25}ms`
+                            ? `${pages.length * 30}ms`
                             : "0ms",
                     }}
                     title="資料ページを追加します"
@@ -435,10 +592,8 @@ export default function ResourceTop({
                 </button>
             </div>
 
-            {/* 育ちの数字。札をやめたぶん、ここに静かに */}
             <p className="mt-2 text-center text-[11px] text-faint">
-                この14日で本文が +{formatNumber(grew)} 文字育ちました ・
-                本文から拾った項目 {fromBody} 件
+                この14日で本文が +{formatNumber(grew)} 文字育ちました
                 {pendingTotal > 0 && (
                     <span className="text-amber">
                         （未整理 {pendingTotal} 件）
@@ -449,7 +604,7 @@ export default function ResourceTop({
             {/* ---- 右の引き出し ---- */}
             <div
                 className={[
-                    "absolute inset-y-0 right-0 z-20 w-[290px] border-l border-line bg-surface shadow-xl transition-transform duration-300",
+                    "absolute inset-y-0 right-0 z-30 w-[290px] border-l border-line bg-surface shadow-xl transition-transform duration-300",
                     selected ? "translate-x-0" : "translate-x-full",
                 ].join(" ")}
             >
@@ -547,8 +702,8 @@ export default function ResourceTop({
 function BrainIcon() {
     return (
         <svg
-            width="52"
-            height="52"
+            width="44"
+            height="44"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
