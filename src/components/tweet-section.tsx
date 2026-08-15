@@ -616,15 +616,35 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
 
   async function handleLike(tweetId: string, liked: boolean) {
     if (!currentUserId) return
-    if (liked) {
-      await supabase.from('tweet_likes').delete().eq('user_id', currentUserId).eq('tweet_id', tweetId)
-    } else {
-      await supabase.from('tweet_likes').insert({ user_id: currentUserId, tweet_id: tweetId })
-    }
+
+    /*
+     * 先に画面を変え、失敗したら戻す。
+     *
+     * 押した手応えは即座に返したいが、
+     * 保存できていないのに付いたままだと、
+     * 開き直したときに外れていて驚く。
+     * 以前は結果を見ずに画面だけ変えていた。
+     */
     setTweets(prev => prev.map(t => t.id === tweetId
       ? { ...t, liked: !liked, like_count: liked ? t.like_count-1 : t.like_count+1 }
       : t
     ))
+
+    const { error } = liked
+      ? await supabase.from('tweet_likes')
+          .delete().eq('user_id', currentUserId).eq('tweet_id', tweetId)
+      : await supabase.from('tweet_likes')
+          .insert({ user_id: currentUserId, tweet_id: tweetId })
+
+    if (error) {
+      console.error('[tweet-like]', error)
+      /* 元に戻す */
+      setTweets(prev => prev.map(t => t.id === tweetId
+        ? { ...t, liked, like_count: liked ? t.like_count+1 : t.like_count-1 }
+        : t
+      ))
+      window.alert(`いいねを保存できませんでした：${error.message}`)
+    }
   }
 
   /**
