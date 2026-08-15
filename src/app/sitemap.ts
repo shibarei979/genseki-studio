@@ -64,7 +64,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             .order("created_at", { ascending: false })
             .limit(1000);
 
-        for (const novel of data ?? []) {
+        /*
+         * 1 話も投稿していない作品は地図に載せない。
+         * 作品ページ側で弾いているので、載せると
+         * 検索エンジンが「見つかりません」を拾う。
+         */
+        const ids = (data ?? []).map((row) => row.id);
+        const live = new Set<string>();
+        if (ids.length > 0) {
+            const { data: eps } = await supabase
+                .from("episodes")
+                .select("novel_id")
+                .in("novel_id", ids)
+                .eq("is_published", true);
+            for (const row of eps ?? []) live.add(row.novel_id as string);
+        }
+
+        for (const novel of (data ?? []).filter((row) => live.has(row.id))) {
             entries.push({
                 url: `${base}/novel/${novel.id}`,
                 lastModified: novel.created_at

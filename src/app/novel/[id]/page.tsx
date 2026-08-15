@@ -86,6 +86,14 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
   if (!isOpen && !isOwner) notFound()
 
+  /*
+   * 1 話も投稿していない作品は、読者には出さない。
+   * （話を読んだあと、下でもう一度確かめる）
+   *
+   * 作品を「公開」にしただけで中身が無いと、
+   * 開いた人は空の目次を見ることになる。
+   */
+
   // author・シリーズ情報・話一覧は互いに独立なので並列取得
   const [authorRes, seriesNovelRes, episodesRes] = await Promise.all([
     supabase.from('profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
@@ -140,6 +148,12 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const episodes = isAuthor
     ? rawEpisodes
     : (rawEpisodes || []).filter(ep => ep.is_published === true)
+
+  /*
+   * 投稿された話が 1 つも無ければ、読者には見せない。
+   * 作者には見せる（これから投稿する場所なので）。
+   */
+  if (!isOwner && (episodes || []).length === 0) notFound()
 
   const upcomingEpisode = (rawEpisodes || [])
     .filter(ep => ep.published === false && ep.scheduled_at && new Date(ep.scheduled_at).getTime() > nowMs)

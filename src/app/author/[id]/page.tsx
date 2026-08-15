@@ -43,8 +43,25 @@ export default async function AuthorPage({ params }: Props) {
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
+  /*
+   * 1 話も投稿していない作品は一覧に出さない。
+   *
+   * 開いても空の目次しか無く、作品ページ側でも弾いている。
+   * ここに出したままだと、押した先が「見つかりません」になる。
+   */
+  const listedIds = (novels || []).map((n: any) => n.id)
+  const publishedEpisodeNovelIds = new Set<string>()
+  if (listedIds.length > 0) {
+    const { data: liveEps } = await supabase
+      .from('episodes')
+      .select('novel_id')
+      .in('novel_id', listedIds)
+      .eq('is_published', true)
+    for (const row of liveEps || []) publishedEpisodeNovelIds.add(row.novel_id)
+  }
+
   const filteredNovels = (novels || []).filter((n: any) =>
-    user ? true : !n.is_r18
+    publishedEpisodeNovelIds.has(n.id) && (user ? true : !n.is_r18)
   )
 
   // シリーズ取得

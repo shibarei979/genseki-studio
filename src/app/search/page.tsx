@@ -143,6 +143,26 @@ export default async function SearchPage({ searchParams }: Props) {
 
   let novelIds = results.map((n: any) => n.id)
 
+  /*
+   * 1 話も投稿していない作品は結果から外す。
+   *
+   * 作品ページ側でも弾いているので、ここに残すと
+   * 押した先が「見つかりません」になる。
+   */
+  if (novelIds.length > 0) {
+    const { data: liveEps } = await supabase
+      .from('episodes')
+      .select('novel_id')
+      .in('novel_id', novelIds)
+      .eq('is_published', true)
+
+    const hasLive = new Set((liveEps || []).map((e: any) => e.novel_id))
+    const before = results.length
+    results = results.filter((n: any) => hasLive.has(n.id))
+    count = Math.max(0, count - (before - results.length))
+    novelIds = results.map((n: any) => n.id)
+  }
+
   // 文字数・ポイント（RPCで一括集計：本文転送なしで軽量）
   const charCountMap: Record<string, number> = {}
   const pointsMap: Record<string, number> = {}
