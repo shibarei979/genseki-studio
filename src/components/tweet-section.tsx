@@ -765,10 +765,10 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                     style={{position:'absolute',top:4,right:4,width:22,height:22,borderRadius:'50%',background:'rgba(0,0,0,0.6)',color:'var(--color-bg-card)',border:'none',cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
                 </div>
               )}
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:12}}>
-                <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:12,flexWrap:'wrap',gap:10}}>
+                <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',minWidth:0}}>
                   <button onClick={()=>fileInputRef.current?.click()}
-                    style={{display:'inline-flex',alignItems:'center',gap:6,height:36,padding:'0 14px',border:'1px solid #dcdfda',borderRadius:10,fontSize:13,color:'var(--color-text-muted)',background:'var(--color-bg-card)',cursor:'pointer'}}>
+                    style={{display:'inline-flex',alignItems:'center',gap:6,height:36,padding:'0 14px',border:'1px solid #dcdfda',borderRadius:10,fontSize:13,color:'var(--color-text-muted)',background:'var(--color-bg-card)',cursor:'pointer',flexShrink:0,whiteSpace:'nowrap'}}>
                     <IconImage/>
                     画像
                   </button>
@@ -785,7 +785,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                     type="button"
                     onClick={()=>setPollOptions(prev => prev ? null : ['', ''])}
                     aria-pressed={pollOptions !== null}
-                    style={{display:'inline-flex',alignItems:'center',gap:6,height:36,padding:'0 12px',borderRadius:10,fontSize:13,cursor:'pointer',
+                    style={{display:'inline-flex',alignItems:'center',gap:6,height:36,padding:'0 12px',borderRadius:10,fontSize:13,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap',
                       border:'1px solid', background: pollOptions ? '#eef2f5' : 'var(--color-bg-card)',
                       borderColor: pollOptions ? 'var(--color-brand)' : '#dcdfda',
                       color: pollOptions ? 'var(--color-brand)' : 'var(--color-text-muted)'}}>
@@ -805,7 +805,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                       value={postTopic ?? ''}
                       onChange={(e)=>setPostTopic(e.target.value || null)}
                       aria-label="テーマ"
-                      style={{height:36,padding:'0 10px',border:'1px solid #dcdfda',borderRadius:10,fontSize:13,color:'var(--color-text-muted)',background:'var(--color-bg-card)',cursor:'pointer',fontFamily:'inherit'}}
+                      style={{height:36,padding:'0 10px',border:'1px solid #dcdfda',borderRadius:10,fontSize:13,color:'var(--color-text-muted)',background:'var(--color-bg-card)',cursor:'pointer',fontFamily:'inherit',maxWidth:140,flexShrink:0}}
                     >
                       <option value="">テーマなし</option>
                       {topicList.filter(t => !t.is_official).map(t => (
@@ -817,7 +817,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                   <span style={{fontSize:12,color:'var(--color-text-faint)'}}>{body.length}/500</span>
                 </div>
                 <button onClick={handlePost} disabled={posting||!body.trim()}
-                  style={{height:40,padding:'0 24px',background:'var(--color-brand)',color:'var(--color-text-inverse)',border:'none',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer',opacity:posting||!body.trim()?0.5:1}}>
+                  style={{height:40,padding:'0 24px',background:'var(--color-brand)',color:'var(--color-text-inverse)',border:'none',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer',opacity:posting||!body.trim()?0.5:1,flexShrink:0,whiteSpace:'nowrap',marginLeft:'auto'}}>
                   {posting ? '投稿中...' : '投稿'}
                 </button>
               </div>

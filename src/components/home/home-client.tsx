@@ -194,12 +194,14 @@ export default function HomeClient() {
                         </main>
 
                         {/*
-                         * 柱が消える幅では、同じ中身を下に回す。
-                         * 出さないと、コンテストとお知らせへの入口が無くなる。
+                         * 狭い画面では、柱の中身を下に回さない。
+                         *
+                         * 執筆室・コンテスト・お知らせを縦に積むと、
+                         * 棚まで指を何度も送ることになり、
+                         * 「書く」への道が遠くなる。
+                         * どれも上の並びから行けるので、ここでは省く。
+                         * 新しく書く入口は、棚の点線の札が担う。
                          */}
-                        <div className="border-t border-line bg-surface px-5 py-6 sm:px-6 xl:hidden">
-                            {side}
-                        </div>
                     </div>
                 </div>
             )}

@@ -383,12 +383,26 @@ export default function CommunityClient() {
                         </div>
 
                         {view === "rooms" ? (
-                            <RoomsPanel
-                                openRooms={openRooms}
-                                myRooms={myRooms}
-                                onChanged={reload}
-                                isNarrow
-                            />
+                            <>
+                                {/*
+                                 * 番号で入る欄。
+                                 *
+                                 * 広い画面では右の柱に置いてあるが、
+                                 * その柱は狭い画面では出ない。
+                                 * 鍵の部屋へ入る唯一の道なので、
+                                 * 狭い画面では執筆室の頭に出す。
+                                 */}
+                                <div className="mb-4 xl:hidden">
+                                    <RoomCodeEntry />
+                                </div>
+
+                                <RoomsPanel
+                                    openRooms={openRooms}
+                                    myRooms={myRooms}
+                                    onChanged={reload}
+                                    isNarrow
+                                />
+                            </>
                         ) : view === "notices" ? (
                             <NoticePanel userId={me.id} />
                         ) : (
