@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export default async function AdminPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  if (!user) redirect('/login')
 
   const adminSupabase = createAdminClient()
   const { data: profile } = await adminSupabase.from('profiles').select('*').eq('user_id', user.id).single()
@@ -58,8 +58,8 @@ export default async function AdminPage() {
 
     /* 失敗しても止めない。数字が 0 になるだけ */
     Promise.resolve(adminSupabase.rpc('get_login_stats')).catch(() => ({ data: null } as any)),
-    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'mobile').gte('created_at', weekAgo)).catch(() => ({ count: 0 } as any)),
-    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'desktop').gte('created_at', weekAgo)).catch(() => ({ count: 0 } as any)),
+    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'mobile').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
+    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'desktop').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {

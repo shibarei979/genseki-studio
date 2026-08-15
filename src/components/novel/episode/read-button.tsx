@@ -16,7 +16,7 @@ export default function ReadButton({ novelId, episodeId, userId, initialRead }: 
 
   async function toggle() {
     if (!userId) {
-      window.location.href = '/auth/login'
+      window.location.href = '/login'
       return
     }
     setLoading(true)

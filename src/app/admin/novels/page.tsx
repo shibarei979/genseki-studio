@@ -8,7 +8,7 @@ import NovelManager from '@/components/admin/novels/novel-manager'
 export default async function AdminNovelsPage({ searchParams }: { searchParams: { q?: string; page?: string; publishing?: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  if (!user) redirect('/login')
   const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single()
   if (!profile?.is_admin) redirect('/')
 

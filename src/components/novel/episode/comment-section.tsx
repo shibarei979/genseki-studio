@@ -311,7 +311,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
         </div>
       ) : (
         <div style={{ padding: '20px 16px', textAlign: 'center', borderBottom: '1px solid var(--color-brand-light)' }}>
-          <Link href="/auth/login" style={{ fontSize: 13, color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 600 }}>ログインしてコメントする</Link>
+          <Link href="/login" style={{ fontSize: 13, color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 600 }}>ログインしてコメントする</Link>
         </div>
       )}
 

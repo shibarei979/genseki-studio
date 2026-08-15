@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export default async function AnalyticsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single()
 
@@ -39,7 +39,7 @@ export default async function AnalyticsPage() {
     allEpisodes.forEach((e: any) => { epToNovel[e.id] = e.novel_id })
 
     const [{ data: pageViews }, { data: likes }, { data: bookmarks }, { data: comments }, { data: epLikes }, { data: epComments }] = await Promise.all([
-      epIds.length > 0 ? supabase.from('page_views').select('episode_id, user_id, created_at, device').in('episode_id', epIds) : Promise.resolve({ data: [] }),
+      epIds.length > 0 ? supabase.from('page_views').select('episode_id, user_id, viewed_at, device').in('episode_id', epIds) : Promise.resolve({ data: [] }),
       supabase.from('likes').select('novel_id').in('novel_id', novelIds),
       supabase.from('bookmarks').select('novel_id').in('novel_id', novelIds),
       supabase.from('comments').select('novel_id, episode_id, body, user_id, created_at, rating').in('novel_id', novelIds).neq('user_id', user.id).order('created_at', { ascending: false }),
@@ -97,19 +97,19 @@ export default async function AnalyticsPage() {
       st.views++
       st.episodeViews[pv.episode_id] = (st.episodeViews[pv.episode_id] || 0) + 1
       if (pv.user_id) st.uniqueUsers.add(pv.user_id)
-      const dt = new Date(pv.created_at)
+      const dt = new Date(pv.viewed_at)
       const t = dt.getTime()
       const hour = dt.getHours()
       if (t >= todayStart) { st.viewsToday++; st.hourlyToday[hour]++ }
       else if (t >= yesterdayStart) { st.viewsYesterday++; st.hourlyYesterday[hour]++ }
       if (t >= weekStart) st.viewsWeek++
       if (t >= monthStart) st.viewsMonth++
-      const day = (pv.created_at || '').slice(0, 10)
+      const day = (pv.viewed_at || '').slice(0, 10)
       // 分類：未ログイン(a) / スマホ(m) / PC(d)
       const seg = !pv.user_id ? 'a' : (pv.device === 'mobile' ? 'm' : 'd')
       if (t >= weekStart) { if (!st.daily7[day]) st.daily7[day] = { v: 0, m: 0, d: 0, a: 0 }; st.daily7[day].v++; st.daily7[day][seg]++ }
       if (t >= monthStart) { if (!st.daily30[day]) st.daily30[day] = { v: 0, m: 0, d: 0, a: 0 }; st.daily30[day].v++; st.daily30[day][seg]++ }
-      const month = (pv.created_at || '').slice(0, 7)
+      const month = (pv.viewed_at || '').slice(0, 7)
       if (month) { if (!st.monthly[month]) st.monthly[month] = { v: 0, m: 0, d: 0, a: 0 }; st.monthly[month].v++; st.monthly[month][seg]++ }
     })
 

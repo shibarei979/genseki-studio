@@ -89,7 +89,7 @@ export default function TermsPage() {
           <div style={{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap'}}>
             <Link href="/" style={{fontSize:13,color:'var(--color-brand)',textDecoration:'none'}}>ホーム</Link>
             <Link href="/auth/register" style={{fontSize:13,color:'var(--color-brand)',textDecoration:'none'}}>新規登録</Link>
-            <Link href="/auth/login" style={{fontSize:13,color:'var(--color-brand)',textDecoration:'none'}}>ログイン</Link>
+            <Link href="/login" style={{fontSize:13,color:'var(--color-brand)',textDecoration:'none'}}>ログイン</Link>
           </div>
         </div>
       </div>

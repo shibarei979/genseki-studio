@@ -50,7 +50,7 @@ export default function LoginPromptModal({ show, onClose, message = 'この機�
             新規登録
           </Link>
         </div>
-        <Link href="/auth/login"
+        <Link href="/login"
           style={{display:'block',marginTop:10,fontSize:12,color:'var(--color-brand)',textDecoration:'none'}}>
           すでにアカウントをお持ちの方はこちら
         </Link>

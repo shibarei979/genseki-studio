@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export default async function AdminAnalyticsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  if (!user) redirect('/login')
 
   const adminSupabase = createAdminClient()
   const { data: profile } = await adminSupabase.from('profiles').select('*').eq('user_id', user.id).single()
@@ -30,7 +30,7 @@ export default async function AdminAnalyticsPage() {
   ] = await Promise.all([
     supabase.from('novels').select('id, genre').eq('published', true),
     supabase.from('likes').select('novel_id'),
-    supabase.from('page_views').select('created_at').gte('created_at', since30.toISOString()),
+    supabase.from('page_views').select('viewed_at').gte('viewed_at', since30.toISOString()),
     supabase.from('novel_views').select('novel_id, view_count'),
     supabase.from('novels').select('id, title, genre').eq('published', true).order('created_at', { ascending: false }).limit(50),
     supabase.from('contests').select('id, title, deadline').eq('is_published', true),
@@ -58,7 +58,7 @@ export default async function AdminAnalyticsPage() {
   const pageViews30 = pageView30Res.data
   const hourMap: Record<number, number> = {}
   for (let i = 0; i < 24; i++) hourMap[i] = 0
-  ;(pageViews30 || []).forEach((pv: any) => { hourMap[new Date(pv.created_at).getHours()]++ })
+  ;(pageViews30 || []).forEach((pv: any) => { hourMap[new Date(pv.viewed_at).getHours()]++ })
   const hourlyAccess = Object.entries(hourMap).map(([h, count]) => ({ hour: Number(h), count })).sort((a,b)=>a.hour-b.hour)
 
   // 作品別閲覧数・いいね数
