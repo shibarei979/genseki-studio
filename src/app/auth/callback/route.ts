@@ -41,8 +41,21 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
+    /*
+     * ここで失敗しても、まだ諦めない。
+     *
+     * X（OAuth 1.0a）は、server 側での取り替えが通らないことがある。
+     * その場合でも、ブラウザの中でなら合鍵を拾えることがあるので、
+     * finish へ回す。理由は住所に載せて、何が起きたか分かるようにする。
+     * （ログインへ即戻すと、原因が何も残らない）
+     */
     if (error || !data.user) {
-        return NextResponse.redirect(`${origin}/login?error=callback`);
+        const reason = error?.message ?? "no-user";
+        const response = NextResponse.redirect(
+            `${origin}/auth/finish?next=${encodeURIComponent(next)}&reason=${encodeURIComponent(reason)}`,
+        );
+        response.headers.set("Cache-Control", "no-store");
+        return response;
     }
 
     /*

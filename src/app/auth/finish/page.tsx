@@ -51,8 +51,20 @@ export default function AuthFinishPage() {
             window.setTimeout(() => {
                 watcher.subscription.unsubscribe();
                 void supabase.auth.getSession().then(({ data: again }) => {
+                    if (again.session) {
+                        window.location.replace(next);
+                        return;
+                    }
+                    /*
+                     * 座れなかった理由を持ったままログインへ戻す。
+                     * 黙って戻すと、次に直すときの手がかりが無くなる。
+                     */
+                    const reason =
+                        new URLSearchParams(window.location.search).get(
+                            "reason",
+                        ) ?? "no-session";
                     window.location.replace(
-                        again.session ? next : "/login?error=callback",
+                        `/login?error=callback&reason=${encodeURIComponent(reason)}`,
                     );
                 });
             }, 4000);

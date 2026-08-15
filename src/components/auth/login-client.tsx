@@ -19,7 +19,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { hasSupabase } from "@/config/env.client";
 import { createClient } from "@/lib/supabase/client";
@@ -39,6 +39,24 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
     const router = useRouter();
 
     const [mode, setMode] = useState<Mode>(initialMode);
+
+    /*
+     * 戻ってきたときの理由を出す。
+     *
+     * 黙ってログイン画面に戻すと、
+     * 押した人には「何も起きなかった」ようにしか見えない。
+     */
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("error") !== "callback") return;
+
+        const reason = params.get("reason");
+        setError(
+            reason
+                ? `ログインを完了できませんでした（${reason}）`
+                : "ログインを完了できませんでした。",
+        );
+    }, []);
     const [step, setStep] = useState<1 | 2>(1);
 
     const [displayName, setDisplayName] = useState("");
