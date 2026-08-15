@@ -44,7 +44,7 @@ export default async function MypagePage() {
    * 作品・フォロー数・フォロー中の人。
    * 開いた瞬間に見えるものだけ。
    */
-  const [novelRes, followerRes, followingRes, followingListRes] =
+  const [novelRes, followerRes, followingRes, followingListRes, followerListRes] =
     await Promise.all([
       supabase
         .from('novels')
@@ -59,13 +59,29 @@ export default async function MypagePage() {
         .select('following_id, profiles!follows_following_id_fkey(user_id, display_name, icon_url)')
         .eq('follower_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(20),
+        /* 名簿としても使うので、20 では足りない */
+        .limit(100),
+
+      /*
+       * フォロワーの名簿。
+       * 数を押したときに誰が並ぶかを見せるため、
+       * 人数だけでなく顔ぶれも読む。
+       */
+      supabase
+        .from('follows')
+        .select('follower_id, profiles!follows_follower_id_fkey(user_id, display_name, icon_url)')
+        .eq('following_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100),
     ])
 
   const novels = novelRes.data
   const novelIds = (novels || []).map((n: any) => n.id)
 
   const followingAuthors = (followingListRes.data || [])
+    .map((f: any) => f.profiles).filter(Boolean)
+
+  const followerAuthors = (followerListRes.data || [])
     .map((f: any) => f.profiles).filter(Boolean)
 
   /*
@@ -100,6 +116,7 @@ export default async function MypagePage() {
       profile={profile}
       novels={novels || []}
       followingAuthors={followingAuthors}
+      followerAuthors={followerAuthors}
       followerCount={followerRes.count || 0}
       followingCount={followingRes.count || 0}
       claimedMissionIds={(claimedMissions||[]).map((m:any) => m.mission_id)}

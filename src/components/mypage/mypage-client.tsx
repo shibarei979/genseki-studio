@@ -40,6 +40,7 @@ interface Props {
   novels: Novel[]
   bookmarkedNovels?: any[]
   followingAuthors?: any[]
+  followerAuthors?: any[]
   followerCount?: number
   followingCount?: number
   contests?: Contest[]
@@ -142,7 +143,7 @@ function FolderCreateModal({ onClose, onCreate, saving }: { onClose:()=>void; on
 
 export default function MypageClient({
   profile, novels: initialNovels, bookmarkedNovels = [],
-  followingAuthors=[], followerCount=0, followingCount=0,
+  followingAuthors=[], followerAuthors=[], followerCount=0, followingCount=0,
   contests=[], initialEntries=[], claimedMissionIds=[], unreadFeedback=0, unreadRanking=0,
   historyItems=[], firstEpMap={}, charCountMap={}, likeMap={},
   missionStats={ likeCount:0, discoverCount:0, commentCount:0, bookmarkCount:0, novelCount:0, episodeCount:0, followCount:0 },
@@ -247,6 +248,8 @@ export default function MypageClient({
   const [showEmailModal, setShowEmailModal] = useState(false)
   const [showPwModal,    setShowPwModal]    = useState(false)
   const [showBioModal,   setShowBioModal]   = useState(false)
+  /* 名簿を出しているか。'follower' か 'following'、閉じていれば null */
+  const [folkList, setFolkList] = useState<'follower'|'following'|null>(null)
   const [bioInput,       setBioInput]       = useState(profile.bio || '')
   const [bioSaving,      setBioSaving]      = useState(false)
   const [newEmail,       setNewEmail]       = useState('')
@@ -551,14 +554,27 @@ export default function MypageClient({
           {userNumber && <div style={{fontSize:12,color:'var(--color-text-faint)',marginBottom:4}}>{userNumber}</div>}
           <div style={{fontSize:12.5,color:'var(--color-text-muted)',marginBottom:12}}>{profile.email}</div>
           <div style={{display:'flex',gap:28,flexWrap:'wrap',marginBottom:12}}>
-            <div style={{textAlign:'center' as const}}>
+            {/*
+             * 数字は押せる。誰なのかが見たいのに、
+             * 数だけ見せて終わりでは用が足りない。
+             * 0 人のときは押しても空なので、押せなくする。
+             */}
+            <button
+              onClick={()=>followerCount>0 && setFolkList('follower')}
+              disabled={followerCount===0}
+              style={{textAlign:'center' as const,background:'none',border:'none',padding:0,cursor:followerCount>0?'pointer':'default'}}
+            >
               <div style={{fontSize:20,fontWeight:800,color:'var(--color-text)',lineHeight:1.2}}>{followerCount}</div>
-              <div style={{fontSize:11,color:'var(--color-text-muted)'}}>フォロワー</div>
-            </div>
-            <div style={{textAlign:'center' as const}}>
+              <div style={{fontSize:11,color:'var(--color-text-muted)',textDecoration:followerCount>0?'underline':'none'}}>フォロワー</div>
+            </button>
+            <button
+              onClick={()=>followingCount>0 && setFolkList('following')}
+              disabled={followingCount===0}
+              style={{textAlign:'center' as const,background:'none',border:'none',padding:0,cursor:followingCount>0?'pointer':'default'}}
+            >
               <div style={{fontSize:20,fontWeight:800,color:'var(--color-text)',lineHeight:1.2}}>{followingCount}</div>
-              <div style={{fontSize:11,color:'var(--color-text-muted)'}}>フォロー中</div>
-            </div>
+              <div style={{fontSize:11,color:'var(--color-text-muted)',textDecoration:followingCount>0?'underline':'none'}}>フォロー中</div>
+            </button>
             <div style={{textAlign:'center' as const}}>
               <div style={{fontSize:20,fontWeight:800,color:'var(--color-text)',lineHeight:1.2}}>{published.length}</div>
               <div style={{fontSize:11,color:'var(--color-text-muted)'}}>公開作品</div>
@@ -1745,6 +1761,55 @@ export default function MypageClient({
           </div>
         </div>
       )}
+      {/*
+       * フォロー／フォロワーの名簿。
+       *
+       * アイコンでも名前でも、押せばその人の作者ページへ行く。
+       * 一覧を別の頁にすると、マイページに戻る手間が増える。
+       */}
+      {folkList && (
+        <div
+          onClick={()=>setFolkList(null)}
+          style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}
+        >
+          <div
+            onClick={(e)=>e.stopPropagation()}
+            style={{background:'var(--color-bg-card)',borderRadius:12,width:'min(420px, 100%)',maxHeight:'70vh',display:'flex',flexDirection:'column',overflow:'hidden'}}
+          >
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px',borderBottom:'1px solid var(--color-brand-border)'}}>
+              <div style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>
+                {folkList==='follower' ? `フォロワー（${followerCount}）` : `フォロー中（${followingCount}）`}
+              </div>
+              <button onClick={()=>setFolkList(null)} style={{background:'none',border:'none',fontSize:16,color:'var(--color-text-muted)',cursor:'pointer'}}>✕</button>
+            </div>
+
+            <div style={{overflowY:'auto',padding:8}}>
+              {(folkList==='follower' ? followerAuthors : followingAuthors).length === 0 ? (
+                <div style={{padding:'24px 12px',textAlign:'center',fontSize:12.5,color:'var(--color-text-muted)'}}>
+                  まだ誰もいません
+                </div>
+              ) : (
+                (folkList==='follower' ? followerAuthors : followingAuthors).map((a:any) => (
+                  <Link
+                    key={a.user_id}
+                    href={`/author/${a.user_id}`}
+                    style={{display:'flex',alignItems:'center',gap:10,padding:'10px 8px',borderRadius:8,textDecoration:'none'}}
+                  >
+                    {a.icon_url
+                      ? <img src={a.icon_url} alt="" style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',flexShrink:0}}/>
+                      : <div style={{width:36,height:36,borderRadius:'50%',background:'var(--color-brand-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'var(--color-brand)',fontWeight:700,flexShrink:0}}>{a.display_name?.[0] ?? '?'}</div>}
+                    <span style={{fontSize:13.5,color:'var(--color-text)',fontWeight:600,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {a.display_name || '名無しの書き手'}
+                    </span>
+                    <span style={{marginLeft:'auto',fontSize:12,color:'var(--color-text-muted)',flexShrink:0}}>→</span>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showBioModal && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
           <div style={{background:'var(--color-bg-card)',borderRadius:16,padding:'28px',maxWidth:480,width:'100%',boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}>
