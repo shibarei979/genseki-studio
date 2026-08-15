@@ -20,7 +20,7 @@ export default async function AdminMessagesPage() {
 
   const { data: sentMessages } = await adminSupabase
     .from('admin_messages')
-    .select('id, to_user_id, subject, body, is_read, created_at')
+    .select('id, to_user_id, subject, body, is_read, created_at, from_user_id, parent_id')
     .order('created_at', { ascending: false })
     .limit(50)
 

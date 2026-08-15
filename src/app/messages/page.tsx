@@ -17,7 +17,11 @@ import Header from '@/components/layout/header'
 import MessagesClient from '@/components/messages/messages-client'
 import { createClient } from '@/lib/supabase/server'
 
-export default async function MessagesPage() {
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: { open?: string }
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -25,14 +29,19 @@ export default async function MessagesPage() {
 
   const { data } = await supabase
     .from('admin_messages')
-    .select('id, subject, body, is_read, created_at')
+    .select('id, subject, body, is_read, created_at, from_user_id, parent_id')
     .eq('to_user_id', user.id)
     .order('created_at', { ascending: false })
 
   return (
     <div className="min-h-screen bg-page">
       <Header breadcrumbs={[{ label: 'お知らせ' }]} />
-      <MessagesClient messages={data || []} />
+      {/* ベルから来たときは、その便りを開いた状態にする */}
+      <MessagesClient
+        messages={data || []}
+        openId={searchParams.open ?? null}
+        userId={user.id}
+      />
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface User { user_id: string; display_name: string; email: string; icon_url: string | null }
-interface Message { id: string; to_user_id: string; to_name: string; to_email: string; subject: string; body: string; is_read: boolean; created_at: string }
+interface Message { id: string; to_user_id: string; to_name: string; to_email: string; subject: string; body: string; is_read: boolean; created_at: string; from_user_id?: string | null; parent_id?: string | null }
 
 const btn = (color: string, bg: string, border: string) => ({
   padding:'6px 14px',borderRadius:6,fontSize:12,fontWeight:600,cursor:'pointer',

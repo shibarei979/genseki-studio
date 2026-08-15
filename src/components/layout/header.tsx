@@ -19,6 +19,7 @@ import EntryImage from "@/components/common/entry-image";
 import AccountMenu from "@/components/layout/account-menu";
 import RoomPresenceBar from "@/components/room/room-presence-bar";
 import { getRepository } from "@/lib/repository";
+import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types";
 import { NOTICES } from "@/types";
 
@@ -125,6 +126,10 @@ export default function Header({ breadcrumbs = [] }: Props) {
             link?: string;
         }[]
     >([]);
+    /** 自分あての未読の便り。ベルに混ぜる */
+    const [letters, setLetters] = useState<
+        { id: string; subject: string; at: string }[]
+    >([]);
     const noticeRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -157,6 +162,41 @@ export default function Header({ breadcrumbs = [] }: Props) {
                     link: row.link,
                 })),
             );
+
+            /*
+             * 自分あての個別の便りも、ベルに混ぜる。
+             *
+             * 届いたことに気づく場所はベルしかない。
+             * 押すと、その便りが開いている状態で頁へ行く。
+             * 運営からの返信も同じ道で届く。
+             */
+            try {
+                const supabase = createClient();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+
+                if (user) {
+                    const { data: letters } = await supabase
+                        .from("admin_messages")
+                        .select("id, subject, created_at, is_read, from_user_id")
+                        .eq("to_user_id", user.id)
+                        .is("from_user_id", null)
+                        .eq("is_read", false)
+                        .order("created_at", { ascending: false })
+                        .limit(20);
+
+                    setLetters(
+                        (letters ?? []).map((row) => ({
+                            id: row.id as string,
+                            subject: (row.subject as string) || "運営からの便り",
+                            at: (row.created_at as string) ?? "",
+                        })),
+                    );
+                }
+            } catch {
+                /* 読めなくても、お知らせだけは出す */
+            }
         })();
         setSeenAt(window.localStorage.getItem(SEEN_KEY));
     }, []);
@@ -201,6 +241,8 @@ export default function Header({ breadcrumbs = [] }: Props) {
                   kind: row.kind,
               }));
     const unread = shown.filter((notice) => !seenAt || notice.date > seenAt);
+    /* ベルの印。お知らせの未読と、届いた便りを合わせて数える */
+    const badgeCount = unread.length + letters.length;
 
     function handleOpenNotice() {
         const next = !isNoticeOpen;
@@ -279,7 +321,7 @@ export default function Header({ breadcrumbs = [] }: Props) {
                         <button
                             type="button"
                             onClick={handleOpenNotice}
-                            aria-label={`通知${unread.length > 0 ? `（未読${unread.length}件）` : ""}`}
+                            aria-label={`通知${badgeCount > 0 ? `（未読${badgeCount}件）` : ""}`}
                             aria-expanded={isNoticeOpen}
                             className={[
                                 "relative flex h-8 w-8 items-center justify-center rounded-full border",
@@ -289,7 +331,7 @@ export default function Header({ breadcrumbs = [] }: Props) {
                             ].join(" ")}
                         >
                             <BellIcon />
-                            {unread.length > 0 && (
+                            {badgeCount > 0 && (
                                 <span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full bg-forest ring-2 ring-[var(--color-surface)]" />
                             )}
                         </button>
@@ -304,6 +346,31 @@ export default function Header({ breadcrumbs = [] }: Props) {
                                 </div>
 
                                 <ul className="thin-scroll max-h-80 divide-y divide-line overflow-y-auto">
+                                    {/*
+                                     * 自分あての便りを先に出す。
+                                     * みんな向けのお知らせより、
+                                     * 自分に宛てられたものが先。
+                                     */}
+                                    {letters.map((letter) => (
+                                        <li key={`letter:${letter.id}`}>
+                                            <Link
+                                                href={`/messages?open=${letter.id}`}
+                                                onClick={() => setIsNoticeOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-canvas"
+                                            >
+                                                <span className="shrink-0 rounded-full bg-forest-tint px-1.5 py-0.5 text-[10px] text-forest">
+                                                    便り
+                                                </span>
+                                                <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                                                    {letter.subject}
+                                                </span>
+                                                <span className="shrink-0 text-[11px] text-faint">
+                                                    {timeAgo(letter.at)}
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    ))}
+
                                     {shown.slice(0, 5).map((notice) => {
                                         const isUnread = unread.some(
                                             (row) => row.id === notice.id,
