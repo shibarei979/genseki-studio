@@ -1901,6 +1901,30 @@ export const supabaseRepository: Repository = {
         })) as ContestEntry[];
     },
 
+    async listMyContestEntries(contestId: string): Promise<ContestEntry[]> {
+        const userId = await currentUser();
+        if (!userId) return [];
+
+        /*
+         * 出した人の列は、古い版が user_id、いまの版が author_id。
+         * どちらで入っているか分からないので、
+         * 全部読んでから自分のものを選ぶ。
+         * 応募の数はたかが知れているので、これで足りる。
+         */
+        const all = await this.listContestEntries(contestId);
+        return all.filter((row) => {
+            const owner =
+                ((row as unknown as Record<string, unknown>).author_id as
+                    | string
+                    | null) ??
+                ((row as unknown as Record<string, unknown>).user_id as
+                    | string
+                    | null) ??
+                null;
+            return owner === userId;
+        });
+    },
+
     async createContestEntry(
         contestId: string,
         input: Omit<ContestEntry, "id" | "contest_id" | "entered_at">,
@@ -1960,10 +1984,45 @@ export const supabaseRepository: Repository = {
     },
 
     async deleteContestEntry(entryId: string): Promise<void> {
-        const { error } = await db()
+        const userId = await requireUser();
+
+        /*
+         * 自分の応募か確かめてから消す。
+         *
+         * 以前は id だけで消していたので、
+         * id さえ分かれば他人の応募も取り消せた。
+         *
+         * 出した人の列は、古い版が user_id、いまの版が author_id。
+         * どちらで入っているか分からないので、
+         * まず読んで、自分のものか目で確かめる。
+         */
+        const { data: entry } = await db()
             .from("contest_entries")
-            .delete()
-            .eq("id", entryId);
+            .select("*")
+            .eq("id", entryId)
+            .maybeSingle();
+
+        if (!entry) throw new Error("その応募は見つかりませんでした。");
+
+        const owner =
+            (entry.author_id as string | null) ??
+            (entry.user_id as string | null) ??
+            null;
+
+        if (owner !== userId) {
+            throw new Error("自分の応募だけ取り消せます。");
+        }
+
+        /*
+         * 消すときも持ち主で絞る。
+         * 読んでから消すまでの間に入れ替わっても、他人のものは消えない。
+         */
+        const query = db().from("contest_entries").delete().eq("id", entryId);
+
+        const { error } =
+            entry.author_id != null
+                ? await query.eq("author_id", userId)
+                : await query.eq("user_id", userId);
 
         /*
          * 弾かれても、Supabase は何も言わずに 0 件消したと返す。

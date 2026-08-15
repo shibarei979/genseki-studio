@@ -64,7 +64,7 @@ export default function ContestEntryClient({
         const [found, workList, entryList] = await Promise.all([
             repository.getContest(contestId),
             repository.listWorks(),
-            repository.listContestEntries(contestId),
+            repository.listMyContestEntries(contestId),
         ]);
 
         setContest(found);

@@ -75,7 +75,7 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
     const reload = useCallback(async () => {
         const repository = getRepository();
         setContest(await repository.getContest(contestId));
-        setEntries(await repository.listContestEntries(contestId));
+        setEntries(await repository.listMyContestEntries(contestId));
         setIsLoading(false);
     }, [contestId]);
 

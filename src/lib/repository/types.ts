@@ -409,6 +409,12 @@ export interface Repository {
     updateFeatureFlag(key: string, status: FeatureFlag["status"]): Promise<FeatureFlag>;
 
     listContestEntries(contestId: string): Promise<ContestEntry[]>;
+    /**
+     * 自分の応募だけ。
+     * 応募の画面は取り消しの押し具を並べるので、
+     * 全員分を渡すと他人の応募に押し具が付く。
+     */
+    listMyContestEntries(contestId: string): Promise<ContestEntry[]>;
     createContestEntry(
         contestId: string,
         input: Omit<ContestEntry, "id" | "contest_id" | "entered_at">,

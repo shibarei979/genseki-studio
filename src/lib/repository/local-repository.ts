@@ -1532,6 +1532,11 @@ export const localRepository: Repository = {
             .sort((a, b) => a.entered_at.localeCompare(b.entered_at));
     },
 
+    /* 端末の中だけで動くときは、応募も自分のものしかない */
+    async listMyContestEntries(contestId: string): Promise<ContestEntry[]> {
+        return this.listContestEntries(contestId);
+    },
+
     async createContestEntry(
         contestId: string,
         input: Omit<ContestEntry, "id" | "contest_id" | "entered_at">,
