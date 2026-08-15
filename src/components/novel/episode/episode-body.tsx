@@ -198,6 +198,14 @@ function SpeechPanel({ title, body, isMobile }: { title: string; body: string; i
   const { isPlaying, isPaused, isStopped, rate, supported, voices, voiceIdx, play, pause, resumeSpeech, stop, changeRate, changeVoice } = useSpeech(fullText)
   const [showVoice, setShowVoice] = useState(false)
 
+  /*
+   * 「聴く β」は、いまは出さない。
+   *
+   * 仕組みは消していない。この return null を消せば戻る。
+   * 出す日が来たら、速さの選びと位置の覚えもそのまま生きる。
+   */
+  return null
+
   if (!supported) return null
 
   const RATES = [0.8, 1.0, 1.25, 1.5, 2.0]
