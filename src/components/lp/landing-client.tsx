@@ -328,16 +328,18 @@ function Hero({ onStart }: { onStart?: () => void }) {
                         </Link>
                     )}
                 </div>
-
-                {/*
-                 * 絵の作者。
-                 * 借りている絵なので、使っている場所には必ず出す。
-                 * 薄い灰色で小さく、文の下に添える。
-                 */}
-                <p className="mt-6 text-[10px]" style={{ color: "#9aa7b4" }}>
-                    Illustration: @猫月ユキ
-                </p>
             </div>
+
+            {/*
+             * 絵の作者。
+             * 絵そのものの右下の角に、薄い灰色で小さく。
+             */}
+            <p
+                className="absolute bottom-2 right-3 z-10 text-[10px]"
+                style={{ color: "#9aa7b4" }}
+            >
+                Illustration: @猫月ユキ
+            </p>
         </section>
     );
 }

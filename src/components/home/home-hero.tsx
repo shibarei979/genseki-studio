@@ -133,18 +133,18 @@ export default function HomeHero() {
                 <p className="mt-3 font-serif text-[13px] italic tracking-wide text-forest/70">
                     Write your story.
                 </p>
-
-                {/*
-                 * 絵の作者。
-                 *
-                 * 借りている絵なので、使っている場所には必ず出す。
-                 * 読ませるためではないので、薄い灰色で小さく、
-                 * 文の下に添える。
-                 */}
-                <p className="mt-4 text-[10px] text-faint">
-                    Illustration: @猫月ユキ
-                </p>
             </div>
+
+            {/*
+             * 絵の作者。
+             *
+             * 借りている絵なので、使っている場所には必ず出す。
+             * 絵そのものの右下の角に、薄い灰色で小さく。
+             * 文の流れに混ぜず、画に添える。
+             */}
+            <p className="absolute bottom-2 right-3 text-[10px] text-faint">
+                Illustration: @猫月ユキ
+            </p>
         </section>
     );
 }
