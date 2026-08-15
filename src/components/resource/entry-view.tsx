@@ -95,6 +95,9 @@ export default function EntryView({
     const [selectedId, setSelectedId] = useState<string | null>(
         initialEntryId ?? null,
     );
+    /* 「同じ人にまとめる」を開いているか。開くと相手を選ぶ列が出る */
+    const [isUniting, setIsUniting] = useState(false);
+    const [uniteQuery, setUniteQuery] = useState("");
 
     /* 地図から別の項目を指されたら、選び直す */
     useEffect(() => {
@@ -507,6 +510,138 @@ export default function EntryView({
 
                     {selected && (
                         <div className="min-w-0 p-4">
+                            {/*
+                             * 同じ人にまとめる。
+                             *
+                             * 別名は本文の読み取りでも見ているので、
+                             * ここでまとめておけば、以後その呼び名が
+                             * 本文に出ても同じ人として数えられる。
+                             * 二度と同じことを訊かれない。
+                             */}
+                            <div className="mb-3 rounded-lg border border-line bg-canvas p-3">
+                                {!isUniting ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsUniting(true);
+                                            setUniteQuery("");
+                                        }}
+                                        className="text-[12px] text-muted hover:text-forest"
+                                    >
+                                        別の呼び名を「{selected.name}」と同じ
+                                        {page.label === "人物" ? "人" : "もの"}
+                                        にまとめる
+                                    </button>
+                                ) : (
+                                    <div>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-[12px] font-medium text-ink">
+                                                {selected.name} と同じにするもの
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setIsUniting(false)
+                                                }
+                                                className="shrink-0 text-[11px] text-faint hover:text-ink"
+                                            >
+                                                やめる
+                                            </button>
+                                        </div>
+
+                                        <input
+                                            type="text"
+                                            value={uniteQuery}
+                                            onChange={(e) =>
+                                                setUniteQuery(e.target.value)
+                                            }
+                                            placeholder="呼び名で探す"
+                                            className="mt-2 w-full rounded-lg border border-line bg-surface px-3 py-2 text-[12px] text-ink outline-none placeholder:text-faint focus:border-forest-line"
+                                        />
+
+                                        <ul className="thin-scroll mt-2 max-h-44 space-y-1 overflow-y-auto">
+                                            {entries
+                                                .filter(
+                                                    (row) =>
+                                                        row.id !== selected.id &&
+                                                        (!uniteQuery.trim() ||
+                                                            [
+                                                                row.name,
+                                                                ...row.aliases,
+                                                            ]
+                                                                .join(" ")
+                                                                .toLowerCase()
+                                                                .includes(
+                                                                    uniteQuery
+                                                                        .trim()
+                                                                        .toLowerCase(),
+                                                                )),
+                                                )
+                                                .slice(0, 12)
+                                                .map((row) => (
+                                                    <li key={row.id}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                if (
+                                                                    !window.confirm(
+                                                                        `「${row.name}」を「${selected.name}」と同じものにまとめますか？\n\n` +
+                                                                            `「${row.name}」は ${selected.name} の別名として残ります。\n` +
+                                                                            `以後、本文に「${row.name}」が出てきても ${selected.name} として数えられます。`,
+                                                                    )
+                                                                ) {
+                                                                    return;
+                                                                }
+                                                                await onMerge(
+                                                                    selected.id,
+                                                                    row.id,
+                                                                );
+                                                                setIsUniting(
+                                                                    false,
+                                                                );
+                                                            }}
+                                                            className="flex w-full items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-left hover:border-forest-line"
+                                                        >
+                                                            <span className="min-w-0 flex-1">
+                                                                <span className="block truncate text-[12px] text-ink">
+                                                                    {row.name}
+                                                                </span>
+                                                                {row.summary && (
+                                                                    <span className="block truncate text-[10px] text-faint">
+                                                                        {
+                                                                            row.summary
+                                                                        }
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            <span className="shrink-0 text-[11px] text-forest">
+                                                                まとめる
+                                                            </span>
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* いま何と同じ扱いになっているか */}
+                                {selected.aliases.length > 0 && (
+                                    <p className="mt-2 flex flex-wrap items-center gap-1">
+                                        <span className="text-[10px] text-faint">
+                                            同じ扱い：
+                                        </span>
+                                        {selected.aliases.map((alias) => (
+                                            <span
+                                                key={alias}
+                                                className="rounded-full bg-surface px-2 py-0.5 text-[10px] text-muted"
+                                            >
+                                                {alias}
+                                            </span>
+                                        ))}
+                                    </p>
+                                )}
+                            </div>
+
                             <EntryDetail
                                 key={selected.id}
                                 page={page}
