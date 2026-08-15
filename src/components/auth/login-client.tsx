@@ -69,20 +69,33 @@ export default function LoginClient() {
         return age;
     }
 
-    async function signInWithGoogle() {
+    /*
+     * よそのアカウントで入る。
+     *
+     * Google・X・GitHub で作りは同じなので 1 つにまとめる。
+     * 生年月日を聞かないのも同じ（向こうで済んでいる）。
+     *
+     * queryParams は Google だけ。X と GitHub に渡すと弾かれる。
+     */
+    async function signInWith(
+        provider: "google" | "twitter" | "github",
+        label: string,
+    ) {
         setIsBusy(true);
         setError("");
 
         const { error: caught } = await createClient().auth.signInWithOAuth({
-            provider: "google",
+            provider,
             options: {
                 redirectTo: `${window.location.origin}/auth/callback?next=/`,
-                queryParams: { access_type: "offline", prompt: "consent" },
+                ...(provider === "google"
+                    ? { queryParams: { access_type: "offline", prompt: "consent" } }
+                    : {}),
             },
         });
 
         if (caught) {
-            setError("Google での登録に進めませんでした。");
+            setError(`${label} での登録に進めませんでした。`);
             setIsBusy(false);
         }
     }
@@ -253,18 +266,40 @@ export default function LoginClient() {
                     </div>
                 )}
 
-                {/* Google */}
+                {/* よそのアカウントで入る */}
                 {step === 1 && (
                     <>
-                        <button
-                            type="button"
-                            onClick={() => void signInWithGoogle()}
-                            disabled={isBusy}
-                            className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg border border-line py-3 text-sm text-ink hover:border-forest-line disabled:opacity-50"
-                        >
-                            <GoogleMark />
-                            Google で{mode === "signin" ? "ログイン" : "登録"}
-                        </button>
+                        <div className="mt-6 space-y-2">
+                            <button
+                                type="button"
+                                onClick={() => void signInWith("google", "Google")}
+                                disabled={isBusy}
+                                className="flex w-full items-center justify-center gap-3 rounded-lg border border-line py-3 text-sm text-ink hover:border-forest-line disabled:opacity-50"
+                            >
+                                <GoogleMark />
+                                Google で{mode === "signin" ? "ログイン" : "登録"}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => void signInWith("twitter", "X")}
+                                disabled={isBusy}
+                                className="flex w-full items-center justify-center gap-3 rounded-lg border border-line py-3 text-sm text-ink hover:border-forest-line disabled:opacity-50"
+                            >
+                                <XMark />
+                                X で{mode === "signin" ? "ログイン" : "登録"}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => void signInWith("github", "GitHub")}
+                                disabled={isBusy}
+                                className="flex w-full items-center justify-center gap-3 rounded-lg border border-line py-3 text-sm text-ink hover:border-forest-line disabled:opacity-50"
+                            >
+                                <GitHubMark />
+                                GitHub で{mode === "signin" ? "ログイン" : "登録"}
+                            </button>
+                        </div>
 
                         <div className="my-5 flex items-center gap-3">
                             <span className="h-px flex-1 bg-[var(--color-line)]" />
@@ -575,6 +610,24 @@ function NotConnected() {
                 </Link>
             </div>
         </div>
+    );
+}
+
+/** X の印。旧 Twitter。Supabase 側の名前は今も twitter */
+function XMark() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M17.53 3h3.2l-6.99 7.99L22 21h-6.44l-5.04-6.6L4.75 21H1.54l7.48-8.55L2 3h6.6l4.56 6.03L17.53 3Zm-1.12 16.06h1.77L7.68 4.84H5.78l10.63 14.22Z" />
+        </svg>
+    );
+}
+
+/** GitHub の印 */
+function GitHubMark() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 22 12c0-5.52-4.48-10-10-10Z" />
+        </svg>
     );
 }
 
