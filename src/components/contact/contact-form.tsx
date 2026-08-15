@@ -94,7 +94,18 @@ export default function ContactForm() {
       user_id: userId || null,
     })
     setLoading(false)
-    if (err) { setError('送信に失敗しました。時間をおいて再度お試しください。'); return }
+    /*
+     * 理由も出す。
+     *
+     * 「送信に失敗しました」だけだと、
+     * 送る側も受ける側も何が起きたか分からない。
+     * ここが塞がると不具合の報告そのものが届かなくなる。
+     */
+    if (err) {
+      console.error('[contact]', err)
+      setError(`送信に失敗しました：${err.message}`)
+      return
+    }
     setSent(true)
   }
 
