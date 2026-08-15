@@ -1589,6 +1589,37 @@ export const localRepository: Repository = {
         );
     },
 
+    /*
+     * 端末の中だけで動くときの部屋の見張り。
+     *
+     * ここでは部屋も自分の端末にしかないので、
+     * 主が去る＝この端末で閉じる、ということ。
+     * 時刻を残し、5 分たったものを畳む。
+     */
+    async touchRoomHost(roomId: string): Promise<void> {
+        writeAll(
+            ROOMS_KEY,
+            readAll<WritingRoom>(ROOMS_KEY).map((room) =>
+                room.id === roomId
+                    ? { ...room, host_seen_at: new Date().toISOString() }
+                    : room,
+            ),
+        );
+    },
+
+    async closeStaleRooms(): Promise<number> {
+        const limit = Date.now() - 5 * 60 * 1000;
+        const rooms = readAll<WritingRoom>(ROOMS_KEY);
+
+        const alive = rooms.filter((room) => {
+            if (!room.host_seen_at) return true;
+            return new Date(room.host_seen_at).getTime() >= limit;
+        });
+
+        if (alive.length !== rooms.length) writeAll(ROOMS_KEY, alive);
+        return rooms.length - alive.length;
+    },
+
     /**
      * ==========================================================
      * プロフィール

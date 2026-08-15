@@ -158,6 +158,22 @@ export default function RoomClient({ roomId }: Props) {
                         },
                         (payload) => setRoom(payload.new as WritingRoom),
                     )
+                    /*
+                     * 部屋が消えたことも受け取る。
+                     *
+                     * 主が去って畳まれたとき、中にいる人へ届く。
+                     * これが無いと、消えた部屋の中に座り続けることになる。
+                     */
+                    .on(
+                        "postgres_changes",
+                        {
+                            event: "DELETE",
+                            schema: "public",
+                            table: "writing_rooms",
+                            filter: `id=eq.${roomId}`,
+                        },
+                        () => setRoom(null),
+                    )
                     .subscribe();
             }
 
@@ -294,6 +310,28 @@ export default function RoomClient({ roomId }: Props) {
          */
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [room?.id, identity.id, identity.name, isAuthLoading]);
+
+    /*
+     * 主がここにいる、と知らせ続ける。
+     *
+     * 在室そのものは Realtime が持っているが、あれは一時的で
+     * サーバーからは見えない。時刻を表に残しておき、
+     * 5 分ぶん途切れたら「主は去った」とみなして畳む。
+     *
+     * 1 分ごとにしているのは、5 分の判定に対して十分細かく、
+     * かつ書き込みが多すぎない間隔だから。
+     * 主でない人が呼んでも、向こうで弾かれるので何も起きない。
+     */
+    useEffect(() => {
+        if (!room?.id || room.host_id !== identity.id) return;
+
+        const repository = getRepository();
+        const beat = () => void repository.touchRoomHost(room.id);
+
+        beat();
+        const timer = window.setInterval(beat, 60 * 1000);
+        return () => window.clearInterval(timer);
+    }, [room?.id, room?.host_id, identity.id]);
 
     /*
      * 在室者が変わったら線を張り直す。

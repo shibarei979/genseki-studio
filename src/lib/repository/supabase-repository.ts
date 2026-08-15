@@ -1643,8 +1643,40 @@ export const supabaseRepository: Repository = {
      * ==========================================================
      */
 
+    async touchRoomHost(roomId: string): Promise<void> {
+        const userId = await currentUser();
+        if (!userId) return;
+
+        /*
+         * 主のときだけ時刻を進める。
+         * host_id で絞っているので、他の人が呼んでも何も起きない。
+         */
+        await db()
+            .from("writing_rooms")
+            .update({ host_seen_at: new Date().toISOString() })
+            .eq("id", roomId)
+            .eq("host_id", userId);
+    },
+
+    async closeStaleRooms(): Promise<number> {
+        const { data, error } = await db().rpc("close_stale_rooms");
+        if (error) return 0;
+        return Number(data ?? 0);
+    },
+
     async listRooms(): Promise<WritingRoom[]> {
         const userId = await currentUser();
+
+        /*
+         * 一覧を出すついでに、主の去った部屋を畳む。
+         * 定時実行の仕掛けが無いので、人が来たときに掃除する。
+         * 失敗しても一覧は出す（掃除は次の人に任せればよい）。
+         */
+        try {
+            await this.closeStaleRooms();
+        } catch {
+            /* 掃除できなくても、一覧は見せる */
+        }
 
         /*
          * 一覧に出すのは、誰でも入れる部屋だけ。

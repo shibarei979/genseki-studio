@@ -420,6 +420,10 @@ export interface Repository {
     deleteContestEntry(entryId: string): Promise<void>;
 
     deleteRoom(roomId: string): Promise<void>;
+    /** 部屋にいることを知らせる。主が去ったのを測るため */
+    touchRoomHost(roomId: string): Promise<void>;
+    /** 主が去って 5 分たった部屋を畳む。畳んだ数を返す */
+    closeStaleRooms(): Promise<number>;
 
     /**
      * ==========================================================

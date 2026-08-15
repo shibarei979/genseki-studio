@@ -69,6 +69,13 @@ export interface WritingRoom {
 
     /** 立てた人。公式の部屋は null */
     host_id: string | null;
+    /**
+     * 部屋を立てた人が最後にいた時刻。
+     * ここが 5 分より古い部屋は、誰かが一覧を開いたときに畳まれる。
+     * 在室そのものは Realtime が持つが、あれは一時的で
+     * サーバーからは見えないので、時刻だけを表に残す。
+     */
+    host_seen_at?: string | null;
     /** 入れる人数の上限 */
     capacity: number;
     allow_chat: boolean;
