@@ -1,21 +1,420 @@
-/**
- * ============================================================
- * 原石航路 Studio
- * 作品を探す
- *
- * 上の段に行き先だけ先に置いてある。
- * 押して 404 が出ると「壊れている」と受け取られるので、
- * 中身ができるまでは何を作っている最中かをここで伝える。
- * ============================================================
- */
+import { createClient } from '@/lib/supabase/server'
+export const dynamic = 'force-dynamic'
+import Header from '@/components/layout/header'
+import Footer from '@/components/layout/footer'
+import AdBanner from '@/components/layout/ad-banner'
+import Link from 'next/link'
+import NovelPreviewPopup from '@/components/novel-preview-popup'
+import SearchForm from '@/components/search/search-form'
 
-import ComingSoon from "@/components/common/coming-soon";
+const PAGE_SIZE = 50
 
-export default function SearchPage() {
-    return (
-        <ComingSoon
-            title="作品を探す"
-            body="ほかの書き手の作品を、傾向や題材から探せる場所を作っています。いまは執筆室とコンテストからたどれます。"
-        />
-    );
+interface Props {
+  searchParams: {
+    q?: string; exclude?: string; genre?: string; type?: string
+    serial?: string; tag?: string; sort?: string; page?: string
+    author?: string; contest?: string
+    charMin?: string; charMax?: string; ptMin?: string; ptMax?: string
+  }
+}
+
+export default async function SearchPage({ searchParams }: Props) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  let profile = null
+  if (user) {
+    const { data } = await supabase.from('profiles').select('*').eq('user_id', user.id).single()
+    profile = data
+  }
+
+  const q        = searchParams.q       || ''
+  const exclude  = searchParams.exclude || ''
+  const genre    = searchParams.genre   || ''
+  const type     = searchParams.type    || ''
+  const serial   = searchParams.serial  || ''
+  const tagParam = searchParams.tag     || ''
+  const sort     = searchParams.sort    || 'new'
+  const page     = Number(searchParams.page || 1)
+  const offset   = (page - 1) * PAGE_SIZE
+  const tags     = tagParam ? tagParam.split(',').filter(Boolean) : []
+  const authorQ  = searchParams.author  || ''
+  const contestId = searchParams.contest || ''
+  const charMin = Number(searchParams.charMin) || 0
+  const charMax = Number(searchParams.charMax) || 0
+  const ptMin = Number(searchParams.ptMin) || 0
+  const ptMax = Number(searchParams.ptMax) || 0
+  const hasMetaFilter = !!(charMin || charMax || ptMin || ptMax)
+  const hasSearch = !!(q || exclude || genre || type || serial || tags.length > 0 || authorQ || contestId || hasMetaFilter)
+
+  const isAgeVerified = profile?.age_verified || false
+
+  // コンテスト絞り込み用の一覧（サイト内・公開中）
+  const { data: searchContests } = await supabase
+    .from('contests').select('id, title')
+    .eq('is_published', true).eq('is_site_contest', true)
+    .order('created_at', { ascending: false })
+
+  let results: any[] = []
+  let count = 0
+
+  // 日間・週間・月間いいね用の期間
+  const now = Date.now()
+  const oneDayAgo   = new Date(now - 1  * 24 * 60 * 60 * 1000).toISOString()
+  const oneWeekAgo  = new Date(now - 7  * 24 * 60 * 60 * 1000).toISOString()
+  const oneMonthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  // いいね数・ブックマーク数・閲覧数・コメント数を後で集計するためnovel_idsを先に取得
+  if (!hasSearch) {
+    let q2 = supabase.from('novels')
+      .select('id, title, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(200)
+    if (!user || !isAgeVerified) {
+      q2 = (q2 as any).eq('is_r18', false).neq('genre', '官能')
+    }
+    if (profile?.show_ai_works === false) {
+      q2 = (q2 as any).neq('ai_usage', 'full')
+    }
+    const { data: allData, count: allCount } = await q2
+    const shuffled = [...(allData || [])].sort(() => Math.random() - 0.5)
+    results = shuffled.slice(0, PAGE_SIZE)
+    count = allCount || 0
+  } else {
+    let query = supabase.from('novels')
+      .select('id, title, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
+      .eq('published', true)
+
+    if (!user || !isAgeVerified) {
+      query = (query as any).eq('is_r18', false).neq('genre', '官能')
+    }
+    if (profile?.show_ai_works === false) {
+      query = (query as any).neq('ai_usage', 'full')
+    }
+    if (q) {
+      query = (query as any).or(`title.ilike.%${q}%,summary.ilike.%${q}%,catchcopy.ilike.%${q}%`)
+    }
+    if (exclude) query = (query as any).not('title', 'ilike', `%${exclude}%`)
+    if (authorQ) {
+      const { data: matchedAuthors } = await supabase
+        .from('profiles').select('user_id').ilike('display_name', `%${authorQ}%`)
+      const authorIds2 = (matchedAuthors||[]).map((a:any) => a.user_id)
+      if (authorIds2.length > 0) {
+        query = (query as any).in('author_id', authorIds2)
+      } else {
+        results = []; count = 0
+      }
+    }
+    if (genre)  query = (query as any).eq('genre', genre)
+    if (type)   query = (query as any).eq('novel_type', type)
+    if (serial === 'serial')   query = (query as any).eq('is_serial', true)
+    if (serial === 'complete') query = (query as any).eq('is_serial', false)
+    if (contestId) {
+      // 指定コンテストの参加作品に絞り込み
+      const { data: contestEntries } = await supabase
+        .from('contest_entries').select('novel_id').eq('contest_id', contestId)
+      const entryNovelIds = (contestEntries||[]).map((e:any) => e.novel_id)
+      if (entryNovelIds.length > 0) {
+        query = (query as any).in('id', entryNovelIds)
+      } else {
+        results = []; count = 0
+      }
+    }
+    if (tags.length > 0) {
+      for (const tag of tags) {
+        query = (query as any).contains('tags', [tag])
+      }
+    }
+
+    // 基本ソート（後で並び替えが必要なものはcreated_at降順で全件取得）
+    const needsPostSort = ['like','like_daily','like_weekly','like_monthly','bookmark','view','comment','rising','ep_count','char_count','award'].includes(sort)
+    if (needsPostSort) {
+      query = (query as any).order('created_at', { ascending: false }).limit(500)
+    } else if (sort === 'old') {
+      query = (query as any).order('created_at', { ascending: true }).range(offset, offset + PAGE_SIZE - 1)
+    } else {
+      query = (query as any).order('created_at', { ascending: false }).range(offset, offset + PAGE_SIZE - 1)
+    }
+
+    const { data, count: c2 } = await (query as any)
+    results = data || []
+    count = c2 || 0
+  }
+
+  let novelIds = results.map((n: any) => n.id)
+
+  // 文字数・ポイント（RPCで一括集計：本文転送なしで軽量）
+  const charCountMap: Record<string, number> = {}
+  const pointsMap: Record<string, number> = {}
+  if (novelIds.length > 0) {
+    const { data: metaData } = await supabase.rpc('get_novel_search_meta', { ids: novelIds })
+    metaData?.forEach((m: any) => {
+      charCountMap[m.novel_id] = Number(m.char_count) || 0
+      pointsMap[m.novel_id] = Number(m.points) || 0
+    })
+  }
+  // 文字数・Pt範囲フィルタ
+  if (hasMetaFilter) {
+    results = results.filter((n: any) => {
+      const ch = charCountMap[n.id] || 0
+      const pt = pointsMap[n.id] || 0
+      if (charMin && ch < charMin) return false
+      if (charMax && ch > charMax) return false
+      if (ptMin && pt < ptMin) return false
+      if (ptMax && pt > ptMax) return false
+      return true
+    })
+    count = results.length
+    novelIds = results.map((n: any) => n.id)
+  }
+  // （旧集計コードの残骸吸収）
+  if (false) {
+    const epData: any[] = []
+    epData?.forEach((ep: any) => {
+      charCountMap[ep.novel_id] = (charCountMap[ep.novel_id] || 0) + (ep.body?.length || 0)
+    })
+  }
+
+  // いいね（総合）
+  const likeMap: Record<string, number> = {}
+  if (novelIds.length > 0) {
+    const { data: likes } = await supabase.from('likes').select('novel_id').in('novel_id', novelIds)
+    likes?.forEach((l: any) => { likeMap[l.novel_id] = (likeMap[l.novel_id] || 0) + 1 })
+  }
+
+  // 日間・週間・月間いいね
+  const likeDailyMap:   Record<string, number> = {}
+  const likeWeeklyMap:  Record<string, number> = {}
+  const likeMonthlyMap: Record<string, number> = {}
+  if (novelIds.length > 0 && ['like_daily','like_weekly','like_monthly'].includes(sort)) {
+    const since = sort === 'like_daily' ? oneDayAgo : sort === 'like_weekly' ? oneWeekAgo : oneMonthAgo
+    const targetMap = sort === 'like_daily' ? likeDailyMap : sort === 'like_weekly' ? likeWeeklyMap : likeMonthlyMap
+    const { data: periodLikes } = await supabase
+      .from('likes').select('novel_id').in('novel_id', novelIds).gte('created_at', since)
+    periodLikes?.forEach((l: any) => { targetMap[l.novel_id] = (targetMap[l.novel_id] || 0) + 1 })
+  }
+
+  // ブックマーク
+  const bookmarkMap: Record<string, number> = {}
+  if (novelIds.length > 0 && sort === 'bookmark') {
+    const { data: bookmarks } = await supabase.from('bookmarks').select('novel_id').in('novel_id', novelIds)
+    bookmarks?.forEach((b: any) => { bookmarkMap[b.novel_id] = (bookmarkMap[b.novel_id] || 0) + 1 })
+  }
+
+  // コメント
+  const commentMap: Record<string, number> = {}
+  if (novelIds.length > 0 && sort === 'comment') {
+    const { data: comments } = await supabase.from('comments').select('novel_id').in('novel_id', novelIds)
+    comments?.forEach((c: any) => { commentMap[c.novel_id] = (commentMap[c.novel_id] || 0) + 1 })
+  }
+
+  // 閲覧数（page_views）
+  const viewMap: Record<string, number> = {}
+  if (novelIds.length > 0 && sort === 'view') {
+    const { data: views } = await supabase.from('page_views').select('novel_id').in('novel_id', novelIds)
+    views?.forEach((v: any) => { viewMap[v.novel_id] = (viewMap[v.novel_id] || 0) + 1 })
+  }
+
+  // 話数
+  const epCountMap: Record<string, number> = {}
+  if (novelIds.length > 0 && sort === 'ep_count') {
+    const { data: eps } = await supabase.from('episodes').select('novel_id').in('novel_id', novelIds).eq('published', true)
+    eps?.forEach((e: any) => { epCountMap[e.novel_id] = (epCountMap[e.novel_id] || 0) + 1 })
+  }
+
+  // 受賞（is_award や award_tag フィールドがある想定、なければlikeで代替）
+  const awardMap: Record<string, number> = {}
+  if (novelIds.length > 0 && sort === 'award') {
+    // award_rankカラムがあれば使う、なければlikeで代替
+    results.forEach((n: any) => {
+      awardMap[n.id] = n.award_rank || likeMap[n.id] || 0
+    })
+  }
+
+  // 作者情報
+  const authorIds = Array.from(new Set(results.map((n: any) => n.author_id)))
+  const authorMap: Record<string, string> = {}
+  if (authorIds.length > 0) {
+    const { data: authors } = await supabase.from('profiles').select('user_id, display_name').in('user_id', authorIds as string[])
+    authors?.forEach((a: any) => { authorMap[a.user_id] = a.display_name })
+  }
+
+  // 新人バッジ
+  const newbieSet = new Set<string>()
+  if (authorIds.length > 0) {
+    const { data: authorNovels } = await supabase
+      .from('novels').select('author_id').eq('published', true).in('author_id', authorIds as string[])
+    const authorCount: Record<string,number> = {}
+    authorNovels?.forEach((n: any) => { authorCount[n.author_id] = (authorCount[n.author_id]||0)+1 })
+    Object.entries(authorCount).forEach(([id, cnt]) => { if (cnt <= 3) newbieSet.add(id) })
+  }
+
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+  let novels = results.map((n: any) => {
+    const likeCount = likeMap[n.id] || 0
+    const isNewWork = new Date(n.created_at).getTime() > sevenDaysAgo
+    // 投稿7日以内 または いいねが50未満の場合、数値を非表示
+    const hideStats = isNewWork || likeCount < 50
+    return {
+      ...n,
+      display_name: authorMap[n.author_id] || '',
+      is_newbie: newbieSet.has(n.author_id),
+      likeCount,
+      charCount: charCountMap[n.id] || 0,
+      hideStats,
+    }
+  })
+
+  // ポストソート（いいね・ブックマーク・閲覧数・コメント・話数・文字数・受賞）
+  if (hasSearch) {
+    if (sort === 'like') {
+      novels.sort((a, b) => (likeMap[b.id]||0) - (likeMap[a.id]||0))
+    } else if (sort === 'like_daily') {
+      novels.sort((a, b) => (likeDailyMap[b.id]||0) - (likeDailyMap[a.id]||0))
+    } else if (sort === 'like_weekly') {
+      novels.sort((a, b) => (likeWeeklyMap[b.id]||0) - (likeWeeklyMap[a.id]||0))
+    } else if (sort === 'like_monthly') {
+      novels.sort((a, b) => (likeMonthlyMap[b.id]||0) - (likeMonthlyMap[a.id]||0))
+    } else if (sort === 'bookmark') {
+      novels.sort((a, b) => (bookmarkMap[b.id]||0) - (bookmarkMap[a.id]||0))
+    } else if (sort === 'view') {
+      novels.sort((a, b) => (viewMap[b.id]||0) - (viewMap[a.id]||0))
+    } else if (sort === 'comment') {
+      novels.sort((a, b) => (commentMap[b.id]||0) - (commentMap[a.id]||0))
+    } else if (sort === 'ep_count') {
+      novels.sort((a, b) => (epCountMap[b.id]||0) - (epCountMap[a.id]||0))
+    } else if (sort === 'char_count') {
+      novels.sort((a, b) => (charCountMap[b.id]||0) - (charCountMap[a.id]||0))
+    } else if (sort === 'award') {
+      novels.sort((a, b) => (awardMap[b.id]||0) - (awardMap[a.id]||0))
+    } else if (sort === 'rising') {
+      // 急上昇：週間いいねで代替
+      const { data: risingLikes } = await supabase
+        .from('likes').select('novel_id').in('novel_id', novelIds).gte('created_at', oneWeekAgo)
+      const risingMap: Record<string, number> = {}
+      risingLikes?.forEach((l: any) => { risingMap[l.novel_id] = (risingMap[l.novel_id] || 0) + 1 })
+      novels.sort((a, b) => (risingMap[b.id]||0) - (risingMap[a.id]||0))
+    }
+
+    // ポストソート後にページネーション
+    const needsPostSort = ['like','like_daily','like_weekly','like_monthly','bookmark','view','comment','rising','ep_count','char_count','award'].includes(sort)
+    if (needsPostSort) {
+      count = novels.length
+      novels = novels.slice(offset, offset + PAGE_SIZE)
+    }
+  }
+
+  function fmtNum(n: number | undefined | null): string {
+    if (!n) return '0'
+    if (n >= 10000) return (Math.floor(n / 1000) / 10) + '万'
+    if (n >= 1000)  return (Math.floor(n / 100)  / 10) + 'K'
+    return n.toString()
+  }
+
+  function buildUrl(params: Record<string, string>) {
+    const base: Record<string, string> = {}
+    if (q)       base.q = q
+    if (exclude) base.exclude = exclude
+    if (genre)   base.genre = genre
+    if (type)    base.type = type
+    if (serial)  base.serial = serial
+    if (tagParam) base.tag = tagParam
+    if (sort)    base.sort = sort
+    Object.assign(base, params)
+    const qs = Object.entries(base).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
+    return `/search${qs ? '?' + qs : ''}`
+  }
+
+  const totalPages = Math.ceil(count / PAGE_SIZE)
+
+  return (
+    <div style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
+      <Header />
+
+      <div className="main-layout" style={{maxWidth:1200,margin:'0 auto',padding:'24px 32px',display:'flex',gap:20,alignItems:'flex-start'}}>
+        <div style={{flex:1,minWidth:0}}>
+
+          <SearchForm
+            defaultQ={q} defaultExclude={exclude} defaultGenre={genre}
+            defaultType={type} defaultSerial={serial} defaultTag={tagParam}
+            defaultSort={sort} ageVerified={isAgeVerified}
+            defaultContest={contestId} contests={searchContests || []}
+            defaultCharMin={searchParams.charMin || ''} defaultCharMax={searchParams.charMax || ''}
+            defaultPtMin={searchParams.ptMin || ''} defaultPtMax={searchParams.ptMax || ''}
+          />
+
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,fontSize:13,color:'var(--color-text-muted)'}}>
+            {hasSearch
+              ? <span>検索結果：<strong style={{color:'var(--color-text)'}}>{fmtNum(count)}作品</strong></span>
+              : <span style={{color:'var(--color-text-muted)'}}>ランダム表示中</span>
+            }
+          </div>
+
+          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden'}}>
+            {novels.length === 0 ? (
+              <div style={{padding:'60px',textAlign:'center',color:'var(--color-text-faint)'}}>
+                <div style={{fontSize:14,marginBottom:8}}>作品が見つかりませんでした</div>
+                <div style={{fontSize:12}}>検索条件を変えてお試しください</div>
+              </div>
+            ) : novels.map((n: any, idx: number) => (
+              <NovelPreviewPopup key={n.id} novel={{...n, like_count: n.hideStats ? 0 : (n.likeCount||0)}}>
+              <div style={{cursor:'pointer',padding:'16px 20px',borderBottom:idx<novels.length-1?'1px solid var(--color-brand-light)':'none'}}>
+                <span style={{display:'flex',gap:5,marginBottom:6,flexWrap:'wrap',alignItems:'center'}}>
+                  <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 6px',borderRadius:3}}>{n.genre}</span>
+                  <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 6px',borderRadius:3}}>{n.novel_type}</span>
+                  {n.is_newbie && <span style={{fontSize:10,background:'#f0fdf4',color:'#16a34a',border:'1px solid #86efac',padding:'1px 6px',borderRadius:3,fontWeight:700}}>新人</span>}
+                  {n.is_serial
+                    ? <span style={{fontSize:10,background:'#f0fdf4',color:'#15803d',border:'1px solid #86efac',padding:'1px 6px',borderRadius:3}}>連載中</span>
+                    : <span style={{fontSize:10,background:'#f5f5f5',color:'#757575',border:'1px solid #e0e0e0',padding:'1px 6px',borderRadius:3}}>完結</span>}
+                  {n.is_r18 && <span style={{fontSize:10,background:'#fef2f2',color:'var(--color-danger)',border:'1px solid #fca5a5',padding:'1px 6px',borderRadius:3}}>R18</span>}
+                </span>
+                <span style={{display:'block',fontSize:17,fontWeight:700,color:'var(--color-text)',marginBottom:4,lineHeight:1.4}}>{n.title}</span>
+                <span style={{display:'block',fontSize:12,color:'var(--color-text-muted)',marginBottom:6}}>作者：{n.display_name}</span>
+                {n.summary && (
+                  <span style={{display:'block',fontSize:12,color:'#5a3a20',lineHeight:1.7,marginBottom:7,overflow:'hidden',WebkitLineClamp:3,WebkitBoxOrient:'vertical' as any}}>
+                    {n.summary}
+                  </span>
+                )}
+                {(n.tags||[]).length > 0 && (
+                  <span style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:7}}>
+                    {(n.tags as string[]).map((t: string) => (
+                      <span key={t} style={{fontSize:10,background:'var(--color-bg)',color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'1px 6px',borderRadius:3}}>#{t}</span>
+                    ))}
+                  </span>
+                )}
+                <span style={{display:'flex',gap:12,fontSize:11,color:'var(--color-text-faint)',flexWrap:'wrap',alignItems:'center'}}>
+                  {n.charCount > 0 && <span>{n.charCount >= 10000 ? `${(n.charCount/10000).toFixed(1)}万文字` : `${n.charCount.toLocaleString()}文字`}</span>}
+                  {n.updated_at && <span>最終更新：{new Date(n.updated_at).toLocaleDateString('ja-JP',{year:'numeric',month:'numeric',day:'numeric'})}</span>}
+                  {!n.hideStats && n.likeCount > 0 && <span style={{color:'var(--color-text-muted)',fontWeight:600}}>♡ {fmtNum(n.likeCount)}</span>}
+                </span>
+              </div>
+              </NovelPreviewPopup>
+            ))}
+          </div>
+
+          {hasSearch && totalPages > 1 && (
+            <div style={{display:'flex',justifyContent:'center',gap:8,marginTop:20}}>
+              {page > 1 && (
+                <Link href={buildUrl({page: String(page-1)})}
+                  style={{padding:'6px 16px',border:'1px solid var(--color-brand-border)',borderRadius:16,fontSize:12,color:'var(--color-brand)',textDecoration:'none',background:'var(--color-bg)'}}>
+                  ‹ 前へ
+                </Link>
+              )}
+              <span style={{padding:'6px 12px',fontSize:12,color:'var(--color-text-muted)'}}>{page} / {totalPages}</span>
+              {page < totalPages && (
+                <Link href={buildUrl({page: String(page+1)})}
+                  style={{padding:'6px 16px',border:'1px solid var(--color-brand-border)',borderRadius:16,fontSize:12,color:'var(--color-brand)',textDecoration:'none',background:'var(--color-bg)'}}>
+                  次へ ›
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      <AdBanner />
+      <Footer />
+    </div>
+  )
 }
