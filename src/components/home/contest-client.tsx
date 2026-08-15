@@ -185,29 +185,12 @@ function ContestCard({ contest }: { contest: Contest }) {
                 </p>
 
                 {/*
-                 * 説明と賞。
+                 * 説明と賞は出さない。
                  *
-                 * 狭い画面では出さない。
-                 * 一覧は「どれを開くか」を選ぶ場なので、
-                 * 題名と締切があれば足りる。
+                 * 一覧は「どれを開くか」を選ぶ場。
+                 * 題名・ひとこと・締切があれば足りる。
                  * 中身は開いた先で読める。
                  */}
-                {contest.description && (
-                    <p className="mt-2.5 hidden line-clamp-3 flex-1 text-xs leading-relaxed text-muted sm:block">
-                        {contest.description}
-                    </p>
-                )}
-
-                {(contest.prizes ?? []).length > 0 && (
-                    <p className="mt-2.5 hidden items-start gap-1.5 border-t border-line pt-2.5 text-[11px] text-muted sm:flex">
-                        <span className="shrink-0 text-faint">賞</span>
-                        <span className="min-w-0 flex-1 truncate">
-                            {(contest.prizes ?? [])
-                                .map((row) => `${row.label} ${row.detail}`)
-                                .join(" / ")}
-                        </span>
-                    </p>
-                )}
             </div>
         </Link>
     );
@@ -219,8 +202,16 @@ function formatDate(text: string): string {
     const date = new Date(text.includes("T") ? text : `${text}T00:00:00`);
     if (Number.isNaN(date.getTime())) return text;
 
+    /*
+     * 日付だけを出す。
+     *
+     * text をそのまま使うと、時刻まで入っているとき
+     * 「2026/08/21T09:00（金）」と生の形が出てしまう。
+     * 読んだ日付から組み直す。
+     */
     const week = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()];
-    return `${text.replace(/-/g, "/")}（${week}）`;
+    const ymd = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+    return `${ymd}（${week}）`;
 }
 
 function EmptyState() {

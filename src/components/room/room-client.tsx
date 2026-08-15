@@ -426,14 +426,18 @@ export default function RoomClient({ roomId }: Props) {
      * 文字で発言してよいか。
      * 部屋を立てた人と、その人が許した人だけ。
      *
-     * いまはログインが無く、自分の端末の部屋しか開けないので、
-     * 自分の立てた部屋では常に話せる扱いにしている。
-     * ログインが入ったら host_id と突き合わせる。
+     * 話せるのは、部屋を立てた人と、その人が許した人だけ。
+     *
+     * 以前は host_id !== null（＝主がいるか）しか見ておらず、
+     * 主のいる部屋では誰でも話せてしまっていた。
+     * 許可 0 人でも全員が話せる状態だったので、
+     * 自分が主かどうかを突き合わせる形に直した。
      */
     const canSpeak =
         room !== null &&
         room.allow_chat &&
-        (room.host_id !== null || (room.speakers ?? []).includes(identity.id));
+        (room.host_id === identity.id ||
+            (room.speakers ?? []).includes(identity.id));
 
     /*
      * いまの時刻。

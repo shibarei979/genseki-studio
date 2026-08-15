@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://genseki-studio-bay.vercel.app/$1",
+      "permanent": true
+    }
+  ]
+}
