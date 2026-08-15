@@ -87,7 +87,18 @@ export default function LoginClient() {
         const { error: caught } = await createClient().auth.signInWithOAuth({
             provider,
             options: {
-                redirectTo: `${window.location.origin}/auth/callback?next=/`,
+                /*
+                 * X だけ ?next=/ を付けない。
+                 *
+                 * 付けると Supabase が「戻り先が許された一覧に無い」と
+                 * 言って、X へ飛ぶ前に止まる。
+                 * Google と GitHub は付けたままで通るので、そのまま。
+                 * 行き先は同じ（/auth/callback が既定でホームへ送る）。
+                 */
+                redirectTo:
+                    provider === "twitter"
+                        ? `${window.location.origin}/auth/callback`
+                        : `${window.location.origin}/auth/callback?next=/`,
                 ...(provider === "google"
                     ? { queryParams: { access_type: "offline", prompt: "consent" } }
                     : {}),
@@ -280,15 +291,14 @@ export default function LoginClient() {
                                 Google で{mode === "signin" ? "ログイン" : "登録"}
                             </button>
 
-                            <button
-                                type="button"
-                                onClick={() => void signInWith("twitter", "X")}
-                                disabled={isBusy}
-                                className="flex w-full items-center justify-center gap-3 rounded-lg border border-line py-3 text-sm text-ink hover:border-forest-line disabled:opacity-50"
-                            >
-                                <XMark />
-                                X で{mode === "signin" ? "ログイン" : "登録"}
-                            </button>
+                            {/*
+                             * X は、いまは出さない。
+                             *
+                             * Supabase まで届くが「requested path is invalid」で
+                             * 止まる。X 側の経路の設定が詰め切れていない。
+                             * signInWith("twitter", "X") はそのまま使えるので、
+                             * 通るようになったらこの囲みを外せば戻る。
+                             */}
 
                             <button
                                 type="button"

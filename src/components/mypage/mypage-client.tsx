@@ -607,19 +607,6 @@ export default function MypageClient({
           )}
         </div>
       )}
-      {followingAuthors.length > 0 && (
-        <div style={{marginTop:16}}>
-          <div style={{fontSize:12,fontWeight:700,color:'var(--color-text-muted)',marginBottom:8}}>フォロー中の作者（{followingAuthors.length}）</div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-            {followingAuthors.map((a:any) => (
-              <a key={a.user_id} href={`/author/${a.user_id}`} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:16,textDecoration:'none'}}>
-                {a.icon_url ? <img src={a.icon_url} style={{width:18,height:18,borderRadius:'50%',objectFit:'cover'}} alt=""/> : <div style={{width:18,height:18,borderRadius:'50%',background:'var(--color-brand-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,color:'var(--color-brand)',fontWeight:700}}>{a.display_name?.[0]}</div>}
-                <span style={{fontSize:12,color:'var(--color-text)'}}>{a.display_name}</span>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div style={{marginTop:20}}>
         <MypageDashboard
