@@ -114,7 +114,14 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
         const { error: caught } = await createClient().auth.signInWithOAuth({
             provider,
             options: {
-                redirectTo: `${window.location.origin}/auth/callback?next=/`,
+                /*
+                 * 問い符から後ろは付けない。
+                 *
+                 * Supabase の Redirect URLs は ** を付けても
+                 * 「?」以降が付いた住所を別物として扱う。
+                 * 行き先はどのみちホームなので、付ける得が無い。
+                 */
+                redirectTo: `${window.location.origin}/auth/callback`,
                 ...(provider === "google"
                     ? { queryParams: { access_type: "offline", prompt: "consent" } }
                     : {}),
