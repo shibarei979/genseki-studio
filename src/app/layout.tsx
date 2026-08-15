@@ -50,6 +50,14 @@ export const metadata: Metadata = {
     // 電話番号や住所を勝手にリンクにしない
     formatDetection: { telephone: false, email: false, address: false },
     alternates: { canonical: "/" },
+    /*
+     * AdSense の所有権の確認。
+     * head に <meta name="google-adsense-account"> を出す。
+     * 審査が済んでも消さないこと。消すと所有権が切れる。
+     */
+    other: {
+        "google-adsense-account": "ca-pub-6967115026241459",
+    },
     robots: { index: true, follow: true },
     openGraph: {
         type: "website",
