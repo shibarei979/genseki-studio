@@ -630,11 +630,23 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
       : t
     ))
 
+    /*
+     * 入れるときは upsert。
+     *
+     * 同じ組み合わせが既にあると、insert は
+     * 「重複している」と言って落ちる。
+     * 二度押しや、画面と表がずれていたときに起きる。
+     * 結果として欲しいのは「入っている状態」なので、
+     * 既にあるなら何もしないでよい。
+     */
     const { error } = liked
       ? await supabase.from('tweet_likes')
           .delete().eq('user_id', currentUserId).eq('tweet_id', tweetId)
       : await supabase.from('tweet_likes')
-          .insert({ user_id: currentUserId, tweet_id: tweetId })
+          .upsert(
+            { user_id: currentUserId, tweet_id: tweetId },
+            { onConflict: 'user_id,tweet_id', ignoreDuplicates: true },
+          )
 
     if (error) {
       console.error('[tweet-like]', error)
