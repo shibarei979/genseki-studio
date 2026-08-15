@@ -848,7 +848,7 @@ export default function RoomClient({ roomId }: Props) {
                     </div>
                 )}
 
-                {isManaging ? (
+                {isManaging && isHost ? (
                     <RoomManagePanel
                         room={room}
                         members={state.members}
@@ -1339,7 +1339,15 @@ export default function RoomClient({ roomId }: Props) {
                                     onClick={() => router.push("/")}
                                 />
 
-                                {room.host_id && (
+                                {/*
+                                 * 設定は部屋を立てた人だけ。
+                                 *
+                                 * 以前は host_id があるか（＝主がいるか）
+                                 * だけを見ていたので、主のいる部屋では
+                                 * 誰でも設定を開けてしまっていた。
+                                 * 発言の許しと同じ穴。
+                                 */}
+                                {isHost && (
                                     <ActionButton
                                         icon={<GearIcon />}
                                         label="部屋の設定"

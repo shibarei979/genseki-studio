@@ -1713,9 +1713,26 @@ export const supabaseRepository: Repository = {
         const userId = await requireUser();
         const base = defaultRoom("", userId);
 
+        /*
+         * 人数は 20 まで。
+         *
+         * 画面の押し具でも止めているが、こちらでも押さえる。
+         * 画面を通さずに作られたときに、際限なく増えないように。
+         */
+        const capacity = Math.min(
+            20,
+            Math.max(1, Number(input.capacity ?? base.capacity)),
+        );
+
         const { data, error } = await db()
             .from("writing_rooms")
-            .insert({ ...base, ...input, id: undefined, host_id: userId })
+            .insert({
+                ...base,
+                ...input,
+                capacity,
+                id: undefined,
+                host_id: userId,
+            })
             .select()
             .single();
 

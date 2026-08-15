@@ -35,7 +35,8 @@ import type { WritingRoom } from "@/types";
 const NAME_MAX = 20;
 const DESC_MAX = 100;
 const CAPACITY_MIN = 1;
-const CAPACITY_MAX = 50;
+/* 入れる人数の上限。これ以上は書く場所として成り立たない */
+const CAPACITY_MAX = 20;
 
 export default function AdminRoomsClient() {
     const [rooms, setRooms] = useState<WritingRoom[] | null>(null);
@@ -216,7 +217,7 @@ export default function AdminRoomsClient() {
                             <span className="text-ink">「{background.label}」</span>
                             の間取りになります
                             <br />
-                            （{background.seats.length}席）
+
                         </span>
                     </div>
                 </div>

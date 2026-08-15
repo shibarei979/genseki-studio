@@ -44,7 +44,8 @@ const DESC_MAX = 100;
 
 /** 入れる人数 */
 const CAPACITY_MIN = 1;
-const CAPACITY_MAX = 50;
+/* 入れる人数の上限。これ以上は書く場所として成り立たない */
+const CAPACITY_MAX = 20;
 
 const STEPS = ["設定", "確認", "完了"] as const;
 
@@ -157,9 +158,6 @@ export default function RoomCreateClient() {
 
                         <p className="mt-2 text-center text-[12px] text-ink">
                             {background.label}
-                            <span className="ml-1.5 text-[11px] text-muted">
-                                {background.seats.length}席
-                            </span>
                         </p>
 
                         <p className="mt-3 flex items-start gap-2 rounded-lg bg-canvas px-3.5 py-2.5 text-[11px] leading-relaxed text-muted">
@@ -197,10 +195,7 @@ export default function RoomCreateClient() {
                                     ["説明", description.trim() || "（なし）"],
                                     ["入れる人", ROOM_VISIBILITY_LABEL[visibility]],
                                     ["最大入室人数", `${capacity}人`],
-                                    [
-                                        "部屋",
-                                        `${background.label}（${background.seats.length}席）`,
-                                    ],
+                                    ["部屋", background.label],
                                     [
                                         "文字での発言",
                                         allowChat
@@ -526,8 +521,7 @@ function SettingsStep({
                      * 家具を全部並べ直すことになる。
                      */}
                     <span className="w-full text-[11px] text-muted">
-                        この人数だと「{backgroundFor(capacity).label}」（
-                        {backgroundFor(capacity).seats.length}席）になります。
+                        この人数だと「{backgroundFor(capacity).label}」になります。
                     </span>
                 </div>
             </section>
