@@ -666,8 +666,9 @@ export default function ResourceClient({ workId }: Props) {
                 ]}
             />
 
-            <div className="flex gap-4 p-4">
-                <aside className="w-56 shrink-0">
+            {/* 狭い画面では縦に積む。理由は設定画面と同じ */}
+            <div className="flex flex-col gap-4 p-4 lg:flex-row">
+                <aside className="w-full shrink-0 lg:w-56">
                     <WorkspaceNav workId={workId} current="resource" />
 
                     <div className="mt-4 rounded-lg border border-line bg-surface">

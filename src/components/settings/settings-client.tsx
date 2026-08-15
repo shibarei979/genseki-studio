@@ -166,8 +166,15 @@ export default function SettingsClient({ workId }: Props) {
                 ]}
             />
 
-            <div className="flex gap-4 p-4">
-                <aside className="w-64 shrink-0">
+            {/*
+             * 狭い画面では縦に積む。
+             *
+             * 横並びのままだと、柱と本体が幅を奪い合って
+             * 「下 書 き」のように文字が 1 文字ずつ縦に割れる。
+             * 広い画面は今までどおり横に並べる。
+             */}
+            <div className="flex flex-col gap-4 p-4 lg:flex-row">
+                <aside className="w-full shrink-0 lg:w-64">
                     <WorkspaceNav workId={workId} current="settings" />
 
                     <div className="mt-4 rounded-lg border border-line bg-surface">

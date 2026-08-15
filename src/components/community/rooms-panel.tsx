@@ -16,6 +16,7 @@
 "use client";
 
 import Link from "next/link";
+import RoomCodeEntry from "@/components/community/room-code-entry";
 import { useState } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
@@ -105,6 +106,18 @@ export default function RoomsPanel({
                     </div>
                 </div>
             </section>
+
+            {/*
+             * 番号で入る欄。
+             *
+             * 広い画面では右の柱にあるが、その柱は狭い画面では出ない。
+             * 鍵の部屋へ入る唯一の道なので、狭いときはここに出す。
+             * 場所は「何をする場所か」の説明のすぐ下。
+             * 一覧を見て「無い」と分かる前に目に入る。
+             */}
+            <div className="mt-3 xl:hidden">
+                <RoomCodeEntry />
+            </div>
 
             {isGuideOpen && (
                 <ul className="mt-3 grid gap-3 rounded-xl border border-line bg-surface px-5 py-4 sm:grid-cols-2">
