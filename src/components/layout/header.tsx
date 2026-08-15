@@ -66,11 +66,10 @@ const NAV_ITEMS: {
     { href: "/", label: "ホーム", icon: "home" },
     { href: "/post", label: "作品を書く", icon: "pen" },
     /*
-     * 「作品を探す」はまだ出さない。
-     *
-     * 読めるのは執筆室で同じ部屋にいる人の作品だけ。
-     * 探す場所を出すと、何も無い一覧に行き着く。
+     * 「作品を探す」。
+     * 中身（絞り込みと並べ替え）が入ったので出した。
      */
+    { href: "/search", label: "作品を探す", icon: "search" },
     { href: "/rooms", label: "コミュニティー", icon: "book", feature: "rooms" },
     { href: "/contest", label: "コンテスト", icon: "trophy", feature: "contest" },
 ];
