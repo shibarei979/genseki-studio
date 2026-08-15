@@ -698,8 +698,23 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
   }
 
   async function handleDelete(tweetId: string) {
+    /* 書いた本人か、押す前に確かめる */
+    const target = tweets.find(t => t.id === tweetId)
+    if (!currentUserId || !target || target.user_id !== currentUserId) return
+
     if (!confirm('このつぶやきを削除しますか？')) return
-    await supabase.from('tweets').delete().eq('id', tweetId).eq('user_id', currentUserId!)
+
+    const { error } = await supabase
+      .from('tweets').delete().eq('id', tweetId).eq('user_id', currentUserId)
+
+    /*
+     * 消えなかったら、消えたことにしない。
+     * 画面から先に消すと、開き直したときに戻ってきて驚く。
+     */
+    if (error) {
+      window.alert(`削除できませんでした：${error.message}`)
+      return
+    }
     setTweets(prev => prev.filter(t => t.id !== tweetId))
   }
 
@@ -917,7 +932,15 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                   {topicLabel(tweet.topic, topicList)}
                 </span>
               )}
-              {isOwner && (
+              {/*
+               * 削除は書いた本人にだけ。
+               *
+               * 以前は isOwner（＝ログインしているか）で出していたので、
+               * 誰の投稿にも押し具が付いていた。
+               * 押しても消えはしなかったが、消せるように見えるのがよくない。
+               * その投稿の user_id と突き合わせる。
+               */}
+              {currentUserId && tweet.user_id === currentUserId && (
                 <button onClick={()=>handleDelete(tweet.id)}
                   style={{fontSize:12,color:'var(--color-text-faint)',background:'none',border:'none',cursor:'pointer',padding:'4px 8px'}}>
                   削除
