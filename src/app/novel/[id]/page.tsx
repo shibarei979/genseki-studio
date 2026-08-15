@@ -90,7 +90,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const [authorRes, seriesNovelRes, episodesRes] = await Promise.all([
     supabase.from('profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('series_novels').select('series_id').eq('novel_id', params.id).maybeSingle(),
-    supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, illust_url, chapter_id, published, scheduled_at')
+    supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, illust_url, chapter_id, published, is_published, scheduled_at')
       .eq('novel_id', params.id).order('ep_number', { ascending: true }),
   ])
   const authorProfile = authorRes.data
@@ -117,9 +117,10 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   )
   if (toPublish.length > 0) {
     await supabase.from('episodes')
-      .update({ published: true, scheduled_at: null })
+      /* 印は 2 つあるので、両方そろえて立てる */
+      .update({ published: true, is_published: true, scheduled_at: null, publish_at: null })
       .in('id', toPublish.map(ep => ep.id))
-    toPublish.forEach(ep => { ep.published = true; ep.scheduled_at = null })
+    toPublish.forEach(ep => { ep.published = true; ep.is_published = true; ep.scheduled_at = null })
     if (novel.published === false) {
       await supabase.from('novels').update({ published: true }).eq('id', novel.id)
     }
@@ -128,14 +129,17 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   /*
    * 読者に見せるのは、投稿された話だけ。
    *
-   * 以前は published !== false で絞っていた。
-   * これだと published が空（保存しただけで投稿していない話）が
-   * 通ってしまい、書きかけが作品ページに並んでいた。
-   * 「投稿した＝true」だけを通す。
+   * 公開の印は表に 2 つある。
+   *   is_published  既定 false。投稿ボタンで立つ。こちらが本物
+   *   published     既定 true。作った時点で立ってしまう
+   *
+   * 以前は published を見ていたので、保存しただけの話まで
+   * 並んでいた。見るのは is_published に統一する。
+   * 予約投稿はどちらも一緒に立てているので、食い違わない。
    */
   const episodes = isAuthor
     ? rawEpisodes
-    : (rawEpisodes || []).filter(ep => ep.published === true)
+    : (rawEpisodes || []).filter(ep => ep.is_published === true)
 
   const upcomingEpisode = (rawEpisodes || [])
     .filter(ep => ep.published === false && ep.scheduled_at && new Date(ep.scheduled_at).getTime() > nowMs)
@@ -365,7 +369,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
             </div>
             {(() => {
               // 表紙が無い場合は1話目の挿絵をフォールバック表示
-              const coverImg = novel.cover_url || (episodesRes.data || []).find((e: any) => e.published === true && e.illust_url)?.illust_url
+              const coverImg = novel.cover_url || (episodesRes.data || []).find((e: any) => e.is_published === true && e.illust_url)?.illust_url
               return coverImg ? (
                 <div style={{marginBottom:14,textAlign:'center'}}>
                   <img src={coverImg} alt={`${novel.title} 表紙`}

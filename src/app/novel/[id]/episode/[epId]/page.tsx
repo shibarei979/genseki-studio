@@ -54,7 +54,7 @@ export default async function EpisodePage({ params }: Props) {
   if (episode.published === false && episode.scheduled_at) {
     const scheduledTime = new Date(episode.scheduled_at).getTime()
     if (scheduledTime <= Date.now()) {
-      await supabase.from('episodes').update({ published: true, scheduled_at: null }).eq('id', episode.id)
+      await supabase.from('episodes').update({ published: true, is_published: true, scheduled_at: null, publish_at: null }).eq('id', episode.id)
       episode.published = true
       episode.scheduled_at = null
       const { data: novelPubCheck } = await supabase.from('novels').select('published').eq('id', novel.id).maybeSingle()
@@ -71,7 +71,7 @@ export default async function EpisodePage({ params }: Props) {
   // author・全話・コメント・話いいね数は互いに独立なので並列取得
   const [authorRes, allEpsRes, epLikeCountRes] = await Promise.all([
     supabase.from('profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
-    supabase.from('episodes').select('id, ep_number, title, published, scheduled_at').eq('novel_id', params.id).order('ep_number', { ascending: true }),
+    supabase.from('episodes').select('id, ep_number, title, published, is_published, scheduled_at').eq('novel_id', params.id).order('ep_number', { ascending: true }),
     supabase.from('episode_likes').select('*', { count: 'exact', head: true }).eq('episode_id', params.epId),
   ])
   const authorData = authorRes.data
@@ -100,8 +100,11 @@ export default async function EpisodePage({ params }: Props) {
     isRead = !!rd
   }
 
-  /* 読者に見せるのは投稿された話だけ。空は未投稿として扱う */
-  const visibleEps = isOwner ? (allEps || []) : (allEps || []).filter(e => e.published === true)
+  /*
+   * 読者に見せるのは投稿された話だけ。
+   * 印は is_published を見る（published は作った時点で立つ）。
+   */
+  const visibleEps = isOwner ? (allEps || []) : (allEps || []).filter(e => e.is_published === true)
   const currentIdx = visibleEps.findIndex(e => e.id === params.epId) ?? -1
   const prevEp = currentIdx > 0 ? visibleEps[currentIdx - 1] : null
   const nextEp = currentIdx >= 0 && currentIdx < visibleEps.length - 1 ? visibleEps[currentIdx + 1] : null

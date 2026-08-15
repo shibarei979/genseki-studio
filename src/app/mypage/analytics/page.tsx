@@ -29,7 +29,7 @@ export default async function AnalyticsPage() {
   if (novelIds.length > 0) {
     const { data: episodes } = await supabase
       .from('episodes')
-      .select('id, novel_id, title, ep_number, published, created_at')
+      .select('id, novel_id, title, ep_number, published, is_published, created_at')
       .in('novel_id', novelIds)
       .order('ep_number', { ascending: true })
     allEpisodes = episodes || []
@@ -143,7 +143,7 @@ export default async function AnalyticsPage() {
 
   const novelStats = (novels || []).map((n: any) => {
     const s = statsMap[n.id]
-    const eps = allEpisodes.filter((e: any) => e.novel_id === n.id && e.published === true)
+    const eps = allEpisodes.filter((e: any) => e.novel_id === n.id && e.is_published === true)
 
     const empty = {
       views:0,likes:0,bookmarks:0,comments:0,viewsToday:0,viewsYesterday:0,viewsWeek:0,viewsMonth:0,

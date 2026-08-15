@@ -25,7 +25,7 @@ export default async function NovelManagePage({ params }: { params: { id: string
   if (novel.author_id !== user.id) redirect('/mypage')  // 自分の作品のみ
 
   // 話一覧を先に取得（PV集計に話IDが必要）
-  const { data: epsData } = await supabase.from('episodes').select('id, ep_number, title, body, published, scheduled_at, created_at, updated_at').eq('novel_id', params.id).order('ep_number', { ascending: true })
+  const { data: epsData } = await supabase.from('episodes').select('id, ep_number, title, body, published, is_published, scheduled_at, created_at, updated_at').eq('novel_id', params.id).order('ep_number', { ascending: true })
   const episodes = epsData || []
   const epIds = episodes.map((e: any) => e.id)
 
@@ -49,7 +49,8 @@ export default async function NovelManagePage({ params }: { params: { id: string
       : Promise.resolve({ count: 0 } as any),
   ])
   const totalChars = episodes.reduce((s: number, e: any) => s + (e.body?.length || 0), 0)
-  const publishedEps = episodes.filter((e: any) => e.published === true)
+  /* 公開の印は is_published。published は作った時点で立つので使わない */
+  const publishedEps = episodes.filter((e: any) => e.is_published === true)
   const firstDate = publishedEps[0]?.created_at
   const lastDate = publishedEps.length > 0 ? publishedEps.reduce((max: string, e: any) => (e.created_at > max ? e.created_at : max), publishedEps[0].created_at) : null
 
