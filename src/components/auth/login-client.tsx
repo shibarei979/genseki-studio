@@ -26,10 +26,19 @@ import { createClient } from "@/lib/supabase/client";
 
 type Mode = "signin" | "signup";
 
-export default function LoginClient() {
+interface Props {
+    /**
+     * 開いたときにどちら側を出すか。
+     * 「無料で始める」から来た人にログイン画面を出すと、
+     * 持っていない合言葉を求められて行き止まりになる。
+     */
+    initialMode?: Mode;
+}
+
+export default function LoginClient({ initialMode = "signin" }: Props) {
     const router = useRouter();
 
-    const [mode, setMode] = useState<Mode>("signin");
+    const [mode, setMode] = useState<Mode>(initialMode);
     const [step, setStep] = useState<1 | 2>(1);
 
     const [displayName, setDisplayName] = useState("");
@@ -291,14 +300,15 @@ export default function LoginClient() {
                                 Google で{mode === "signin" ? "ログイン" : "登録"}
                             </button>
 
-                            {/*
-                             * X は、いまは出さない。
-                             *
-                             * Supabase まで届くが「requested path is invalid」で
-                             * 止まる。X 側の経路の設定が詰め切れていない。
-                             * signInWith("twitter", "X") はそのまま使えるので、
-                             * 通るようになったらこの囲みを外せば戻る。
-                             */}
+                            <button
+                                type="button"
+                                onClick={() => void signInWith("twitter", "X")}
+                                disabled={isBusy}
+                                className="flex w-full items-center justify-center gap-3 rounded-lg border border-line py-3 text-sm text-ink hover:border-forest-line disabled:opacity-50"
+                            >
+                                <XMark />
+                                X で{mode === "signin" ? "ログイン" : "登録"}
+                            </button>
 
                             <button
                                 type="button"

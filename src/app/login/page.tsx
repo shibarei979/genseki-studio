@@ -7,6 +7,18 @@
 
 import LoginClient from "@/components/auth/login-client";
 
-export default function LoginPage() {
-    return <LoginClient />;
+/*
+ * /login?mode=signup で登録側を開く。
+ * 「無料で始める」「はじめての方は」からはこちらへ送る。
+ */
+export default function LoginPage({
+    searchParams,
+}: {
+    searchParams: { mode?: string };
+}) {
+    return (
+        <LoginClient
+            initialMode={searchParams.mode === "signup" ? "signup" : "signin"}
+        />
+    );
 }

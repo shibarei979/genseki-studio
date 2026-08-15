@@ -93,7 +93,8 @@ function StartButton({
     }
 
     return (
-        <Link href="/login" className={className} style={style}>
+        // 「始める」は登録側を開く。持っていない合言葉を求めない
+        <Link href="/login?mode=signup" className={className} style={style}>
             {children}
         </Link>
     );
