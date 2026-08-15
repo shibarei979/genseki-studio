@@ -21,7 +21,7 @@ export default async function AuthorPage({ params }: Props) {
 
   const { data: author } = await supabase
     .from('profiles')
-    .select('user_id, display_name, icon_url, bio, user_number, created_at')
+    .select('user_id, display_name, icon_url, bio, user_number, created_at, x_account')
     .eq('user_id', params.id)
     .single()
 
@@ -237,6 +237,25 @@ export default async function AuthorPage({ params }: Props) {
                 </div>
                 <div style={{fontSize:12,color:'var(--color-text-faint)',marginBottom:author.bio?10:0}}>{joinStr}から活動中</div>
                 {author.bio && <p style={{fontSize:13,color:'var(--color-text)',lineHeight:1.8,margin:0,whiteSpace:'pre-wrap'}}>{author.bio}</p>}
+
+                {/*
+                 * X への入口。連携している人にだけ出す。
+                 * 持っているのは id だけなので、ここで住所を組み立てる。
+                 * 別の窓で開く。読んでいた頁を置き去りにしない。
+                 */}
+                {author.x_account && (
+                  <a
+                    href={`https://x.com/${author.x_account}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:author.bio?10:0,padding:'6px 12px',border:'1px solid var(--color-brand-border)',borderRadius:16,fontSize:12,color:'var(--color-text)',textDecoration:'none',background:'var(--color-bg-card)'}}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M17.53 3h3.2l-6.99 7.99L22 21h-6.44l-5.04-6.6L4.75 21H1.54l7.48-8.55L2 3h6.6l4.56 6.03L17.53 3Zm-1.12 16.06h1.77L7.68 4.84H5.78l10.63 14.22Z"/>
+                    </svg>
+                    @{author.x_account}
+                  </a>
+                )}
               </div>
             </div>
           </div>

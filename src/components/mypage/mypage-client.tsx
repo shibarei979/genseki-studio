@@ -19,7 +19,6 @@ import MypageDashboard from '@/components/mypage/mypage-dashboard'
  */
 const SeriesManager    = dynamic(() => import('@/components/series-manager'))
 const MissionClient    = dynamic(() => import('@/components/mypage/mission-client'))
-const TweetSection     = dynamic(() => import('@/components/tweet-section'))
 const ChapterEditModal = dynamic(() => import('@/components/mypage/chapter-edit-modal'))
 
 import type { Profile, Novel } from '@/types'
@@ -108,7 +107,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id:'series',    label:'シリーズ' },
   { id:'bookmarks', label:'保存済み' },
   { id:'history',   label:'閲覧履歴' },
-  { id:'tweet',     label:'つぶやき' },
   { id:'mission',   label:'ミッション' },
   { id:'settings',  label:'設定' },
 ]
@@ -1176,67 +1174,6 @@ export default function MypageClient({
     )
   }
 
-  // ===== つぶやきタブ =====
-  const TweetTab = () => (
-    <div>
-      <div style={{marginBottom:32}}>
-        <h1 style={{fontSize:22,fontWeight:700,color:'var(--color-text)',letterSpacing:'-0.01em',lineHeight:1.3}}>つぶやき</h1>
-        <p style={{fontSize:14,color:'var(--color-text-muted)',marginTop:10,lineHeight:1.7}}>近況や作品の進捗を、気軽に共有しましょう。</p>
-      </div>
-      <div style={{display:'flex',gap:24,alignItems:'flex-start',flexWrap:'wrap'}}>
-        {/* 左：つぶやき本体 */}
-        <div style={{flex:'1 1 480px',minWidth:'min(300px, 100%)'}}>
-          <TweetSection authorId={profile.user_id ?? ''} currentUserId={profile.user_id ?? ''} currentUserName={profile.display_name} currentUserIconUrl={profile.icon_url ?? null} isOwner={true}/>
-        </div>
-        {/* 右：サイドパネル */}
-        <div style={{flex:'0 1 300px',minWidth:'min(260px, 100%)',display:'flex',flexDirection:'column',gap:16}}>
-          {/* よく絡む作者 */}
-          {followingAuthors.length > 0 ? (
-            <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px 22px',boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-                <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>よく絡む作者</span>
-                <a href={`/author/${profile.user_id}/following`} style={{fontSize:11.5,color:'var(--color-brand)',textDecoration:'none',fontWeight:600}}>すべて見る →</a>
-              </div>
-              {followingAuthors.slice(0,5).map((a:any)=>(
-                <a key={a.user_id} href={`/author/${a.user_id}`} style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,textDecoration:'none'}}>
-                  {a.icon_url
-                    ? <img src={a.icon_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',flexShrink:0}} alt=""/>
-                    : <div style={{width:36,height:36,borderRadius:'50%',background:'var(--color-brand-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'var(--color-brand)',fontWeight:700,flexShrink:0}}>{a.display_name?.[0]}</div>}
-                  <div style={{minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:600,color:'var(--color-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.display_name}</div>
-                    <div style={{fontSize:11,color:'var(--color-brand)'}}>フォロー中</div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px 22px',boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
-              <div style={{fontSize:14,fontWeight:700,color:'var(--color-text)',marginBottom:8}}>よく絡む作者</div>
-              <p style={{fontSize:12.5,color:'var(--color-text-muted)',lineHeight:1.8,marginBottom:14}}>
-                作者をフォローすると、ここに表示されます。気になる作品の作者を見つけてみましょう。
-              </p>
-              <Link href="/search" style={{fontSize:13,color:'var(--color-brand)',textDecoration:'none',fontWeight:600}}>作品を探す →</Link>
-            </div>
-          )}
-          {/* つぶやきのヒント */}
-          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px 22px',boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
-            <div style={{fontSize:14,fontWeight:700,color:'var(--color-text)',marginBottom:16}}>つぶやきのヒント</div>
-            {[
-              {t:'進捗を共有しよう',d:'書き終えた章や、これからの展開を気軽につぶやいてみましょう。'},
-              {t:'他の作者と交流しよう',d:'感想や応援の言葉で、創作の輪を広げてみましょう。'},
-              {t:'ハッシュタグを使おう',d:'#執筆ログ や #創作メモ などで見つけてもらいやすくなります。'},
-            ].map((h,i,arr)=>(
-              <div key={h.t} style={{marginBottom:i<arr.length-1?18:0}}>
-                <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:5}}>{h.t}</div>
-                <div style={{fontSize:12,color:'var(--color-text-muted)',lineHeight:1.8}}>{h.d}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-
   // ===== ミッションタブ =====
   const MissionTab = () => (
     <div>
@@ -1485,7 +1422,6 @@ export default function MypageClient({
               {activeTab==='works' && <WorksTab/>}
               {activeTab==='bookmarks' && <BookmarksTab/>}
               {activeTab==='history' && <HistoryTab/>}
-              {activeTab==='tweet' && <TweetTab/>}
               {activeTab==='mission' && <MissionTab/>}
               {activeTab==='settings' && <SettingsTab/>}
               {activeTab==='series' && (
@@ -1543,7 +1479,6 @@ export default function MypageClient({
               {activeTab==='works' && <WorksTab/>}
               {activeTab==='bookmarks' && <BookmarksTab/>}
               {activeTab==='history' && <HistoryTab/>}
-              {activeTab==='tweet' && <TweetTab/>}
               {activeTab==='mission' && <MissionTab/>}
               {activeTab==='settings' && <SettingsTab/>}
               {activeTab==='series' && (

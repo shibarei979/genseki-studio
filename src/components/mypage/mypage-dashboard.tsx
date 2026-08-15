@@ -135,7 +135,7 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
               <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{cur}/{m.target}</span>
             </div>
             <div style={{ height: 5, background: 'var(--color-bg)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ width: `${(cur / m.target) * 100}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-brand), #ff9d5c)' }} />
+              <div style={{ width: `${(cur / m.target) * 100}%`, height: '100%', background: 'var(--color-brand)' }} />
             </div>
           </div>
         )
