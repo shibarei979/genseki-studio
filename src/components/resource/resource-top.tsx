@@ -88,6 +88,28 @@ const SLOTS: { x: number; y: number }[] = [
 ];
 
 /*
+ * 狭い画面での置き場所。
+ *
+ * 広い画面の配置をそのまま縮めると、丸どうしが重なる。
+ * 横は狭く縦に長いので、円ではなく縦長の楕円に並べ、
+ * 左右の端まで使い切る。中ほど（核の左右）には置かない。
+ */
+const NARROW_SLOTS: { x: number; y: number }[] = [
+    { x: 50, y: 8 },
+    { x: 84, y: 20 },
+    { x: 88, y: 42 },
+    { x: 80, y: 66 },
+    { x: 50, y: 78 },
+    { x: 20, y: 66 },
+    { x: 12, y: 42 },
+    { x: 16, y: 20 },
+    { x: 50, y: 92 },
+    { x: 84, y: 88 },
+    { x: 16, y: 88 },
+    { x: 50, y: 30 },
+];
+
+/*
  * 分類同士の糸。世界は放射ではなく網でつながっている。
  * 実在するページ同士のときだけ張る。
  */
@@ -128,6 +150,20 @@ export default function ResourceTop({
     onOpenAdd,
 }: Props) {
     const [isSpread, setIsSpread] = useState(false);
+
+    /*
+     * 狭い画面かどうか。
+     * 丸の置き場所と大きさを変えるのに使う。
+     * 決め打ちの配置のままだと、狭い幅では丸が重なる。
+     */
+    const [isNarrow, setIsNarrow] = useState(false);
+
+    useEffect(() => {
+        const measure = () => setIsNarrow(window.innerWidth < 768);
+        measure();
+        window.addEventListener("resize", measure);
+        return () => window.removeEventListener("resize", measure);
+    }, []);
     const [hoveredId, setHoveredId] = useState<string | null>(null);
     const [query, setQuery] = useState("");
     const [panelQuery, setPanelQuery] = useState("");
@@ -178,7 +214,8 @@ export default function ResourceTop({
     }
 
     function slotOf(index: number) {
-        return SLOTS[index % SLOTS.length];
+        const table = isNarrow ? NARROW_SLOTS : SLOTS;
+        return table[index % table.length];
     }
 
     function countOf(page: ResourcePage): number {
@@ -331,7 +368,10 @@ export default function ResourceTop({
 
     /* 件数で丸が育つ。0件=88px、増えるほど最大132pxまで */
     function sizeOf(count: number): number {
-        return 88 + Math.min(44, Math.round(Math.log2(count + 1) * 11));
+        /* 狭い画面では一回り小さく。並べる余地が無い */
+        const base = isNarrow ? 74 : 88;
+        const grow = isNarrow ? 26 : 44;
+        return base + Math.min(grow, Math.round(Math.log2(count + 1) * 11));
     }
 
     /* 分類同士の糸。両方のページがあるときだけ */
@@ -348,7 +388,8 @@ export default function ResourceTop({
 
     return (
         <div className="relative overflow-hidden">
-            <div className="relative min-h-[540px] lg:min-h-[620px]">
+            {/* 狭い画面は縦に並べるので、その分の高さを取る */}
+            <div className="relative min-h-[620px] sm:min-h-[540px] lg:min-h-[620px]">
                 {/* ================= 外の世界 ================= */}
                 <div
                     className="absolute inset-0 transition-all duration-500"
@@ -436,9 +477,15 @@ export default function ResourceTop({
                     {/* ---- 核 ---- */}
                     <div
                         className="absolute left-1/2 top-[47%] z-10 -translate-x-1/2 -translate-y-1/2 text-center"
-                        style={{ width: 230 }}
+                        style={{ width: isNarrow ? 190 : 230 }}
                     >
-                        <div className="relative mx-auto h-36 w-36">
+                        {/* 狭い画面では核も一回り小さく。丸と重ならないように */}
+                        <div
+                            className={[
+                                "relative mx-auto",
+                                isNarrow ? "h-28 w-28" : "h-36 w-36",
+                            ].join(" ")}
+                        >
                             <span
                                 aria-hidden="true"
                                 className="core-halo absolute -inset-5 rounded-full"
@@ -463,7 +510,10 @@ export default function ResourceTop({
                                     setQuery("");
                                 }}
                                 aria-expanded={isSpread}
-                                className="core-breathe relative flex h-36 w-36 flex-col items-center justify-center rounded-full border border-forest-line/70 text-forest shadow-[0_14px_36px_-14px_rgba(31,78,107,0.4)] transition-transform duration-200 hover:scale-[1.04]"
+                                className={[
+                                    "core-breathe relative flex flex-col items-center justify-center rounded-full border border-forest-line/70 text-forest shadow-[0_14px_36px_-14px_rgba(31,78,107,0.4)] transition-transform duration-200 hover:scale-[1.04]",
+                                    isNarrow ? "h-28 w-28" : "h-36 w-36",
+                                ].join(" ")}
                                 style={{
                                     background:
                                         "radial-gradient(circle at 50% 36%, #ffffff 0%, #f2f7fb 68%, #e6eef5 100%)",
