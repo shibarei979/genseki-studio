@@ -42,6 +42,27 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     /*
+     * よその鍵（Google・X・GitHub）で入ってきた人も確かめる。
+     *
+     * BAN は住所で覚えているので、別の入口から
+     * 同じ住所で入り直せてしまうと意味がない。
+     * ここで見つけたら、座らせずに追い返す。
+     */
+    if (data?.user?.email) {
+        const { createAdminClient } = await import("@/lib/supabase/admin");
+        const { data: banned } = await createAdminClient()
+            .from("banned_emails")
+            .select("email")
+            .eq("email", data.user.email.trim().toLowerCase())
+            .maybeSingle();
+
+        if (banned) {
+            await supabase.auth.signOut();
+            return NextResponse.redirect(`${origin}/login?error=banned`);
+        }
+    }
+
+    /*
      * ここで失敗しても、まだ諦めない。
      *
      * X（OAuth 1.0a）は、server 側での取り替えが通らないことがある。

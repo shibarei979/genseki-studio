@@ -22,10 +22,21 @@ import { ROOT_ADMIN_EMAIL, USER_ROLE_LABEL } from "@/types";
 
 type Filter = "all" | "admin" | "suspended";
 
+/** 何で登録したかの見せ方。twitter は X の昔の名前 */
+const PROVIDER_LABEL: Record<string, string> = {
+    google: "Google",
+    twitter: "X",
+    github: "GitHub",
+    email: "メール",
+};
+
 export default function AdminUsersClient() {
     const [users, setUsers] = useState<AdminUser[] | null>(null);
     const [keyword, setKeyword] = useState("");
     const [filter, setFilter] = useState<Filter>("all");
+    /* 確かめの窓で、BAN と削除のどちらを尋ねているか */
+    const [mode, setMode] = useState<"ban" | "delete">("ban");
+    const [isWorking, setIsWorking] = useState(false);
     const [target, setTarget] = useState<AdminUser | null>(null);
     const [reason, setReason] = useState("");
     const [error, setError] = useState("");
@@ -211,7 +222,19 @@ export default function AdminUsersClient() {
 
                                 <p className="mt-0.5 text-[10px] text-faint">
                                     作品 {user.work_count}　
-                                    {user.created_at.slice(0, 10)} から
+                                    {user.created_at.slice(0, 10)} から　
+                                    {/* 何で登録したか。問い合わせのとき手がかりになる */}
+                                    {PROVIDER_LABEL[user.login_provider ?? "email"] ??
+                                        user.login_provider}
+                                    {user.mission_stats && (
+                                        <>
+                                            {"　"}
+                                            公開{user.mission_stats.works}・話
+                                            {user.mission_stats.episodes}・感想
+                                            {user.mission_stats.comments}・いいね
+                                            {user.mission_stats.likes}
+                                        </>
+                                    )}
                                     {user.suspend_reason && `　理由：${user.suspend_reason}`}
                                 </p>
                             </div>
@@ -249,31 +272,37 @@ export default function AdminUsersClient() {
                             </div>
                             )}
 
-                            {/* 停止 */}
-                            {isRoot ? null : user.suspended_at ? (
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        void patch(user.user_id, {
-                                            suspended_at: null,
-                                            suspend_reason: "",
-                                        })
-                                    }
-                                    className="shrink-0 rounded-md border border-line px-3 py-1 text-[10px] text-muted hover:text-ink"
-                                >
-                                    戻す
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setTarget(user);
-                                        setReason("");
-                                    }}
-                                    className="shrink-0 rounded-md px-3 py-1 text-[10px] text-faint hover:text-[var(--color-danger)]"
-                                >
-                                    停止
-                                </button>
+                            {/*
+                             * BAN と削除。
+                             *   BAN    ログインごと止める。同じ住所では入り直せない
+                             *   削除    記録を消すだけ。同じ住所でまた登録できる
+                             * どちらも確かめてから行う。戻せないため。
+                             */}
+                            {isRoot ? null : (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMode("ban");
+                                            setTarget(user);
+                                            setReason("");
+                                        }}
+                                        className="shrink-0 rounded-md px-3 py-1 text-[10px] text-faint hover:text-[var(--color-danger)]"
+                                    >
+                                        BAN
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMode("delete");
+                                            setTarget(user);
+                                            setReason("");
+                                        }}
+                                        className="shrink-0 rounded-md px-3 py-1 text-[10px] text-faint hover:text-ink"
+                                    >
+                                        削除
+                                    </button>
+                                </>
                             )}
                         </li>
                         );
@@ -286,21 +315,36 @@ export default function AdminUsersClient() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-6">
                     <div className="w-full max-w-sm rounded-xl bg-surface p-5 shadow-xl">
                         <p className="text-sm text-ink">
-                            「{target.display_name}」を停止しますか
+                            「{target.display_name}」を
+                            {mode === "ban" ? "BAN" : "削除"}しますか
                         </p>
                         <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-                            書いたものは消えません。読むことはできますが、
-                            新しく書いたり直したりできなくなります。
+                            {mode === "ban" ? (
+                                <>
+                                    ログインごと止めます。
+                                    このメールアドレスでは、作り直しても
+                                    入れなくなります。
+                                    書いたものは消えません。
+                                </>
+                            ) : (
+                                <>
+                                    アカウントの記録を消します。
+                                    同じメールアドレスで、また登録できます。
+                                    書いたものは消えません。
+                                </>
+                            )}
                         </p>
 
-                        <input
-                            type="text"
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            placeholder="理由（本人には出ません）"
-                            aria-label="理由"
-                            className="mt-3 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-forest"
-                        />
+                        {mode === "ban" && (
+                            <input
+                                type="text"
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value)}
+                                placeholder="理由（本人には出ません）"
+                                aria-label="理由"
+                                className="mt-3 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-forest"
+                            />
+                        )}
 
                         <div className="mt-4 flex gap-2">
                             <button
@@ -312,16 +356,50 @@ export default function AdminUsersClient() {
                             </button>
                             <button
                                 type="button"
+                                disabled={isWorking}
                                 onClick={async () => {
-                                    await patch(target.user_id, {
-                                        suspended_at: new Date().toISOString(),
-                                        suspend_reason: reason.trim(),
-                                    });
-                                    setTarget(null);
+                                    setIsWorking(true);
+                                    try {
+                                        const response = await fetch(
+                                            "/api/admin/user",
+                                            {
+                                                method: "POST",
+                                                headers: {
+                                                    "Content-Type":
+                                                        "application/json",
+                                                },
+                                                body: JSON.stringify({
+                                                    action: mode,
+                                                    userId: target.user_id,
+                                                    reason: reason.trim(),
+                                                }),
+                                            },
+                                        );
+                                        const data = await response.json();
+                                        if (!response.ok) {
+                                            throw new Error(
+                                                data?.error ??
+                                                    "うまくいきませんでした",
+                                            );
+                                        }
+                                        setTarget(null);
+                                        await reload();
+                                    } catch (caught) {
+                                        window.alert(
+                                            caught instanceof Error
+                                                ? caught.message
+                                                : "うまくいきませんでした",
+                                        );
+                                    }
+                                    setIsWorking(false);
                                 }}
-                                className="flex-1 rounded-lg bg-[var(--color-danger)] py-2 text-xs font-medium text-white hover:opacity-90"
+                                className="flex-1 rounded-lg bg-[var(--color-danger)] py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
                             >
-                                停止する
+                                {isWorking
+                                    ? "しています…"
+                                    : mode === "ban"
+                                      ? "BANする"
+                                      : "削除する"}
                             </button>
                         </div>
                     </div>

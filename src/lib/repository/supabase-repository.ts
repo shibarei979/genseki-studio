@@ -2011,6 +2011,53 @@ export const supabaseRepository: Repository = {
             counts.set(row.author_id, (counts.get(row.author_id) ?? 0) + 1);
         }
 
+        /*
+         * ミッションの進み。
+         *
+         * 運営が「この人はどこまで来ているか」を掴むため。
+         * 数えるだけなので、本文は引かない。
+         * 読めなかった項目は 0 として扱い、一覧そのものは必ず出す。
+         */
+        const [publishedRes, episodesRes, commentsRes, likesRes] =
+            await Promise.all([
+                db().from("novels").select("author_id").eq("published", true),
+                db().from("episodes").select("novel_id").eq("is_published", true),
+                db().from("comments").select("user_id"),
+                db().from("likes").select("user_id"),
+            ]);
+
+        /* 話は作品を経由して書き手に結びつける */
+        const novelOwner = new Map<string, string>();
+        for (const row of rows<{ id: string; author_id: string }>(
+            (await db().from("novels").select("id, author_id")).data,
+        )) {
+            novelOwner.set(row.id, row.author_id);
+        }
+
+        function tally<T extends Record<string, unknown>>(
+            list: T[] | null,
+            key: keyof T,
+        ) {
+            const map = new Map<string, number>();
+            for (const row of rows<T>(list)) {
+                const id = String(row[key] ?? "");
+                if (!id) continue;
+                map.set(id, (map.get(id) ?? 0) + 1);
+            }
+            return map;
+        }
+
+        const publishedCounts = tally(publishedRes.data, "author_id");
+        const commentCounts = tally(commentsRes.data, "user_id");
+        const likeCounts = tally(likesRes.data, "user_id");
+
+        const episodeCounts = new Map<string, number>();
+        for (const row of rows<{ novel_id: string }>(episodesRes.data)) {
+            const owner = novelOwner.get(row.novel_id);
+            if (!owner) continue;
+            episodeCounts.set(owner, (episodeCounts.get(owner) ?? 0) + 1);
+        }
+
         return rows<Record<string, unknown>>(data).map((row) => ({
             user_id: row.user_id as string,
             email: (row.email as string) ?? "",
@@ -2020,6 +2067,13 @@ export const supabaseRepository: Repository = {
             suspended_at: (row.suspended_at as string | null) ?? null,
             suspend_reason: (row.suspend_reason as string) ?? "",
             work_count: counts.get(row.user_id as string) ?? 0,
+            login_provider: (row.login_provider as string | null) ?? null,
+            mission_stats: {
+                works: publishedCounts.get(row.user_id as string) ?? 0,
+                episodes: episodeCounts.get(row.user_id as string) ?? 0,
+                comments: commentCounts.get(row.user_id as string) ?? 0,
+                likes: likeCounts.get(row.user_id as string) ?? 0,
+            },
             created_at: (row.created_at as string) ?? "",
         }));
     },

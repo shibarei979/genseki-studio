@@ -51,6 +51,19 @@ export interface AdminUser {
     suspend_reason: string;
     /** 数え上げ。何を書いている人か掴むため */
     work_count: number;
+    /** 何で登録したか（google / twitter / github / email） */
+    login_provider?: string | null;
+    /** ミッションの進み。運営が様子を掴むため */
+    mission_stats?: {
+        /** 公開した作品 */
+        works: number;
+        /** 投稿した話 */
+        episodes: number;
+        /** 書いたコメント */
+        comments: number;
+        /** 押したいいね */
+        likes: number;
+    } | null;
     created_at: string;
 }
 

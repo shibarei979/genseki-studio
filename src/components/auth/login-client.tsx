@@ -48,6 +48,12 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
      */
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
+
+        if (params.get("error") === "banned") {
+            setError("このアカウントは利用できません（BANされています）。");
+            return;
+        }
+
         if (params.get("error") !== "callback") return;
 
         const reason = params.get("reason");
@@ -104,6 +110,28 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
      *
      * queryParams は Google だけ。X と GitHub に渡すと弾かれる。
      */
+    /*
+     * この住所は BAN されていないか。
+     *
+     * BAN のときは認証ごと消してあるので、
+     * そのまま進むと「新しく登録できてしまう」。
+     * 入る前と、作る前に確かめる。
+     */
+    async function isBanned(target: string): Promise<boolean> {
+        try {
+            const response = await fetch("/api/auth/check-ban", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: target }),
+            });
+            const data = await response.json();
+            return data?.banned === true;
+        } catch {
+            /* 確かめられなければ通す。ここで全員を止めない */
+            return false;
+        }
+    }
+
     async function signInWith(
         provider: "google" | "twitter" | "github",
         label: string,
@@ -181,6 +209,12 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
 
         setIsBusy(true);
 
+        if (await isBanned(email.trim())) {
+            setError("このメールアドレスは利用できません（BANされています）。");
+            setIsBusy(false);
+            return;
+        }
+
         const birthdate = `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`;
 
         const { error: caught } = await createClient().auth.signUp({
@@ -226,6 +260,12 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
         }
 
         setIsBusy(true);
+
+        if (await isBanned(email.trim())) {
+            setError("このメールアドレスは利用できません（BANされています）。");
+            setIsBusy(false);
+            return;
+        }
 
         const { error: caught } = await createClient().auth.signInWithPassword({
             email: email.trim(),
