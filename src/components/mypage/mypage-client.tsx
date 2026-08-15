@@ -383,11 +383,27 @@ export default function MypageClient({
     setNotifySaving(false)
   }
 
-  async function handleSaveBio() {
-    setBioSaving(true)
-    await supabase.from('profiles').update({ bio: bioInput.trim()||null }).eq('user_id', profile.user_id)
-    setBioSaving(false); setShowBioModal(false)
-    setToast('自己紹介を保存しました'); setTimeout(()=>setToast(''),2000)
+  /*
+   * 名前と自己紹介をまとめて保存する。
+   *
+   * 1 回の書き込みで両方直す。分けて書くと、
+   * 片方だけ通って片方が落ちたときに食い違う。
+   */
+  async function handleSaveProfile() {
+    const name = nameInput.trim()
+    if (!name) { setNameError('名前を入力してください'); return }
+    if (name.length > 20) { setNameError('20文字以内'); return }
+
+    setBioSaving(true); setNameError('')
+    const { error } = await supabase.from('profiles')
+      .update({ display_name: name, bio: bioInput.trim()||null })
+      .eq('user_id', profile.user_id)
+    setBioSaving(false)
+
+    if (error) { setNameError('保存に失敗しました'); return }
+
+    setShowBioModal(false)
+    setToast('プロフィールを保存しました'); setTimeout(()=>setToast(''),2000)
   }
   async function handleIconUpload(file: File) {
     if (!file.type.startsWith('image/')) return
@@ -580,10 +596,13 @@ export default function MypageClient({
           </div>
         </div>
         <div style={{flex:'1 1 240px',minWidth:'min(220px, 100%)',display:'flex',flexDirection:'column',gap:12,alignItems:'flex-end'}}>
-          {profile.bio && <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.8,paddingRight:60}}>{profile.bio}</div>}
-          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginLeft:'auto',justifyContent:'flex-end',paddingRight:200,marginTop:10}}>
-            <button onClick={()=>setEditingName(true)} style={{fontSize:12.5,border:'1px solid var(--color-brand-border)',padding:'8px 16px',borderRadius:8,background:'var(--color-bg-card)',color:'var(--color-text-muted)',cursor:'pointer'}}>名前を変更</button>
-            <button onClick={()=>setShowBioModal(true)} style={{fontSize:12.5,border:'1px solid var(--color-brand-border)',padding:'8px 16px',borderRadius:8,background:'var(--color-bg-card)',color:'var(--color-text-muted)',cursor:'pointer'}}>自己紹介を編集</button>
+          {profile.bio && <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.8}}>{profile.bio}</div>}
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginLeft:'auto',justifyContent:'flex-end',marginTop:10}}>
+            {/*
+             * 名前と自己紹介は 1 つの窓で直す。
+             * 別々の押し具にすると、どちらを押せばよいか一瞬迷う。
+             */}
+            <button onClick={()=>{setNameInput(profile.display_name);setBioInput(profile.bio||'');setNameError('');setShowBioModal(true)}} style={{fontSize:12.5,border:'1px solid var(--color-brand-border)',padding:'8px 16px',borderRadius:8,background:'var(--color-bg-card)',color:'var(--color-text-muted)',cursor:'pointer'}}>プロフィールを編集</button>
             <Link href={`/author/${profile.user_id}`} style={{fontSize:12.5,padding:'8px 16px',borderRadius:8,background:'var(--color-brand)',color:'var(--color-text-inverse)',textDecoration:'none',fontWeight:700}}>公開ページを見る →</Link>
           </div>
         </div>
@@ -1735,12 +1754,19 @@ export default function MypageClient({
       {showBioModal && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
           <div style={{background:'var(--color-bg-card)',borderRadius:16,padding:'28px',maxWidth:480,width:'100%',boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}>
-            <div style={{fontSize:16,fontWeight:700,color:'var(--color-text)',marginBottom:16}}>自己紹介を編集</div>
+            <div style={{fontSize:16,fontWeight:700,color:'var(--color-text)',marginBottom:16}}>プロフィールを編集</div>
+
+            <div style={{fontSize:12,fontWeight:600,color:'var(--color-text)',marginBottom:6}}>名前</div>
+            <input value={nameInput} onChange={e=>{setNameInput(e.target.value);setNameError('')}} maxLength={20} placeholder="名前（20文字以内）"
+              style={{width:'100%',padding:'10px 14px',border:`1.5px solid ${nameError?'var(--color-danger)':'var(--color-brand-border)'}`,borderRadius:8,fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const,marginBottom:nameError?4:14}}/>
+            {nameError && <div style={{fontSize:11,color:'var(--color-danger)',marginBottom:12}}>{nameError}</div>}
+
+            <div style={{fontSize:12,fontWeight:600,color:'var(--color-text)',marginBottom:6}}>自己紹介</div>
             <textarea value={bioInput} onChange={e=>setBioInput(e.target.value)} rows={6} maxLength={300} placeholder="自己紹介（300文字以内）" style={{width:'100%',padding:'10px 14px',border:'1.5px solid var(--color-brand-border)',borderRadius:8,fontSize:13,outline:'none',resize:'vertical',fontFamily:'inherit',boxSizing:'border-box' as const,lineHeight:1.8}}/>
             <div style={{fontSize:11,color:'var(--color-text-faint)',textAlign:'right',marginBottom:16}}>{bioInput.length}/300</div>
             <div style={{display:'flex',gap:10}}>
-              <button onClick={()=>{setShowBioModal(false);setBioInput(profile.bio||'')}} style={{flex:1,padding:'10px',border:'1px solid var(--color-brand-border)',borderRadius:8,background:'none',color:'var(--color-text-muted)',fontSize:13,cursor:'pointer'}}>キャンセル</button>
-              <button onClick={handleSaveBio} disabled={bioSaving} style={{flex:1,padding:'10px',border:'none',borderRadius:8,background:'var(--color-brand)',color:'var(--color-text-inverse)',fontSize:13,fontWeight:700,cursor:'pointer',opacity:bioSaving?0.6:1}}>{bioSaving?'保存中...':'保存する'}</button>
+              <button onClick={()=>{setShowBioModal(false);setBioInput(profile.bio||'');setNameInput(profile.display_name);setNameError('')}} style={{flex:1,padding:'10px',border:'1px solid var(--color-brand-border)',borderRadius:8,background:'none',color:'var(--color-text-muted)',fontSize:13,cursor:'pointer'}}>キャンセル</button>
+              <button onClick={handleSaveProfile} disabled={bioSaving||nameSaving} style={{flex:1,padding:'10px',border:'none',borderRadius:8,background:'var(--color-brand)',color:'var(--color-text-inverse)',fontSize:13,fontWeight:700,cursor:'pointer',opacity:bioSaving?0.6:1}}>{bioSaving?'保存中...':'保存する'}</button>
             </div>
           </div>
         </div>
