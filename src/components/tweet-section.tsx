@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { hasSupabase } from '@/config/env.client'
 import { createClient } from '@/lib/supabase/client'
 
@@ -968,10 +969,23 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
         <div key={tweet.id} style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,marginBottom:16,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
           <div style={{padding:'20px 22px'}}>
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
-              <Avatar name={tweet.display_name} iconUrl={tweet.icon_url} size={40}/>
+              {/*
+               * 書いた人の顔と名前から、その人の作者ページへ。
+               *
+               * つぶやきで見かけた人の作品を読みに行く道が、
+               * ここに無いと途切れる。
+               */}
+              <Link href={`/author/${tweet.user_id}`} style={{flexShrink:0,display:'block'}}>
+                <Avatar name={tweet.display_name} iconUrl={tweet.icon_url} size={40}/>
+              </Link>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:'flex',alignItems:'baseline',gap:8}}>
-                  <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>{tweet.display_name}</span>
+                  <Link
+                    href={`/author/${tweet.user_id}`}
+                    style={{fontSize:14,fontWeight:700,color:'var(--color-text)',textDecoration:'none'}}
+                  >
+                    {tweet.display_name}
+                  </Link>
                   <span style={{fontSize:12,color:'var(--color-text-faint)'}}>{fmtDate(tweet.created_at)}</span>
                 </div>
               </div>
@@ -1150,7 +1164,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                       )}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
-                      <span style={{fontSize:13,fontWeight:600,color:'var(--color-text)',marginRight:8}}>{parent.display_name}</span>
+                      <Link href={`/author/${parent.user_id}`} style={{fontSize:13,fontWeight:600,color:'var(--color-text)',marginRight:8,textDecoration:'none'}}>{parent.display_name}</Link>
                       <span style={{fontSize:11.5,color:'var(--color-text-faint)'}}>{fmtDate(parent.created_at)}</span>
                       <div style={{fontSize:13,color:'var(--color-text)',marginTop:4,lineHeight:1.7}}>{parent.body}</div>
 
@@ -1194,7 +1208,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                       <div style={{display:'flex',gap:10,padding:'12px 0 12px 12px',flex:1,minWidth:0}}>
                         <Avatar name={child.display_name} iconUrl={child.icon_url} size={24}/>
                         <div style={{flex:1,minWidth:0}}>
-                          <span style={{fontSize:12.5,fontWeight:600,color:'var(--color-text)',marginRight:8}}>{child.display_name}</span>
+                          <Link href={`/author/${child.user_id}`} style={{fontSize:12.5,fontWeight:600,color:'var(--color-text)',marginRight:8,textDecoration:'none'}}>{child.display_name}</Link>
                           <span style={{fontSize:11,color:'var(--color-text-faint)'}}>{fmtDate(child.created_at)}</span>
                           <div style={{fontSize:12.5,color:'var(--color-text)',marginTop:4,lineHeight:1.7}}>{child.body}</div>
                         </div>

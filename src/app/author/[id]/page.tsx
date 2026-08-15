@@ -289,19 +289,25 @@ export default async function AuthorPage({ params }: Props) {
       {/* ===== モバイル ===== */}
       <div className="mobile-only" style={{padding:'12px 16px 0'}}>
         <div style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding:'16px',marginBottom:14}}>
-          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+          {/*
+           * 狭い画面では、押し具を下の段へ回す。
+           *
+           * 1 行に詰めると、名前と「◯年◯月から活動中」の
+           * 置き場所が押し具に潰され、1 文字ずつ縦に割れる。
+           */}
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12,flexWrap:'wrap'}}>
             {author.icon_url
               ? <img src={author.icon_url} style={{width:56,height:56,borderRadius:'50%',objectFit:'cover',flexShrink:0}} alt=""/>
               : <div style={{width:56,height:56,borderRadius:'50%',background:'var(--color-brand-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,color:'var(--color-brand)',fontWeight:700,flexShrink:0}}>
                   {author.display_name?.[0] || '?'}
                 </div>
             }
-            <div style={{flex:1,minWidth:0}}>
+            <div style={{flex:'1 1 140px',minWidth:0}}>
               <h1 style={{fontSize:17,fontWeight:700,color:'var(--color-text)',margin:0,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{author.display_name}</h1>
-              <div style={{fontSize:11,color:'var(--color-text-faint)'}}>{joinStr}から活動中</div>
+              <div style={{fontSize:11,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>{joinStr}から活動中</div>
             </div>
             {!isMe && user && (
-              <div style={{flexShrink:0,display:'flex',gap:6}}>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap',width:'100%'}}>
                 <FollowButton authorId={params.id} userId={user.id} initialFollowing={isFollowing} followerCount={followerCount || 0}/>
                 <MessageButton targetId={params.id} userId={user.id}/>
                 <BlockButton targetId={params.id} userId={user.id} initialBlocked={isBlocked} initialMuted={isMuted}/>
