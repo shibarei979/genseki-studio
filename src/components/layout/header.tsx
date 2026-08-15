@@ -12,7 +12,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import EntryImage from "@/components/common/entry-image";
@@ -112,15 +112,6 @@ export default function Header({ breadcrumbs = [] }: Props) {
         (item) => !item.feature || !offKeys.includes(item.feature),
     );
     const [seenAt, setSeenAt] = useState<string | null>(null);
-    /* ヘッダーの検索窓。押した先は作品を探す頁 */
-    const router = useRouter();
-    const [searchWord, setSearchWord] = useState("");
-
-    function goSearch() {
-        const word = searchWord.trim();
-        /* 空でも探す頁へ送る。何も無い所で止めない */
-        router.push(word ? `/search?q=${encodeURIComponent(word)}` : "/search");
-    }
     /** 運営が立てたお知らせ。無ければ既定のものを出す */
     const [notices, setNotices] = useState<
         {
@@ -285,55 +276,6 @@ export default function Header({ breadcrumbs = [] }: Props) {
 
                 {/* 右端。通知とアイコンのあいだを空ける */}
                 <div className="ml-auto flex shrink-0 items-center gap-3.5">
-                    {/*
-                     * 作品を探す。
-                     *
-                     * 広い画面では窓のまま、狭い画面では虫めがねだけ。
-                     * 窓を残すと行き先の並びが押し出されて 2 段になる。
-                     */}
-                    <div className="relative hidden md:block">
-                        <input
-                            type="search"
-                            value={searchWord}
-                            onChange={(e) => setSearchWord(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") goSearch();
-                            }}
-                            placeholder="作品を探す"
-                            aria-label="作品を探す"
-                            className="w-40 rounded-full border border-line bg-canvas py-1.5 pl-8 pr-3 text-[13px] text-ink outline-none transition-all placeholder:text-faint focus:w-56 focus:border-forest-line lg:w-48 lg:focus:w-64"
-                        />
-                        <button
-                            type="button"
-                            onClick={goSearch}
-                            aria-label="探す"
-                            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint hover:text-forest"
-                        >
-                            <SearchIcon />
-                        </button>
-                    </div>
-
-                    <Link
-                        href="/search"
-                        aria-label="作品を探す"
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-muted hover:border-forest-line hover:text-forest md:hidden"
-                    >
-                        <SearchIcon />
-                    </Link>
-                    {/*
-                     * メッセージ。中身はまだ無いので押せないままにする。
-                     * 置き場所だけ先に決めておかないと、
-                     * 後から足したときに右上の並びが変わってしまう。
-                     */}
-                    <Link
-                        href="/messages"
-                        title="運営からのお知らせ"
-                        aria-label="運営からのお知らせ"
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-line text-muted hover:border-forest-line hover:text-forest"
-                    >
-                        <MailIcon />
-                    </Link>
-
                     <div ref={noticeRef} className="relative">
                         <button
                             type="button"
@@ -552,25 +494,6 @@ function MailIcon() {
         >
             <rect x="3" y="5.5" width="18" height="13" rx="2" />
             <path d="m3.8 7 8.2 6 8.2-6" />
-        </svg>
-    );
-}
-
-/** 虫めがね。探すの印 */
-function SearchIcon() {
-    return (
-        <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden="true"
-        >
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
         </svg>
     );
 }
