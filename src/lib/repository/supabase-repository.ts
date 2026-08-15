@@ -184,7 +184,18 @@ function toWork(row: Record<string, unknown>): Work {
         author_note: (row.author_note as string) ?? "",
         cover_url: (row.cover_url as string | null) ?? null,
         cover_tile: (row.cover_tile as Work["cover_tile"]) ?? null,
-        format: (row.format as Work["format"]) ?? null,
+        /*
+         * 作品の形。
+         * format が空でも、投稿サイト側の novel_type があれば
+         * そちらから読む。以前に向こうで作った作品のため。
+         */
+        format:
+            (row.format as Work["format"]) ??
+            (row.novel_type === "短編"
+                ? "short"
+                : row.novel_type === "長編"
+                  ? "long"
+                  : null),
         ai_usage: (row.ai_usage as Work["ai_usage"]) ?? "none",
         deleted_at: (row.deleted_at as string | null) ?? null,
         created_at: row.created_at as string,
@@ -571,6 +582,20 @@ export const supabaseRepository: Repository = {
                 catchphrase: input.catchphrase ?? "",
                 age_rating: input.age_rating ?? "all",
                 author_note: input.author_note ?? "",
+
+                /*
+                 * 作品の形。
+                 *
+                 * 送らずにいると、表の既定（長編・連載中）が入る。
+                 * そのため短編のつもりで書いた作品まで
+                 * すべて「長編」になっていた。
+                 *
+                 * 新しく作る時点では話が 1 つも無いので、
+                 * ここでは短編として始める。
+                 * 話が増えれば長編に変わる（下の見直しで）。
+                 */
+                novel_type: "短編",
+                is_serial: true,
             })
             .select()
             .single();
@@ -580,9 +605,25 @@ export const supabaseRepository: Repository = {
     },
 
     async updateWork(workId: string, patch: Partial<Work>): Promise<Work> {
+        /*
+         * 作品の形を、投稿サイト側の名前にも写す。
+         *
+         * こちらは format（"long" / "short"）で持ち、
+         * 投稿サイト側は novel_type（「長編」/「短編」）で持っている。
+         * 繋いでいなかったので、基本情報で選んでも
+         * 表には既定の「長編」が入ったままだった。
+         *
+         * format を送っていないときは、novel_type も触らない。
+         * 触ると、他の項目を直しただけで形が書き換わる。
+         */
+        const next: Record<string, unknown> = { ...patch };
+
+        if (patch.format === "short") next.novel_type = "短編";
+        if (patch.format === "long") next.novel_type = "長編";
+
         const { data, error } = await db()
             .from("novels")
-            .update(patch)
+            .update(next)
             .eq("id", workId)
             .select()
             .single();
@@ -826,6 +867,12 @@ export const supabaseRepository: Repository = {
                 visibility: merged.visibility,
                 serial_status: merged.serial_status,
                 published: merged.visibility === "public",
+                /*
+                 * 投稿サイト側は is_serial（連載中かどうか）を見ている。
+                 * こちらの serial_status と揃えないと、
+                 * 完結にしても「連載中」と出たままになる。
+                 */
+                is_serial: merged.serial_status === "ongoing",
             })
             .eq("id", workId);
 

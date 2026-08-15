@@ -21,9 +21,18 @@ import Header from "@/components/layout/header";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
 import { getRepository } from "@/lib/repository";
 import { formatNumber } from "@/lib/utils/text";
-import type { AiUsage, Chapter, Episode, PublishSettings, Work } from "@/types";
+import type {
+    AiUsage,
+    Chapter,
+    Episode,
+    PublishSettings,
+    Work,
+    WorkFormat,
+} from "@/types";
 import {
     AI_USAGE_LABEL,
+    WORK_FORMAT_DESCRIPTION,
+    WORK_FORMAT_LABEL,
     formatChapterLabel,
 } from "@/types";
 
@@ -601,6 +610,50 @@ function PostForm({
                                 </label>
                             )}
                         </div>
+                    </Card>
+
+                    {/*
+                     * 作品の形。
+                     *
+                     * 基本情報にもあるが、出す直前にここでも直せるようにする。
+                     * 出してから「長編になっている」と気づいても遅い。
+                     */}
+                    <Card title="作品の形">
+                        <ul className="space-y-1.5">
+                            {(Object.keys(WORK_FORMAT_LABEL) as WorkFormat[]).map(
+                                (key) => (
+                                    <li key={key}>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                onChangeWorkInfo?.({ format: key })
+                                            }
+                                            aria-pressed={work.format === key}
+                                            className={[
+                                                "w-full rounded-md border px-3 py-2 text-left",
+                                                work.format === key
+                                                    ? "border-forest bg-forest-tint/50"
+                                                    : "border-line hover:border-forest-line",
+                                            ].join(" ")}
+                                        >
+                                            <span className="block text-[12px] text-ink">
+                                                {WORK_FORMAT_LABEL[key]}
+                                            </span>
+                                            <span className="mt-0.5 block text-[10px] text-faint">
+                                                {WORK_FORMAT_DESCRIPTION[key]}
+                                            </span>
+                                        </button>
+                                    </li>
+                                ),
+                            )}
+                        </ul>
+
+                        {!work.format && (
+                            <p className="mt-2 text-[10px] leading-relaxed text-amber">
+                                まだ選ばれていません。
+                                選ばないと「長編」として扱われます。
+                            </p>
+                        )}
                     </Card>
 
                     {/*
