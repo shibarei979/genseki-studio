@@ -54,22 +54,23 @@ export default async function MypagePage() {
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', user.id),
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', user.id),
 
-      supabase
-        .from('follows')
-        .select('following_id, profiles!follows_following_id_fkey(user_id, display_name, icon_url)')
-        .eq('follower_id', user.id)
-        .order('created_at', { ascending: false })
-        /* 名簿としても使うので、20 では足りない */
-        .limit(100),
-
       /*
-       * フォロワーの名簿。
-       * 数を押したときに誰が並ぶかを見せるため、
-       * 人数だけでなく顔ぶれも読む。
+       * 名簿は id だけ取り、profiles は後で引く。
+       *
+       * follows の繋ぎ先は profiles ではなく auth.users なので、
+       * profiles!... と繋いで一度に読む書き方は通らない。
+       * （通らないと空で返るだけなので、気づきにくい）
        */
       supabase
         .from('follows')
-        .select('follower_id, profiles!follows_follower_id_fkey(user_id, display_name, icon_url)')
+        .select('following_id')
+        .eq('follower_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100),
+
+      supabase
+        .from('follows')
+        .select('follower_id')
         .eq('following_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100),
@@ -78,11 +79,26 @@ export default async function MypagePage() {
   const novels = novelRes.data
   const novelIds = (novels || []).map((n: any) => n.id)
 
-  const followingAuthors = (followingListRes.data || [])
-    .map((f: any) => f.profiles).filter(Boolean)
+  /*
+   * 集めた id から、名前とアイコンを引く。
+   * 並び順は follows の順（新しい順）のまま保つ。
+   * profiles の返る順に任せると、古い順に混ざる。
+   */
+  const followingIds = (followingListRes.data || []).map((f: any) => f.following_id)
+  const followerIds  = (followerListRes.data  || []).map((f: any) => f.follower_id)
+  const folkIds = Array.from(new Set([...followingIds, ...followerIds]))
 
-  const followerAuthors = (followerListRes.data || [])
-    .map((f: any) => f.profiles).filter(Boolean)
+  let folkMap: Record<string, any> = {}
+  if (folkIds.length > 0) {
+    const { data: folks } = await supabase
+      .from('profiles')
+      .select('user_id, display_name, icon_url')
+      .in('user_id', folkIds)
+    for (const row of folks || []) folkMap[row.user_id] = row
+  }
+
+  const followingAuthors = followingIds.map((id: string) => folkMap[id]).filter(Boolean)
+  const followerAuthors  = followerIds.map((id: string) => folkMap[id]).filter(Boolean)
 
   /*
    * 作品ごとのいいね・コメント・閲覧・話数。
