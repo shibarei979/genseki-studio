@@ -42,6 +42,8 @@ interface Props {
     stages: PlotStage[];
     logs: WritingLog[];
     onOpen: (pageId: string) => void;
+    /** 項目を選んだ状態で一覧を開く。「この人をくわしく」の道 */
+    onOpenEntry: (pageId: string, entryId: string) => void;
     onOpenAdd: () => void;
 }
 
@@ -122,6 +124,7 @@ export default function ResourceTop({
     stages,
     logs,
     onOpen,
+    onOpenEntry,
     onOpenAdd,
 }: Props) {
     const [isSpread, setIsSpread] = useState(false);
@@ -908,7 +911,18 @@ export default function ResourceTop({
                                                     item={item}
                                                     page={focused}
                                                     onOpenList={() =>
-                                                        onOpen(focused.id)
+                                                        /*
+                                                         * 項目(人物など)は、その項目を
+                                                         * 選んだ状態で一覧を開く。
+                                                         * 関係とプロットには項目の頁が
+                                                         * 無いので、一覧の入口へ。
+                                                         */
+                                                        item.entry
+                                                            ? onOpenEntry(
+                                                                  focused.id,
+                                                                  item.id,
+                                                              )
+                                                            : onOpen(focused.id)
                                                     }
                                                 />
                                             </div>

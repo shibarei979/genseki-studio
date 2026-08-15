@@ -150,6 +150,8 @@ interface Props {
 export default function ResourceClient({ workId }: Props) {
     const router = useRouter();
     const [work, setWork] = useState<Work | null>(null);
+    /* 地図から「この項目をくわしく」と指名されたときの覚え */
+    const [jumpEntryId, setJumpEntryId] = useState<string | null>(null);
     const [pages, setPages] = useState<ResourcePage[]>([]);
     const [entries, setEntries] = useState<ResourceEntry[]>([]);
     const [relations, setRelations] = useState<ResourceRelation[]>([]);
@@ -842,11 +844,19 @@ export default function ResourceClient({ workId }: Props) {
                         <ResourceTop
                             workTitle={work.title}
                             pages={pages}
+                            onOpenEntry={(pageId, entryId) => {
+                                setJumpEntryId(entryId);
+                                setView(pageId);
+                            }}
                             entries={entries}
                             relations={relations}
                             stages={stages}
                             logs={logs}
-                            onOpen={setView}
+                            onOpen={(pageId) => {
+                                // ふつうに開くときは、前の指名を持ち越さない
+                                setJumpEntryId(null);
+                                setView(pageId);
+                            }}
                             onOpenAdd={() => setView("add")}
                         />
                     )}
@@ -1042,6 +1052,7 @@ export default function ResourceClient({ workId }: Props) {
                                 <EntryView
                                     page={currentPage}
                                     pages={pages}
+                                    initialEntryId={jumpEntryId}
                                     entries={entries.filter(
                                         (entry) => entry.page_id === currentPage.id,
                                     )}

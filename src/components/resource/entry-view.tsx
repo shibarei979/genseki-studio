@@ -18,7 +18,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
 import EntryImage from "@/components/common/entry-image";
@@ -63,6 +63,12 @@ interface Props {
     canGenerateImage: boolean;
     /** その作品でこれまでに作った図案の数 */
     imageUsedCount: number;
+    /**
+     * 開いた瞬間に選んでおく項目。
+     * 資料の地図から「この人をくわしく」と飛んでくる道のため。
+     * 無ければ今までどおり、何も選ばずに開く。
+     */
+    initialEntryId?: string | null;
     onJump?: (episodeId: string, line: number) => void;
     onMergeDuplicates: (group: DuplicateGroup) => void;
 }
@@ -82,10 +88,18 @@ export default function EntryView({
     onGenerateImage,
     canGenerateImage,
     imageUsedCount,
+    initialEntryId,
     onJump,
     onMergeDuplicates,
 }: Props) {
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(
+        initialEntryId ?? null,
+    );
+
+    /* 地図から別の項目を指されたら、選び直す */
+    useEffect(() => {
+        if (initialEntryId) setSelectedId(initialEntryId);
+    }, [initialEntryId]);
     const [mode, setMode] = useState<ViewMode>("cards");
     const [keyword, setKeyword] = useState("");
     const [typeFilter, setTypeFilter] = useState("all");
