@@ -1,9 +1,9 @@
 /**
  * ============================================================
  * 原石航路 Studio
- * /auth/callback — Google から戻ってくる場所
+ * /auth/callback — よそのアカウントから戻ってくる場所
  *
- * Google の画面で許可したあと、ここへ帰ってくる。
+ * Google・GitHub・X の画面で許可したあと、ここへ帰ってくる。
  * 受け取った合言葉を、使える形の合鍵に取り替える。
  *
  * profiles は登録の引き金が作るが、
@@ -20,11 +20,25 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get("code");
     const next = searchParams.get("next") ?? "/";
 
+    const supabase = await createClient();
+
+    /*
+     * code が無いまま来ることがある。
+     *
+     * X は OAuth 1.0a なので、code ではなく
+     * 合鍵そのものを持って帰ってくる（住所の # から後ろ）。
+     * # から後ろはここ（server）まで届かないので、
+     * code が無い＝失敗、と決めつけてはいけない。
+     * その場合は client 側の受け口へ回し、そこで合鍵を拾う。
+     */
     if (!code) {
-        return NextResponse.redirect(`${origin}/login?error=callback`);
+        const response = NextResponse.redirect(
+            `${origin}/auth/finish?next=${encodeURIComponent(next)}`,
+        );
+        response.headers.set("Cache-Control", "no-store");
+        return response;
     }
 
-    const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error || !data.user) {
@@ -53,7 +67,8 @@ export async function GET(request: NextRequest) {
             user_id: data.user.id,
             display_name: displayName,
             email: data.user.email ?? "",
-            login_provider: "google",
+            login_provider:
+                (data.user.app_metadata?.provider as string) ?? "google",
         });
     }
 

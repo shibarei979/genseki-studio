@@ -96,18 +96,7 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
         const { error: caught } = await createClient().auth.signInWithOAuth({
             provider,
             options: {
-                /*
-                 * X だけ ?next=/ を付けない。
-                 *
-                 * 付けると Supabase が「戻り先が許された一覧に無い」と
-                 * 言って、X へ飛ぶ前に止まる。
-                 * Google と GitHub は付けたままで通るので、そのまま。
-                 * 行き先は同じ（/auth/callback が既定でホームへ送る）。
-                 */
-                redirectTo:
-                    provider === "twitter"
-                        ? `${window.location.origin}/auth/callback`
-                        : `${window.location.origin}/auth/callback?next=/`,
+                redirectTo: `${window.location.origin}/auth/callback?next=/`,
                 ...(provider === "google"
                     ? { queryParams: { access_type: "offline", prompt: "consent" } }
                     : {}),
