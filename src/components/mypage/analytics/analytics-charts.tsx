@@ -1,0 +1,287 @@
+'use client'
+import { useState } from 'react'
+
+interface EpisodeRow {
+  ep_number: number
+  title: string
+  views: number
+  likes: number
+  comments: number
+  created_at: string
+}
+interface NovelStat {
+  id: string
+  title: string
+  genre: string
+  published: boolean
+  views: number
+  viewsToday: number
+  viewsYesterday: number
+  viewsWeek: number
+  viewsMonth: number
+  likes: number
+  bookmarks: number
+  comments: number
+  uniqueCount: number
+  hourlyToday: number[]
+  hourlyYesterday: number[]
+  daily7: { date: string; views: number; m?: number; d?: number; a?: number }[]
+  dailyTop: { date: string; views: number; m?: number; d?: number; a?: number }[]
+  monthlyTop: { month: string; views: number; m?: number; d?: number; a?: number }[]
+  episodeRows: EpisodeRow[]
+  commentList: { body: string; author: string; created_at: string; episode_title: string; rating?: number | null }[]
+}
+
+export default function AnalyticsCharts({ novels }: { novels: NovelStat[] }) {
+  const [selectedId, setSelectedId] = useState(novels[0]?.id || '')
+  const selected = novels.find(n => n.id === selectedId) || novels[0]
+  if (!selected) return null
+
+  return (
+    <div>
+      {/* 作品選択（ドロップダウン） */}
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:12,color:'var(--color-text-muted)',fontWeight:600,marginBottom:8}}>作品を選択</div>
+        <div style={{position:'relative',display:'inline-block',minWidth:260,maxWidth:'100%'}}>
+          <select value={selectedId} onChange={e=>setSelectedId(e.target.value)}
+            style={{
+              width:'100%',appearance:'none',WebkitAppearance:'none',
+              padding:'10px 40px 10px 16px',borderRadius:10,
+              border:'1.5px solid var(--color-brand-border)',
+              background:'var(--color-bg-card)',color:'var(--color-text)',
+              fontSize:14,fontWeight:600,cursor:'pointer',
+            }}>
+            {novels.map(n => (
+              <option key={n.id} value={n.id}>
+                {n.title}{n.published===false ? '（非公開）' : ''}
+              </option>
+            ))}
+          </select>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:16,alignItems:'start'}} className="ana-layout">
+        {/* 左カラム：グラフ群 */}
+        <div style={{display:'flex',flexDirection:'column',gap:16,minWidth:0}}>
+          {/* 本日の時間帯別 */}
+          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
+            <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:6}}>
+              <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>本日のページビュー</span>
+              <span style={{fontSize:13,color:'var(--color-text-muted)'}}>合計 <strong style={{fontSize:18,color:'var(--color-brand)'}}>{selected.viewsToday}</strong> PV</span>
+            </div>
+            <HourlyChart data={selected.hourlyToday}/>
+          </div>
+
+          {/* 昨日の時間帯別 */}
+          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
+            <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:6}}>
+              <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>昨日のページビュー</span>
+              <span style={{fontSize:13,color:'var(--color-text-muted)'}}>合計 <strong style={{fontSize:18,color:'var(--color-brand)'}}>{selected.viewsYesterday}</strong> PV</span>
+            </div>
+            <HourlyChart data={selected.hourlyYesterday}/>
+          </div>
+
+          {/* 直近7日 */}
+          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
+            <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:6}}>
+              <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>直近7日間のページビュー</span>
+              <span style={{fontSize:13,color:'var(--color-text-muted)'}}>合計 <strong style={{fontSize:18,color:'var(--color-brand)'}}>{selected.viewsWeek}</strong> PV</span>
+            </div>
+            <DayChart data={selected.daily7}/>
+          </div>
+        </div>
+
+        {/* 右カラム：サマリー・上位 */}
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          {/* 全期間 */}
+          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:14}}>全期間</div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:2}}>累計ページビュー</div>
+              <div style={{fontSize:26,fontWeight:700,color:'var(--color-brand)'}}>{selected.views.toLocaleString()} <span style={{fontSize:13,color:'var(--color-text-muted)',fontWeight:400}}>PV</span></div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:2}}>累計ユニークアクセス</div>
+              <div style={{fontSize:22,fontWeight:700,color:'var(--color-text)'}}>{selected.uniqueCount.toLocaleString()} <span style={{fontSize:12,color:'var(--color-text-muted)',fontWeight:400}}>人</span></div>
+            </div>
+            <div style={{borderTop:'1px solid var(--color-brand-light)',paddingTop:12,display:'flex',flexDirection:'column',gap:10}}>
+              {[['いいね',selected.likes,'var(--color-danger)'],['保存',selected.bookmarks,'var(--color-brand)'],['コメント',selected.comments,'var(--color-info)']].map(([l,v,c])=>(
+                <div key={l as string} style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <span style={{fontSize:12,color:'var(--color-text-muted)'}}>{l as string}</span>
+                  <span style={{fontSize:18,fontWeight:700,color:c as string}}>{(v as number).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 日別上位 */}
+          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:12}}>日別ページビュー上位</div>
+            {selected.dailyTop.length === 0 ? (
+              <div style={{fontSize:12,color:'var(--color-text-faint)'}}>データがありません</div>
+            ) : selected.dailyTop.map((d, i) => (
+              <div key={d.date} style={{padding:'6px 0',borderBottom:i<selected.dailyTop.length-1?'1px solid var(--color-brand-light)':'none'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
+                  <span style={{fontSize:12,color:'var(--color-text-muted)'}}>{i+1}. {d.date}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>{d.views} PV</span>
+                </div>
+                {(d.m||d.d||d.a) ? (
+                  <div style={{display:'flex',height:5,borderRadius:3,overflow:'hidden',background:'var(--color-bg)'}}>
+                    {(d.m||0)>0 && <div style={{flex:d.m,background:'var(--color-brand)'}}/>}
+                    {(d.d||0)>0 && <div style={{flex:d.d,background:'var(--color-info)'}}/>}
+                    {(d.a||0)>0 && <div style={{flex:d.a,background:'#cbd5e1'}}/>}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          {/* 月別上位 */}
+          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:12}}>月別ページビュー上位</div>
+            {selected.monthlyTop.length === 0 ? (
+              <div style={{fontSize:12,color:'var(--color-text-faint)'}}>データがありません</div>
+            ) : selected.monthlyTop.map((m, i) => (
+              <div key={m.month} style={{padding:'6px 0',borderBottom:i<selected.monthlyTop.length-1?'1px solid var(--color-brand-light)':'none'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
+                  <span style={{fontSize:12,color:'var(--color-text-muted)'}}>{i+1}. {m.month}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>{m.views} PV</span>
+                </div>
+                {(m.m||m.d||m.a) ? (
+                  <div style={{display:'flex',height:5,borderRadius:3,overflow:'hidden',background:'var(--color-bg)'}}>
+                    {(m.m||0)>0 && <div style={{flex:m.m,background:'var(--color-brand)'}}/>}
+                    {(m.d||0)>0 && <div style={{flex:m.d,background:'var(--color-info)'}}/>}
+                    {(m.a||0)>0 && <div style={{flex:m.a,background:'#cbd5e1'}}/>}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 話別データ（全幅） */}
+      <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginTop:16}}>
+        <div style={{padding:'12px 16px',borderBottom:'1px solid var(--color-brand-border)',background:'var(--color-bg)',fontSize:13,fontWeight:700,color:'var(--color-text)'}}>
+          エピソード別
+        </div>
+        {selected.episodeRows.length === 0 ? (
+          <div style={{padding:'30px',textAlign:'center',color:'var(--color-text-faint)',fontSize:12}}>公開中の話がありません</div>
+        ) : (
+          selected.episodeRows.map((ep, i) => (
+            <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'13px 18px',borderBottom:i<selected.episodeRows.length-1?'1px solid var(--color-brand-light)':'none',flexWrap:'wrap'}}>
+              <span style={{fontSize:11,color:'var(--color-text-muted)',minWidth:44,flexShrink:0}}>{ep.ep_number}話</span>
+              <span style={{fontSize:13,fontWeight:600,color:'var(--color-text)',flex:1,minWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.title}</span>
+              <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',minWidth:44,textAlign:'right',display:'inline-flex',alignItems:'center',gap:3,justifyContent:'flex-end'}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                {ep.likes}
+              </span>
+              <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',minWidth:44,textAlign:'right',display:'inline-flex',alignItems:'center',gap:3,justifyContent:'flex-end'}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                {ep.comments}
+              </span>
+              <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)',whiteSpace:'nowrap',minWidth:60,textAlign:'right'}}>{ep.views.toLocaleString()} PV</span>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* コメント一覧（全幅） */}
+      <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginTop:16}}>
+        <div style={{padding:'12px 16px',borderBottom:'1px solid var(--color-brand-border)',background:'var(--color-bg)',fontSize:13,fontWeight:700,color:'var(--color-text)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <span>寄せられたコメント</span>
+          <span style={{fontSize:12,color:'var(--color-text-muted)',fontWeight:400}}>{selected.comments}件</span>
+        </div>
+        {selected.commentList.length === 0 ? (
+          <div style={{padding:'30px',textAlign:'center',color:'var(--color-text-faint)',fontSize:12}}>まだコメントがありません</div>
+        ) : (
+          selected.commentList.map((c, i) => (
+            <div key={i} style={{padding:'14px 18px',borderBottom:i<selected.commentList.length-1?'1px solid var(--color-brand-light)':'none'}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,flexWrap:'wrap'}}>
+                <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>{c.author}</span>
+                {c.rating && c.rating >= 1 && (
+                  <span style={{display:'inline-flex',gap:1}}>
+                    {[1,2,3].map(i => <span key={i} style={{fontSize:11,color:i<=(c.rating||0)?'#f5a623':'#ddd'}}>★</span>)}
+                  </span>
+                )}
+                <span style={{fontSize:11,color:'var(--color-brand)',background:'var(--color-brand-light)',padding:'1px 8px',borderRadius:10}}>{c.episode_title}</span>
+                <span style={{fontSize:11,color:'var(--color-text-faint)',marginLeft:'auto'}}>{fmtDateShort(c.created_at)}</span>
+              </div>
+              <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.7,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{c.body}</div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .ana-layout { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+function fmtDateShort(s: string) {
+  if (!s) return ''
+  const d = new Date(s)
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
+
+// 時間帯別（0-23時）
+function HourlyChart({ data }: { data: number[] }) {
+  const max = Math.max(1, ...data)
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'flex-end',gap:1,height:120,borderBottom:'1px solid var(--color-brand-border)'}}>
+        {data.map((v, h) => (
+          <div key={h} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end',height:'100%'}} title={`${h}時: ${v}PV`}>
+            <div style={{width:'100%',height:`${(v/max)*100}%`,minHeight:v>0?2:0,background:'var(--color-brand)',borderRadius:'2px 2px 0 0'}}/>
+          </div>
+        ))}
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',marginTop:5,fontSize:9,color:'var(--color-text-faint)'}}>
+        <span>0時</span><span>6時</span><span>12時</span><span>18時</span><span>23時</span>
+      </div>
+    </div>
+  )
+}
+
+// 日別
+function DayChart({ data }: { data: { date: string; views: number; m?: number; d?: number; a?: number }[] }) {
+  const max = Math.max(1, ...data.map(d => d.views))
+  return (
+    <div>
+      <div style={{display:'flex',gap:12,marginBottom:8,fontSize:10.5,color:'var(--color-text-muted)',flexWrap:'wrap'}}>
+        <span><span style={{display:'inline-block',width:9,height:9,borderRadius:2,background:'var(--color-brand)',marginRight:4}}/>スマホ</span>
+        <span><span style={{display:'inline-block',width:9,height:9,borderRadius:2,background:'var(--color-info)',marginRight:4}}/>PC</span>
+        <span><span style={{display:'inline-block',width:9,height:9,borderRadius:2,background:'#cbd5e1',marginRight:4}}/>未ログイン</span>
+      </div>
+      <div style={{display:'flex',alignItems:'flex-end',gap:8,height:120,borderBottom:'1px solid var(--color-brand-border)'}}>
+        {data.map((d, i) => {
+          const mm = d.m || 0, dd = d.d || 0, aa = d.a || 0
+          const legacy = Math.max(0, d.views - mm - dd - aa)  // 分類前の旧データ
+          return (
+            <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end',height:'100%'}} title={`${d.date}: ${d.views}PV（スマホ${mm}・PC${dd}・未ログイン${aa}${legacy>0?`・不明${legacy}`:''}）`}>
+              <div style={{width:'100%',maxWidth:40,height:`${(d.views/max)*100}%`,minHeight:d.views>0?3:0,display:'flex',flexDirection:'column',borderRadius:'3px 3px 0 0',overflow:'hidden',margin:'0 auto'}}>
+                {mm>0 && <div style={{flex:mm,background:'var(--color-brand)'}}/>}
+                {dd>0 && <div style={{flex:dd,background:'var(--color-info)'}}/>}
+                {aa>0 && <div style={{flex:aa,background:'#cbd5e1'}}/>}
+                {legacy>0 && <div style={{flex:legacy,background:'#ffd9bd'}}/>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{display:'flex',gap:8,marginTop:5}}>
+        {data.map((d, i) => (
+          <div key={i} style={{flex:1,textAlign:'center',fontSize:9,color:'var(--color-text-faint)'}}>{d.date}</div>
+        ))}
+      </div>
+    </div>
+  )
+}

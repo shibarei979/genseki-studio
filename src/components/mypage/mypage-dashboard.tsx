@@ -50,6 +50,12 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
   const claimedSet = new Set(claimedMissionIds)
   const missionPreview = missions.filter(m => !claimedSet.has(m.id)).slice(0, 4)
 
+  const summaryCards = [
+    { label: '投稿作品', value: monthlySummary.novels, prev: monthlySummary.novelsPrev },
+    { label: '総文字数', value: monthlySummary.chars, prev: monthlySummary.charsPrev },
+    { label: '総閲覧数', value: monthlySummary.views, prev: monthlySummary.viewsPrev },
+    { label: '総いいね数', value: monthlySummary.likes, prev: monthlySummary.likesPrev },
+  ]
 
   const RecentWorks = (
     <div style={card}>
@@ -129,7 +135,7 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
               <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{cur}/{m.target}</span>
             </div>
             <div style={{ height: 5, background: 'var(--color-bg)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ width: `${(cur / m.target) * 100}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-brand), #4a7fa5)' }} />
+              <div style={{ width: `${(cur / m.target) * 100}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-brand), #ff9d5c)' }} />
             </div>
           </div>
         )
@@ -137,12 +143,24 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
     </div>
   )
 
+  const Summary = (
+    <div style={card}>
+      <div style={cardHead}><span style={cardTitle}>活動サマリー（今月）</span><Link href="/mypage/report" style={seeAll}>グラフで見る →</Link></div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {summaryCards.map(s => (
+          <div key={s.label} style={{ background: 'var(--color-bg)', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>{s.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-text)', marginBottom: 4 }}>{s.value.toLocaleString()}</div>
+            {diffLabel(s.value, s.prev)}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <div id="mypage-dashboard" style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      {/* CSS 内の > や " は React がエスケープしてしまうため、
-          dangerouslySetInnerHTML で素通しする（ハイドレーション不一致も回避） */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style>{`
         #mypage-dashboard a.dash-link:hover > div,
         #mypage-dashboard a.dash-link:hover,
         #mypage-dashboard a.dash-link:focus > div,
@@ -155,7 +173,7 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
           transition: none !important;
           box-shadow: none !important;
         }
-      ` }} />
+      `}</style>
       {/* 左：コンテンツ系カード群 */}
       <div style={{ flex: '2 1 440px', minWidth: 300, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
@@ -171,6 +189,7 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
       {/* 右：ミッション進捗＋活動サマリー */}
       <div style={{ flex: '1 1 260px', minWidth: 260, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {Missions}
+        {Summary}
       </div>
     </div>
   )
