@@ -206,10 +206,24 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  /*
+   * つぶやきを読む。
+   *
+   * currentUserId も見張ること。
+   *
+   * 自分が誰かは、ページを開いた少しあとに決まる。
+   * それを見ずに一度だけ読むと、読んだ時点では
+   * 「誰でもない人」として自分のいいねを探すので、
+   * 押したはずのいいねが 1 つも見つからず、
+   * リロードのたびに色が消える。
+   *
+   * 話ページのいいねが消えないのは、あちらが
+   * サーバー側で誰かを確かめてから渡しているため。
+   */
   useEffect(() => {
     loadTweets()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authorId, scope, topic])
+  }, [authorId, scope, topic, currentUserId])
 
   async function loadTweets() {
     setLoading(true)
@@ -352,10 +366,19 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     }
 
     const tweetIds = tweetsData.map(t => t.id)
-    const { data: likesData } = await supabase
+    const { data: likesData, error: likesError } = await supabase
       .from('tweet_likes')
       .select('tweet_id, user_id')
       .in('tweet_id', tweetIds)
+
+    /*
+     * 読めなかったら黙らない。
+     *
+     * ここが空で返ると、押したはずのいいねが
+     * 「押していない」ことになって色が消える。
+     * 弾かれているのか、本当に無いのかを見分けたい。
+     */
+    if (likesError) console.error('[tweet-likes-read]', likesError)
 
     const { data: commentsData } = await supabase
       .from('tweet_comments')
