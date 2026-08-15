@@ -29,22 +29,6 @@ const CATEGORIES: Record<string, string[]> = {
     '権利侵害・盗作の報告',
     'その他',
   ],
-  /*
-   * どこで起きたかを選んでもらう。
-   * 場所が分かるだけで、探す手間がまるで違う。
-   */
-  bug: [
-    'ログイン・登録',
-    '作品の投稿・編集',
-    '作品の表示・公開',
-    '検索・一覧',
-    'コメント・いいね・通知',
-    '執筆室・コミュニティー',
-    'コンテスト・応募',
-    'マイページ・設定',
-    'スマートフォンでの表示崩れ',
-    'その他の不具合',
-  ],
   business: [
     '作品のメディア化・出版に関するご相談',
     '広告・タイアップのご相談',
@@ -103,7 +87,8 @@ export default function ContactForm() {
     if (!name.trim())            { setError('お名前を入力してください'); return }
     if (!email.includes('@'))    { setError('正しいメールアドレスを入力してください'); return }
     if (senderType === 'business' && !company.trim()) { setError('会社名を入力してください'); return }
-    if (!category)               { setError('お問い合わせ内容を選択してください'); return }
+    /* バグ・不具合のときは選ばせないので、確かめない */
+    if (senderType !== 'bug' && !category) { setError('お問い合わせ内容を選択してください'); return }
     if (body.trim().length < 10) { setError('本文を10文字以上入力してください'); return }
 
     setLoading(true)
@@ -111,7 +96,7 @@ export default function ContactForm() {
     const { error: err } = await supabase.from('contact_messages').insert({
       name: name.trim(),
       email: email.trim(),
-      category: `[${senderLabel}] ${category}`,
+      category: `[${senderLabel}] ${category || 'バグ・不具合の報告'}`,
       body: `${company ? `会社名：${company}\n` : ''}${phone ? `電話番号：${phone}\n` : ''}\n${body.trim()}`,
       user_id: userId || null,
     })
@@ -196,7 +181,15 @@ export default function ContactForm() {
           placeholder="090-0000-0000" style={{...inp,maxWidth:280}}/>
       </div>
 
-      {/* お問い合わせ内容 */}
+      {/*
+       * お問い合わせ内容。
+       *
+       * バグ・不具合のときは出さない。
+       * どこで起きたかは本文に書いてもらえばよく、
+       * 先に選ばせると、報告するまでの手数が増える。
+       * 急いで知らせたい人ほど途中でやめてしまう。
+       */}
+      {senderType !== 'bug' && (
       <div style={rowStyle}>
         <label style={{fontSize:13,fontWeight:600,color:'var(--color-text)',display:'block',marginBottom:8}}>
           お問い合わせ内容<span style={{color:'var(--color-brand)',marginLeft:4,fontSize:11,fontWeight:700}}>必須</span>
@@ -211,6 +204,7 @@ export default function ContactForm() {
           <div style={{fontSize:12,color:'var(--color-text-faint)',padding:'8px 0'}}>先にお問い合わせ区分を選択してください</div>
         )}
       </div>
+      )}
 
       {/* 本文 */}
       <div style={{padding:'16px 24px'}}>
