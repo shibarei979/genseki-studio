@@ -125,7 +125,17 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
     }
   }
 
-  const episodes = isAuthor ? rawEpisodes : (rawEpisodes || []).filter(ep => ep.published !== false)
+  /*
+   * 読者に見せるのは、投稿された話だけ。
+   *
+   * 以前は published !== false で絞っていた。
+   * これだと published が空（保存しただけで投稿していない話）が
+   * 通ってしまい、書きかけが作品ページに並んでいた。
+   * 「投稿した＝true」だけを通す。
+   */
+  const episodes = isAuthor
+    ? rawEpisodes
+    : (rawEpisodes || []).filter(ep => ep.published === true)
 
   const upcomingEpisode = (rawEpisodes || [])
     .filter(ep => ep.published === false && ep.scheduled_at && new Date(ep.scheduled_at).getTime() > nowMs)
@@ -355,7 +365,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
             </div>
             {(() => {
               // 表紙が無い場合は1話目の挿絵をフォールバック表示
-              const coverImg = novel.cover_url || (episodesRes.data || []).find((e: any) => e.published !== false && e.illust_url)?.illust_url
+              const coverImg = novel.cover_url || (episodesRes.data || []).find((e: any) => e.published === true && e.illust_url)?.illust_url
               return coverImg ? (
                 <div style={{marginBottom:14,textAlign:'center'}}>
                   <img src={coverImg} alt={`${novel.title} 表紙`}

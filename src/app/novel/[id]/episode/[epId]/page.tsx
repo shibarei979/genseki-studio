@@ -100,7 +100,8 @@ export default async function EpisodePage({ params }: Props) {
     isRead = !!rd
   }
 
-  const visibleEps = isOwner ? (allEps || []) : (allEps || []).filter(e => e.published !== false)
+  /* 読者に見せるのは投稿された話だけ。空は未投稿として扱う */
+  const visibleEps = isOwner ? (allEps || []) : (allEps || []).filter(e => e.published === true)
   const currentIdx = visibleEps.findIndex(e => e.id === params.epId) ?? -1
   const prevEp = currentIdx > 0 ? visibleEps[currentIdx - 1] : null
   const nextEp = currentIdx >= 0 && currentIdx < visibleEps.length - 1 ? visibleEps[currentIdx + 1] : null

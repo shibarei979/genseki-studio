@@ -49,7 +49,7 @@ export default async function NovelManagePage({ params }: { params: { id: string
       : Promise.resolve({ count: 0 } as any),
   ])
   const totalChars = episodes.reduce((s: number, e: any) => s + (e.body?.length || 0), 0)
-  const publishedEps = episodes.filter((e: any) => e.published !== false)
+  const publishedEps = episodes.filter((e: any) => e.published === true)
   const firstDate = publishedEps[0]?.created_at
   const lastDate = publishedEps.length > 0 ? publishedEps.reduce((max: string, e: any) => (e.created_at > max ? e.created_at : max), publishedEps[0].created_at) : null
 

@@ -143,7 +143,7 @@ export default async function AnalyticsPage() {
 
   const novelStats = (novels || []).map((n: any) => {
     const s = statsMap[n.id]
-    const eps = allEpisodes.filter((e: any) => e.novel_id === n.id && e.published !== false)
+    const eps = allEpisodes.filter((e: any) => e.novel_id === n.id && e.published === true)
 
     const empty = {
       views:0,likes:0,bookmarks:0,comments:0,viewsToday:0,viewsYesterday:0,viewsWeek:0,viewsMonth:0,
