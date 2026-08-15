@@ -39,7 +39,16 @@ export default function MessageSender({ users, sentMessages: initialMessages }: 
       .select().single()
     setLoading(false)
 
-    if (err) { setError('送信に失敗しました'); return }
+    /*
+     * 理由を出す。
+     * 「送信に失敗しました」だけだと、
+     * 決まりで弾かれたのか、列が無いのか分からない。
+     */
+    if (err) {
+      console.error('[admin-message]', err)
+      setError(`送信に失敗しました：${err.message}`)
+      return
+    }
 
     // 通知も送る
     await fetch('/api/notify', {
