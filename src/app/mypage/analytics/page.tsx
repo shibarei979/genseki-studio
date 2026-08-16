@@ -213,26 +213,7 @@ export default async function AnalyticsPage() {
         {novelStats.length === 0 ? (
           <div style={{textAlign:'center',padding:'60px 20px',color:'var(--color-text-muted)'}}>まだ作品がありません</div>
         ) : (
-          <>
-          <AnalyticsCharts novels={novelStats} />
-
-          {/*
-           * デバイス別。
-           *
-           * 札で大きく出していたが、毎日見る数字ではない。
-           * 図の下に 1 行で添える。
-           */}
-          {(deviceStats.mobilePv + deviceStats.desktopPv) > 0 && (
-            <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'4px 14px',padding:'10px 16px',marginTop:12,border:'1px solid var(--color-brand-border)',borderRadius:10,fontSize:12,color:'var(--color-text-muted)'}}>
-              <span style={{fontWeight:700,color:'var(--color-text)'}}>デバイス別</span>
-              <span>PC {deviceStats.desktopPv.toLocaleString()}（{deviceStats.desktopUsers.toLocaleString()}人）</span>
-              <span>スマホ {deviceStats.mobilePv.toLocaleString()}（{deviceStats.mobileUsers.toLocaleString()}人）</span>
-              <span style={{color:'var(--color-brand)',fontWeight:700}}>
-                合計 {(deviceStats.desktopPv+deviceStats.mobilePv).toLocaleString()}（{(deviceStats.desktopUsers+deviceStats.mobileUsers).toLocaleString()}人）
-              </span>
-            </div>
-          )}
-          </>
+          <AnalyticsCharts novels={novelStats} deviceStats={deviceStats} />
         )}
       </div>
       <Footer />

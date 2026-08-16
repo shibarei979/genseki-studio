@@ -32,7 +32,14 @@ interface NovelStat {
   commentList: { body: string; author: string; created_at: string; episode_title: string; rating?: number | null }[]
 }
 
-export default function AnalyticsCharts({ novels }: { novels: NovelStat[] }) {
+export default function AnalyticsCharts({
+  novels,
+  deviceStats,
+}: {
+  novels: NovelStat[]
+  /** 端末ごとの数。右の柱の末尾に添える */
+  deviceStats?: { desktopPv: number; mobilePv: number; desktopUsers: number; mobileUsers: number }
+}) {
   const [selectedId, setSelectedId] = useState(novels[0]?.id || '')
   const selected = novels.find(n => n.id === selectedId) || novels[0]
   if (!selected) return null
@@ -161,6 +168,31 @@ export default function AnalyticsCharts({ novels }: { novels: NovelStat[] }) {
               </div>
             ))}
           </div>
+        {/*
+         * 端末ごとの数。
+         *
+         * 毎日見る数字ではないので、柱の末尾に添える。
+         * 上の札と同じ見た目にして、並びから浮かせない。
+         */}
+        {deviceStats && (deviceStats.desktopPv + deviceStats.mobilePv) > 0 && (
+          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'14px 18px'}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:8}}>デバイス別</div>
+            {[
+              { label:'PC',   pv:deviceStats.desktopPv, users:deviceStats.desktopUsers },
+              { label:'スマホ', pv:deviceStats.mobilePv,  users:deviceStats.mobileUsers },
+            ].map(row => (
+              <div key={row.label} style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',padding:'4px 0'}}>
+                <span style={{fontSize:12,color:'var(--color-text-muted)'}}>{row.label}</span>
+                <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>
+                  {row.pv.toLocaleString()} PV
+                  <span style={{fontSize:11,fontWeight:400,color:'var(--color-text-faint)',marginLeft:6}}>
+                    {row.users.toLocaleString()}人
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
         </div>
       </div>
 
