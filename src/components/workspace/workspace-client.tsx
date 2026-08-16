@@ -339,7 +339,21 @@ export default function WorkspaceClient({ workId }: Props) {
                             <EpisodeList
                                 episodes={episodes}
                                 selectedId={selectedId}
-                                onSelect={setSelectedId}
+                                onSelect={(id) => {
+                                    setSelectedId(id);
+                                    /*
+                                     * 狭い画面では、選んだらそのまま本文へ。
+                                     *
+                                     * 以前は一覧に留まり、「本文にもどる」を
+                                     * 自分で押す必要があった。
+                                     * 話を選ぶのは本文を書くためなので、
+                                     * その二度手間を無くす。
+                                     *
+                                     * 広い画面は一覧と本文が並んでいるので、
+                                     * 閉じても何も起きない（isListOpen を見ていない）。
+                                     */
+                                    setIsListOpen(false);
+                                }}
                                 onCreate={handleCreate}
                                 onDelete={(id) => void deleteEpisode(id)}
                                 onToggleStatus={(ep) => void handleToggleStatus(ep)}
@@ -369,15 +383,24 @@ export default function WorkspaceClient({ workId }: Props) {
                         <button
                             type="button"
                             onClick={() => setIsListOpen(true)}
-                            className="mb-2 flex w-full items-center justify-between gap-2 rounded-md border border-line bg-surface px-3.5 py-2 text-[13px] text-ink hover:border-forest-line lg:hidden"
+                            /*
+                             * 押せると分かる見た目にする。
+                             *
+                             * 白地に細字だと、いま開いている話の
+                             * 見出しにしか見えず、ここから話を選べると
+                             * 気づかれない。
+                             * 枠の色を付け、右端は札の形にする。
+                             */
+                            className="mb-2 flex w-full items-center justify-between gap-2 rounded-md border border-forest-line bg-forest-tint/40 px-3.5 py-2.5 text-[13px] text-ink hover:bg-forest-tint lg:hidden"
                         >
-                            <span className="min-w-0 truncate">
+                            <span className="min-w-0 truncate font-medium">
                                 {selected
                                     ? `第${selected.ep_number}話　${selected.title || "無題"}`
                                     : "話を選ぶ"}
                             </span>
-                            <span className="shrink-0 text-[11px] text-muted">
-                                ほかの話 ▾
+                            <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[11px] text-forest">
+                                話を切りかえる
+                                <span aria-hidden="true">▾</span>
                             </span>
                         </button>
                     )}
