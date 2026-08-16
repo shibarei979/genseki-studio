@@ -1001,6 +1001,51 @@ body {
 
 /**
  * ============================================================
+ * 花びら
+ *
+ * 運営のダッシュボードで、人が増えたときに舞う。
+ *
+ * 紙吹雪はまっすぐ落ちるが、こちらは左右に揺れながら落ちる。
+ * 角も丸めて、花びららしく。
+ * ============================================================
+ */
+
+@keyframes petal-fall {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 0.95;
+    }
+    25% {
+        transform: translate(18px, 25vh) rotate(90deg);
+    }
+    50% {
+        transform: translate(-14px, 50vh) rotate(200deg);
+    }
+    75% {
+        transform: translate(16px, 75vh) rotate(300deg);
+    }
+    100% {
+        transform: translate(-8px, 108vh) rotate(420deg);
+        opacity: 0;
+    }
+}
+
+.petal-piece {
+    /* 片側だけ丸めると、花びらの形に見える */
+    border-radius: 60% 20% 60% 20%;
+    animation-name: petal-fall;
+    animation-timing-function: ease-in-out;
+    animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .petal-piece {
+        display: none;
+    }
+}
+
+/**
+ * ============================================================
  * 狭い画面へ
  *
  * パソコンの見た目は変えない。

@@ -1,4 +1,5 @@
 import AdminShell from '@/components/admin/admin-shell'
+import UserJoinPetals from '@/components/admin/user-join-petals'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
@@ -116,6 +117,9 @@ export default async function AdminPage() {
 
   return (
     <AdminShell title="ダッシュボード" description="今どうなっているか">
+      {/* 人が増えていたら花が舞う。1 人につき 50 枚 */}
+      <UserJoinPetals count={userCount ?? 0} />
+
         <div style={{marginBottom:28}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,marginBottom:4}}>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
