@@ -396,16 +396,23 @@ export default function WorkspaceClient({ workId }: Props) {
                                 }
                                 onCreateChapter={(episodeId) => {
                                     void (async () => {
+                                        /*
+                                         * 名前だけを聞く。
+                                         *
+                                         * 「第◯章」は並び順から自動で付くので、
+                                         * ここで入れると「第2章 第二章」になる。
+                                         * 聞くのは「出会い」のような題だけ。
+                                         */
                                         const title = window.prompt(
-                                            "章の名前を入れてください",
-                                            `第${chapters.length + 1}章`,
+                                            `第${chapters.length + 1}章の名前を入れてください（例：出会い）\n空のままでも作れます`,
+                                            "",
                                         );
                                         if (title === null) return;
 
                                         const chapter = await getRepository()
                                             .createChapter(
                                                 workId,
-                                                title.trim() || undefined,
+                                                title.trim(),
                                             );
                                         await reloadChapters();
                                         /* 作った章に、その話を入れる */

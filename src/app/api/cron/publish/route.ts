@@ -42,12 +42,33 @@ export async function GET(request: Request) {
          * 見るのは is_published。published は既定 true なので
          * 「まだ出していない話」の目印にならない。
          */
-        const { data: due, error } = await admin
-            .from("episodes")
-            .select("id, novel_id")
-            .neq("is_published", true)
-            .not("scheduled_at", "is", null)
-            .lte("scheduled_at", now);
+        /*
+         * 予約の時刻は 2 か所にある。
+         *
+         *   scheduled_at  こちらを本命として見る
+         *   publish_at    古い予約はこちらにしか入っていない
+         *
+         * 片方だけ見ていると、直す前に予約されたものが
+         * 永久に出ないまま残る。両方を拾う。
+         */
+        const [byScheduled, byPublishAt] = await Promise.all([
+            admin
+                .from("episodes")
+                .select("id, novel_id")
+                .neq("is_published", true)
+                .not("scheduled_at", "is", null)
+                .lte("scheduled_at", now),
+            admin
+                .from("episodes")
+                .select("id, novel_id")
+                .neq("is_published", true)
+                .is("scheduled_at", null)
+                .not("publish_at", "is", null)
+                .lte("publish_at", now),
+        ]);
+
+        const error = byScheduled.error ?? byPublishAt.error;
+        const due = [...(byScheduled.data ?? []), ...(byPublishAt.data ?? [])];
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
