@@ -27,7 +27,7 @@ interface Props {
 }
 
 export default function EpisodePublish({ episode, onChange, onClose }: Props) {
-    const [at, setAt] = useState(episode.publish_at?.slice(0, 16) ?? "");
+    const [at, setAt] = useState(toLocalInput(episode.publish_at));
     const [error, setError] = useState("");
 
     const isScheduled = Boolean(episode.publish_at) && !episode.is_published;
@@ -150,4 +150,22 @@ function formatAt(iso: string | null | undefined): string {
 
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${at.getMonth() + 1}月${at.getDate()}日 ${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
+/**
+ * 保存された時刻を、日時の入力欄に入る形にする。
+ *
+ * 表には世界標準時で入っている（…T04:27:00Z）。
+ * これをそのまま切り出すと、日本時間の欄に 04:27 と出て、
+ * 13:27 に予約したはずが 9 時間ずれて見える。
+ *
+ * 端末の時刻に直してから組み立てる。
+ */
+function toLocalInput(iso: string | null | undefined): string {
+    if (!iso) return "";
+    const at = new Date(iso);
+    if (Number.isNaN(at.getTime())) return "";
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
 }
