@@ -394,6 +394,41 @@ export default function WorkspaceClient({ workId }: Props) {
                                         chapter_id: chapterId,
                                     })
                                 }
+                                onRenameChapter={(chapterId, title) => {
+                                    void (async () => {
+                                        await getRepository().updateChapter(
+                                            chapterId,
+                                            { title },
+                                        );
+                                        await reloadChapters();
+                                    })();
+                                }}
+                                onDeleteChapter={(chapterId) => {
+                                    void (async () => {
+                                        /*
+                                         * 中の話は消さない。
+                                         * 章から出して「章に入れていない」へ戻す。
+                                         * 話まで消えると、書いたものが失われる。
+                                         */
+                                        await Promise.all(
+                                            episodes
+                                                .filter(
+                                                    (ep) =>
+                                                        ep.chapter_id ===
+                                                        chapterId,
+                                                )
+                                                .map((ep) =>
+                                                    updateEpisode(ep.id, {
+                                                        chapter_id: null,
+                                                    }),
+                                                ),
+                                        );
+                                        await getRepository().deleteChapter(
+                                            chapterId,
+                                        );
+                                        await reloadChapters();
+                                    })();
+                                }}
                                 onCreateChapter={(episodeId) => {
                                     void (async () => {
                                         /*

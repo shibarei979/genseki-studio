@@ -3,6 +3,17 @@
  * 原石航路 Studio
  * EpisodeList — 左サイドバーの話一覧
  *
+ * 章ごとに束ねて並べる。
+ *
+ *   第一章　出会い          ← 見出し。名前を直せる・消せる
+ *     第1話 はじまり
+ *     第2話 出会い
+ *   章に入れていない
+ *     第3話
+ *
+ * 話は章の見出しへドラッグして入れられる。
+ * 話どうしをドラッグすれば、今までどおり並びが変わる。
+ *
  * 並び替えは HTML5 のドラッグ＆ドロップを使う。
  * ライブラリを入れずに済ませ、依存を増やさないため。
  * ============================================================
@@ -26,12 +37,16 @@ interface Props {
     onDelete: (episodeId: string) => void;
     onToggleStatus: (episode: Episode) => void;
     onReorder: (orderedIds: string[]) => void;
-    /** 章の一覧。無ければ章の欄は出ない */
+    /** 章の一覧 */
     chapters?: Chapter[];
     /** 話を章へ入れる・外す */
     onAssignChapter?: (episodeId: string, chapterId: string | null) => void;
     /** 章を作る。話を渡せば、その話を作った章に入れる */
     onCreateChapter?: (episodeId: string | null) => void;
+    /** 章の名前を変える */
+    onRenameChapter?: (chapterId: string, title: string) => void;
+    /** 章を消す。中の話は「章に入れていない」へ戻る */
+    onDeleteChapter?: (chapterId: string) => void;
 }
 
 export default function EpisodeList({
@@ -39,6 +54,8 @@ export default function EpisodeList({
     chapters = [],
     onAssignChapter,
     onCreateChapter,
+    onRenameChapter,
+    onDeleteChapter,
     selectedId,
     onSelect,
     onCreate,
@@ -48,6 +65,8 @@ export default function EpisodeList({
 }: Props) {
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [overId, setOverId] = useState<string | null>(null);
+    /* ドラッグが乗っている章の見出し */
+    const [overChapterId, setOverChapterId] = useState<string | null>(null);
 
     function handleDrop(targetId: string) {
         if (!draggingId || draggingId === targetId) {
@@ -67,6 +86,95 @@ export default function EpisodeList({
         setOverId(null);
     }
 
+    /*
+     * 章ごとに束ねる。
+     *
+     * 章の並びはそのまま、最後に「章に入れていない」を置く。
+     * 章の無い作品では、束ねずにただ並べる（見出しだけ増えても邪魔）。
+     */
+    const hasChapters = chapters.length > 0;
+
+    const groups: { chapter: Chapter | null; items: Episode[] }[] = hasChapters
+        ? [
+              ...chapters.map((chapter) => ({
+                  chapter,
+                  items: episodes.filter((ep) => ep.chapter_id === chapter.id),
+              })),
+              {
+                  chapter: null,
+                  items: episodes.filter(
+                      (ep) =>
+                          !ep.chapter_id ||
+                          !chapters.some((c) => c.id === ep.chapter_id),
+                  ),
+              },
+          ]
+        : [{ chapter: null, items: episodes }];
+
+    function renderEpisode(episode: Episode) {
+        const isSelected = episode.id === selectedId;
+        const isOver = episode.id === overId && episode.id !== draggingId;
+
+        return (
+            <li
+                key={episode.id}
+                draggable
+                onDragStart={() => setDraggingId(episode.id)}
+                onDragEnd={() => {
+                    setDraggingId(null);
+                    setOverId(null);
+                    setOverChapterId(null);
+                }}
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    setOverId(episode.id);
+                }}
+                onDrop={() => handleDrop(episode.id)}
+                className={[
+                    "group mb-1 flex items-center gap-2 rounded-md px-2 py-2",
+                    isSelected ? "bg-forest-tint" : "hover:bg-canvas",
+                    isOver
+                        ? "border-t-2 border-forest"
+                        : "border-t-2 border-transparent",
+                    draggingId === episode.id ? "opacity-40" : "",
+                ].join(" ")}
+            >
+                <span
+                    aria-hidden="true"
+                    className="cursor-grab select-none text-xs leading-none text-faint"
+                >
+                    ⠿
+                </span>
+
+                <button
+                    type="button"
+                    onClick={() => onSelect(episode.id)}
+                    className="min-w-0 flex-1 text-left"
+                >
+                    <span className="block truncate text-[13px] text-ink">
+                        {formatEpisodeLabel(episode)}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-faint">
+                        {formatNumber(episode.char_count)}文字
+                    </span>
+                </button>
+
+                <EpisodeStatusMark
+                    status={episode.status}
+                    onToggle={() => onToggleStatus(episode)}
+                />
+
+                <DeleteButton
+                    label={formatEpisodeLabel(episode)}
+                    note="この話の本文と履歴を削除します。元に戻せません。"
+                    onDelete={() => onDelete(episode.id)}
+                    isFloating
+                    size="small"
+                />
+            </li>
+        );
+    }
+
     return (
         <div className="flex h-full flex-col">
             <div className="flex items-center justify-between px-3.5 py-2.5">
@@ -80,13 +188,6 @@ export default function EpisodeList({
                         ＋ 新規作成
                     </button>
 
-                    {/*
-                     * 章を作る。
-                     *
-                     * 話を作るのと同じ場所に置く。
-                     * 話ごとに札を並べていたときは、
-                     * 選んだ話の下にしか出ず、見つけにくかった。
-                     */}
                     {onCreateChapter && (
                         <button
                             type="button"
@@ -99,116 +200,114 @@ export default function EpisodeList({
                 </span>
             </div>
 
-            <ul className="thin-scroll flex-1 overflow-y-auto px-2 pb-2">
-                {episodes.map((episode) => {
-                    const isSelected = episode.id === selectedId;
-                    const isOver = episode.id === overId && episode.id !== draggingId;
+            <div className="thin-scroll flex-1 overflow-y-auto px-2 pb-2">
+                {groups.map(({ chapter, items }, groupIndex) => {
+                    /* 章が無い作品では、見出しを出さずに並べるだけ */
+                    if (!hasChapters) {
+                        return (
+                            <ul key="all">{items.map(renderEpisode)}</ul>
+                        );
+                    }
+
+                    /* 空の「章に入れていない」は出さない。見出しだけ残っても仕方ない */
+                    if (!chapter && items.length === 0) return null;
+
+                    const isOverHere =
+                        overChapterId === (chapter?.id ?? "__none__");
 
                     return (
-                        <li
-                            key={episode.id}
-                            draggable
-                            onDragStart={() => setDraggingId(episode.id)}
-                            onDragEnd={() => {
-                                setDraggingId(null);
-                                setOverId(null);
-                            }}
-                            onDragOver={(e) => {
-                                e.preventDefault();
-                                setOverId(episode.id);
-                            }}
-                            onDrop={() => handleDrop(episode.id)}
-                            className={[
-                                "group mb-1 flex flex-wrap items-center gap-2 rounded-md px-2 py-2",
-                                isSelected ? "bg-forest-tint" : "hover:bg-canvas",
-                                isOver ? "border-t-2 border-forest" : "border-t-2 border-transparent",
-                                draggingId === episode.id ? "opacity-40" : "",
-                            ].join(" ")}
-                        >
-                            <span
-                                aria-hidden="true"
-                                className="cursor-grab select-none text-xs leading-none text-faint"
-                            >
-                                ⠿
-                            </span>
-
-                            <button
-                                type="button"
-                                onClick={() => onSelect(episode.id)}
-                                className="min-w-0 flex-1 text-left"
-                            >
-                                <span className="block truncate text-[13px] text-ink">
-                                    {formatEpisodeLabel(episode)}
-                                </span>
-                                <span className="mt-0.5 block text-xs text-faint">
-                                    {formatNumber(episode.char_count)}文字
-                                </span>
-                            </button>
-
-                            <EpisodeStatusMark
-                                status={episode.status}
-                                onToggle={() => onToggleStatus(episode)}
-                            />
-
-                            <DeleteButton
-                                label={formatEpisodeLabel(episode)}
-                                note="この話の本文と履歴を削除します。元に戻せません。"
-                                onDelete={() => onDelete(episode.id)}
-                                isFloating
-                                size="small"
-                            />
-
+                        <div key={chapter?.id ?? "__none__"} className="mb-1">
                             {/*
-                             * 章。
+                             * 章の見出し。
                              *
-                             * 選んでいる話にだけ出す。
-                             * 全部の話に出すと一覧が二重に見えて、
-                             * どれを書いているのか分からなくなる。
-                             *
-                             * ここで作れるようにするのは、
-                             * 章を作る場所が投稿の設定にしかなく、
-                             * 書いている最中には遠いため。
+                             * ここへ話をドラッグすると、その章に入る。
+                             * 受け取れることが分かるよう、
+                             * 乗っている間は枠を光らせる。
                              */}
-                            {isSelected && onAssignChapter && chapters.length > 0 && (
-                                <span
-                                    className="basis-full pl-6 pr-1 pt-1.5"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    {/*
-                                     * どの章に入れるか。
-                                     *
-                                     * 章がまだ 1 つも無いときは出さない。
-                                     * 選ぶものが無い欄は、ただの飾りになる。
-                                     */}
-                                    <select
-                                        value={episode.chapter_id ?? ""}
-                                        onChange={(e) =>
-                                            onAssignChapter(
-                                                episode.id,
-                                                e.target.value || null,
-                                            )
-                                        }
-                                        className="w-full rounded border border-line bg-surface px-2 py-1 text-[11px] text-muted outline-none focus:border-forest"
-                                    >
-                                        <option value="">章に入れない</option>
-                                        {chapters.map((chapter, chapterIndex) => (
-                                            <option
-                                                key={chapter.id}
-                                                value={chapter.id}
-                                            >
-                                                {formatChapterLabel(
-                                                    chapter,
-                                                    chapterIndex,
-                                                )}
-                                            </option>
-                                        ))}
-                                    </select>
+                            <div
+                                onDragOver={(e) => {
+                                    if (!onAssignChapter) return;
+                                    e.preventDefault();
+                                    setOverChapterId(chapter?.id ?? "__none__");
+                                }}
+                                onDragLeave={() => setOverChapterId(null)}
+                                onDrop={() => {
+                                    if (draggingId && onAssignChapter) {
+                                        onAssignChapter(
+                                            draggingId,
+                                            chapter?.id ?? null,
+                                        );
+                                    }
+                                    setDraggingId(null);
+                                    setOverChapterId(null);
+                                }}
+                                className={[
+                                    "group/chapter mt-2 flex items-center gap-1.5 rounded-md px-2 py-1.5",
+                                    isOverHere
+                                        ? "bg-forest-tint ring-1 ring-forest"
+                                        : "bg-canvas",
+                                ].join(" ")}
+                            >
+                                <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-ink">
+                                    {chapter
+                                        ? formatChapterLabel(chapter, groupIndex)
+                                        : "章に入れていない"}
+                                    <span className="ml-1.5 font-normal text-faint">
+                                        {items.length}話
+                                    </span>
                                 </span>
+
+                                {chapter && onRenameChapter && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const next = window.prompt(
+                                                "章の名前",
+                                                chapter.title ?? "",
+                                            );
+                                            if (next === null) return;
+                                            onRenameChapter(
+                                                chapter.id,
+                                                next.trim(),
+                                            );
+                                        }}
+                                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-faint opacity-0 hover:text-forest group-hover/chapter:opacity-100"
+                                    >
+                                        名前
+                                    </button>
+                                )}
+
+                                {chapter && onDeleteChapter && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (
+                                                !window.confirm(
+                                                    `「${chapter.title || "この章"}」を消しますか？\n中の話は消えません。「章に入れていない」へ戻ります。`,
+                                                )
+                                            ) {
+                                                return;
+                                            }
+                                            onDeleteChapter(chapter.id);
+                                        }}
+                                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-faint opacity-0 hover:text-[var(--color-danger)] group-hover/chapter:opacity-100"
+                                    >
+                                        消す
+                                    </button>
+                                )}
+                            </div>
+
+                            <ul>{items.map(renderEpisode)}</ul>
+
+                            {items.length === 0 && (
+                                <p className="px-3 py-2 text-[10px] text-faint">
+                                    ここへ話をドラッグすると入ります
+                                </p>
                             )}
-                        </li>
+                        </div>
                     );
                 })}
-            </ul>
+            </div>
 
             {episodes.length === 0 && (
                 <p className="px-4 pb-4 text-xs text-faint">
@@ -218,7 +317,8 @@ export default function EpisodeList({
 
             {episodes.length > 1 && (
                 <p className="border-t border-line px-3.5 py-2 text-[11px] text-faint">
-                    ドラッグ＆ドロップで並び替えできます
+                    ドラッグ＆ドロップで並び替え
+                    {hasChapters && "・章の見出しへ入れられます"}
                 </p>
             )}
         </div>
