@@ -16,6 +16,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import Header from "@/components/layout/header";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
@@ -37,6 +38,7 @@ import {
 } from "@/types";
 
 export default function WorkPostClient({ workId }: { workId: string }) {
+    const router = useRouter();
     const [work, setWork] = useState<Work | null>(null);
     const [episodes, setEpisodes] = useState<Episode[]>([]);
     const [publish, setPublish] = useState<PublishSettings | null>(null);
@@ -63,17 +65,22 @@ export default function WorkPostClient({ workId }: { workId: string }) {
          * どの話を開くか。
          *
          * 執筆から来たときは、その話を開く（?ep=...）。
-         * 以前は必ず先頭の話だったので、
-         * 5 話目を書いていた人が 1 話目の設定を見せられていた。
+         * ただし見るのは開いた最初の一度だけ。
+         *
+         * 毎回見ると、投稿や非公開を押して読み直すたびに
+         * URL の話へ引き戻され、別の話を見ていたのに
+         * 勝手に移動する。
          */
-        const wanted =
-            typeof window !== "undefined"
-                ? new URLSearchParams(window.location.search).get("ep")
-                : null;
-
         setSelectedId((current) => {
+            if (current) return current;
+
+            const wanted =
+                typeof window !== "undefined"
+                    ? new URLSearchParams(window.location.search).get("ep")
+                    : null;
+
             if (wanted && rows.some((row) => row.id === wanted)) return wanted;
-            return current ?? rows[0]?.id ?? null;
+            return rows[0]?.id ?? null;
         });
         setIsLoading(false);
     }, [workId]);
@@ -256,6 +263,18 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                             chapters={chapters}
                             publish={publish}
                             onChange={(patch) => void change(selected.id, patch)}
+                            onPosted={() => {
+                                /*
+                                 * 投稿したら、書いていた所へ戻る。
+                                 *
+                                 * 出したあとは、たいてい続きを書くか
+                                 * 直しに戻る。投稿の画面に留まっても
+                                 * 次にすることが無い。
+                                 */
+                                router.push(
+                                    `/workspace/${workId}?ep=${selected.id}`,
+                                );
+                            }}
                             work={work}
                             onChangeWorkInfo={(patch) =>
                                 void (async () => {
@@ -307,8 +326,11 @@ function PostForm({
     onChangeWork,
     onChangeSettings,
     onChangeWorkInfo,
+    onPosted,
     work,
 }: {
+    /** 投稿し終えたとき。書いていた所へ戻すのに使う */
+    onPosted?: () => void;
     episode: Episode;
     chapters: Chapter[];
     publish: PublishSettings | null;
@@ -395,11 +417,13 @@ function PostForm({
 
             setError("");
             onChange({ is_published: false, publish_at: target.toISOString() });
+            onPosted?.();
             return;
         }
 
         setError("");
         onChange({ is_published: true, publish_at: null });
+        onPosted?.();
     }
 
     return (

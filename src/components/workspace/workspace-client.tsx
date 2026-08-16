@@ -50,6 +50,15 @@ export default function WorkspaceClient({ workId }: Props) {
      * 一度使ったら消す。話を切り替えるたびに飛ぶと邪魔になる。
      */
     const [jumpLine, setJumpLine] = useState<number | null>(null);
+    /*
+     * 末尾へ寄せたか。
+     *
+     * 開いた最初の一度だけにする。
+     * これが無いと、書くたびに episodes が新しくなって
+     * この判定が何度も走り、そのはずみで末尾へ飛ばされる。
+     * 矢印や BS を押している最中に飛ぶのはこれ。
+     */
+    const didJumpToTailRef = useRef(false);
     /** URL で指定された行き先。話が読み込まれるまで持っておく */
     const wantedEpisodeRef = useRef<string | null>(null);
     const wantedLineRef = useRef<number | null>(null);
@@ -157,12 +166,16 @@ export default function WorkspaceClient({ workId }: Props) {
             setSelectedId(latest.id);
 
             /*
-             * 本文の末尾に置く。
+             * 本文の末尾に置く。開いた最初の一度だけ。
+             *
              * 続きを書くのだから、頭ではなく終わりから始めたい。
+             * ただし書いている最中に走らせてはいけない。
              * 999999 は「どの本文より後ろ」の意味。
-             * 受け取る側が、行数を超えていれば末尾に寄せる。
              */
-            setJumpLine(999999);
+            if (!didJumpToTailRef.current) {
+                didJumpToTailRef.current = true;
+                setJumpLine(999999);
+            }
         }
     }, [episodes, selectedId]);
 
@@ -341,6 +354,12 @@ export default function WorkspaceClient({ workId }: Props) {
                                 selectedId={selectedId}
                                 onSelect={(id) => {
                                     setSelectedId(id);
+                                    /*
+                                     * 選び直したときも末尾から書ける。
+                                     * ここは押した瞬間にしか走らないので、
+                                     * 書いている最中に飛ぶことはない。
+                                     */
+                                    if (id !== selectedId) setJumpLine(999999);
                                     /*
                                      * 狭い画面では、選んだらそのまま本文へ。
                                      *
