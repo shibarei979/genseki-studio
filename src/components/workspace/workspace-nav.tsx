@@ -14,9 +14,11 @@ import Link from "next/link";
 interface Props {
     workId: string;
     current: "write" | "settings" | "resource" | "post";
+    /** 投稿へ渡す話。書いていた話をそのまま開くため */
+    episodeId?: string | null;
 }
 
-export default function WorkspaceNav({ workId, current }: Props) {
+export default function WorkspaceNav({ workId, current, episodeId }: Props) {
     return (
         <div className="space-y-2">
             <div className="grid grid-cols-3 gap-2">
@@ -42,7 +44,11 @@ export default function WorkspaceNav({ workId, current }: Props) {
              * 上の 3 つとは目的が違うので、段を分ける。
              */}
             <NavButton
-                href={`/workspace/${workId}/post`}
+                href={
+                    episodeId
+                        ? `/workspace/${workId}/post?ep=${episodeId}`
+                        : `/workspace/${workId}/post`
+                }
                 label="投稿"
                 isActive={current === "post"}
             />

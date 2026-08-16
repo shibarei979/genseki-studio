@@ -120,8 +120,15 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const isAuthor = user?.id === novel.author_id
 
   const nowMs = Date.now()
+  /*
+   * 時間の来た予約を公開する。
+   *
+   * 見るのは is_published。published は既定が true なので、
+   * 「published === false」では 1 件も当たらず、
+   * 予約しても時間が過ぎて出なかった。
+   */
   const toPublish = (rawEpisodes || []).filter(ep =>
-    ep.published === false && ep.scheduled_at && new Date(ep.scheduled_at).getTime() <= nowMs
+    ep.is_published !== true && ep.scheduled_at && new Date(ep.scheduled_at).getTime() <= nowMs
   )
   if (toPublish.length > 0) {
     await supabase.from('episodes')
@@ -156,7 +163,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   if (!isOwner && (episodes || []).length === 0) notFound()
 
   const upcomingEpisode = (rawEpisodes || [])
-    .filter(ep => ep.published === false && ep.scheduled_at && new Date(ep.scheduled_at).getTime() > nowMs)
+    .filter(ep => ep.is_published !== true && ep.scheduled_at && new Date(ep.scheduled_at).getTime() > nowMs)
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0] || null
 
   const { data: chapters } = await supabase
@@ -269,7 +276,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
   function EpisodeRow({ ep }: { ep: any }) {
     const isReadEp = readEpisodeIds.has(ep.id)
-    const isScheduled = isAuthor && ep.published === false && ep.scheduled_at
+    const isScheduled = isAuthor && ep.is_published !== true && ep.scheduled_at
     return (
       <Link href={`/novel/${params.id}/episode/${ep.id}`} style={{textDecoration:'none',display:'block'}}>
         <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderBottom:'1px solid var(--color-brand-light)',background: isReadEp ? '#e5e7eb' : 'var(--color-bg-card)'}}>

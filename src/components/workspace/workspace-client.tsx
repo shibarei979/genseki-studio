@@ -314,7 +314,7 @@ export default function WorkspaceClient({ workId }: Props) {
                         isListOpen ? "flex" : "hidden",
                     ].join(" ")}
                 >
-                    <WorkspaceNav workId={workId} current="write" />
+                    <WorkspaceNav workId={workId} current="write" episodeId={selectedId} />
 
                     {/* 一覧を閉じる。狭い画面だけ */}
                     <button

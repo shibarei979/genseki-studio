@@ -51,11 +51,13 @@ export default async function EpisodePage({ params }: Props) {
 
   // ===== 予約投稿の自動公開判定 =====
   const isOwner = user?.id === novel.author_id
-  if (episode.published === false && episode.scheduled_at) {
+  /* 見るのは is_published。published は既定 true で当てにならない */
+  if (episode.is_published !== true && episode.scheduled_at) {
     const scheduledTime = new Date(episode.scheduled_at).getTime()
     if (scheduledTime <= Date.now()) {
       await supabase.from('episodes').update({ published: true, is_published: true, scheduled_at: null, publish_at: null }).eq('id', episode.id)
       episode.published = true
+      episode.is_published = true
       episode.scheduled_at = null
       const { data: novelPubCheck } = await supabase.from('novels').select('published').eq('id', novel.id).maybeSingle()
       if (novelPubCheck && novelPubCheck.published === false) {
@@ -64,7 +66,7 @@ export default async function EpisodePage({ params }: Props) {
     } else if (!isOwner) {
       notFound()
     }
-  } else if (episode.published === false && !isOwner) {
+  } else if (episode.is_published !== true && !isOwner) {
     notFound()
   }
 

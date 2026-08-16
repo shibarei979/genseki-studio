@@ -58,7 +58,23 @@ export default function WorkPostClient({ workId }: { workId: string }) {
         setPublish(publishData);
         setChapters(chapterData);
         setEpisodes(rows);
-        setSelectedId((current) => current ?? rows[0]?.id ?? null);
+
+        /*
+         * どの話を開くか。
+         *
+         * 執筆から来たときは、その話を開く（?ep=...）。
+         * 以前は必ず先頭の話だったので、
+         * 5 話目を書いていた人が 1 話目の設定を見せられていた。
+         */
+        const wanted =
+            typeof window !== "undefined"
+                ? new URLSearchParams(window.location.search).get("ep")
+                : null;
+
+        setSelectedId((current) => {
+            if (wanted && rows.some((row) => row.id === wanted)) return wanted;
+            return current ?? rows[0]?.id ?? null;
+        });
         setIsLoading(false);
     }, [workId]);
 

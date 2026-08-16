@@ -700,10 +700,29 @@ export const supabaseRepository: Repository = {
             next.scanned_length = patch.scanned_length;
         }
         if (patch.chapter_id !== undefined) next.chapter_id = patch.chapter_id;
+        /*
+         * 公開の印は表に 2 つある。
+         *   is_published  こちらで使う印
+         *   published     投稿サイト側の印。既定 true
+         * 片方だけ立てると、表示と食い違う。
+         */
         if (patch.is_published !== undefined) {
             next.is_published = patch.is_published;
+            next.published = patch.is_published;
         }
-        if (patch.publish_at !== undefined) next.publish_at = patch.publish_at;
+
+        /*
+         * 予約の時刻も 2 つある。
+         *   publish_at    こちらで使う
+         *   scheduled_at  投稿サイト側が見て、時間が来たら公開する
+         *
+         * 繋いでいなかったので、予約しても時間が過ぎて出なかった。
+         * 両方に同じ時刻を入れる。
+         */
+        if (patch.publish_at !== undefined) {
+            next.publish_at = patch.publish_at;
+            next.scheduled_at = patch.publish_at;
+        }
         if (patch.preface !== undefined) next.preface = patch.preface;
         if (patch.episode_summary !== undefined) {
             next.episode_summary = patch.episode_summary;

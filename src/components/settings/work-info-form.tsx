@@ -208,6 +208,15 @@ export default function WorkInfoForm({ work, onSave }: Props) {
 
                     <Field label="タグ" htmlFor="info-tags">
                         <TagInput id="info-tags" tags={tags} onChange={setTags} />
+                        {/*
+                         * 自分で作れることを書いておく。
+                         * 候補から選ぶ欄に見えるので、
+                         * 打ち込めると気づかれない。
+                         */}
+                        <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+                            ※ 候補から選ぶほか、自由に打ち込んで作ることもできます
+                            （入力して Enter）。
+                        </p>
                     </Field>
 
                     <Field label="あらすじ" htmlFor="info-summary" error={summaryError}>
