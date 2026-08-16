@@ -1347,7 +1347,17 @@ export default function MypageClient({
           <div style={secCard}>
             <div style={secTitle}>表示設定</div>
             <div style={{fontSize:13,fontWeight:600,color:'var(--color-text)',marginBottom:4}}>ホーム初期表示</div>
-            <div style={{fontSize:11.5,color:'var(--color-text-muted)',marginBottom:10}}>マイページを開いたときに表示する内容を選べます。いつでも変更できます。</div>
+            <div style={{fontSize:11.5,color:'var(--color-text-muted)',marginBottom:6}}>マイページを開いたときに表示する内容を選べます。いつでも変更できます。</div>
+            {/*
+             * 何が起きるかは、選ぶ前に書いておく。
+             * 押してから気づくのでは遅い。
+             */}
+            <div style={{fontSize:11.5,color:'var(--color-text-muted)',lineHeight:1.8,marginBottom:10}}>
+              「執筆に集中」にすると、フォロワー数・閲覧数・いいね・
+              ランキング・ミッションなどの数字と、コミュニティーへの入口を隠します。
+              数えるのをやめるだけで、記録は残ります。
+              いつでも「執筆向け」に戻せます。
+            </div>
             {/*
               読書向けはまだ用意していない。
               押せるようにしておくと、選んでも何も変わらず
@@ -1376,12 +1386,6 @@ export default function MypageClient({
               </button>
             </div>
 
-            <p style={{fontSize:11.5,color:'var(--color-text-muted)',lineHeight:1.8,marginTop:10}}>
-              「執筆に集中」にすると、フォロワー数・閲覧数・いいね・
-              ランキング・ミッションなどの数字と、コミュニティーへの入口を隠します。
-              数えるのをやめるだけで、記録は残ります。
-              いつでも「執筆向け」に戻せます。
-            </p>
             {roleSaving && <span style={{fontSize:11,color:'var(--color-brand)',marginLeft:10}}>保存中...</span>}
           </div>
 
