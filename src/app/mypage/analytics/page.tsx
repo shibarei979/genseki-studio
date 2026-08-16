@@ -210,56 +210,29 @@ export default async function AnalyticsPage() {
           <h1 style={{fontSize:20,fontWeight:700,color:'var(--color-text)'}}>ダッシュボード</h1>
           <Link href="/mypage?tab=works" style={{fontSize:13,color:'var(--color-brand)',textDecoration:'none'}}>← 作品管理に戻る</Link>
         </div>
-        {(deviceStats.mobilePv + deviceStats.desktopPv) > 0 && (
-          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'14px 18px',marginBottom:16}}>
-            <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:10}}>デバイス別アクセス</div>
-            {/*
-             * 格子の枠を引かない。
-             *
-             * 全部の升を線で囲むと、数字より線が目に入る。
-             * 見たいのは「パソコンとスマホでどちらが多いか」なので、
-             * 4 つの札に分けて、数字を大きく出す。
-             */}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))',gap:10}}>
-              {[
-                { label:'パソコンから', users:deviceStats.desktopUsers, pv:deviceStats.desktopPv },
-                { label:'スマートフォンから', users:deviceStats.mobileUsers, pv:deviceStats.mobilePv },
-              ].map(row => (
-                <div key={row.label} style={{border:'1px solid var(--color-brand-border)',borderRadius:10,padding:'14px 16px'}}>
-                  <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:6}}>{row.label}</div>
-                  <div style={{display:'flex',alignItems:'baseline',gap:6}}>
-                    <span style={{fontSize:22,fontWeight:700,color:'var(--color-text)',lineHeight:1.2}}>{row.pv.toLocaleString()}</span>
-                    <span style={{fontSize:11,color:'var(--color-text-muted)'}}>回ひらかれた</span>
-                  </div>
-                  <div style={{fontSize:11,color:'var(--color-text-faint)',marginTop:4}}>
-                    読んだ人 {row.users.toLocaleString()}人
-                  </div>
-                </div>
-              ))}
-
-              <div style={{border:'1px solid var(--color-brand)',borderRadius:10,padding:'14px 16px',background:'var(--color-brand-light)'}}>
-                <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:6}}>合わせて</div>
-                <div style={{display:'flex',alignItems:'baseline',gap:6}}>
-                  <span style={{fontSize:22,fontWeight:700,color:'var(--color-brand)',lineHeight:1.2}}>
-                    {(deviceStats.desktopPv+deviceStats.mobilePv).toLocaleString()}
-                  </span>
-                  <span style={{fontSize:11,color:'var(--color-text-muted)'}}>回ひらかれた</span>
-                </div>
-                <div style={{fontSize:11,color:'var(--color-text-faint)',marginTop:4}}>
-                  読んだ人 {(deviceStats.desktopUsers+deviceStats.mobileUsers).toLocaleString()}人
-                </div>
-              </div>
-            </div>
-            <div style={{fontSize:10.5,color:'var(--color-text-faint)',marginTop:10,lineHeight:1.8}}>
-              「読んだ人」はログインしている人の数、「ひらかれた回数」はログインしていない人も含みます。
-              記録を取り始めた日からの分です。
-            </div>
-          </div>
-        )}
         {novelStats.length === 0 ? (
           <div style={{textAlign:'center',padding:'60px 20px',color:'var(--color-text-muted)'}}>まだ作品がありません</div>
         ) : (
+          <>
           <AnalyticsCharts novels={novelStats} />
+
+          {/*
+           * デバイス別。
+           *
+           * 札で大きく出していたが、毎日見る数字ではない。
+           * 図の下に 1 行で添える。
+           */}
+          {(deviceStats.mobilePv + deviceStats.desktopPv) > 0 && (
+            <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'4px 14px',padding:'10px 16px',marginTop:12,border:'1px solid var(--color-brand-border)',borderRadius:10,fontSize:12,color:'var(--color-text-muted)'}}>
+              <span style={{fontWeight:700,color:'var(--color-text)'}}>デバイス別</span>
+              <span>PC {deviceStats.desktopPv.toLocaleString()}（{deviceStats.desktopUsers.toLocaleString()}人）</span>
+              <span>スマホ {deviceStats.mobilePv.toLocaleString()}（{deviceStats.mobileUsers.toLocaleString()}人）</span>
+              <span style={{color:'var(--color-brand)',fontWeight:700}}>
+                合計 {(deviceStats.desktopPv+deviceStats.mobilePv).toLocaleString()}（{(deviceStats.desktopUsers+deviceStats.mobileUsers).toLocaleString()}人）
+              </span>
+            </div>
+          )}
+          </>
         )}
       </div>
       <Footer />
