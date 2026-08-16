@@ -258,12 +258,22 @@ export default async function AnalyticsPage() {
   })
 
   return (
-    <div style={{minHeight:'100vh'}}>
+    /* 背景は薄い灰。札を白にして浮かせる */
+    <div style={{minHeight:'100vh',background:'var(--color-bg)'}}>
       <Header />
-      <div style={{maxWidth:1100,margin:'0 auto',padding:'24px 16px'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:8}}>
-          <h1 style={{fontSize:20,fontWeight:700,color:'var(--color-text)'}}>ダッシュボード</h1>
-          <Link href="/mypage?tab=works" style={{fontSize:13,color:'var(--color-brand)',textDecoration:'none'}}>← 作品管理に戻る</Link>
+      <div style={{maxWidth:1100,margin:'0 auto',padding:'28px 16px'}}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:22,flexWrap:'wrap',gap:12}}>
+          <div>
+            <h1 style={{fontSize:24,fontWeight:700,color:'var(--color-text)',letterSpacing:'-0.01em'}}>ダッシュボード</h1>
+            <p style={{fontSize:13,color:'var(--color-text-muted)',marginTop:6}}>作品の反応をたしかめて、次の執筆に活かしましょう。</p>
+          </div>
+          <Link
+            href="/mypage?tab=works"
+            style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:13,color:'var(--color-text-muted)',textDecoration:'none',
+              border:'1px solid var(--color-brand-border)',borderRadius:8,padding:'8px 14px',background:'var(--color-bg-card)'}}
+          >
+            ← 作品管理に戻る
+          </Link>
         </div>
         {novelStats.length === 0 ? (
           <div style={{textAlign:'center',padding:'60px 20px',color:'var(--color-text-muted)'}}>まだ作品がありません</div>

@@ -38,6 +38,18 @@ interface NovelStat {
   commentList: { body: string; author: string; created_at: string; episode_title: string; rating?: number | null }[]
 }
 
+/**
+ * 昨日との差。
+ *
+ * どちらも 0 のときに「0%」と出すと、
+ * 減ったのか動きが無いのか分からないので「—」にする。
+ */
+function diffLabel(today: number, yesterday: number): string {
+  if (yesterday === 0) return today === 0 ? '—' : '+100%'
+  const ratio = Math.round(((today - yesterday) / yesterday) * 100)
+  return ratio > 0 ? `+${ratio}%` : `${ratio}%`
+}
+
 const RANGES: { key: 'month'|'year'|'all'; label: string }[] = [
   { key:'month', label:'1か月' },
   { key:'year',  label:'1年' },
@@ -97,18 +109,38 @@ export default function AnalyticsCharts({
         <div style={{display:'flex',flexDirection:'column',gap:16,minWidth:0}}>
           {/* 本日の時間帯別 */}
           <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
-            <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:6}}>
-              <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>本日のページビュー</span>
-              <span style={{fontSize:13,color:'var(--color-text-muted)'}}>合計 <strong style={{fontSize:18,color:'var(--color-brand)'}}>{selected.viewsToday}</strong> PV</span>
+            {/*
+             * 数字を大きく、見出しの下に置く。
+             *
+             * 「合計 0 PV」と右端に小さく出すより、
+             * まず数が目に入るほうが分かりやすい。
+             * 右上には昨日との差を添える。
+             */}
+            <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>本日のページビュー</div>
+                <div style={{display:'flex',alignItems:'baseline',gap:5,marginTop:6}}>
+                  <span style={{fontSize:30,fontWeight:700,color:'var(--color-text)',lineHeight:1.1}}>{selected.viewsToday}</span>
+                  <span style={{fontSize:12,color:'var(--color-text-muted)'}}>PV</span>
+                </div>
+              </div>
+              <span style={{fontSize:11,color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',borderRadius:8,padding:'5px 10px'}}>
+                昨日比 {diffLabel(selected.viewsToday, selected.viewsYesterday)}
+              </span>
             </div>
             <HourlyChart data={selected.hourlyToday}/>
           </div>
 
           {/* 昨日の時間帯別 */}
           <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
-            <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:6}}>
-              <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>昨日のページビュー</span>
-              <span style={{fontSize:13,color:'var(--color-text-muted)'}}>合計 <strong style={{fontSize:18,color:'var(--color-brand)'}}>{selected.viewsYesterday}</strong> PV</span>
+            <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>昨日のページビュー</div>
+                <div style={{display:'flex',alignItems:'baseline',gap:5,marginTop:6}}>
+                  <span style={{fontSize:30,fontWeight:700,color:'var(--color-text)',lineHeight:1.1}}>{selected.viewsYesterday}</span>
+                  <span style={{fontSize:12,color:'var(--color-text-muted)'}}>PV</span>
+                </div>
+              </div>
             </div>
             <HourlyChart data={selected.hourlyYesterday}/>
           </div>
@@ -212,29 +244,11 @@ export default function AnalyticsCharts({
               </div>
             ))}
           </div>
-        {/*
-         * 端末ごとの数。
-         *
-         * 毎日見る数字ではないので、柱の末尾に添える。
-         * 上の札と同じ見た目にして、並びから浮かせない。
-         */}
+        {/* 端末ごとの割合 */}
         {deviceStats && (deviceStats.desktopPv + deviceStats.mobilePv) > 0 && (
-          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'14px 18px'}}>
-            <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:8}}>デバイス別</div>
-            {[
-              { label:'PC',   pv:deviceStats.desktopPv, users:deviceStats.desktopUsers },
-              { label:'スマホ', pv:deviceStats.mobilePv,  users:deviceStats.mobileUsers },
-            ].map(row => (
-              <div key={row.label} style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',padding:'4px 0'}}>
-                <span style={{fontSize:12,color:'var(--color-text-muted)'}}>{row.label}</span>
-                <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>
-                  {row.pv.toLocaleString()} PV
-                  <span style={{fontSize:11,fontWeight:400,color:'var(--color-text-faint)',marginLeft:6}}>
-                    {row.users.toLocaleString()}人
-                  </span>
-                </span>
-              </div>
-            ))}
+          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:14}}>デバイス別</div>
+            <DeviceDonut desktopPv={deviceStats.desktopPv} mobilePv={deviceStats.mobilePv}/>
           </div>
         )}
         </div>
@@ -242,27 +256,33 @@ export default function AnalyticsCharts({
 
       {/* 話別データ（全幅） */}
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginTop:16}}>
-        <div style={{padding:'12px 16px',borderBottom:'1px solid var(--color-brand-border)',background:'var(--color-bg)',fontSize:13,fontWeight:700,color:'var(--color-text)'}}>
-          エピソード別
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid var(--color-brand-border)',background:'var(--color-bg)'}}>
+          <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>エピソード別</span>
         </div>
+
         {selected.episodeRows.length === 0 ? (
           <div style={{padding:'30px',textAlign:'center',color:'var(--color-text-faint)',fontSize:12}}>公開中の話がありません</div>
         ) : (
-          selected.episodeRows.map((ep, i) => (
-            <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'13px 18px',borderBottom:i<selected.episodeRows.length-1?'1px solid var(--color-brand-light)':'none',flexWrap:'wrap'}}>
-              <span style={{fontSize:11,color:'var(--color-text-muted)',minWidth:44,flexShrink:0}}>{ep.ep_number}話</span>
-              <span style={{fontSize:13,fontWeight:600,color:'var(--color-text)',flex:1,minWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.title}</span>
-              <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',minWidth:44,textAlign:'right',display:'inline-flex',alignItems:'center',gap:3,justifyContent:'flex-end'}}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                {ep.likes}
-              </span>
-              <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',minWidth:44,textAlign:'right',display:'inline-flex',alignItems:'center',gap:3,justifyContent:'flex-end'}}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                {ep.comments}
-              </span>
-              <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)',whiteSpace:'nowrap',minWidth:60,textAlign:'right'}}>{ep.views.toLocaleString()} PV</span>
+          <div>
+            {/* 見出し。数字だけ並ぶと、何の数か分からない */}
+            <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 18px',borderBottom:'1px solid var(--color-brand-light)',fontSize:11,color:'var(--color-text-muted)'}}>
+              <span style={{minWidth:44,flexShrink:0}}>話数</span>
+              <span style={{flex:1,minWidth:120}}>エピソードタイトル</span>
+              <span style={{minWidth:44,textAlign:'right'}}>いいね</span>
+              <span style={{minWidth:44,textAlign:'right'}}>コメント</span>
+              <span style={{minWidth:60,textAlign:'right'}}>閲覧</span>
             </div>
-          ))
+
+            {selected.episodeRows.map((ep, i) => (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'13px 18px',borderBottom:i<selected.episodeRows.length-1?'1px solid var(--color-brand-light)':'none',flexWrap:'wrap'}}>
+                <span style={{fontSize:11,color:'var(--color-text-muted)',minWidth:44,flexShrink:0}}>{ep.ep_number}話</span>
+                <span style={{fontSize:13,fontWeight:600,color:'var(--color-text)',flex:1,minWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.title}</span>
+                <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',minWidth:44,textAlign:'right'}}>{ep.likes}</span>
+                <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',minWidth:44,textAlign:'right'}}>{ep.comments}</span>
+                <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)',whiteSpace:'nowrap',minWidth:60,textAlign:'right'}}>{ep.views.toLocaleString()} PV</span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -273,7 +293,16 @@ export default function AnalyticsCharts({
           <span style={{fontSize:12,color:'var(--color-text-muted)',fontWeight:400}}>{selected.comments}件</span>
         </div>
         {selected.commentList.length === 0 ? (
-          <div style={{padding:'30px',textAlign:'center',color:'var(--color-text-faint)',fontSize:12}}>まだコメントがありません</div>
+          /* 何も無いときこそ、そっけなくしない */
+          <div style={{padding:'34px 20px',display:'flex',alignItems:'center',justifyContent:'center',gap:12}}>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand-border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <div>
+              <div style={{fontSize:13,color:'var(--color-text-muted)'}}>まだコメントがありません</div>
+              <div style={{fontSize:11,color:'var(--color-text-faint)',marginTop:3}}>最初の感想をお待ちしています。</div>
+            </div>
+          </div>
         ) : (
           selected.commentList.map((c, i) => (
             <div key={i} style={{padding:'14px 18px',borderBottom:i<selected.commentList.length-1?'1px solid var(--color-brand-light)':'none'}}>
@@ -330,32 +359,126 @@ function HourlyChart({ data }: { data: number[] }) {
 // 日別
 function DayChart({ data }: { data: { date: string; views: number; m?: number; d?: number; a?: number }[] }) {
   const max = Math.max(1, ...data.map(d => d.views))
+
+  /*
+   * 目盛りの数。
+   *
+   * 0 と上限のあいだを 3 つに割る。
+   * 棒の高さだけでは「4 なのか 40 なのか」が読めない。
+   */
+  const ticks = [0, 1, 2, 3].map(i => Math.round((max / 3) * i))
+  const uniqueTicks = Array.from(new Set(ticks)).sort((a, b) => b - a)
+
+  /*
+   * 日付の間引き。
+   *
+   * 30 本あると全部は出せない。5 本ごとに出す。
+   * 本数が少ないときは全部出す。
+   */
+  const labelStep = data.length > 14 ? Math.ceil(data.length / 8) : 1
+
   return (
     <div>
-      <div style={{display:'flex',gap:12,marginBottom:8,fontSize:10.5,color:'var(--color-text-muted)',flexWrap:'wrap'}}>
+      <div style={{display:'flex',gap:12,marginBottom:10,fontSize:10.5,color:'var(--color-text-muted)',flexWrap:'wrap'}}>
         <span><span style={{display:'inline-block',width:9,height:9,borderRadius:2,background:'var(--color-brand)',marginRight:4}}/>スマホ</span>
         <span><span style={{display:'inline-block',width:9,height:9,borderRadius:2,background:'var(--color-info)',marginRight:4}}/>PC</span>
         <span><span style={{display:'inline-block',width:9,height:9,borderRadius:2,background:'#cbd5e1',marginRight:4}}/>未ログイン</span>
       </div>
-      <div style={{display:'flex',alignItems:'flex-end',gap:8,height:120,borderBottom:'1px solid var(--color-brand-border)'}}>
-        {data.map((d, i) => {
-          const mm = d.m || 0, dd = d.d || 0, aa = d.a || 0
-          const legacy = Math.max(0, d.views - mm - dd - aa)  // 分類前の旧データ
-          return (
-            <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end',height:'100%'}} title={`${d.date}: ${d.views}PV（スマホ${mm}・PC${dd}・未ログイン${aa}${legacy>0?`・不明${legacy}`:''}）`}>
-              <div style={{width:'100%',maxWidth:40,height:`${(d.views/max)*100}%`,minHeight:d.views>0?3:0,display:'flex',flexDirection:'column',borderRadius:'3px 3px 0 0',overflow:'hidden',margin:'0 auto'}}>
-                {mm>0 && <div style={{flex:mm,background:'var(--color-brand)'}}/>}
-                {dd>0 && <div style={{flex:dd,background:'var(--color-info)'}}/>}
-                {aa>0 && <div style={{flex:aa,background:'#cbd5e1'}}/>}
-                {legacy>0 && <div style={{flex:legacy,background:'#ffd9bd'}}/>}
-              </div>
+
+      <div style={{display:'flex',gap:8}}>
+        {/* 目盛りの数字 */}
+        <div style={{display:'flex',flexDirection:'column',justifyContent:'space-between',height:140,fontSize:10,color:'var(--color-text-faint)',textAlign:'right',minWidth:16}}>
+          {uniqueTicks.map(t => <span key={t}>{t}</span>)}
+        </div>
+
+        <div style={{flex:1,minWidth:0}}>
+          {/* 目盛りの横線。棒の後ろに敷く */}
+          <div style={{position:'relative',height:140}}>
+            <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+              {uniqueTicks.map(t => (
+                <div key={t} style={{borderTop:'1px solid var(--color-brand-light)'}}/>
+              ))}
             </div>
-          )
-        })}
+
+            <div style={{position:'relative',display:'flex',alignItems:'flex-end',gap:data.length > 14 ? 3 : 8,height:'100%'}}>
+              {data.map((d, i) => {
+                const mm = d.m || 0, dd = d.d || 0, aa = d.a || 0
+                const legacy = Math.max(0, d.views - mm - dd - aa)
+                return (
+                  <div
+                    key={i}
+                    style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end',height:'100%'}}
+                    title={`${d.date}: ${d.views}PV（スマホ${mm}・PC${dd}・未ログイン${aa}${legacy>0?`・不明${legacy}`:''}）`}
+                  >
+                    <div style={{width:'100%',maxWidth:data.length > 14 ? 18 : 40,height:`${(d.views/max)*100}%`,minHeight:d.views>0?3:0,display:'flex',flexDirection:'column',borderRadius:'3px 3px 0 0',overflow:'hidden',margin:'0 auto'}}>
+                      {mm>0 && <div style={{flex:mm,background:'var(--color-brand)'}}/>}
+                      {dd>0 && <div style={{flex:dd,background:'var(--color-info)'}}/>}
+                      {aa>0 && <div style={{flex:aa,background:'#cbd5e1'}}/>}
+                      {legacy>0 && <div style={{flex:legacy,background:'#ffd9bd'}}/>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{display:'flex',gap:data.length > 14 ? 3 : 8,marginTop:6}}>
+            {data.map((d, i) => (
+              <div key={i} style={{flex:1,textAlign:'center',fontSize:9,color:'var(--color-text-faint)',whiteSpace:'nowrap',overflow:'hidden'}}>
+                {i % labelStep === 0 ? d.date : ''}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      <div style={{display:'flex',gap:8,marginTop:5}}>
-        {data.map((d, i) => (
-          <div key={i} style={{flex:1,textAlign:'center',fontSize:9,color:'var(--color-text-faint)'}}>{d.date}</div>
+    </div>
+  )
+}
+
+/**
+ * 端末ごとの割合。
+ *
+ * 表で数字を並べるより、輪のほうが割合が一目で分かる。
+ * 中央に合計を置くのは、輪の中の空きを使うため。
+ */
+export function DeviceDonut({
+  desktopPv, mobilePv,
+}: { desktopPv: number; mobilePv: number }) {
+  const total = desktopPv + mobilePv
+  if (total === 0) return null
+
+  const pcRatio = desktopPv / total
+  /* 円の太さと大きさ。conic-gradient で塗り分ける */
+  const pcDeg = Math.round(pcRatio * 360)
+
+  const rows = [
+    { label:'PC',   pv:desktopPv, color:'var(--color-info)' },
+    { label:'スマホ', pv:mobilePv,  color:'var(--color-brand)' },
+  ]
+
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+      <div style={{position:'relative',width:104,height:104,flexShrink:0}}>
+        <div style={{width:'100%',height:'100%',borderRadius:'50%',
+          background:`conic-gradient(var(--color-info) 0deg ${pcDeg}deg, var(--color-brand) ${pcDeg}deg 360deg)`}}/>
+        {/* 真ん中を抜いて輪にする */}
+        <div style={{position:'absolute',inset:18,borderRadius:'50%',background:'var(--color-bg-card)',
+          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+          <span style={{fontSize:10,color:'var(--color-text-muted)'}}>合計</span>
+          <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)',lineHeight:1.2}}>{total} PV</span>
+        </div>
+      </div>
+
+      <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:0}}>
+        {rows.map(row => (
+          <div key={row.label} style={{display:'flex',alignItems:'center',gap:8,fontSize:12}}>
+            <span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:row.color,flexShrink:0}}/>
+            <span style={{color:'var(--color-text-muted)',minWidth:40}}>{row.label}</span>
+            <span style={{fontWeight:700,color:'var(--color-text)'}}>{row.pv} PV</span>
+            <span style={{color:'var(--color-text-faint)'}}>
+              （{total > 0 ? Math.round((row.pv / total) * 100) : 0}%）
+            </span>
+          </div>
         ))}
       </div>
     </div>
