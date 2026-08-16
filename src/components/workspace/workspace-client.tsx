@@ -137,7 +137,32 @@ export default function WorkspaceClient({ workId }: Props) {
         }
 
         if (!selectedId || !episodes.some((ep) => ep.id === selectedId)) {
-            setSelectedId(episodes[0].id);
+            /*
+             * 最後にさわった話を開く。
+             *
+             * 以前は必ず第 1 話だった。
+             * 続きを書きに来た人は、そこから毎回目当ての話を
+             * 探し直すことになる。話が増えるほど手間が増える。
+             *
+             * 日付が無い（古い話）ときは、いちばん後ろの話にする。
+             * 何も分からないなら、新しいほうが目当てに近い。
+             */
+            const latest = [...episodes].sort((a, b) => {
+                const at = a.updated_at ?? "";
+                const bt = b.updated_at ?? "";
+                if (at && bt && at !== bt) return bt.localeCompare(at);
+                return b.ep_number - a.ep_number;
+            })[0];
+
+            setSelectedId(latest.id);
+
+            /*
+             * 本文の末尾に置く。
+             * 続きを書くのだから、頭ではなく終わりから始めたい。
+             * 999999 は「どの本文より後ろ」の意味。
+             * 受け取る側が、行数を超えていれば末尾に寄せる。
+             */
+            setJumpLine(999999);
         }
     }, [episodes, selectedId]);
 

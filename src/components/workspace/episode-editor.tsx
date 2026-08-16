@@ -294,9 +294,27 @@ export default function EpisodeEditor({
             const area = surfaceRef.current?.querySelector("textarea");
             if (!area) return;
 
-            scrollToLine(area, jumpToLine);
-            setFlashLine(jumpToLine);
-            window.setTimeout(() => setFlashLine(null), 2600);
+            const result = scrollToLine(area, jumpToLine);
+
+            /*
+             * 末尾へ寄せたいだけのとき（開いた直後の「続きから」）は、
+             * 光らせず、選ばず、書き足せる形にする。
+             *
+             * 資料から飛んできたときは「この行だよ」と
+             * 示したいので今までどおり光らせる。
+             * 行数を超えた指定は、末尾へ寄せる合図として扱う。
+             */
+            const isTail = jumpToLine >= 999999;
+
+            if (isTail) {
+                const end = area.value.length;
+                area.setSelectionRange(end, end);
+            } else {
+                setFlashLine(jumpToLine);
+                window.setTimeout(() => setFlashLine(null), 2600);
+            }
+
+            void result;
             onJumped?.();
         }, 60);
 
