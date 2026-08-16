@@ -33,7 +33,7 @@ import { AUTO_EXTRACT_INTERVAL_MS } from "@/config";
 import { getRepository } from "@/lib/repository";
 import { useAiStatus } from "@/hooks/use-ai-status";
 import { formatNumber } from "@/lib/utils/text";
-import type { DisplaySettings, Episode, Work } from "@/types";
+import type { Chapter, DisplaySettings, Episode, Work } from "@/types";
 import { nextEpisodeStatus } from "@/types";
 
 interface Props {
@@ -50,6 +50,8 @@ export default function WorkspaceClient({ workId }: Props) {
      * 一度使ったら消す。話を切り替えるたびに飛ぶと邪魔になる。
      */
     const [jumpLine, setJumpLine] = useState<number | null>(null);
+    /* 章。話をまとめるための束 */
+    const [chapters, setChapters] = useState<Chapter[]>([]);
     /*
      * 末尾へ寄せたか。
      *
@@ -178,6 +180,15 @@ export default function WorkspaceClient({ workId }: Props) {
             }
         }
     }, [episodes, selectedId]);
+
+    /* 章を読む。作品を開いたときと、章を足したとき */
+    const reloadChapters = useCallback(async () => {
+        setChapters(await getRepository().listChapters(workId));
+    }, [workId]);
+
+    useEffect(() => {
+        void reloadChapters();
+    }, [reloadChapters]);
 
     const selected = episodes.find((ep) => ep.id === selectedId) ?? null;
     const totalChars = episodes.reduce((sum, ep) => sum + ep.char_count, 0);
@@ -377,6 +388,32 @@ export default function WorkspaceClient({ workId }: Props) {
                                 onDelete={(id) => void deleteEpisode(id)}
                                 onToggleStatus={(ep) => void handleToggleStatus(ep)}
                                 onReorder={(ids) => void reorderEpisodes(ids)}
+                                chapters={chapters}
+                                onAssignChapter={(episodeId, chapterId) =>
+                                    void updateEpisode(episodeId, {
+                                        chapter_id: chapterId,
+                                    })
+                                }
+                                onCreateChapter={(episodeId) => {
+                                    void (async () => {
+                                        const title = window.prompt(
+                                            "章の名前を入れてください",
+                                            `第${chapters.length + 1}章`,
+                                        );
+                                        if (title === null) return;
+
+                                        const chapter = await getRepository()
+                                            .createChapter(
+                                                workId,
+                                                title.trim() || undefined,
+                                            );
+                                        await reloadChapters();
+                                        /* 作った章に、その話を入れる */
+                                        await updateEpisode(episodeId, {
+                                            chapter_id: chapter.id,
+                                        });
+                                    })();
+                                }}
                             />
                         </div>
                     </div>

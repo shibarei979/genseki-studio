@@ -15,7 +15,7 @@ import { useState } from "react";
 import DeleteButton from "@/components/common/delete-button";
 import EpisodeStatusMark from "@/components/workspace/episode-status-mark";
 import { formatNumber } from "@/lib/utils/text";
-import type { Episode } from "@/types";
+import type { Chapter, Episode } from "@/types";
 import { formatEpisodeLabel } from "@/types";
 
 interface Props {
@@ -26,10 +26,19 @@ interface Props {
     onDelete: (episodeId: string) => void;
     onToggleStatus: (episode: Episode) => void;
     onReorder: (orderedIds: string[]) => void;
+    /** 章の一覧。無ければ章の欄は出ない */
+    chapters?: Chapter[];
+    /** 話を章へ入れる・外す */
+    onAssignChapter?: (episodeId: string, chapterId: string | null) => void;
+    /** 章を作る。作った章に、その話を入れる */
+    onCreateChapter?: (episodeId: string) => void;
 }
 
 export default function EpisodeList({
     episodes,
+    chapters = [],
+    onAssignChapter,
+    onCreateChapter,
     selectedId,
     onSelect,
     onCreate,
@@ -91,7 +100,7 @@ export default function EpisodeList({
                             }}
                             onDrop={() => handleDrop(episode.id)}
                             className={[
-                                "group mb-1 flex items-center gap-2 rounded-md px-2 py-2",
+                                "group mb-1 flex flex-wrap items-center gap-2 rounded-md px-2 py-2",
                                 isSelected ? "bg-forest-tint" : "hover:bg-canvas",
                                 isOver ? "border-t-2 border-forest" : "border-t-2 border-transparent",
                                 draggingId === episode.id ? "opacity-40" : "",
@@ -129,6 +138,54 @@ export default function EpisodeList({
                                 isFloating
                                 size="small"
                             />
+
+                            {/*
+                             * 章。
+                             *
+                             * 選んでいる話にだけ出す。
+                             * 全部の話に出すと一覧が二重に見えて、
+                             * どれを書いているのか分からなくなる。
+                             *
+                             * ここで作れるようにするのは、
+                             * 章を作る場所が投稿の設定にしかなく、
+                             * 書いている最中には遠いため。
+                             */}
+                            {isSelected && onAssignChapter && (
+                                <span
+                                    className="basis-full pl-6 pr-1 pt-1.5"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <select
+                                        value={episode.chapter_id ?? ""}
+                                        onChange={(e) => {
+                                            if (e.target.value === "__new__") {
+                                                onCreateChapter?.(episode.id);
+                                                return;
+                                            }
+                                            onAssignChapter(
+                                                episode.id,
+                                                e.target.value || null,
+                                            );
+                                        }}
+                                        className="w-full rounded border border-line bg-surface px-2 py-1 text-[11px] text-muted outline-none focus:border-forest"
+                                    >
+                                        <option value="">章に入れない</option>
+                                        {chapters.map((chapter) => (
+                                            <option
+                                                key={chapter.id}
+                                                value={chapter.id}
+                                            >
+                                                {chapter.title || "名前のない章"}
+                                            </option>
+                                        ))}
+                                        {onCreateChapter && (
+                                            <option value="__new__">
+                                                ＋ 新しい章を作る
+                                            </option>
+                                        )}
+                                    </select>
+                                </span>
+                            )}
                         </li>
                     );
                 })}
