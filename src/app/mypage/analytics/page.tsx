@@ -258,8 +258,7 @@ export default async function AnalyticsPage() {
   })
 
   return (
-    /* 背景は薄い灰。札を白にして浮かせる */
-    <div style={{minHeight:'100vh',background:'var(--color-bg)'}}>
+    <div style={{minHeight:'100vh'}}>
       <Header />
       <div style={{maxWidth:1100,margin:'0 auto',padding:'28px 16px'}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:22,flexWrap:'wrap',gap:12}}>

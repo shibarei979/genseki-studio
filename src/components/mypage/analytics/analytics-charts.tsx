@@ -245,10 +245,10 @@ export default function AnalyticsCharts({
             ))}
           </div>
         {/* 端末ごとの割合 */}
-        {deviceStats && (deviceStats.desktopPv + deviceStats.mobilePv) > 0 && (
+        {deviceStats && (deviceStats.desktopUsers + deviceStats.mobileUsers) > 0 && (
           <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
             <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:14}}>デバイス別</div>
-            <DeviceDonut desktopPv={deviceStats.desktopPv} mobilePv={deviceStats.mobilePv}/>
+            <DeviceDonut desktopUsers={deviceStats.desktopUsers} mobileUsers={deviceStats.mobileUsers}/>
           </div>
         )}
         </div>
@@ -442,22 +442,23 @@ function DayChart({ data }: { data: { date: string; views: number; m?: number; d
  * 中央に合計を置くのは、輪の中の空きを使うため。
  */
 export function DeviceDonut({
-  desktopPv, mobilePv,
-}: { desktopPv: number; mobilePv: number }) {
-  const total = desktopPv + mobilePv
+  desktopUsers, mobileUsers,
+}: { desktopUsers: number; mobileUsers: number }) {
+  const total = desktopUsers + mobileUsers
   if (total === 0) return null
 
-  const pcRatio = desktopPv / total
+  const pcRatio = desktopUsers / total
   /* 円の太さと大きさ。conic-gradient で塗り分ける */
   const pcDeg = Math.round(pcRatio * 360)
 
   const rows = [
-    { label:'PC',   pv:desktopPv, color:'var(--color-info)' },
-    { label:'スマホ', pv:mobilePv,  color:'var(--color-brand)' },
+    { label:'PC',   count:desktopUsers, color:'var(--color-info)' },
+    { label:'スマホ', count:mobileUsers,  color:'var(--color-brand)' },
   ]
 
   return (
-    <div style={{display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+    /* 輪は中央に。左に寄っていると、右の余白が空いて見える */
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:14}}>
       <div style={{position:'relative',width:104,height:104,flexShrink:0}}>
         <div style={{width:'100%',height:'100%',borderRadius:'50%',
           background:`conic-gradient(var(--color-info) 0deg ${pcDeg}deg, var(--color-brand) ${pcDeg}deg 360deg)`}}/>
@@ -465,18 +466,18 @@ export function DeviceDonut({
         <div style={{position:'absolute',inset:18,borderRadius:'50%',background:'var(--color-bg-card)',
           display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
           <span style={{fontSize:10,color:'var(--color-text-muted)'}}>合計</span>
-          <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)',lineHeight:1.2}}>{total} PV</span>
+          <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)',lineHeight:1.2}}>{total}人</span>
         </div>
       </div>
 
-      <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:0}}>
+      <div style={{display:'flex',flexDirection:'column',gap:8,width:'100%'}}>
         {rows.map(row => (
           <div key={row.label} style={{display:'flex',alignItems:'center',gap:8,fontSize:12}}>
             <span style={{display:'inline-block',width:10,height:10,borderRadius:2,background:row.color,flexShrink:0}}/>
             <span style={{color:'var(--color-text-muted)',minWidth:40}}>{row.label}</span>
-            <span style={{fontWeight:700,color:'var(--color-text)'}}>{row.pv} PV</span>
-            <span style={{color:'var(--color-text-faint)'}}>
-              （{total > 0 ? Math.round((row.pv / total) * 100) : 0}%）
+            <span style={{fontWeight:700,color:'var(--color-text)',marginLeft:'auto'}}>{row.count}人</span>
+            <span style={{color:'var(--color-text-faint)',minWidth:46,textAlign:'right'}}>
+              （{total > 0 ? Math.round((row.count / total) * 100) : 0}%）
             </span>
           </div>
         ))}
