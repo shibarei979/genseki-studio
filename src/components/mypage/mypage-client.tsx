@@ -35,7 +35,7 @@ interface MissionStats {
 }
 
 interface Props {
-  profile: Profile & { birthdate?: string | null; notify_like?: boolean; notify_comment?: boolean; notify_follow?: boolean; notify_new_episode?: boolean; notify_new_work?: boolean; gender?: string | null; x_account?: string | null; allow_comments?: boolean; user_role?: string | null }
+  profile: Profile & { birthdate?: string | null; notify_like?: boolean; notify_comment?: boolean; notify_follow?: boolean; notify_new_episode?: boolean; notify_new_work?: boolean; gender?: string | null; x_account?: string | null; allow_comments?: boolean; user_role?: string | null; home_mode?: string | null }
   novels: Novel[]
   bookmarkedNovels?: any[]
   followingAuthors?: any[]
@@ -101,13 +101,14 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
   settings:  <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></>,
 }
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: Tab; label: string; hideInFocus?: boolean }[] = [
   { id:'mypage',    label:'マイページ' },
   { id:'works',     label:'作品管理' },
   { id:'series',    label:'シリーズ' },
   { id:'bookmarks', label:'保存済み' },
   { id:'history',   label:'閲覧履歴' },
-  { id:'mission',   label:'ミッション' },
+  /* ミッションは数を競うもの。集中したい人には出さない */
+  { id:'mission',   label:'ミッション', hideInFocus: true },
   { id:'settings',  label:'設定' },
 ]
 
@@ -288,7 +289,42 @@ export default function MypageClient({
   const [epToggling,     setEpToggling]     = useState('')
   const [expandedNovels, setExpandedNovels] = useState<Set<string>>(new Set())
   const [userRole, setUserRole] = useState(profile.user_role || '')
+  /*
+   * 執筆に集中するモード。
+   *
+   * 数字と他の人の痕跡を隠す。消すのではなく隠すだけなので、
+   * 切り替えれば元どおり出る。
+   */
+  const [homeMode, setHomeMode] = useState(profile.home_mode || 'write')
+  const isFocusWriting = homeMode === 'focus'
   const [roleSaving, setRoleSaving] = useState(false)
+
+  /*
+   * ホームの見せ方を覚える。
+   *
+   * user_role は運営かどうかの権限に使っている列なので、
+   * そこには書かない。home_mode に持つ。
+   */
+  async function saveHomeMode(next: string) {
+    if (next === homeMode) return
+    setHomeMode(next)
+    setRoleSaving(true)
+
+    const { error } = await supabase
+      .from('profiles').update({ home_mode: next }).eq('user_id', profile.user_id)
+
+    setRoleSaving(false)
+
+    if (error) {
+      /* 保存できなければ戻す。切り替えた気にさせない */
+      setHomeMode(homeMode)
+      setToast(`設定を保存できませんでした：${error.message}`)
+      setTimeout(()=>setToast(''), 4000)
+      return
+    }
+    setToast(next === 'focus' ? '執筆に集中する表示にしました' : '執筆向けの表示にしました')
+    setTimeout(()=>setToast(''), 2500)
+  }
   const [notifyLike,       setNotifyLike]       = useState(profile.notify_like       !== false)
   const [notifyComment,    setNotifyComment]    = useState(profile.notify_comment    !== false)
   const [notifyFollow,     setNotifyFollow]     = useState(profile.notify_follow     !== false)
@@ -336,7 +372,15 @@ export default function MypageClient({
    */
   const isWriterRole = true
   const allMissionsDone = claimedMissionIds.length >= (isWriterRole ? 15 : 10)
-  const visibleTabs = TABS.filter(t => t.id !== 'mission' || !allMissionsDone)
+  /*
+   * 出すタブ。
+   *   ミッションは、全部やり終えたら出さない（今までどおり）
+   *   「執筆に集中」の間は、数を競うものを出さない
+   */
+  const visibleTabs = TABS.filter(t =>
+    (t.id !== 'mission' || !allMissionsDone) &&
+    !(isFocusWriting && t.hideInFocus)
+  )
   const published  = myNovels.filter(n => n.published)
   const drafts     = myNovels.filter(n => !n.published)
   const initial    = profile.display_name.slice(0,1)
@@ -567,6 +611,13 @@ export default function MypageClient({
           </div>
           {userNumber && <div style={{fontSize:12,color:'var(--color-text-faint)',marginBottom:4}}>{userNumber}</div>}
           <div style={{fontSize:12.5,color:'var(--color-text-muted)',marginBottom:12}}>{profile.email}</div>
+          {/*
+           * 数字。
+           *
+           * 「執筆に集中」の間は出さない。
+           * 数えるのをやめるだけで、記録は残っている。
+           */}
+          {!isFocusWriting && (
           <div style={{display:'flex',gap:28,flexWrap:'wrap',marginBottom:12}}>
             {/*
              * 数字は押せる。誰なのかが見たいのに、
@@ -594,6 +645,7 @@ export default function MypageClient({
               <div style={{fontSize:11,color:'var(--color-text-muted)'}}>公開作品</div>
             </div>
           </div>
+          )}
         </div>
         <div style={{flex:'1 1 240px',minWidth:'min(220px, 100%)',display:'flex',flexDirection:'column',gap:12,alignItems:'flex-end'}}>
           {profile.bio && <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.8}}>{profile.bio}</div>}
@@ -1304,16 +1356,32 @@ export default function MypageClient({
             <div style={{display:'inline-flex',border:'1px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden'}}>
               <span
                 title="読書向けの画面は準備中です"
-                style={{padding:'8px 22px',fontSize:13,fontWeight:500,
+                style={{padding:'8px 18px',fontSize:13,fontWeight:500,
                   background:'var(--color-bg-card)',color:'var(--color-text-faint)'}}>
                 読書向け（準備中）
               </span>
-              <span
-                style={{padding:'8px 22px',fontSize:13,fontWeight:700,
-                  background:'var(--color-brand)',color:'var(--base-color-1)'}}>
+              <button
+                onClick={()=>saveHomeMode('write')}
+                style={{padding:'8px 18px',fontSize:13,fontWeight:isFocusWriting?500:700,cursor:'pointer',border:'none',
+                  background:isFocusWriting?'var(--color-bg-card)':'var(--color-brand)',
+                  color:isFocusWriting?'var(--color-text-muted)':'var(--base-color-1)'}}>
                 執筆向け
-              </span>
+              </button>
+              <button
+                onClick={()=>saveHomeMode('focus')}
+                style={{padding:'8px 18px',fontSize:13,fontWeight:isFocusWriting?700:500,cursor:'pointer',border:'none',
+                  background:isFocusWriting?'var(--color-brand)':'var(--color-bg-card)',
+                  color:isFocusWriting?'var(--base-color-1)':'var(--color-text-muted)'}}>
+                執筆に集中
+              </button>
             </div>
+
+            <p style={{fontSize:11.5,color:'var(--color-text-muted)',lineHeight:1.8,marginTop:10}}>
+              「執筆に集中」にすると、フォロワー数・閲覧数・いいね・
+              ランキング・ミッションなどの数字と、コミュニティーへの入口を隠します。
+              数えるのをやめるだけで、記録は残ります。
+              いつでも「執筆向け」に戻せます。
+            </p>
             {roleSaving && <span style={{fontSize:11,color:'var(--color-brand)',marginLeft:10}}>保存中...</span>}
           </div>
 

@@ -108,8 +108,20 @@ export default function Header({ breadcrumbs = [] }: Props) {
         })();
     }, []);
 
+    /*
+     * 出す行き先。
+     *
+     * 運営が切った機能は出さない。
+     * それに加えて「執筆に集中」の間は、
+     * コミュニティーへの入口も出さない。
+     * 消すのではなく、モードの間だけ隠す。
+     */
+    const isFocusWriting = profile?.home_mode === "focus";
+
     const shownNav = NAV_ITEMS.filter(
-        (item) => !item.feature || !offKeys.includes(item.feature),
+        (item) =>
+            (!item.feature || !offKeys.includes(item.feature)) &&
+            !(isFocusWriting && item.href === "/rooms"),
     );
     const [seenAt, setSeenAt] = useState<string | null>(null);
     /** 運営が立てたお知らせ。無ければ既定のものを出す */

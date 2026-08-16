@@ -408,6 +408,7 @@ export const supabaseRepository: Repository = {
             bio: (data.bio as string) ?? "",
             avatar_hue: (data.avatar_hue as number) ?? 120,
             x_account: (data.x_account as string) ?? "",
+            home_mode: (data.home_mode as string | null) ?? null,
             website: (data.website as string) ?? "",
             claimed_missions: (data.claimed_missions as string[]) ?? [],
             started_at: (data.created_at as string) ?? new Date().toISOString(),

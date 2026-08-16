@@ -19,6 +19,12 @@ export interface Profile {
     avatar_hue: number;
     /** 外部アカウント。投稿サイトができたら表示に使う */
     x_account: string;
+    /**
+     * ホームの見せ方。
+     *   write  ふつう
+     *   focus  執筆に集中（数字と他の人の痕跡を隠す）
+     */
+    home_mode?: string | null;
     website: string;
     /** 受け取り済みのミッション。受け取ると一覧から消える */
     claimed_missions: string[];
