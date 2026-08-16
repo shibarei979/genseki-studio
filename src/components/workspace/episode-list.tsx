@@ -30,8 +30,8 @@ interface Props {
     chapters?: Chapter[];
     /** 話を章へ入れる・外す */
     onAssignChapter?: (episodeId: string, chapterId: string | null) => void;
-    /** 章を作る。作った章に、その話を入れる */
-    onCreateChapter?: (episodeId: string) => void;
+    /** 章を作る。話を渡せば、その話を作った章に入れる */
+    onCreateChapter?: (episodeId: string | null) => void;
 }
 
 export default function EpisodeList({
@@ -71,13 +71,32 @@ export default function EpisodeList({
         <div className="flex h-full flex-col">
             <div className="flex items-center justify-between px-3.5 py-2.5">
                 <h2 className="text-[13px] font-medium text-ink">エピソード</h2>
-                <button
-                    type="button"
-                    onClick={onCreate}
-                    className="rounded-md border border-line px-2.5 py-1 text-xs text-muted hover:border-forest-line hover:text-forest"
-                >
-                    ＋ 新規作成
-                </button>
+                <span className="flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        onClick={onCreate}
+                        className="rounded-md border border-line px-2.5 py-1 text-xs text-muted hover:border-forest-line hover:text-forest"
+                    >
+                        ＋ 新規作成
+                    </button>
+
+                    {/*
+                     * 章を作る。
+                     *
+                     * 話を作るのと同じ場所に置く。
+                     * 話ごとに札を並べていたときは、
+                     * 選んだ話の下にしか出ず、見つけにくかった。
+                     */}
+                    {onCreateChapter && (
+                        <button
+                            type="button"
+                            onClick={() => onCreateChapter(null)}
+                            className="rounded-md border border-line px-2.5 py-1 text-xs text-muted hover:border-forest-line hover:text-forest"
+                        >
+                            ＋ 章
+                        </button>
+                    )}
+                </span>
             </div>
 
             <ul className="thin-scroll flex-1 overflow-y-auto px-2 pb-2">
@@ -150,76 +169,40 @@ export default function EpisodeList({
                              * 章を作る場所が投稿の設定にしかなく、
                              * 書いている最中には遠いため。
                              */}
-                            {isSelected && onAssignChapter && (
+                            {isSelected && onAssignChapter && chapters.length > 0 && (
                                 <span
-                                    className="basis-full pl-6 pr-1 pt-2"
+                                    className="basis-full pl-6 pr-1 pt-1.5"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <span className="mb-1 block text-[10px] text-faint">
-                                        この話をどの章に入れるか
-                                    </span>
-
                                     {/*
-                                     * 札を並べる。
+                                     * どの章に入れるか。
                                      *
-                                     * 小さな選択欄だと、押せる所に見えず、
-                                     * 中を開くまで何が選べるかも分からない。
-                                     * いま入っている章が一目で分かるように、
-                                     * 選ばれている札だけ色を変える。
+                                     * 章がまだ 1 つも無いときは出さない。
+                                     * 選ぶものが無い欄は、ただの飾りになる。
                                      */}
-                                    <span className="flex flex-wrap gap-1">
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                onAssignChapter(episode.id, null)
-                                            }
-                                            className={[
-                                                "rounded-full border px-2.5 py-1 text-[11px]",
-                                                !episode.chapter_id
-                                                    ? "border-forest bg-forest text-white"
-                                                    : "border-line bg-surface text-muted hover:border-forest-line",
-                                            ].join(" ")}
-                                        >
-                                            章なし
-                                        </button>
-
+                                    <select
+                                        value={episode.chapter_id ?? ""}
+                                        onChange={(e) =>
+                                            onAssignChapter(
+                                                episode.id,
+                                                e.target.value || null,
+                                            )
+                                        }
+                                        className="w-full rounded border border-line bg-surface px-2 py-1 text-[11px] text-muted outline-none focus:border-forest"
+                                    >
+                                        <option value="">章に入れない</option>
                                         {chapters.map((chapter, chapterIndex) => (
-                                            <button
+                                            <option
                                                 key={chapter.id}
-                                                type="button"
-                                                onClick={() =>
-                                                    onAssignChapter(
-                                                        episode.id,
-                                                        chapter.id,
-                                                    )
-                                                }
-                                                className={[
-                                                    "max-w-[150px] truncate rounded-full border px-2.5 py-1 text-[11px]",
-                                                    episode.chapter_id ===
-                                                    chapter.id
-                                                        ? "border-forest bg-forest text-white"
-                                                        : "border-line bg-surface text-muted hover:border-forest-line",
-                                                ].join(" ")}
+                                                value={chapter.id}
                                             >
                                                 {formatChapterLabel(
                                                     chapter,
                                                     chapterIndex,
                                                 )}
-                                            </button>
+                                            </option>
                                         ))}
-
-                                        {onCreateChapter && (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    onCreateChapter(episode.id)
-                                                }
-                                                className="rounded-full border border-dashed border-line px-2.5 py-1 text-[11px] text-muted hover:border-forest-line hover:text-forest"
-                                            >
-                                                ＋ 章を作る
-                                            </button>
-                                        )}
-                                    </span>
+                                    </select>
                                 </span>
                             )}
                         </li>

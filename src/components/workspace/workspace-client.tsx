@@ -415,10 +415,17 @@ export default function WorkspaceClient({ workId }: Props) {
                                                 title.trim(),
                                             );
                                         await reloadChapters();
-                                        /* 作った章に、その話を入れる */
-                                        await updateEpisode(episodeId, {
-                                            chapter_id: chapter.id,
-                                        });
+
+                                        /*
+                                         * 話を指定して呼ばれたときだけ、
+                                         * 作った章にその話を入れる。
+                                         * 見出しの「＋ 章」からは章を作るだけ。
+                                         */
+                                        if (episodeId) {
+                                            await updateEpisode(episodeId, {
+                                                chapter_id: chapter.id,
+                                            });
+                                        }
                                     })();
                                 }}
                             />
