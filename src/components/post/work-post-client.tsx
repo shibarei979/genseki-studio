@@ -416,7 +416,10 @@ function PostForm({
             }
 
             setError("");
-            onChange({ is_published: false, publish_at: target.toISOString() });
+            onChange({
+                is_published: false,
+                publish_at: floorTo5Min(target).toISOString(),
+            });
             onPosted?.();
             return;
         }
@@ -582,6 +585,14 @@ function PostForm({
                         <Field label="予約公開（任意）">
                             <input
                                 type="datetime-local"
+                        /*
+                         * 5 分刻み。
+                         *
+                         * 公開の見回りが 5 分ごとなので、
+                         * 1 分単位で選べても、その間は待つことになる。
+                         * 選べる時刻と実際に出る時刻を揃える。
+                         */
+                        step={300}
                                 value={at}
                                 onChange={(e) => setAt(e.target.value)}
                                 className={inputClass}
@@ -998,4 +1009,18 @@ function toLocalInput(iso: string | null | undefined): string {
 
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
+/**
+ * 時刻を 5 分単位に丸める。
+ *
+ * 公開の見回りが 5 分ごとなので、7 分や 13 分を選べても
+ * 実際に出るのは次の見回りのとき。
+ * 選んだ時刻と出る時刻を合わせるため、切り捨てて揃える。
+ * （切り上げにすると、選んだ時刻より後になって驚く）
+ */
+function floorTo5Min(date: Date): Date {
+    const at = new Date(date);
+    at.setMinutes(Math.floor(at.getMinutes() / 5) * 5, 0, 0);
+    return at;
 }
