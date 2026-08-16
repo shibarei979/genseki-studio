@@ -26,11 +26,23 @@ interface NovelStat {
   hourlyToday: number[]
   hourlyYesterday: number[]
   daily7: { date: string; views: number; m?: number; d?: number; a?: number }[]
+  /** 1か月。30日ぶんを1日ずつ */
+  daily30?: { date: string; views: number; m?: number; d?: number; a?: number }[]
+  /** 1年。1年を30に分けたもの */
+  yearly30?: { date: string; views: number; m?: number; d?: number; a?: number }[]
+  /** 総合。1年ずつ */
+  allYears?: { date: string; views: number; m?: number; d?: number; a?: number }[]
   dailyTop: { date: string; views: number; m?: number; d?: number; a?: number }[]
   monthlyTop: { month: string; views: number; m?: number; d?: number; a?: number }[]
   episodeRows: EpisodeRow[]
   commentList: { body: string; author: string; created_at: string; episode_title: string; rating?: number | null }[]
 }
+
+const RANGES: { key: 'month'|'year'|'all'; label: string }[] = [
+  { key:'month', label:'1か月' },
+  { key:'year',  label:'1年' },
+  { key:'all',   label:'総合' },
+]
 
 export default function AnalyticsCharts({
   novels,
@@ -41,8 +53,17 @@ export default function AnalyticsCharts({
   deviceStats?: { desktopPv: number; mobilePv: number; desktopUsers: number; mobileUsers: number }
 }) {
   const [selectedId, setSelectedId] = useState(novels[0]?.id || '')
+  const [range, setRange] = useState<'month'|'year'|'all'>('month')
   const selected = novels.find(n => n.id === selectedId) || novels[0]
   if (!selected) return null
+
+  /* 選んだ期間の並びと合計 */
+  const rangeData =
+    range === 'month' ? (selected.daily30 ?? selected.daily7)
+    : range === 'year' ? (selected.yearly30 ?? [])
+    : (selected.allYears ?? [])
+
+  const rangeTotal = rangeData.reduce((sum, row) => sum + row.views, 0)
 
   return (
     <div>
@@ -95,10 +116,33 @@ export default function AnalyticsCharts({
           {/* 直近7日 */}
           <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'18px'}}>
             <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:6}}>
-              <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>直近7日間のページビュー</span>
-              <span style={{fontSize:13,color:'var(--color-text-muted)'}}>合計 <strong style={{fontSize:18,color:'var(--color-brand)'}}>{selected.viewsWeek}</strong> PV</span>
+              <span style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>ページビュー</span>
+              <span style={{fontSize:13,color:'var(--color-text-muted)'}}>合計 <strong style={{fontSize:18,color:'var(--color-brand)'}}>{rangeTotal}</strong> PV</span>
             </div>
-            <DayChart data={selected.daily7}/>
+
+            {/*
+             * 期間の切り替え。
+             *   1か月  30日ぶんを1日ずつ
+             *   1年    1年を30に分けて（1本あたり約12日）
+             *   総合   1年ずつ
+             * どれも本数を30前後に揃える。365本並べても読めない。
+             */}
+            <div style={{display:'inline-flex',border:'1px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden',marginBottom:14}}>
+              {RANGES.map(r => (
+                <button
+                  key={r.key}
+                  onClick={()=>setRange(r.key)}
+                  style={{padding:'6px 14px',fontSize:12,cursor:'pointer',border:'none',
+                    fontWeight:range===r.key?700:500,
+                    background:range===r.key?'var(--color-brand)':'var(--color-bg-card)',
+                    color:range===r.key?'var(--base-color-1)':'var(--color-text-muted)'}}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+
+            <DayChart data={rangeData}/>
           </div>
         </div>
 

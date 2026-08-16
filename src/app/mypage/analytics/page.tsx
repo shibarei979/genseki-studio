@@ -76,6 +76,7 @@ export default async function AnalyticsPage() {
         hourlyYesterday: new Array(24).fill(0),
         daily7: {},   // 直近7日
         daily30: {},  // 直近30日（日別上位用）
+        dailyAll: {}, // 全期間の日ごと（1年の図を組み立てるのに使う）
         monthly: {},  // 月別
         episodeViews: {},
         episodeLikes: {},
@@ -109,6 +110,8 @@ export default async function AnalyticsPage() {
       const seg = !pv.user_id ? 'a' : (pv.device === 'mobile' ? 'm' : 'd')
       if (t >= weekStart) { if (!st.daily7[day]) st.daily7[day] = { v: 0, m: 0, d: 0, a: 0 }; st.daily7[day].v++; st.daily7[day][seg]++ }
       if (t >= monthStart) { if (!st.daily30[day]) st.daily30[day] = { v: 0, m: 0, d: 0, a: 0 }; st.daily30[day].v++; st.daily30[day][seg]++ }
+      /* 期間で切らずに、日ごとも全部数える。1 年の図で使う */
+      if (day) { if (!st.dailyAll[day]) st.dailyAll[day] = { v: 0, m: 0, d: 0, a: 0 }; st.dailyAll[day].v++; st.dailyAll[day][seg]++ }
       const month = (pv.viewed_at || '').slice(0, 7)
       if (month) { if (!st.monthly[month]) st.monthly[month] = { v: 0, m: 0, d: 0, a: 0 }; st.monthly[month].v++; st.monthly[month][seg]++ }
     })
@@ -148,7 +151,7 @@ export default async function AnalyticsPage() {
     const empty = {
       views:0,likes:0,bookmarks:0,comments:0,viewsToday:0,viewsYesterday:0,viewsWeek:0,viewsMonth:0,
       uniqueUsers:new Set(),hourlyToday:new Array(24).fill(0),hourlyYesterday:new Array(24).fill(0),
-      daily7:{},daily30:{},monthly:{},episodeViews:{},episodeLikes:{},episodeComments:{},commentList:[],
+      daily7:{},daily30:{},dailyAll:{},monthly:{},episodeViews:{},episodeLikes:{},episodeComments:{},commentList:[],
     }
     const st = s || empty
 
@@ -169,6 +172,55 @@ export default async function AnalyticsPage() {
       const o7 = st.daily7[key] || { v: 0, m: 0, d: 0, a: 0 }
       daily7.push({ date: key.slice(5), views: o7.v, m: o7.m, d: o7.d, a: o7.a })
     }
+    /*
+     * 1 か月：30 日ぶんを 1 日ずつ。
+     */
+    const daily30: { date: string; views: number; m: number; d: number; a: number }[] = []
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+      const key = d.toISOString().slice(0, 10)
+      const o = st.daily30[key] || { v: 0, m: 0, d: 0, a: 0 }
+      daily30.push({ date: key.slice(5), views: o.v, m: o.m, d: o.d, a: o.a })
+    }
+
+    /*
+     * 1 年：1 年を 30 に分ける（1 本あたり約 12 日）。
+     *
+     * 日ごとに 365 本並べても、細すぎて読めない。
+     * 月ごと 12 本では粗いので、その間を取る。
+     */
+    const yearly30: { date: string; views: number; m: number; d: number; a: number }[] = []
+    const SPAN = Math.ceil(365 / 30)
+    for (let i = 29; i >= 0; i--) {
+      const end = new Date(Date.now() - i * SPAN * 24 * 60 * 60 * 1000)
+      const start = new Date(end.getTime() - (SPAN - 1) * 24 * 60 * 60 * 1000)
+      let v = 0, m = 0, d = 0, a = 0
+
+      for (let k = 0; k < SPAN; k++) {
+        const day = new Date(start.getTime() + k * 24 * 60 * 60 * 1000)
+          .toISOString().slice(0, 10)
+        const o = st.dailyAll[day]
+        if (!o) continue
+        v += o.v; m += o.m; d += o.d; a += o.a
+      }
+      yearly30.push({ date: end.toISOString().slice(5, 10), views: v, m, d, a })
+    }
+
+    /*
+     * 総合：1 年ずつ。
+     * 月ごとの記録から、年でまとめ直す。
+     */
+    const yearlyMap: Record<string, { v: number; m: number; d: number; a: number }> = {}
+    for (const [month, o] of Object.entries(st.monthly) as [string, any][]) {
+      const year = month.slice(0, 4)
+      if (!yearlyMap[year]) yearlyMap[year] = { v: 0, m: 0, d: 0, a: 0 }
+      yearlyMap[year].v += o.v; yearlyMap[year].m += o.m
+      yearlyMap[year].d += o.d; yearlyMap[year].a += o.a
+    }
+    const allYears = Object.entries(yearlyMap)
+      .sort((x, y) => x[0].localeCompare(y[0]))
+      .map(([year, o]) => ({ date: year, views: o.v, m: o.m, d: o.d, a: o.a }))
+
     // 日別上位（直近30日）
     const dailyTop = Object.entries(st.daily30)
       .map(([date, o]: any) => ({ date, views: o.v, m: o.m, d: o.d, a: o.a }))
@@ -195,6 +247,9 @@ export default async function AnalyticsPage() {
       hourlyToday: st.hourlyToday,
       hourlyYesterday: st.hourlyYesterday,
       daily7,
+      daily30,
+      yearly30,
+      allYears,
       dailyTop,
       monthlyTop,
       episodeRows,
