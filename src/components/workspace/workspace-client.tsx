@@ -415,6 +415,12 @@ export default function WorkspaceClient({ workId }: Props) {
                                         chapter_id: chapterId,
                                     })
                                 }
+                                onDeleteMany={(ids) => {
+                                    void (async () => {
+                                        await getRepository().deleteEpisodes(ids);
+                                        await reload();
+                                    })();
+                                }}
                                 onReorderChapters={(ids) => {
                                     void (async () => {
                                         await getRepository().reorderChapters(

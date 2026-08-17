@@ -797,6 +797,39 @@ export const supabaseRepository: Repository = {
         await db().from("episodes").delete().eq("id", episodeId);
     },
 
+    async deleteAllEpisodes(workId: string): Promise<void> {
+        /*
+         * まとめて消す。
+         *
+         * 1 話ずつ消していたので、5,000 話あると
+         * 5,000 回のやり取りになり、終わらない。
+         */
+        const { error } = await db()
+            .from("episodes")
+            .delete()
+            .eq("novel_id", workId);
+
+        if (error) throw new Error(describeError(error.message));
+    },
+
+    async deleteEpisodes(episodeIds: string[]): Promise<void> {
+        if (episodeIds.length === 0) return;
+
+        /*
+         * 小分けにして消す。
+         * id を何百件も並べると、問い合わせが長くなりすぎる。
+         */
+        const CHUNK = 100;
+        for (let at = 0; at < episodeIds.length; at += CHUNK) {
+            const { error } = await db()
+                .from("episodes")
+                .delete()
+                .in("id", episodeIds.slice(at, at + CHUNK));
+
+            if (error) throw new Error(describeError(error.message));
+        }
+    },
+
     async reorderEpisodes(workId: string, orderedIds: string[]): Promise<void> {
         /*
          * 1 件ずつ更新する。

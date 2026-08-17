@@ -49,6 +49,8 @@ interface Props {
     onDeleteChapter?: (chapterId: string) => void;
     /** 章を並べ替える。渡した順に上から並ぶ */
     onReorderChapters?: (orderedIds: string[]) => void;
+    /** 選んだ話をまとめて消す */
+    onDeleteMany?: (episodeIds: string[]) => void;
     /** 話の題名を変える */
     onRenameEpisode?: (episodeId: string, title: string) => void;
 }
@@ -61,6 +63,7 @@ export default function EpisodeList({
     onRenameChapter,
     onDeleteChapter,
     onReorderChapters,
+    onDeleteMany,
     onRenameEpisode,
     selectedId,
     onSelect,
@@ -75,6 +78,22 @@ export default function EpisodeList({
     const [overChapterId, setOverChapterId] = useState<string | null>(null);
     /* つかんでいる章。話とは別に覚える */
     const [draggingChapterId, setDraggingChapterId] = useState<string | null>(null);
+
+    /*
+     * まとめて消すために選んでいる話。
+     *
+     * ふだんは出さない。「選んで消す」を押したときだけ
+     * 丸が出る。書いている最中に消す口が見えていると、
+     * 手が滑ったときに戻せない。
+     */
+    const [isPicking, setIsPicking] = useState(false);
+    const [picked, setPicked] = useState<string[]>([]);
+
+    function togglePicked(id: string) {
+        setPicked((list) =>
+            list.includes(id) ? list.filter((at) => at !== id) : [...list, id],
+        );
+    }
 
     function handleDrop(targetId: string) {
         if (!draggingId || draggingId === targetId) {
@@ -147,16 +166,35 @@ export default function EpisodeList({
                     draggingId === episode.id ? "opacity-40" : "",
                 ].join(" ")}
             >
-                <span
-                    aria-hidden="true"
-                    className="cursor-grab select-none text-xs leading-none text-faint"
-                >
-                    ⠿
-                </span>
+                {/* 選んでいる間は、つまみの代わりに丸を出す */}
+                {isPicking ? (
+                    <button
+                        type="button"
+                        onClick={() => togglePicked(episode.id)}
+                        aria-pressed={picked.includes(episode.id)}
+                        className={[
+                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px]",
+                            picked.includes(episode.id)
+                                ? "border-[var(--color-danger)] bg-[var(--color-danger)] text-white"
+                                : "border-line text-transparent hover:border-[var(--color-danger)]",
+                        ].join(" ")}
+                    >
+                        ✓
+                    </button>
+                ) : (
+                    <span
+                        aria-hidden="true"
+                        className="cursor-grab select-none text-xs leading-none text-faint"
+                    >
+                        ⠿
+                    </span>
+                )}
 
                 <button
                     type="button"
-                    onClick={() => onSelect(episode.id)}
+                    onClick={() =>
+                        isPicking ? togglePicked(episode.id) : onSelect(episode.id)
+                    }
                     className="min-w-0 flex-1 text-left"
                 >
                     <span className="block truncate text-[13px] text-ink">
@@ -225,6 +263,116 @@ export default function EpisodeList({
 
                 </span>
             </div>
+
+            {/*
+             * まとめて消す。
+             *
+             * 余分な話を 1 つずつ消すのは骨が折れる。
+             * ただし戻せない操作なので、
+             * ふだんは丸を出さず、押したときだけ選べるようにする。
+             */}
+            {onDeleteMany && episodes.length > 0 && (
+                <div className="px-3.5 pb-2">
+                    {!isPicking ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsPicking(true);
+                                setPicked([]);
+                            }}
+                            className="text-[11px] text-faint hover:text-forest"
+                        >
+                            選んで消す
+                        </button>
+                    ) : (
+                        <div className="rounded-md border border-line bg-canvas px-2.5 py-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-[11px] text-ink">
+                                    {picked.length > 0
+                                        ? `${picked.length}話を選んでいます`
+                                        : "消す話を選んでください"}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsPicking(false);
+                                        setPicked([]);
+                                    }}
+                                    className="shrink-0 text-[11px] text-faint hover:text-ink"
+                                >
+                                    やめる
+                                </button>
+                            </div>
+
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setPicked(
+                                            picked.length === episodes.length
+                                                ? []
+                                                : episodes.map((ep) => ep.id),
+                                        )
+                                    }
+                                    className="rounded border border-line px-2 py-0.5 text-[10px] text-muted hover:border-forest-line"
+                                >
+                                    {picked.length === episodes.length
+                                        ? "選択を外す"
+                                        : "すべて選ぶ"}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setPicked(
+                                            episodes
+                                                .filter(
+                                                    (ep) =>
+                                                        !ep.title.trim() &&
+                                                        ep.char_count === 0,
+                                                )
+                                                .map((ep) => ep.id),
+                                        )
+                                    }
+                                    title="名前も本文も無い話を選びます"
+                                    className="rounded border border-line px-2 py-0.5 text-[10px] text-muted hover:border-forest-line"
+                                >
+                                    空の話を選ぶ
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={picked.length === 0}
+                                    onClick={() => {
+                                        const names = episodes
+                                            .filter((ep) => picked.includes(ep.id))
+                                            .slice(0, 5)
+                                            .map((ep) => formatEpisodeLabel(ep))
+                                            .join("\n");
+
+                                        if (
+                                            !window.confirm(
+                                                `${picked.length}話を消します。元に戻せません。\n\n` +
+                                                    `${names}${picked.length > 5 ? "\nほか" : ""}`,
+                                            )
+                                        ) {
+                                            return;
+                                        }
+                                        onDeleteMany(picked);
+                                        setIsPicking(false);
+                                        setPicked([]);
+                                    }}
+                                    className="ml-auto rounded bg-[var(--color-danger)] px-2.5 py-0.5 text-[10px] text-white disabled:opacity-40"
+                                >
+                                    {picked.length > 0
+                                        ? `${picked.length}話を消す`
+                                        : "消す"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="thin-scroll flex-1 overflow-y-auto px-2 pb-2">
                 {groups.map(({ chapter, items }, groupIndex) => {

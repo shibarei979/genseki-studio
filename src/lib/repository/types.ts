@@ -115,6 +115,10 @@ export interface Repository {
 
     /** 削除後、残りの ep_number を 1 から振り直す */
     deleteEpisode(episodeId: string): Promise<void>;
+    /** その作品の話をすべて消す。入れ替えのとき、1 話ずつでは遅すぎる */
+    deleteAllEpisodes(workId: string): Promise<void>;
+    /** 選んだ話をまとめて消す。1 話ずつでは、数が多いと終わらない */
+    deleteEpisodes(episodeIds: string[]): Promise<void>;
 
     /** orderedIds の並び順で ep_number を 1 から振り直す */
     reorderEpisodes(workId: string, orderedIds: string[]): Promise<void>;

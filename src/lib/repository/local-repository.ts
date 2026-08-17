@@ -391,6 +391,21 @@ export const localRepository: Repository = {
         await touchWork(target.work_id);
     },
 
+    async deleteAllEpisodes(workId: string): Promise<void> {
+        writeAll(
+            EPISODES_KEY,
+            readAll<Episode>(EPISODES_KEY).filter((ep) => ep.work_id !== workId),
+        );
+    },
+
+    async deleteEpisodes(episodeIds: string[]): Promise<void> {
+        const gone = new Set(episodeIds);
+        writeAll(
+            EPISODES_KEY,
+            readAll<Episode>(EPISODES_KEY).filter((ep) => !gone.has(ep.id)),
+        );
+    },
+
     async reorderEpisodes(workId: string, orderedIds: string[]): Promise<void> {
         const all = readAll<Episode>(EPISODES_KEY);
         const rank = new Map(orderedIds.map((id, i) => [id, i]));
