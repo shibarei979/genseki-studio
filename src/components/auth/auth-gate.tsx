@@ -27,8 +27,29 @@ import { useAuth } from "@/hooks/use-auth";
  *
  * ここに無い場所は、すべてログインが要る。
  * コンテストやお知らせも、まずは登録してもらう。
+ *
+ * ただし、決まりごとと問い合わせ先は別。
+ * 登録する前に読めなければ、何に同意するのか
+ * 分からないまま登録することになる。
+ * LP のフッターからも辿れる場所なので、開けておく。
  */
-const OPEN_PATHS = ["/lp", "/login", "/auth"];
+const OPEN_PATHS = [
+    "/lp",
+    "/login",
+    "/auth",
+
+    /* 決まりごと */
+    "/terms",
+    "/privacy",
+    "/guidelines",
+
+    /* 使い方と困ったとき */
+    "/guide",
+    "/faq",
+    "/help",
+    "/contact",
+    "/feedback",
+];
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
