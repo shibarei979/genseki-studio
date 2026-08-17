@@ -28,7 +28,11 @@ import {
 import type {
     AiUsage,
     WorkFormat, AgeRating, Work } from "@/types";
-import { AGE_RATING_DESCRIPTION, AGE_RATING_LABEL, GENRES } from "@/types";
+import {
+    AGE_RATING_DESCRIPTION,
+    AGE_RATING_LABEL,
+    GENRES_SELECTABLE,
+} from "@/types";
 
 interface Props {
     work: Work;
@@ -174,7 +178,12 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                         >
                             {/* まだ決めていない状態を選べるようにする */}
                             <option value="">選んでください</option>
-                            {GENRES.map((g) => (
+                            {/*
+                             * 昔のジャンルは出さない。
+                             * 既にそれで出している作品はそのままだが、
+                             * これから選ぶ人には新しい分け方で選んでもらう。
+                             */}
+                            {GENRES_SELECTABLE.map((g) => (
                                 <option key={g} value={g}>
                                     {g}
                                 </option>

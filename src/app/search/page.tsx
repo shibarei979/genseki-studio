@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { GENRE_LEGACY_MATCH } from '@/types'
 export const dynamic = 'force-dynamic'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
@@ -105,7 +106,20 @@ export default async function SearchPage({ searchParams }: Props) {
         results = []; count = 0
       }
     }
-    if (genre)  query = (query as any).eq('genre', genre)
+    if (genre) {
+      /*
+       * 昔のジャンルも一緒に拾う。
+       *
+       * ファンタジーを 3 つに分けた日に、それまで
+       * 「SF / ファンタジー」で出していた作品が
+       * 検索から消えてしまう。書き手が選び直すまでの間、
+       * 新しいジャンルのどれで探しても出るようにする。
+       */
+      const legacy = GENRE_LEGACY_MATCH[genre] ?? []
+      query = legacy.length > 0
+        ? (query as any).in('genre', [genre, ...legacy])
+        : (query as any).eq('genre', genre)
+    }
     if (type)   query = (query as any).eq('novel_type', type)
     if (serial === 'serial')   query = (query as any).eq('is_serial', true)
     if (serial === 'complete') query = (query as any).eq('is_serial', false)
