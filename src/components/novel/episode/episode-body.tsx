@@ -23,29 +23,6 @@ function renderBodyH(text: string): string {
   return r
 }
 
-function isHorizontalChar(ch: string): boolean {
-  /*
-   * 縦書きで 90 度回す文字。
-   *
-   * 似た形の記号がいくつもあり、取りこぼすと
-   * その字だけ横に寝たまま残る。
-   * 「――――」が横棒のまま出ていたのは
-   * ― (U+2015) が漏れていたため。
-   *
-   * 括弧や句読点は入れない。
-   * writing-mode が縦向きに直してくれるので、
-   * こちらで回すと二重になって逆さまになる。
-   */
-  return [
-    'ー', 'ｰ',                     // 長音
-    '—', '―', '–', '─', '‐', '-',  // ダッシュ・罫線・ハイフン
-    '〜', '～', '〰',               // 波
-    '＝', '=', '_', '＿',           // 等号・下線
-    '…', '‥',                     // 点
-    '｜', '|',                     // 縦棒（縦書きでは横にする）
-  ].includes(ch)
-}
-
 function VerticalText({ text }: { text: string }) {
   let processed = text.replace(/[0-9]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
   /*
@@ -63,8 +40,8 @@ function VerticalText({ text }: { text: string }) {
    * 「コーヒー」が「コ｜ヒ｜」になり、
    * ダッシュのように見えるという報告があった。
    *
-   * 縦書きでの向きは、下の isHorizontalChar が
-   * 90 度回して合わせている。置き換える必要はない。
+   * 縦書きでの向きは、ブラウザの縦組みに任せる。
+   * 置き換える必要はない。
    */
   /*
    * ルビと傍点は、1 文字ずつに分ける前に取り出す。
@@ -91,21 +68,22 @@ function VerticalText({ text }: { text: string }) {
     parts.push({ type: 'text', body: processed.slice(last) })
   }
 
-  /** ふつうの文字を、1 文字ずつ縦に組む */
+  /** ふつうの文字は、そのまま置く */
   function renderChars(text: string, keyPrefix: string) {
-    return text.split('').map((ch, i) =>
-      ch === '\n'
-        ? <br key={`${keyPrefix}-${i}`}/>
-        : (
-          <span key={`${keyPrefix}-${i}`} style={{
-            display: 'inline-block',
-            transform: isHorizontalChar(ch) ? 'rotate(90deg)' : 'none',
-            lineHeight: 1.2,
-          }}>
-            {ch}
-          </span>
-        )
-    )
+    /*
+     * 1 文字ずつ span に入れて回すのをやめた。
+     *
+     * 回すと「――――」が 1 本ずつバラバラに立ち、
+     * 細い縦棒が並んで見える。
+     * 執筆画面はブラウザの縦組みに任せていて、そちらが正しい。
+     * ここも同じにする。改行だけ <br> に直す。
+     */
+    return text.split('\n').map((line, i, all) => (
+      <span key={`${keyPrefix}-${i}`}>
+        {line}
+        {i < all.length - 1 ? <br/> : null}
+      </span>
+    ))
   }
 
   return (

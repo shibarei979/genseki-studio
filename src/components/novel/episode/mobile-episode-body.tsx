@@ -26,29 +26,6 @@ function renderBody(text: string): string {
   return result
 }
 
-function isHorizontalChar(ch: string): boolean {
-  /*
-   * 縦書きで 90 度回す文字。
-   *
-   * 似た形の記号がいくつもあり、取りこぼすと
-   * その字だけ横に寝たまま残る。
-   * 「――――」が横棒のまま出ていたのは
-   * ― (U+2015) が漏れていたため。
-   *
-   * 括弧や句読点は入れない。
-   * writing-mode が縦向きに直してくれるので、
-   * こちらで回すと二重になって逆さまになる。
-   */
-  return [
-    'ー', 'ｰ',                     // 長音
-    '—', '―', '–', '─', '‐', '-',  // ダッシュ・罫線・ハイフン
-    '〜', '～', '〰',               // 波
-    '＝', '=', '_', '＿',           // 等号・下線
-    '…', '‥',                     // 点
-    '｜', '|',                     // 縦棒（縦書きでは横にする）
-  ].includes(ch)
-}
-
 function VerticalText({ text }: { text: string }) {
   let processed = text.replace(/[0-9]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
   /*
@@ -61,7 +38,7 @@ function VerticalText({ text }: { text: string }) {
   /*
    * 伸ばし棒は置き換えない。
    * 「コーヒー」が「コ｜ヒ｜」になるのを防ぐ。
-   * 向きは isHorizontalChar が 90 度回して合わせる。
+   * 向きはブラウザの縦組みに任せる。
    */
   /*
    * ルビと傍点は、1 文字ずつに分ける前に取り出す。
@@ -82,19 +59,17 @@ function VerticalText({ text }: { text: string }) {
   if (last < processed.length) parts.push({ type: 'text', body: processed.slice(last) })
 
   function renderChars(text: string, keyPrefix: string) {
-    return text.split('').map((ch, i) =>
-      ch === '\n'
-        ? <br key={`${keyPrefix}-${i}`}/>
-        : (
-          <span key={`${keyPrefix}-${i}`} style={{
-            display: 'inline-block',
-            transform: isHorizontalChar(ch) ? 'rotate(90deg)' : 'none',
-            lineHeight: 1.2,
-          }}>
-            {ch}
-          </span>
-        )
-    )
+    /*
+     * 1 文字ずつ回すのをやめた。
+     * 回すと「――――」が 1 本ずつ立って細く並ぶ。
+     * 執筆画面と同じく、ブラウザの縦組みに任せる。
+     */
+    return text.split('\n').map((line, i, all) => (
+      <span key={`${keyPrefix}-${i}`}>
+        {line}
+        {i < all.length - 1 ? <br/> : null}
+      </span>
+    ))
   }
 
   return (
