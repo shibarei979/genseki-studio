@@ -15,7 +15,11 @@
  * 取り込んだ長い文を、話ごとに分けるために使う。
  * 本文に紛れない見た目にしておく。
  */
-const SPLIT_MARK = "──── ここで切る ────";
+/*
+ * 切り印は分割する側と同じものを使う。
+ * 別々に持つと、片方を直したときにずれて、
+ * 押しても切れなくなる。
+ */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -25,7 +29,9 @@ import { ACCEPTED_IMPORT_TYPES, readManuscriptFile } from "@/lib/utils/file-impo
 import {
     buildTxt,
     downloadTextFile,
+    SPLIT_MARK,
     splitManuscript,
+    suggestSplitPoints,
 } from "@/lib/utils/manuscript";
 import { openPrintView } from "@/lib/utils/pdf-export";
 import { formatNumber } from "@/lib/utils/text";
@@ -83,6 +89,62 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
      * 「あの場面はどの話だったか」を探すのに、
      * 題名だけでは足りない。
      */
+    /* 切ったほうがよさそうな場所 */
+    const suggestions = useMemo(() => suggestSplitPoints(raw), [raw]);
+
+    /**
+     * 指した場所に切り印を入れる。
+     *
+     * 入れたあと、その位置へカーソルを移す。
+     * どこに入ったか見えないと、続けて指せない。
+     */
+    function insertSplitAt(at: number) {
+        const next = raw.slice(0, at) + SPLIT_MARK + "\n" + raw.slice(at);
+        setRaw(next);
+        setEdited(null);
+
+        window.setTimeout(() => {
+            const area = rawRef.current;
+            if (!area) return;
+            const to = at + SPLIT_MARK.length + 1;
+            area.focus();
+            area.setSelectionRange(to, to);
+            /* その行が見えるところまで送る */
+            const ratio = to / Math.max(1, next.length);
+            area.scrollTop = area.scrollHeight * ratio - area.clientHeight / 2;
+        }, 0);
+    }
+
+    /**
+     * 原稿の中の、その話の場所へ移す。
+     *
+     * 探している言葉があればそこを、
+     * 無ければその話の頭を選んで見せる。
+     */
+    function jumpToChunk(chunk: { title: string; body: string }) {
+        const area = rawRef.current;
+        if (!area) return;
+
+        const needle = query.trim();
+        const head = chunk.body.slice(0, 30);
+
+        /* まず本文の頭で探し、そこから言葉を探す */
+        let at = head ? raw.indexOf(head) : -1;
+        if (at < 0 && chunk.title) at = raw.indexOf(chunk.title);
+        if (at < 0) at = 0;
+
+        if (needle) {
+            const inBody = raw.indexOf(needle, at);
+            if (inBody >= 0) at = inBody;
+        }
+
+        area.focus();
+        area.setSelectionRange(at, at + (needle ? needle.length : 0));
+
+        const ratio = at / Math.max(1, raw.length);
+        area.scrollTop = area.scrollHeight * ratio - area.clientHeight / 2;
+    }
+
     const matchedIndexes = useMemo(() => {
         const needle = query.trim().toLowerCase();
         if (!needle) return [];
@@ -411,6 +473,42 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                             </span>
                         </div>
 
+                        {/*
+                         * 切る場所の提案。
+                         *
+                         * 自分で場所を探すのは骨が折れる。
+                         * 見出しらしい行と、空行が続いた所を挙げて、
+                         * 押せばそこに印が入るようにする。
+                         */}
+                        {suggestions.length > 0 && (
+                            <div className="mt-3 rounded-md border border-line px-3.5 py-3">
+                                <p className="text-[11px] text-ink">
+                                    ここで切れそうです
+                                    <span className="ml-1.5 text-[10px] text-faint">
+                                        押すと印が入ります
+                                    </span>
+                                </p>
+                                <ul className="thin-scroll mt-2 max-h-32 space-y-1 overflow-y-auto">
+                                    {suggestions.map((point, index) => (
+                                        <li key={index}>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertSplitAt(point.at)}
+                                                className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-canvas"
+                                            >
+                                                <span className="shrink-0 rounded bg-forest-tint px-1.5 py-0.5 text-[9px] text-forest">
+                                                    {point.label}
+                                                </span>
+                                                <span className="min-w-0 flex-1 truncate text-[11px] text-muted">
+                                                    {point.preview}
+                                                </span>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
                         <div className="mt-4 flex flex-wrap items-center gap-3">
                             <button
                                 type="button"
@@ -501,6 +599,22 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                             <span className="w-5 shrink-0 text-right text-xs text-faint">
                                                 {index + 1}
                                             </span>
+
+                                            {/*
+                                             * 探して見つけた話は、原稿のその場所へ飛べる。
+                                             * 一覧で見つけても、直すのは左の原稿なので、
+                                             * そこまで自分で送るのは骨が折れる。
+                                             */}
+                                            {query.trim() && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => jumpToChunk(chunk)}
+                                                    title="原稿のこの場所へ移動"
+                                                    className="shrink-0 rounded border border-line px-1.5 py-0.5 text-[10px] text-muted hover:border-forest-line hover:text-forest"
+                                                >
+                                                    原稿へ
+                                                </button>
+                                            )}
 
                                             <input
                                                 type="text"

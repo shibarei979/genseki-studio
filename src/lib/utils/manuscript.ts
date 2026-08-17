@@ -73,9 +73,107 @@ function countChars(text: string): number {
  * detectHeadings が false のとき、または見出しが 1 つも見つからないときは
  * 3 行以上の空行を区切りとして扱う。それも無ければ全体を 1 話にする。
  */
+/**
+ * 手で入れた切り印。
+ *
+ * 画面から「ここで切る」で挟む印。
+ * 自動の見分けより、手で指したほうを必ず優先する。
+ * 指したのに変わらなければ、指す意味がない。
+ */
+export const SPLIT_MARK = "──── ここで切る ────";
+
+/**
+ * 切ったほうがよさそうな場所を探す。
+ *
+ * 見出しらしい行が無い原稿でも、
+ * 空行が続く所や、場面の変わり目らしい所はある。
+ * 「ここで切れます」と示せれば、自分で探さずに済む。
+ *
+ * 返すのは、その行が本文の何文字目から始まるか。
+ */
+export function suggestSplitPoints(raw: string): {
+    at: number;
+    label: string;
+    preview: string;
+}[] {
+    const text = raw.replace(/\r\n/g, "\n");
+    if (text.trim().length === 0) return [];
+
+    const lines = text.split("\n");
+    const found: { at: number; label: string; preview: string }[] = [];
+
+    let cursor = 0;
+    let blankRun = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (trimmed.length === 0) {
+            blankRun++;
+            cursor += line.length + 1;
+            continue;
+        }
+
+        /* 見出しらしい行 */
+        if (isHeading(line)) {
+            found.push({
+                at: cursor,
+                label: "見出しらしい行",
+                preview: trimmed.slice(0, 24),
+            });
+        } else if (blankRun >= 2) {
+            /*
+             * 空行が 2 つ以上続いたあと。
+             * 書き手が場面を分けた印であることが多い。
+             */
+            found.push({
+                at: cursor,
+                label: "空行のあと",
+                preview: trimmed.slice(0, 24),
+            });
+        }
+
+        blankRun = 0;
+        cursor += line.length + 1;
+    }
+
+    /* 多すぎても選べない。上から 12 個まで */
+    return found.slice(0, 12);
+}
+
 export function splitManuscript(raw: string, options: SplitOptions): SplitResult[] {
     const text = raw.replace(/\r\n/g, "\n").trim();
     if (text.length === 0) return [];
+
+    /* 手で切った所があれば、まずそこで分ける */
+    if (text.includes(SPLIT_MARK)) {
+        const pieces = text
+            .split(SPLIT_MARK)
+            .map((piece) => piece.trim())
+            .filter((piece) => piece.length > 0);
+
+        if (pieces.length > 0) {
+            return pieces.map((piece) => {
+                /*
+                 * かたまりの頭が見出しなら、それを題にする。
+                 * 手で切った所でも、題は拾えたほうがよい。
+                 */
+                const lines = piece.split("\n");
+                const first = lines[0] ?? "";
+
+                if (isHeading(first)) {
+                    const body = lines.slice(1).join("\n").trim();
+                    return {
+                        title: toTitle(first),
+                        body,
+                        charCount: countChars(body),
+                    };
+                }
+                return { title: "", body: piece, charCount: countChars(piece) };
+            });
+        }
+    }
 
     if (options.detectHeadings) {
         /* 章を見出しとして扱うときは、そちらで切る */
