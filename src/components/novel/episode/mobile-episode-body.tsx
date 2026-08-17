@@ -25,28 +25,26 @@ function fontFamilyOf(font: Settings['font']): string {
  */
 function normalizeForHorizontalReading(text: string): string {
   let next = text
-  next = next.replace(/…{2,}/g, '...')
-  next = next.replace(/…/g, '...')
+
+  /* 全角 1 つ（…）は半角 3 つ（...）。数を保つ */
+  next = next.replace(/…+/g, (m) => '.'.repeat(m.length * 3))
 
   /*
-   * ハイフンやダッシュの連なりを揃える。
+   * 横棒は長音（ー）で見せる。
    *
-   * 「-----」「—————」と並べて線にする書き方がある。
-   * そのままだと長さがまちまちで、字送りも乱れる。
-   * 横書きでも「——」の 2 つ重ねに揃える。
+   * 半角ハイフンやダッシュを並べて線にした所を、
+   * 同じ本数の「ーーーー」に置き換える。
+   * 1 つだけのハイフンは触らない（ジャン-ピエール などのため）。
    */
-  next = next.replace(/[-–—―]{2,}/g, '——')
+  next = next.replace(/[-–—―－]{2,}/g, (m) => 'ー'.repeat(m.length))
 
-  /*
-   * 長音を並べた線と、ダッシュを揃える。
-   *
-   * 「ーーー」も「——」も、横書きでは同じ線として見せる。
-   * かなが続くときは伸ばしなので触らない。
-   */
-  next = next.replace(/(^|[^ぁ-んァ-ヶー])(ー{2,})(?![ぁ-んァ-ヶー])/g, (_m, pre) => `${pre}——`)
+  /* 全角英数字・記号を半角へ */
   next = next.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
 
-  /* 行頭の字下げは残す。詰めると段落の切れ目が消える */
+  /*
+   * 全角空白を半角へ。ただし行頭の字下げは残す。
+   * 詰めると段落の切れ目が分からなくなる。
+   */
   return next
     .split('\n')
     .map((line) => {
@@ -96,8 +94,16 @@ function normalizeForReading(text: string): string {
   let next = text
 
   /* 三点リーダとダッシュは、全角化より先に揃える */
-  next = next.replace(/\.{3,}/g, '……')
-  next = next.replace(/[-–—―]{2,}/g, '——')
+  /*
+   * 三点リーダ。点の数を保って直す。
+   *
+   * 半角 3 つ（...）が全角 1 つ（…）にあたる。
+   * 数を見ずに「……」へ揃えると、縦横を切り替えるたびに
+   * 点が増えたり減ったりする。
+   */
+  next = next.replace(/\.{3,}/g, (m) => '…'.repeat(Math.max(1, Math.round(m.length / 3))))
+  /* 全角 1 つ（—）は半角 2 つ（--）。本数を保つ */
+  next = next.replace(/[—―]+/g, (m) => '--'.repeat(m.length))
 
   /*
    * 長音が続くところはダッシュに直す。
