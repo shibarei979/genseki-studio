@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import EpisodeChunks, { CHUNK_THRESHOLD } from '@/components/novel/episode-chunks'
 export const revalidate = 10
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
@@ -99,7 +100,8 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
     supabase.from('profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('series_novels').select('series_id').eq('novel_id', params.id).maybeSingle(),
     supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, illust_url, chapter_id, published, is_published, scheduled_at')
-      .eq('novel_id', params.id).order('ep_number', { ascending: true }),
+      /* 上限を上げる。既定 1,000 件だと目次の後ろが消える */
+      .eq('novel_id', params.id).order('ep_number', { ascending: true }).limit(5000),
   ])
   const authorProfile = authorRes.data
   const seriesNovelData = seriesNovelRes.data
@@ -450,7 +452,18 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
             {!episodes || episodes.length === 0 ? (
               <div style={{padding:'32px',textAlign:'center',color:'var(--color-text-faint)',fontSize:13}}>まだ話がありません</div>
             ) : !hasChapters ? (
-              allEpisodes.map((ep) => <EpisodeRow key={ep.id} ep={ep} />)
+              /*
+               * 話が多いときは 50 話ずつ束ねる。
+               * 全部並べると、目当ての話まで指を送り続けることになる。
+               */
+              allEpisodes.length > CHUNK_THRESHOLD ? (
+                <EpisodeChunks
+                  episodes={allEpisodes}
+                  renderRow={(ep) => <EpisodeRow key={ep.id} ep={ep} />}
+                />
+              ) : (
+                allEpisodes.map((ep) => <EpisodeRow key={ep.id} ep={ep} />)
+              )
             ) : (
               <ChapterAccordion
                 novelId={params.id}

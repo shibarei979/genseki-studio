@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import EpisodeChunks, { CHUNK_THRESHOLD } from '@/components/novel/episode-chunks'
 import Link from 'next/link'
 
 interface Episode {
@@ -102,7 +103,17 @@ export default function ChapterAccordion({
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
             </button>
-            {isOpen && chEps.map((ep) => <EpisodeRow key={ep.id} ep={ep} />)}
+            {/* 章の中も、多ければ 50 話ずつ束ねる */}
+            {isOpen && (
+              chEps.length > CHUNK_THRESHOLD ? (
+                <EpisodeChunks
+                  episodes={chEps}
+                  renderRow={(ep: any) => <EpisodeRow key={ep.id} ep={ep} />}
+                />
+              ) : (
+                chEps.map((ep) => <EpisodeRow key={ep.id} ep={ep} />)
+              )
+            )}
           </div>
         )
       })}
@@ -127,7 +138,16 @@ export default function ChapterAccordion({
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </button>
-          {openIds.has('unassigned') && unassignedEpisodes.map((ep) => <EpisodeRow key={ep.id} ep={ep} />)}
+          {openIds.has('unassigned') && (
+            unassignedEpisodes.length > CHUNK_THRESHOLD ? (
+              <EpisodeChunks
+                episodes={unassignedEpisodes}
+                renderRow={(ep: any) => <EpisodeRow key={ep.id} ep={ep} />}
+              />
+            ) : (
+              unassignedEpisodes.map((ep) => <EpisodeRow key={ep.id} ep={ep} />)
+            )
+          )}
         </div>
       )}
     </>
