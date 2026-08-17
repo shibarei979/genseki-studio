@@ -24,13 +24,37 @@ function renderBodyH(text: string): string {
 }
 
 function isHorizontalChar(ch: string): boolean {
-  return ['ー','〜','…','‥','─','—','－','〰','ｰ','｜','|'].includes(ch)
+  /*
+   * 縦書きで 90 度回す文字。
+   *
+   * 似た形の記号がいくつもあり、取りこぼすと
+   * その字だけ横に寝たまま残る。
+   * 「――――」が横棒のまま出ていたのは
+   * ― (U+2015) が漏れていたため。
+   *
+   * 括弧や句読点は入れない。
+   * writing-mode が縦向きに直してくれるので、
+   * こちらで回すと二重になって逆さまになる。
+   */
+  return [
+    'ー', 'ｰ',                     // 長音
+    '—', '―', '–', '─', '‐', '-',  // ダッシュ・罫線・ハイフン
+    '〜', '～', '〰',               // 波
+    '＝', '=', '_', '＿',           // 等号・下線
+    '…', '‥',                     // 点
+    '｜', '|',                     // 縦棒（縦書きでは横にする）
+  ].includes(ch)
 }
 
 function VerticalText({ text }: { text: string }) {
   let processed = text.replace(/[0-9]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
-  processed = processed.replace(/…/g, '・・・')
-  processed = processed.replace(/‥/g, '・・')
+  /*
+   * 三点リーダも置き換えない。
+   *
+   * 「・・・」に差し替えると、字形も間隔も変わるうえ、
+   * コピーした本文まで別の字になる。
+   * 縦書きでの向きは、下で 1 字ずつ回して合わせる。
+   */
   /*
    * 伸ばし棒は置き換えない。
    *
@@ -596,6 +620,13 @@ function VerticalBody({ title, body, preface, afterword, authorName, fontSize, f
       <div ref={scrollRef} className="v-scroll" style={{overflowX:'scroll',overflowY:'hidden',height:'calc(100vh - 180px)',paddingBottom:4}}>
         <div style={{
           writingMode:'vertical-rl',
+          /*
+           * mixed のまま。
+           *
+           * upright にすると英字まで 1 字ずつ縦になり、
+           * "Albert" が縦に積まれて読めなくなる。
+           * 横棒の記号は VerticalText が 1 字ずつ回して合わせる。
+           */
           textOrientation:'mixed',
           display:'inline-block',
           padding:'32px 24px 32px 48px',
