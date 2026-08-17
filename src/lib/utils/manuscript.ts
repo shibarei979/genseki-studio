@@ -39,11 +39,22 @@ export interface SplitResult {
  * 行全体が短く、これらの形に合うものだけを拾う。
  */
 const HEADING_PATTERNS: RegExp[] = [
-    /^\s*第[0-9０-９一二三四五六七八九十百]+[話章節部幕]\s*[　\s].*$/,
-    /^\s*第[0-9０-９一二三四五六七八九十百]+[話章節部幕]\s*$/,
+    /*
+     * 「第◯話」「◯話」。
+     *
+     * 題との区切りは空白とは限らない。
+     * 「第1話：始まり」「第1話.始まり」「第1話-始まり」も拾う。
+     * 以前は空白だけを見ていて、これらを本文として扱っていた。
+     */
+    /^\s*第?[0-9０-９一二三四五六七八九十百千]+\s*[話章節部幕][\s　:：.．,、。・\-–—ー|｜]*.*$/,
+
+    /* 「プロローグ」「エピローグ」なども見出しとして扱う */
+    /^\s*[（(【\[]?\s*(プロローグ|エピローグ|序章|終章|幕間|間章|序|終)\s*[)）】\]]?\s*[　\s:：.．\-–—]*.*$/,
+
+    /* 記号だけの区切り */
     /^\s*[#＃]{1,3}\s*.+$/,
-    /^\s*[◆◇■□●○※＊*]{1,3}\s*.*$/,
-    /^\s*[-–—―ー=＝]{3,}\s*$/,
+    /^\s*[◆◇■□●○※＊*☆★・]{1,5}\s*.*$/,
+    /^\s*[-–—―ー=＝~〜_＿]{3,}\s*$/,
 ];
 
 function isHeading(line: string): boolean {
@@ -160,9 +171,25 @@ export function splitManuscript(raw: string, options: SplitOptions): SplitResult
                  * 手で切った所でも、題は拾えたほうがよい。
                  */
                 const lines = piece.split("\n");
-                const first = lines[0] ?? "";
+                const first = (lines[0] ?? "").trim();
 
-                if (isHeading(first)) {
+                /*
+                 * 見出しの形なら、それを題にする。
+                 *
+                 * 加えて、頭の行が短くて次に本文が続くときも
+                 * 題として拾う。「選んだ所で切る」で置いた
+                 * 題名は「第◯話」の形とは限らないため。
+                 * 30 字までにするのは、本文の 1 行目を
+                 * 誤って題にしないため。
+                 */
+                const looksLikeTitle =
+                    isHeading(first) ||
+                    (first.length > 0 &&
+                        first.length <= 30 &&
+                        lines.length > 1 &&
+                        lines.slice(1).join("").trim().length > 0);
+
+                if (looksLikeTitle) {
                     const body = lines.slice(1).join("\n").trim();
                     return {
                         title: toTitle(first),

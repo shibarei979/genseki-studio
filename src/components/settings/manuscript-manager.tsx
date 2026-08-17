@@ -110,9 +110,29 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
             area.focus();
             area.setSelectionRange(to, to);
             /* その行が見えるところまで送る */
-            const ratio = to / Math.max(1, next.length);
-            area.scrollTop = area.scrollHeight * ratio - area.clientHeight / 2;
+            scrollTo(area, to, next);
         }, 0);
+    }
+
+    /**
+     * 原稿の中の、指した位置まで送る。
+     *
+     * 文字数の割合で送ると、行の長さがまちまちなので
+     * 狙いから外れる。実際に何行目かを数えて、
+     * 行の高さを掛けたほうが正しく着く。
+     */
+    function scrollTo(area: HTMLTextAreaElement, at: number, text = raw) {
+        const before = text.slice(0, at);
+        const line = before.split("\n").length - 1;
+
+        const style = window.getComputedStyle(area);
+        const lineHeight =
+            parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.7;
+
+        area.scrollTop = Math.max(
+            0,
+            line * lineHeight - area.clientHeight / 2,
+        );
     }
 
     /**
@@ -141,8 +161,7 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         area.focus();
         area.setSelectionRange(at, at + (needle ? needle.length : 0));
 
-        const ratio = at / Math.max(1, raw.length);
-        area.scrollTop = area.scrollHeight * ratio - area.clientHeight / 2;
+        scrollTo(area, at);
     }
 
     const matchedIndexes = useMemo(() => {
@@ -172,6 +191,8 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
     /* 原稿の欄と、いまの位置 */
     const rawRef = useRef<HTMLTextAreaElement>(null);
     const [caret, setCaret] = useState(0);
+    /* 選んだ範囲。題名にするのに使う */
+    const [selection, setSelection] = useState({ start: 0, end: 0 });
 
     /** 手で入れた切れ目の数 */
     const marks = raw.split(SPLIT_MARK).length - 1;
@@ -182,7 +203,49 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
      * 行の途中で切ると読みにくいので、
      * その行の頭まで戻してから入れる。
      */
+    /**
+     * 選んだ所で切る。
+     *
+     * 文字を選んでいれば、それを題名にして切る。
+     * 「第三章 邂逅」を選べば、そこが新しい話の頭になり、
+     * 題名も入った状態になる。
+     * 何も選んでいなければ、いまいる行で切るだけ。
+     */
     function insertSplit() {
+        const picked = raw.slice(selection.start, selection.end).trim();
+
+        if (picked.length > 0 && picked.length <= 60 && !picked.includes("\n")) {
+            /*
+             * 選んだ文字を題名にする。
+             *
+             * 選んだ所の行頭に印を入れ、選んだ文字は
+             * 見出しの形（第◯話 …）ではなく、そのまま次の行の頭に残す。
+             * 分割する側が、かたまりの頭の行を題名として拾う。
+             */
+            const lineStart =
+                raw.lastIndexOf("\n", Math.max(0, selection.start - 1)) + 1;
+
+            const before = raw.slice(0, lineStart);
+            const rest = raw.slice(lineStart);
+
+            const next = `${before}${SPLIT_MARK}\n${picked}\n${rest.replace(picked, "").replace(/^\s*\n/, "")}`;
+
+            setRaw(next);
+            setEdited(null);
+
+            window.setTimeout(() => {
+                const area = rawRef.current;
+                if (!area) return;
+                const to = lineStart + SPLIT_MARK.length + 1 + picked.length + 1;
+                area.focus();
+                area.setSelectionRange(to, to);
+                setCaret(to);
+                setSelection({ start: to, end: to });
+            }, 0);
+            return;
+        }
+
+        /* 何も選んでいないときは、いまいる行で切る */
         const at = raw.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
 
         const next =
@@ -190,7 +253,6 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         setRaw(next);
         setEdited(null);
 
-        /* 入れた印の後ろへ、書き口を移す */
         window.setTimeout(() => {
             const area = rawRef.current;
             if (!area) return;
@@ -369,6 +431,10 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                             onSelect={(e) => {
                                 const area = e.target as HTMLTextAreaElement;
                                 setCaret(area.selectionStart);
+                                setSelection({
+                                    start: area.selectionStart,
+                                    end: area.selectionEnd,
+                                });
                             }}
                             rows={14}
                             aria-label="取り込む原稿"
@@ -450,7 +516,9 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                 disabled={!raw}
                                 className="rounded-md border border-forest-line px-4 py-1.5 text-xs text-forest hover:bg-forest-tint disabled:opacity-40"
                             >
-                                ここで切る
+                                {selection.end > selection.start
+                                    ? "選んだ所で切る（題名にする）"
+                                    : "ここで切る"}
                             </button>
 
                             {marks > 0 && (
