@@ -52,6 +52,14 @@ export interface DisplaySettings {
      */
     reader_mode: "none" | "horizontal" | "vertical";
 
+    /**
+     * 話の一覧に「第◯話」を出すか。
+     *
+     * 題名だけで並べたい人のため。
+     * 執筆画面の見え方だけで、読者側は変わらない。
+     */
+    show_episode_number?: boolean;
+
 }
 
 export const PAGE_MODE_LABEL: Record<PageMode, string> = {
@@ -205,6 +213,7 @@ export function defaultDisplaySettings(workId: string): DisplaySettings {
         font_family: "mincho",
         letter_spacing: "normal",
         reader_mode: "none",
+        show_episode_number: true,
     };
 }
 
