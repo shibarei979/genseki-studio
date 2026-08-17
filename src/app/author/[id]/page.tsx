@@ -241,7 +241,6 @@ export default async function AuthorPage({ params }: Props) {
                   {!isMe && user && (
                     <>
                       <FollowButton authorId={params.id} userId={user.id} initialFollowing={isFollowing} followerCount={followerCount || 0}/>
-                <MessageButton targetId={params.id} userId={user.id}/>
                       <MessageButton targetId={params.id} userId={user.id}/>
                       <BlockButton targetId={params.id} userId={user.id} initialBlocked={isBlocked} initialMuted={isMuted}/>
                     </>
