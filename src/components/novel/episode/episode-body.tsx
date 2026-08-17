@@ -23,8 +23,46 @@ function renderBodyH(text: string): string {
   return r
 }
 
+/**
+ * 読む側の縦書き用に、見た目だけ整える。
+ *
+ * 執筆画面の「縦書き用に整える」と同じ考えで直すが、
+ * こちらは本文を書き換えない。読む瞬間の見た目だけ。
+ * 保存されているものは書き手のまま残す。
+ *
+ *   半角英数字 → 全角   縦組みで横倒しにならないように
+ *   ... → ……           三点リーダは二つ重ねが慣習
+ *   -- → ——            ダッシュも同じ
+ *   半角空白 → 全角空白
+ *
+ * 字下げは入れない。
+ * 書き手が段落の形を決めているので、読む側で足すと
+ * 意図した見た目が崩れる。
+ */
+function normalizeForReading(text: string): string {
+  let next = text
+
+  /* 三点リーダとダッシュは、全角化より先に揃える */
+  next = next.replace(/\.{3,}/g, '……')
+  next = next.replace(/[-–—―]{2,}/g, '——')
+
+  /* 半角英数字・記号を全角へ */
+  next = next.replace(/[!-~]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
+
+  /* 半角空白も全角へ */
+  next = next.replace(/ /g, '　')
+
+  return next
+}
+
 function VerticalText({ text }: { text: string }) {
-  let processed = text.replace(/[0-9]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
+  /*
+   * 整えるのは、ルビを切り出したあと。
+   *
+   * 先にかけると ｜ や 《》 まで全角になり、
+   * ルビの印として読めなくなる。
+   */
+  let processed = text
   /*
    * 三点リーダも置き換えない。
    *
@@ -97,8 +135,8 @@ function VerticalText({ text }: { text: string }) {
            */
           return (
             <ruby key={`r-${i}`} style={{ rubyPosition: 'over' }}>
-              {part.body}
-              <rt style={{ fontSize: '0.5em' }}>{part.ruby}</rt>
+              {normalizeForReading(part.body)}
+              <rt style={{ fontSize: '0.5em' }}>{normalizeForReading(part.ruby ?? '')}</rt>
             </ruby>
           )
         }
@@ -115,12 +153,12 @@ function VerticalText({ text }: { text: string }) {
                 WebkitTextEmphasisPosition: 'over right',
               } as React.CSSProperties}
             >
-              {part.body}
+              {normalizeForReading(part.body)}
             </span>
           )
         }
 
-        return <span key={`t-${i}`}>{renderChars(part.body, `t${i}`)}</span>
+        return <span key={`t-${i}`}>{renderChars(normalizeForReading(part.body), `t${i}`)}</span>
       })}
     </>
   )
