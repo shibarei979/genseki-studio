@@ -471,8 +471,25 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
             mergeUp(index);
         }
 
-        /* 番号がずれるので、確定はやり直し */
-        setConfirmed([]);
+        /*
+         * 消したぶん、後ろの話は番号が 1 つ減る。
+         *
+         * 確定をやり直すのではなく、番号だけずらす。
+         * やり直すと、確定してあったものが提案へ戻ってしまう。
+         *
+         * 消した話そのものが確定していたときは、
+         * つながった先（1 つ前）が確定として残る。
+         */
+        setConfirmed((list) =>
+            Array.from(
+                new Set(
+                    list.map((at) => {
+                        if (at === index) return Math.max(0, index - 1);
+                        return at > index ? at - 1 : at;
+                    }),
+                ),
+            ).sort((a, b) => a - b),
+        );
     }
 
     function handleExportTxt() {
@@ -849,16 +866,6 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                                 {formatNumber(chunk.charCount)}字
                                             </span>
 
-                                            {/* 前の話とくっつける */}
-                                            <button
-                                                type="button"
-                                                onClick={() => mergeUp(index)}
-                                                disabled={index === 0}
-                                                title="前の話とつなげる"
-                                                className="shrink-0 px-1 text-xs text-faint opacity-0 hover:text-forest disabled:invisible group-hover:opacity-100"
-                                            >
-                                                ↑結合
-                                            </button>
 
                                             {/*
                                              * ✕ は「この切れ目が間違い」の意味。
