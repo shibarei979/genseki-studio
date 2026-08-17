@@ -451,6 +451,33 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
      * 先頭のときは、次の話とつなげる。
      */
     function rejectChunk(index: number) {
+        /*
+         * 原稿に入れた切り印も消す。
+         *
+         * 一覧の上でつなげても、原稿に印が残っていると
+         * 本文に線が残り、読み直すとまた同じ場所で切れる。
+         *
+         * 消すのは index 番目の話の直前にある印。
+         * 印で切った所でなければ（見出しで切れた場合）、
+         * 印の数が足りないので何もしない。
+         */
+        if (index > 0) {
+            const pieces = raw.split(SPLIT_MARK);
+            if (pieces.length > index) {
+                /* index 番目の印だけを外して、前後をつなぐ */
+                const next = pieces
+                    .map((piece, at) =>
+                        /* index 番目の話の「前」の印 = index-1 番目の切れ目 */
+                        at === index - 1 ? piece : `${piece}${SPLIT_MARK}`,
+                    )
+                    .join("")
+                    .replace(new RegExp(`${SPLIT_MARK}$`), "")
+                    .replace(/\n{3,}/g, "\n\n");
+
+                setRaw(next);
+            }
+        }
+
         if (index === 0) {
             /* 先頭は前が無いので、次とつなげる */
             setEdited((rows) => {
