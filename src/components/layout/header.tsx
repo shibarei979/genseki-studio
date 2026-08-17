@@ -446,7 +446,15 @@ export default function Header({ breadcrumbs = [] }: Props) {
             {/* 幅が狭いときは行き先を下の段に出す */}
             <nav
                 aria-label="主なページ"
-                className="thin-scroll flex items-center justify-center gap-1 overflow-x-auto border-t border-line px-4 py-1.5 sm:px-8 lg:hidden"
+                /*
+                 * 中央寄せにしない。
+                 *
+                 * 横に送れる並びで justify-center にすると、
+                 * 入りきらないぶんが左右に均等にはみ出し、
+                 * 左端（ホーム）が画面の外に出て戻せなくなる。
+                 * 左から詰めれば、頭が必ず見える。
+                 */
+                className="thin-scroll flex items-center gap-1 overflow-x-auto border-t border-line px-4 py-1.5 sm:px-8 lg:hidden"
             >
                 {shownNav.map((item) => (
                     <Link

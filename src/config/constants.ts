@@ -18,7 +18,7 @@ export const CATCHPHRASE_MAX_LENGTH = 100;
 export const SUMMARY_MAX_LENGTH = 5000;
 
 /** タグの最大個数 */
-export const TAG_MAX_COUNT = 10;
+export const TAG_MAX_COUNT = 30;
 
 /** タグ 1 個あたりの最大文字数 */
 export const TAG_MAX_LENGTH = 20;

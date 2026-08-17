@@ -1108,29 +1108,35 @@ interface FootLink {
     href?: string;
 }
 
+/*
+ * 行き先は全部入れる。
+ *
+ * 以前は label だけで href が無く、字が並んでいるだけだった。
+ * 登録する前に規約を読みたい人が、読む手立てを持てない。
+ */
 const FOOT_COLUMNS: { title: string; links: FootLink[] }[] = [
     {
         title: "はじめての方へ",
         links: [
             { label: "原石航路とは", href: "#about" },
-            { label: "投稿ガイド" },
-            { label: "よくある質問" },
+            { label: "投稿ガイド", href: "/guide" },
+            { label: "よくある質問", href: "/faq" },
         ],
     },
     {
         title: "サポート",
         links: [
-            { label: "ヘルプ・FAQ" },
-            { label: "お問い合わせ" },
-            { label: "ご意見・ご要望" },
+            { label: "ヘルプ・FAQ", href: "/help" },
+            { label: "お問い合わせ", href: "/contact" },
+            { label: "ご意見・ご要望", href: "/feedback" },
         ],
     },
     {
         title: "規約・ガイドライン",
         links: [
-            { label: "利用規約" },
-            { label: "プライバシーポリシー" },
-            { label: "投稿ガイドライン" },
+            { label: "利用規約", href: "/terms" },
+            { label: "プライバシーポリシー", href: "/privacy" },
+            { label: "投稿ガイドライン", href: "/guidelines" },
         ],
     },
 ];
