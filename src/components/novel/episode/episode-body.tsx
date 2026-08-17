@@ -16,9 +16,63 @@ interface Props {
 
 const DEFAULTS: Settings = { font: 'serif', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
 
+/**
+ * 読む側の横書き用に、見た目だけ整える。
+ *
+ * 縦書きで書かれた原稿は、英数字が全角だったり
+ * 「……」「——」が使われていたりする。
+ * そのまま横書きで読むと、字が間延びして読みにくい。
+ *
+ * これも本文は書き換えない。読む瞬間の見た目だけ。
+ * 執筆画面の「横書き用に整える」と同じ考え。
+ */
+function normalizeForHorizontalReading(text: string): string {
+  let next = text
+
+  /* 三点リーダを先に。全角を戻す前に見分ける */
+  next = next.replace(/…{2,}/g, '...')
+  next = next.replace(/…/g, '...')
+
+  /* 全角英数字・記号を半角へ */
+  next = next.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+
+  /*
+   * 全角空白を半角へ。ただし行頭の字下げは残す。
+   * 字下げまで詰めると、段落の切れ目が分からなくなる。
+   */
+  return next
+    .split('\n')
+    .map((line) => {
+      const indent = line.startsWith('　') ? '　' : ''
+      const body = indent ? line.slice(1) : line
+      return indent + body.replace(/　/g, ' ')
+    })
+    .join('\n')
+}
+
 function renderBodyH(text: string): string {
-  let r = text.replace(/｜([^《]+)《([^》]+)》/g, '<ruby>$1<rt>$2</rt></ruby>')
-  r = r.replace(/《《([^》]+)》》/g, '<em style="font-style:normal;font-weight:700;border-bottom:2px solid var(--color-brand)">$1</em>')
+  /*
+   * 整えるのは、ルビを取り出したあと。
+   * 先にかけると ｜ や 《》 が半角になり、
+   * ルビの印として読めなくなる。
+   */
+  let r = text.replace(/｜([^《]+)《([^》]+)》/g,
+    (_m, base: string, ruby: string) =>
+      `<ruby>${normalizeForHorizontalReading(base)}<rt>${normalizeForHorizontalReading(ruby)}</rt></ruby>`)
+  r = r.replace(/《《([^》]+)》》/g,
+    (_m, body: string) =>
+      `<em style="font-style:normal;font-weight:700;border-bottom:2px solid var(--color-brand)">${normalizeForHorizontalReading(body)}</em>`)
+
+  /*
+   * 残った本文を整える。
+   * ルビと傍点は上で組み終えているので、
+   * ここでは <ruby> や <em> の中は触らない。
+   */
+  r = r
+    .split(/(<[^>]+>)/)
+    .map((piece) => (piece.startsWith('<') ? piece : normalizeForHorizontalReading(piece)))
+    .join('')
+
   r = r.replace(/\n/g, '<br/>')
   return r
 }

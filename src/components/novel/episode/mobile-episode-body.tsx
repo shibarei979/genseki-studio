@@ -19,9 +19,42 @@ function fontFamilyOf(font: Settings['font']): string {
        :                      "'Noto Sans JP', sans-serif"
 }
 
+/**
+ * 読む側の横書き用に、見た目だけ整える。
+ * 本文は書き換えない。読む瞬間の見え方だけ。
+ */
+function normalizeForHorizontalReading(text: string): string {
+  let next = text
+  next = next.replace(/…{2,}/g, '...')
+  next = next.replace(/…/g, '...')
+  next = next.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+
+  /* 行頭の字下げは残す。詰めると段落の切れ目が消える */
+  return next
+    .split('\n')
+    .map((line) => {
+      const indent = line.startsWith('　') ? '　' : ''
+      const body = indent ? line.slice(1) : line
+      return indent + body.replace(/　/g, ' ')
+    })
+    .join('\n')
+}
+
 function renderBody(text: string): string {
-  let result = text.replace(/｜([^《]+)《([^》]+)》/g, '<ruby>$1<rt>$2</rt></ruby>')
-  result = result.replace(/《《([^》]+)》》/g, '<em style="font-style:normal;font-weight:700;border-bottom:2px solid var(--color-brand)">$1</em>')
+  /* 整えるのはルビを取り出したあと。先だと ｜《》 が壊れる */
+  let result = text.replace(/｜([^《]+)《([^》]+)》/g,
+    (_m, base: string, ruby: string) =>
+      `<ruby>${normalizeForHorizontalReading(base)}<rt>${normalizeForHorizontalReading(ruby)}</rt></ruby>`)
+
+  result = result.replace(/《《([^》]+)》》/g,
+    (_m, body: string) =>
+      `<em style="font-style:normal;font-weight:700;border-bottom:2px solid var(--color-brand)">${normalizeForHorizontalReading(body)}</em>`)
+
+  result = result
+    .split(/(<[^>]+>)/)
+    .map((piece) => (piece.startsWith('<') ? piece : normalizeForHorizontalReading(piece)))
+    .join('')
+
   result = result.replace(/\n/g, '<br/>')
   return result
 }
