@@ -13,6 +13,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import Header from "@/components/layout/header";
 import EpisodeEditor from "@/components/workspace/episode-editor";
@@ -41,6 +42,14 @@ interface Props {
 }
 
 export default function WorkspaceClient({ workId }: Props) {
+    /*
+     * 住所の問い符から後ろ。
+     *
+     * 投稿から戻ってきたときは、画面はそのままで
+     * ここだけが変わる。見張っていないと気づけない。
+     */
+    const searchParams = useSearchParams();
+
     const [work, setWork] = useState<Work | null>(null);
     const [settings, setSettings] = useState<DisplaySettings | null>(null);
     const [isWorkLoading, setIsWorkLoading] = useState(true);
@@ -126,7 +135,16 @@ export default function WorkspaceClient({ workId }: Props) {
 
         // 印を消す。読み込み直すたびに飛ばないように
         window.history.replaceState({}, "", window.location.pathname);
-    }, []);
+
+        /*
+         * すでに読み込みが終わっていれば、その場で選び直す。
+         *
+         * 投稿から戻ってきたときは、同じ画面のまま住所だけが変わる。
+         * 下の「選び直す」は話が読み込まれた時にしか走らないので、
+         * ここで直に選ばないと 1 話目のままになる。
+         */
+        setSelectedId((current) => (current === episodeId ? current : episodeId));
+    }, [searchParams]);
 
     // 選択中の話が無くなったら先頭を選ぶ
     useEffect(() => {
