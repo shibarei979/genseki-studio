@@ -44,7 +44,7 @@ export function normalizeForVertical(raw: string): NormalizeResult {
         // 三点リーダとダッシュは全角化より先に処理する
         next = next.replace(/\.{3,}|。{3,}|・{3,}/g, "……");
         next = next.replace(/[-–—―]{2,}/g, "——");
-        next = next.replace(/ー{2,}(?![ぁ-んァ-ヶ])/g, "——");
+        next = next.replace(/(^|[^ぁ-んァ-ヶー])(ー{2,})(?![ぁ-んァ-ヶー])/g, (_m, pre) => `${pre}——`);
 
         next = toFullWidth(next);
         next = next.replace(/ /g, "　");

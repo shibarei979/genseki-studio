@@ -27,6 +27,14 @@ function normalizeForHorizontalReading(text: string): string {
   let next = text
   next = next.replace(/…{2,}/g, '...')
   next = next.replace(/…/g, '...')
+
+  /*
+   * 長音を並べた線と、ダッシュを揃える。
+   *
+   * 「ーーー」も「——」も、横書きでは同じ線として見せる。
+   * かなが続くときは伸ばしなので触らない。
+   */
+  next = next.replace(/(^|[^ぁ-んァ-ヶー])(ー{2,})(?![ぁ-んァ-ヶー])/g, (_m, pre) => `${pre}——`)
   next = next.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
 
   /* 行頭の字下げは残す。詰めると段落の切れ目が消える */
@@ -81,6 +89,19 @@ function normalizeForReading(text: string): string {
   /* 三点リーダとダッシュは、全角化より先に揃える */
   next = next.replace(/\.{3,}/g, '……')
   next = next.replace(/[-–—―]{2,}/g, '——')
+
+  /*
+   * 長音が続くところはダッシュに直す。
+   *
+   * 「ーーー」と伸ばし棒を並べて線のかわりにする書き方がある。
+   * 縦書きだと 1 本ずつ切れて見えるので、ダッシュに揃える。
+   *
+   * ただし、あとにかなが続くときは触らない。
+   * 前後にかなが無いときだけ、線とみなす。
+   * 「ぎゅーーーっと」「ぎゅーーー」は伸ばしなので触らない。
+   * 「ーーー、そして」「「ーーー」」は線なので揃える。
+   */
+  next = next.replace(/(^|[^ぁ-んァ-ヶー])(ー{2,})(?![ぁ-んァ-ヶー])/g, (_m, pre) => `${pre}——`)
 
   /* 半角英数字・記号を全角へ */
   next = next.replace(/[!-~]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
