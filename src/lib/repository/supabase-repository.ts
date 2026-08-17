@@ -650,7 +650,13 @@ export const supabaseRepository: Repository = {
             .select("*")
             .eq("novel_id", workId)
             .is("deleted_at", null)
-            .order("ep_number");
+            /*
+             * 話も、並ぶ順を一つに決める。
+             * ep_number が同じものがあっても入れ替わらないように。
+             */
+            .order("ep_number")
+            .order("created_at")
+            .order("id");
         return rows<Record<string, unknown>>(data).map(toEpisode);
     },
 
@@ -2246,11 +2252,23 @@ export const supabaseRepository: Repository = {
      */
 
     async listChapters(workId: string): Promise<Chapter[]> {
+        /*
+         * 並ぶ順は、必ず上から。
+         *
+         * sort_order だけで並べると、番号が同じ章があったときに
+         * 順序が決まらず、開くたびに入れ替わる。
+         * （報告のあった「音読みで前後が入れ替わる」がこれ）
+         *
+         * 作った時刻を二番目の物差しにして、
+         * どんな場合でも順序が一つに決まるようにする。
+         */
         const { data } = await db()
             .from("chapters")
             .select("*")
             .eq("novel_id", workId)
-            .order("sort_order");
+            .order("sort_order")
+            .order("created_at")
+            .order("id");
 
         return rows<Record<string, unknown>>(data).map((row) => ({
             ...(row as unknown as Chapter),
@@ -2261,9 +2279,22 @@ export const supabaseRepository: Repository = {
     async createChapter(workId: string, title = ""): Promise<Chapter> {
         const existing = await this.listChapters(workId);
 
+        /*
+         * 並び順は、いまの最後の次。
+         *
+         * 「章の数」を入れていたが、章を消すと番号が飛ぶので
+         * （0,2,4 のように）、数と番号が食い違い、
+         * 作った章が既にある章と同じ番号になることがあった。
+         * 同じ番号どうしは並ぶ順が決まらず、入れ替わる。
+         */
+        const lastOrder = existing.reduce(
+            (max, chapter) => Math.max(max, chapter.sort_order ?? 0),
+            -1,
+        );
+
         const { data, error } = await db()
             .from("chapters")
-            .insert({ novel_id: workId, title, sort_order: existing.length })
+            .insert({ novel_id: workId, title, sort_order: lastOrder + 1 })
             .select()
             .single();
 

@@ -47,6 +47,8 @@ interface Props {
     onRenameChapter?: (chapterId: string, title: string) => void;
     /** 章を消す。中の話は「章に入れていない」へ戻る */
     onDeleteChapter?: (chapterId: string) => void;
+    /** 章を並べ替える。渡した順に上から並ぶ */
+    onReorderChapters?: (orderedIds: string[]) => void;
     /** 話の題名を変える */
     onRenameEpisode?: (episodeId: string, title: string) => void;
 }
@@ -58,6 +60,7 @@ export default function EpisodeList({
     onCreateChapter,
     onRenameChapter,
     onDeleteChapter,
+    onReorderChapters,
     onRenameEpisode,
     selectedId,
     onSelect,
@@ -70,6 +73,8 @@ export default function EpisodeList({
     const [overId, setOverId] = useState<string | null>(null);
     /* ドラッグが乗っている章の見出し */
     const [overChapterId, setOverChapterId] = useState<string | null>(null);
+    /* つかんでいる章。話とは別に覚える */
+    const [draggingChapterId, setDraggingChapterId] = useState<string | null>(null);
 
     function handleDrop(targetId: string) {
         if (!draggingId || draggingId === targetId) {
@@ -246,20 +251,47 @@ export default function EpisodeList({
                              * 乗っている間は枠を光らせる。
                              */}
                             <div
+                                /*
+                                 * 章そのものも動かせる。
+                                 * 上から並んだ順が、そのまま章の順になる。
+                                 */
+                                draggable={Boolean(chapter && onReorderChapters)}
+                                onDragStart={() => {
+                                    if (chapter) setDraggingChapterId(chapter.id);
+                                }}
+                                onDragEnd={() => {
+                                    setDraggingChapterId(null);
+                                    setOverChapterId(null);
+                                }}
                                 onDragOver={(e) => {
-                                    if (!onAssignChapter) return;
+                                    if (!onAssignChapter && !draggingChapterId) return;
                                     e.preventDefault();
                                     setOverChapterId(chapter?.id ?? "__none__");
                                 }}
                                 onDragLeave={() => setOverChapterId(null)}
                                 onDrop={() => {
-                                    if (draggingId && onAssignChapter) {
+                                    /* 章を章の上へ落としたら、並べ替え */
+                                    if (
+                                        draggingChapterId &&
+                                        chapter &&
+                                        draggingChapterId !== chapter.id &&
+                                        onReorderChapters
+                                    ) {
+                                        const ids = chapters.map((c) => c.id);
+                                        const from = ids.indexOf(draggingChapterId);
+                                        const to = ids.indexOf(chapter.id);
+                                        ids.splice(from, 1);
+                                        ids.splice(to, 0, draggingChapterId);
+                                        onReorderChapters(ids);
+                                    } else if (draggingId && onAssignChapter) {
+                                        /* 話を落としたら、その章に入れる */
                                         onAssignChapter(
                                             draggingId,
                                             chapter?.id ?? null,
                                         );
                                     }
                                     setDraggingId(null);
+                                    setDraggingChapterId(null);
                                     setOverChapterId(null);
                                 }}
                                 className={[
@@ -269,6 +301,15 @@ export default function EpisodeList({
                                         : "bg-canvas",
                                 ].join(" ")}
                             >
+                                {chapter && onReorderChapters && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="cursor-grab select-none text-[10px] leading-none text-faint"
+                                    >
+                                        ⠿
+                                    </span>
+                                )}
+
                                 <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-ink">
                                     {chapter
                                         ? formatChapterLabel(chapter, groupIndex)

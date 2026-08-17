@@ -397,6 +397,15 @@ export default function WorkspaceClient({ workId }: Props) {
                                         chapter_id: chapterId,
                                     })
                                 }
+                                onReorderChapters={(ids) => {
+                                    void (async () => {
+                                        await getRepository().reorderChapters(
+                                            workId,
+                                            ids,
+                                        );
+                                        await reloadChapters();
+                                    })();
+                                }}
                                 onRenameChapter={(chapterId, title) => {
                                     void (async () => {
                                         await getRepository().updateChapter(
