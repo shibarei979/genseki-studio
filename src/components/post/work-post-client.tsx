@@ -56,6 +56,45 @@ export default function WorkPostClient({ workId }: { workId: string }) {
     const [bulkTo, setBulkTo] = useState("");
     const [bulkError, setBulkError] = useState("");
     const [bulkDoing, setBulkDoing] = useState(0);
+
+    /*
+     * まとめて消す。
+     *
+     * 執筆画面と同じ形。投稿の一覧を見ながら
+     * 「これは要らない」と気づくことが多い。
+     */
+    const [isPicking, setIsPicking] = useState(false);
+    const [picked, setPicked] = useState<string[]>([]);
+
+    function togglePicked(id: string) {
+        setPicked((list) =>
+            list.includes(id) ? list.filter((at) => at !== id) : [...list, id],
+        );
+    }
+
+    async function deletePicked() {
+        if (picked.length === 0) return;
+
+        const names = episodes
+            .filter((row) => picked.includes(row.id))
+            .slice(0, 5)
+            .map((row) => row.title || `${row.ep_number}話`)
+            .join("\n");
+
+        if (
+            !window.confirm(
+                `${picked.length}話を消します。元に戻せません。\n\n` +
+                    `${names}${picked.length > 5 ? "\nほか" : ""}`,
+            )
+        ) {
+            return;
+        }
+
+        await getRepository().deleteEpisodes(picked);
+        setPicked([]);
+        setIsPicking(false);
+        await reload();
+    }
     const [isLoading, setIsLoading] = useState(true);
 
     const reload = useCallback(async () => {
@@ -348,6 +387,78 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                     )}
                                 </div>
                             )}
+
+                            {/*
+                             * まとめて消す。
+                             *
+                             * 執筆画面と同じ形。
+                             * ふだんは四角を出さず、押したときだけ選べる。
+                             */}
+                            {episodes.length > 0 && (
+                                <div className="mt-2 border-t border-line pt-2">
+                                    {!isPicking ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsPicking(true);
+                                                setPicked([]);
+                                            }}
+                                            className="text-[11px] text-faint hover:text-[var(--color-danger)]"
+                                        >
+                                            選んで消す
+                                        </button>
+                                    ) : (
+                                        <div className="rounded-md border border-line bg-canvas px-2.5 py-2">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-[11px] text-ink">
+                                                    {picked.length > 0
+                                                        ? `${picked.length}話を選んでいます`
+                                                        : "消す話を選んでください"}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsPicking(false);
+                                                        setPicked([]);
+                                                    }}
+                                                    className="shrink-0 text-[11px] text-faint hover:text-ink"
+                                                >
+                                                    やめる
+                                                </button>
+                                            </div>
+
+                                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setPicked(
+                                                            picked.length === episodes.length
+                                                                ? []
+                                                                : episodes.map((row) => row.id),
+                                                        )
+                                                    }
+                                                    className="rounded border border-line px-2 py-0.5 text-[10px] text-muted hover:border-forest-line"
+                                                >
+                                                    {picked.length === episodes.length
+                                                        ? "選択を外す"
+                                                        : "すべて選ぶ"}
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={picked.length === 0}
+                                                    onClick={() => void deletePicked()}
+                                                    className="ml-auto rounded bg-[var(--color-danger)] px-2.5 py-0.5 text-[10px] text-white disabled:opacity-40"
+                                                >
+                                                    {picked.length > 0
+                                                        ? `${picked.length}話を消す`
+                                                        : "消す"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/*
@@ -377,14 +488,36 @@ export default function WorkPostClient({ workId }: { workId: string }) {
 
                                         <ul className={group.label ? "pl-1" : ""}>
                                             {own.map((episode) => (
-                                                <li key={episode.id}>
+                                                <li
+                                                    key={episode.id}
+                                                    className="flex items-center gap-1.5"
+                                                >
+                                                    {/* 選んでいる間だけ四角を出す */}
+                                                    {isPicking && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => togglePicked(episode.id)}
+                                                            aria-pressed={picked.includes(episode.id)}
+                                                            className={[
+                                                                "ml-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[9px]",
+                                                                picked.includes(episode.id)
+                                                                    ? "border-[var(--color-danger)] bg-[var(--color-danger)] text-white"
+                                                                    : "border-line text-transparent hover:border-[var(--color-danger)]",
+                                                            ].join(" ")}
+                                                        >
+                                                            ✓
+                                                        </button>
+                                                    )}
+
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            setSelectedId(episode.id)
+                                                            isPicking
+                                                                ? togglePicked(episode.id)
+                                                                : setSelectedId(episode.id)
                                                         }
                                                         className={[
-                                                            "block w-full rounded-md px-2.5 py-2 text-left",
+                                                            "block min-w-0 flex-1 rounded-md px-2.5 py-2 text-left",
                                                             episode.id === selectedId
                                                                 ? "bg-forest-tint"
                                                                 : "hover:bg-canvas",

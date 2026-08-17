@@ -172,8 +172,9 @@ export default function EpisodeList({
                         type="button"
                         onClick={() => togglePicked(episode.id)}
                         aria-pressed={picked.includes(episode.id)}
+                        /* 四角。選ぶ印は丸より四角のほうが伝わる */
                         className={[
-                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px]",
+                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[9px]",
                             picked.includes(episode.id)
                                 ? "border-[var(--color-danger)] bg-[var(--color-danger)] text-white"
                                 : "border-line text-transparent hover:border-[var(--color-danger)]",
