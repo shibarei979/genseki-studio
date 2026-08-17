@@ -627,6 +627,20 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                          * 題名と本文の両方から探し、
                          * 当たった話だけを残して見せる。
                          */}
+                        {/*
+                         * 切れすぎているときは知らせる。
+                         *
+                         * 何百話にも刻まれた一覧を見せられても、
+                         * 直しようがない。先に気づいてもらう。
+                         */}
+                        {chunks.length > 30 && (
+                            <p className="mt-2 rounded-md border border-amber bg-amber-tint/40 px-3 py-2 text-[11px] leading-relaxed text-ink">
+                                {chunks.length}話に分かれています。
+                                多すぎるときは、上の「章見出し・シーン区切りを検出する」を
+                                切って、「ここで切る」で自分の切りたい場所を指すほうが早いです。
+                            </p>
+                        )}
+
                         {chunks.length > 0 && (
                             <input
                                 type="text"
