@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { ROOT_ADMIN_EMAIL } from '@/types'
 import dynamic from 'next/dynamic'
 
 import Header from '@/components/layout/header'
@@ -297,6 +298,8 @@ export default function MypageClient({
    */
   const [homeMode, setHomeMode] = useState(profile.home_mode || 'write')
   const isFocusWriting = homeMode === 'focus'
+  /* 運営だけが触れる。作りかけの画面を確かめるため */
+  const isRootAdmin = (profile.email || '').toLowerCase() === ROOT_ADMIN_EMAIL
   const [roleSaving, setRoleSaving] = useState(false)
 
   /*
@@ -1364,12 +1367,30 @@ export default function MypageClient({
               壊れていると受け取られる。
             */}
             <div style={{display:'inline-flex',border:'1px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden'}}>
-              <span
-                title="読書向けの画面は準備中です"
-                style={{padding:'8px 18px',fontSize:13,fontWeight:500,
-                  background:'var(--color-bg-card)',color:'var(--color-text-faint)'}}>
-                読書向け（準備中）
-              </span>
+              {/*
+               * 読書向け。
+               *
+               * まだ作りかけなので、ふつうの人には押させない。
+               * 運営だけ、実際の見え方を確かめながら作るために選べる。
+               * できあがったら、この見分けを外して全員に出す。
+               */}
+              {isRootAdmin ? (
+                <button
+                  onClick={()=>saveHomeMode('read')}
+                  title="作りかけの画面です（運営のみ）"
+                  style={{padding:'8px 18px',fontSize:13,fontWeight:homeMode==='read'?700:500,cursor:'pointer',border:'none',
+                    background:homeMode==='read'?'var(--color-brand)':'var(--color-bg-card)',
+                    color:homeMode==='read'?'var(--base-color-1)':'var(--color-text-muted)'}}>
+                  読書向け（作成中）
+                </button>
+              ) : (
+                <span
+                  title="読書向けの画面は準備中です"
+                  style={{padding:'8px 18px',fontSize:13,fontWeight:500,
+                    background:'var(--color-bg-card)',color:'var(--color-text-faint)'}}>
+                  読書向け（準備中）
+                </span>
+              )}
               <button
                 onClick={()=>saveHomeMode('write')}
                 style={{padding:'8px 18px',fontSize:13,fontWeight:isFocusWriting?500:700,cursor:'pointer',border:'none',
