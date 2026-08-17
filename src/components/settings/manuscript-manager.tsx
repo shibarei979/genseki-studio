@@ -37,7 +37,7 @@ interface Props {
     episodes: Episode[];
     settings: DisplaySettings;
     onImport: (
-        items: { title: string; body: string }[],
+        items: { title: string; body: string; chapterTitle?: string }[],
         mode: "append" | "replace",
     ) => Promise<void>;
 }
@@ -45,6 +45,14 @@ interface Props {
 export default function ManuscriptManager({ work, episodes, settings, onImport }: Props) {
     const [raw, setRaw] = useState("");
     const [detectHeadings, setDetectHeadings] = useState(true);
+    /*
+     * 「第◯章」の扱い。
+     * 1 話ぶんとして書く人と、話をまとめる見出しとして
+     * 書く人がいる。どちらか選んでもらう。
+     */
+    const [chapterAs, setChapterAs] = useState<"episode" | "chapter">("episode");
+    /* 貼った原稿の中を探す */
+    const [query, setQuery] = useState("");
     const [isImporting, setIsImporting] = useState(false);
     const [fileNotice, setFileNotice] = useState("");
     const [isReadingFile, setIsReadingFile] = useState(false);
@@ -61,12 +69,33 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
     );
 
     const auto = useMemo(
-        () => splitManuscript(raw, { detectHeadings }),
-        [raw, detectHeadings],
+        () => splitManuscript(raw, { detectHeadings, chapterAs }),
+        [raw, detectHeadings, chapterAs],
     );
 
     const chunks = edited ?? auto;
     const totalChars = chunks.reduce((sum, chunk) => sum + chunk.charCount, 0);
+
+    /*
+     * 探している言葉に当たる話。
+     *
+     * 題名と本文の両方を見る。
+     * 「あの場面はどの話だったか」を探すのに、
+     * 題名だけでは足りない。
+     */
+    const matchedIndexes = useMemo(() => {
+        const needle = query.trim().toLowerCase();
+        if (!needle) return [];
+
+        return chunks
+            .map((chunk, index) => ({ chunk, index }))
+            .filter(
+                ({ chunk }) =>
+                    chunk.title.toLowerCase().includes(needle) ||
+                    chunk.body.toLowerCase().includes(needle),
+            )
+            .map(({ index }) => index);
+    }, [chunks, query]);
 
     /* 書き出しに載せる作者名 */
     const [profileName, setProfileName] = useState("名無しの書き手");
@@ -130,7 +159,11 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
 
         setIsImporting(true);
         await onImport(
-            chunks.map((chunk) => ({ title: chunk.title, body: chunk.body })),
+            chunks.map((chunk) => ({
+                title: chunk.title,
+                body: chunk.body,
+                chapterTitle: chunk.chapterTitle,
+            })),
             mode,
         );
         setRaw("");
@@ -297,6 +330,52 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                         </p>
 
                         {/*
+                         * 「第◯章」の扱い。
+                         *
+                         * 1 話ぶんのつもりで書く人と、
+                         * 話をまとめる見出しのつもりで書く人がいる。
+                         * どちらかで結果がまるで変わるので、選んでもらう。
+                         */}
+                        {detectHeadings && (
+                            <div className="mt-3 rounded-md border border-line px-3.5 py-3">
+                                <p className="text-[11px] text-ink">
+                                    原稿の中の「第◯章」は
+                                </p>
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setChapterAs("episode")}
+                                        className={[
+                                            "rounded-full border px-3 py-1 text-[11px]",
+                                            chapterAs === "episode"
+                                                ? "border-forest bg-forest text-white"
+                                                : "border-line text-muted hover:border-forest-line",
+                                        ].join(" ")}
+                                    >
+                                        1話として切る
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setChapterAs("chapter")}
+                                        className={[
+                                            "rounded-full border px-3 py-1 text-[11px]",
+                                            chapterAs === "chapter"
+                                                ? "border-forest bg-forest text-white"
+                                                : "border-line text-muted hover:border-forest-line",
+                                        ].join(" ")}
+                                    >
+                                        章の見出しとして扱う
+                                    </button>
+                                </div>
+                                <p className="mt-2 text-[10px] leading-relaxed text-faint">
+                                    {chapterAs === "episode"
+                                        ? "「第一章」も1話として数えます。章＝1話ぶんで書いている方はこちら。"
+                                        : "「第一章」では切らず、中の「第◯話」で切ります。章の名前は各話に添えます。"}
+                                </p>
+                            </div>
+                        )}
+
+                        {/*
                          * 切れ目を手で入れる。
                          *
                          * 自動の分割は必ずどこかを外す。
@@ -363,7 +442,34 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                     </div>
 
                     <div>
-                        <h3 className="text-sm font-medium text-ink">分割結果のプレビュー</h3>
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-sm font-medium text-ink">分割結果のプレビュー</h3>
+                            {chunks.length > 0 && (
+                                <span className="text-[11px] text-faint">
+                                    {query.trim()
+                                        ? `${matchedIndexes.length}話が一致`
+                                        : `${chunks.length}話`}
+                                </span>
+                            )}
+                        </div>
+
+                        {/*
+                         * 貼った原稿の中を探す。
+                         *
+                         * 何十話も貼ったあと、直したい話を
+                         * 目で追って探すのは骨が折れる。
+                         * 題名と本文の両方から探し、
+                         * 当たった話だけを残して見せる。
+                         */}
+                        {chunks.length > 0 && (
+                            <input
+                                type="text"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="題名や本文の言葉で探す"
+                                className="mt-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-forest"
+                            />
+                        )}
                         {chunks.length === 0 ? (
                             <div className="mt-2 flex h-[340px] items-center justify-center rounded-md border border-dashed border-line">
                                 <p className="text-sm text-faint">
@@ -379,7 +485,15 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                  * 直せないと、入れてから手作業になる。
                                  */}
                                 <ul className="thin-scroll mt-2 h-[340px] divide-y divide-line overflow-y-auto rounded-md border border-line">
-                                    {chunks.map((chunk, index) => (
+                                    {chunks.map((chunk, index) => {
+                                        /* 探しているときは、当たった話だけ出す */
+                                        if (
+                                            query.trim() &&
+                                            !matchedIndexes.includes(index)
+                                        ) {
+                                            return null;
+                                        }
+                                        return (
                                         <li
                                             key={index}
                                             className="group flex items-center gap-2 px-3 py-2 text-sm"
@@ -423,7 +537,14 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                                 ✕
                                             </button>
                                         </li>
-                                    ))}
+                                        );
+                                    })}
+
+                                    {query.trim() && matchedIndexes.length === 0 && (
+                                        <li className="px-3 py-6 text-center text-xs text-faint">
+                                            見つかりませんでした
+                                        </li>
+                                    )}
                                 </ul>
                                 <p className="mt-2 text-right text-xs text-muted">
                                     合計：{chunks.length}話　{formatNumber(totalChars)}文字

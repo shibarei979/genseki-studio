@@ -13,10 +13,22 @@
 export interface SplitOptions {
     /** 章見出し・シーン区切りを検出する */
     detectHeadings: boolean;
+    /**
+     * 「第◯章」をどう扱うか。
+     *
+     *   episode  1 話として切る（既定。「第一章＝1話」と書く人向け）
+     *   chapter  章の見出しとして扱い、中の「第◯話」で切る
+     *
+     * 人によって意味が違う。「第一章」の下に第1話〜第5話が
+     * 並ぶ書き方だと、話として切ると空の話ができてしまう。
+     */
+    chapterAs?: "episode" | "chapter";
 }
 
 export interface SplitResult {
     title: string;
+    /** 属する章の名前。章として扱ったときだけ入る */
+    chapterTitle?: string;
     body: string;
     charCount: number;
 }
@@ -66,6 +78,12 @@ export function splitManuscript(raw: string, options: SplitOptions): SplitResult
     if (text.length === 0) return [];
 
     if (options.detectHeadings) {
+        /* 章を見出しとして扱うときは、そちらで切る */
+        if (options.chapterAs === "chapter") {
+            const withChapters = splitWithChapters(text);
+            if (withChapters.length > 0) return withChapters;
+        }
+
         const byHeading = splitByHeading(text);
         if (byHeading.length > 0) return byHeading;
     }
@@ -74,6 +92,58 @@ export function splitManuscript(raw: string, options: SplitOptions): SplitResult
     if (byBlank.length > 1) return byBlank;
 
     return [{ title: "", body: text, charCount: countChars(text) }];
+}
+
+/** 「第◯章」の行か */
+function isChapterHeading(line: string): boolean {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.length > 40) return false;
+    return /^\s*第[0-9０-９一二三四五六七八九十百]+[章部幕](\s|　|$)/.test(trimmed);
+}
+
+/**
+ * 章を見出しとして扱い、中の話で切る。
+ *
+ * 章の行では切らない。切ると、その章の題だけの
+ * 空の話ができてしまう。章の名前は覚えておき、
+ * 中の話に添える。
+ */
+function splitWithChapters(text: string): SplitResult[] {
+    const lines = text.split("\n");
+    const chunks: { title: string; chapterTitle: string; lines: string[] }[] = [];
+    let chapter = "";
+
+    for (const line of lines) {
+        if (isChapterHeading(line)) {
+            chapter = toTitle(line);
+            continue;
+        }
+
+        if (isHeading(line)) {
+            chunks.push({ title: toTitle(line), chapterTitle: chapter, lines: [] });
+            continue;
+        }
+
+        if (chunks.length === 0) {
+            if (line.trim().length === 0) continue;
+            chunks.push({ title: "", chapterTitle: chapter, lines: [] });
+        }
+        chunks[chunks.length - 1].lines.push(line);
+    }
+
+    if (chunks.length === 0) return [];
+
+    return chunks
+        .map((chunk) => {
+            const body = chunk.lines.join("\n").trim();
+            return {
+                title: chunk.title,
+                chapterTitle: chunk.chapterTitle || undefined,
+                body,
+                charCount: countChars(body),
+            };
+        })
+        .filter((chunk) => chunk.body.length > 0 || chunk.title.length > 0);
 }
 
 function splitByHeading(text: string): SplitResult[] {

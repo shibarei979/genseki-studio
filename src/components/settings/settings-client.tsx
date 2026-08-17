@@ -109,7 +109,7 @@ export default function SettingsClient({ workId }: Props) {
     }
 
     async function handleImport(
-        items: { title: string; body: string }[],
+        items: { title: string; body: string; chapterTitle?: string }[],
         mode: "append" | "replace",
     ) {
         const repository = getRepository();
@@ -124,7 +124,45 @@ export default function SettingsClient({ workId }: Props) {
             }
         }
 
-        await repository.createEpisodes(workId, items);
+        const created = await repository.createEpisodes(
+            workId,
+            items.map((item) => ({ title: item.title, body: item.body })),
+        );
+
+        /*
+         * 章として取り込んだときは、章も作って結びつける。
+         *
+         * 名前を持っているだけでは、一覧に章として並ばない。
+         * 同じ名前の章は 1 つにまとめる。
+         */
+        const chapterNames = Array.from(
+            new Set(items.map((item) => item.chapterTitle).filter(Boolean)),
+        ) as string[];
+
+        if (chapterNames.length > 0) {
+            const existing = await repository.listChapters(workId);
+            const idByName = new Map(existing.map((c) => [c.title, c.id]));
+
+            for (const name of chapterNames) {
+                if (idByName.has(name)) continue;
+                const chapter = await repository.createChapter(workId, name);
+                idByName.set(name, chapter.id);
+            }
+
+            await Promise.all(
+                items.map((item, index) => {
+                    const episode = created?.[index];
+                    const chapterId = item.chapterTitle
+                        ? idByName.get(item.chapterTitle)
+                        : null;
+                    if (!episode || !chapterId) return Promise.resolve();
+                    return repository.updateEpisode(episode.id, {
+                        chapter_id: chapterId,
+                    });
+                }),
+            );
+        }
+
         await reloadEpisodes();
     }
 
