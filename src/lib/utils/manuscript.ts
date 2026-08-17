@@ -317,8 +317,22 @@ function splitByHeading(text: string): SplitResult[] {
 /** 空行で切るときの、最低の空行数 */
 const BLANK_LINES_TO_SPLIT = 4;
 
-/** これを超える数に切れたら、切りすぎとみなす */
+/**
+ * 空行で切ったとき、これを超えたら切りすぎとみなす。
+ *
+ * 見出しで切れたものには効かない。
+ * 空行だけで何百話にもなるのは、まず書き方の癖であって
+ * 話の切れ目ではない。
+ */
 const TOO_MANY_PIECES = 200;
+
+/**
+ * 一度に取り込める話の上限。
+ *
+ * これ以上は、送るのも読むのも時間がかかりすぎる。
+ * 超えるぶんは切り捨てず、画面で知らせて分けてもらう。
+ */
+export const MAX_IMPORT_EPISODES = 5000;
 
 function splitByBlankLines(text: string): SplitResult[] {
     /*

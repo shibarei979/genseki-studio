@@ -645,19 +645,38 @@ export const supabaseRepository: Repository = {
      */
 
     async listEpisodes(workId: string): Promise<Episode[]> {
-        const { data } = await db()
-            .from("episodes")
-            .select("*")
-            .eq("novel_id", workId)
-            .is("deleted_at", null)
-            /*
-             * 話も、並ぶ順を一つに決める。
-             * ep_number が同じものがあっても入れ替わらないように。
-             */
-            .order("ep_number")
-            .order("created_at")
-            .order("id");
-        return rows<Record<string, unknown>>(data).map(toEpisode);
+        /*
+         * 分けて読む。
+         *
+         * 一度に読むと、返ってくる行数の上限（既定 1000）に当たり、
+         * 2,200 話ある作品でも 1,000 話しか出てこない。
+         * 端から順に、届かなくなるまで読む。
+         */
+        const PAGE = 500;
+        const all: Record<string, unknown>[] = [];
+
+        for (let from = 0; ; from += PAGE) {
+            const { data } = await db()
+                .from("episodes")
+                .select("*")
+                .eq("novel_id", workId)
+                .is("deleted_at", null)
+                /*
+                 * 話も、並ぶ順を一つに決める。
+                 * ep_number が同じものがあっても入れ替わらないように。
+                 */
+                .order("ep_number")
+                .order("created_at")
+                .order("id")
+                .range(from, from + PAGE - 1);
+
+            const part = rows<Record<string, unknown>>(data);
+            all.push(...part);
+
+            if (part.length < PAGE) break;
+        }
+
+        return all.map(toEpisode);
     },
 
     async getEpisode(episodeId: string): Promise<Episode | null> {
@@ -805,21 +824,37 @@ export const supabaseRepository: Repository = {
 
         let next = ((last?.ep_number as number) ?? 0) + 1;
 
-        const { data, error } = await db()
-            .from("episodes")
-            .insert(
-                inputs.map((row) => ({
-                    novel_id: workId,
-                    title: row.title,
-                    body: row.body,
-                    char_count: row.body.replace(/\s/g, "").length,
-                    ep_number: next++,
-                })),
-            )
-            .select();
+        /*
+         * 小分けにして送る。
+         *
+         * 一度に全部送ると、返ってくる行数の上限（既定 1000）に当たり、
+         * 2,200 話を入れても 1,000 話しか入らない。
+         * 送るほうにも本文の重さがあるので、200 話ずつにする。
+         */
+        const CHUNK = 200;
+        const created: Episode[] = [];
 
-        if (error) throw new Error(describeError(error.message));
-        return rows<Record<string, unknown>>(data).map(toEpisode);
+        for (let at = 0; at < inputs.length; at += CHUNK) {
+            const part = inputs.slice(at, at + CHUNK);
+
+            const { data, error } = await db()
+                .from("episodes")
+                .insert(
+                    part.map((row) => ({
+                        novel_id: workId,
+                        title: row.title,
+                        body: row.body,
+                        char_count: row.body.replace(/\s/g, "").length,
+                        ep_number: next++,
+                    })),
+                )
+                .select();
+
+            if (error) throw new Error(describeError(error.message));
+            created.push(...rows<Record<string, unknown>>(data).map(toEpisode));
+        }
+
+        return created;
     },
 
     /**

@@ -29,6 +29,7 @@ import { ACCEPTED_IMPORT_TYPES, readManuscriptFile } from "@/lib/utils/file-impo
 import {
     buildTxt,
     downloadTextFile,
+    MAX_IMPORT_EPISODES,
     SPLIT_MARK,
     splitManuscript,
     suggestSplitPoints,
@@ -313,6 +314,19 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
     async function handleImport() {
         /* 取り込むのは確定した分だけ */
         if (confirmedChunks.length === 0 || isImporting) return;
+
+        /*
+         * 上限を超えたら止める。
+         * 途中まで入れて止まると、どこまで入ったか分からなくなる。
+         */
+        if (confirmedChunks.length > MAX_IMPORT_EPISODES) {
+            window.alert(
+                `一度に取り込めるのは${MAX_IMPORT_EPISODES.toLocaleString()}話までです。\n` +
+                    `いまは${confirmedChunks.length.toLocaleString()}話が確定しています。\n` +
+                    `分けて取り込んでください。`,
+            );
+            return;
+        }
 
         const message =
             mode === "replace"
@@ -811,7 +825,7 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                          * 何百話にも刻まれた一覧を見せられても、
                          * 直しようがない。先に気づいてもらう。
                          */}
-                        {chunks.length > 30 && (
+                        {chunks.length > 500 && (
                             <p className="mt-2 rounded-md border border-amber bg-amber-tint/40 px-3 py-2 text-[11px] leading-relaxed text-ink">
                                 {chunks.length}話に分かれています。
                                 多すぎるときは、上の「章見出し・シーン区切りを検出する」を
