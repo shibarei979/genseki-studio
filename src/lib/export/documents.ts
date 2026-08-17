@@ -39,7 +39,7 @@ function buildSections(
 ): string {
     return episodes
         .map((episode) => {
-            const title = escapeHtml(episode.title || `第${episode.ep_number}話`);
+            const title = escapeHtml(episode.title || `${episode.ep_number}話`);
 
             const paragraphs = plain(episode.body)
                 .split("\n")
@@ -162,7 +162,7 @@ p { margin: 0 0 0.3em; text-indent: 1em; }
     episodes.forEach((episode, index) => {
         const id = `ep${index + 1}`;
         const href = `text/${id}.xhtml`;
-        const epTitle = escapeHtml(episode.title || `第${episode.ep_number}話`);
+        const epTitle = escapeHtml(episode.title || `${episode.ep_number}話`);
 
         const paragraphs = plain(episode.body)
             .split("\n")

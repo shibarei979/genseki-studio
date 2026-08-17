@@ -512,7 +512,7 @@ export default function WorkspaceClient({ workId }: Props) {
                         >
                             <span className="min-w-0 truncate font-medium">
                                 {selected
-                                    ? `第${selected.ep_number}話　${selected.title || "無題"}`
+                                    ? selected.title || `${selected.ep_number}話`
                                     : "話を選ぶ"}
                             </span>
                             <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[11px] text-forest">

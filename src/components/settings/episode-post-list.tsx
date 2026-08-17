@@ -107,7 +107,7 @@ export default function EpisodePostList({
                             <li key={episode.id} className="px-6 py-3.5">
                                 <div className="flex flex-wrap items-center gap-3">
                                     <span className="w-10 shrink-0 text-xs text-faint">
-                                        第{episode.ep_number}話
+                                        {/* 番号は出さない */}
                                     </span>
 
                                     <span className="min-w-0 flex-1">

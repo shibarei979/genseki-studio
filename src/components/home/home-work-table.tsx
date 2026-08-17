@@ -366,7 +366,7 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                                         {/* いま何話まで来ているか。棚では見えない情報 */}
                                         <span className="mt-1 block truncate text-[11px] text-muted">
                                             {newest
-                                                ? `第${newest.ep_number}話　${newest.title || "無題"}`
+                                                ? newest.title || `${newest.ep_number}話`
                                                 : "まだ話がありません"}
                                         </span>
 

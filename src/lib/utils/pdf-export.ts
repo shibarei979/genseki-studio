@@ -63,8 +63,9 @@ export function openPrintView(
     const chapters = episodes
         .map((episode) => {
             const heading = episode.title.trim()
-                ? `第${episode.ep_number}話　${episode.title}`
-                : `第${episode.ep_number}話`;
+                /* 書き出しも、書き手の題名をそのまま使う */
+                ? episode.title
+                : `${episode.ep_number}話`;
             return `
                 <section class="chapter">
                     <h2>${escapeHtml(heading)}</h2>

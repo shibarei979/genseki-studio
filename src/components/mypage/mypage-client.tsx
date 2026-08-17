@@ -1639,7 +1639,6 @@ export default function MypageClient({
               ) : epList.map((ep:any,i:number) => (
                 <div key={ep.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 20px',borderBottom:i<epList.length-1?'1px solid var(--color-brand-light)':'none'}}>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:11,color:'var(--color-text-faint)',marginBottom:1}}>第{ep.ep_number}話</div>
                     <div style={{fontSize:13,fontWeight:600,color:'var(--color-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.title}</div>
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>

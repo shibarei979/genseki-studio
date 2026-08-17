@@ -351,8 +351,9 @@ function WorkCard({
         own.length === 0
             ? "プロット作成中"
             : lastDone
-              ? `第${lastDone.ep_number}話まで`
-              : `第${own.length}話 執筆中`;
+              /* ここは「何話ぶん書けたか」の数。話の番号ではない */
+              ? `${lastDone.ep_number}話まで`
+              : `${own.length}話 執筆中`;
 
     return (
         <div className="group relative flex h-full gap-3.5 rounded-xl border border-line bg-surface p-3.5 hover:border-forest-line hover:shadow-sm">

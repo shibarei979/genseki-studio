@@ -627,7 +627,7 @@ export default function TimelineView({
                                                                 title="この話を開く"
                                                                 className="rounded bg-forest-tint px-1.5 py-0.5 text-[10px] text-forest hover:underline"
                                                             >
-                                                                第{episode.ep_number}話
+                                                                {episode.title || `${episode.ep_number}話`}
                                                             </button>
                                                         );
                                                     })}
@@ -662,7 +662,7 @@ export default function TimelineView({
                                                     label="関連エピソード"
                                                     options={episodes.map((episode) => ({
                                                         id: episode.id,
-                                                        label: `第${episode.ep_number}話`,
+                                                        label: episode.title || `${episode.ep_number}話`,
                                                     }))}
                                                     selected={linkedEpisodes.map(String)}
                                                     onChange={(next) =>

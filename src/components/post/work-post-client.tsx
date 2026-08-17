@@ -219,7 +219,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                     >
                                                         <span className="flex items-center gap-2">
                                                             <span className="shrink-0 text-[11px] text-faint">
-                                                                {episode.ep_number}話
+                                                                {/* 番号は出さない。題名で見分ける */}
                                                             </span>
                                                             <span
                                                                 className={[

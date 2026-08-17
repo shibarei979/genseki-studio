@@ -328,7 +328,8 @@ export interface ExportEpisode {
 export function buildTxt(workTitle: string, episodes: ExportEpisode[]): string {
     const header = `${workTitle}\n\n`;
     const chapters = episodes.map((ep) => {
-        const heading = ep.title.trim() ? `第${ep.ep_number}話　${ep.title}` : `第${ep.ep_number}話`;
+        /* 書き出しも題名をそのまま。取り込み直すときの切れ目にもなる */
+        const heading = ep.title.trim() || `${ep.ep_number}話`;
         return `${heading}\n\n${ep.body}`;
     });
     return header + chapters.join("\n\n\n");

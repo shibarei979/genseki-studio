@@ -132,7 +132,7 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                                     </p>
                                     {latestEpisode && (
                                         <p className="mt-1.5 truncate text-[11px] text-ink">
-                                            第{latestEpisode.ep_number}話　
+
                                             {latestEpisode.title || "無題"}
                                         </p>
                                     )}
