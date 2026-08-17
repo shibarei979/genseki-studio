@@ -90,10 +90,19 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
      */
     const [confirmed, setConfirmed] = useState<number[]>([]);
 
-    /* 原稿が変わったら、確定はやり直し */
+    /*
+     * 確定をやり直す条件。
+     *
+     * 切り方の設定を変えたときだけ。
+     * 原稿に印を足しただけで消すと、
+     * 「ここで切る」を押すたびに確定が全部消えてしまう。
+     *
+     * 原稿を貼り替えたとき（中身がまるごと変わったとき）は、
+     * 下の handleSelectFile と貼り付けの側で消している。
+     */
     useEffect(() => {
         setConfirmed([]);
-    }, [raw, detectHeadings, chapterAs]);
+    }, [detectHeadings, chapterAs]);
 
     const confirmedChunks = confirmed
         .map((index) => chunks[index])
@@ -124,6 +133,7 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         const next = raw.slice(0, at) + SPLIT_MARK + "\n" + raw.slice(at);
         setRaw(next);
         setEdited(null);
+        shiftConfirmed(countPiecesBefore(next, at));
 
         window.setTimeout(() => {
             const area = rawRef.current;
@@ -255,6 +265,9 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
             setRaw(next);
             setEdited(null);
 
+            /* 入れた場所より後ろの確定を、1 つずらす */
+            shiftConfirmed(countPiecesBefore(next, lineStart));
+
             window.setTimeout(() => {
                 const area = rawRef.current;
                 if (!area) return;
@@ -275,6 +288,8 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         setRaw(next);
         setEdited(null);
 
+        shiftConfirmed(countPiecesBefore(next, at));
+
         window.setTimeout(() => {
             const area = rawRef.current;
             if (!area) return;
@@ -286,7 +301,9 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
     }
 
     function clearSplits() {
+        /* 印を全部外したら、話の数が変わるので確定もやり直し */
         setRaw(raw.split(SPLIT_MARK).join("").replace(/\n{3,}/g, "\n\n"));
+        setConfirmed([]);
         setEdited(null);
     }
 
@@ -326,7 +343,9 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         try {
             const result = await readManuscriptFile(file);
             // すでに書きかけの内容があれば後ろに足す。上書きで消さない
+            /* 読み込んだ原稿を足したら、確定はやり直し */
             setRaw((current) => (current ? `${current}\n\n${result.text}` : result.text));
+            setConfirmed([]);
 
             const isPdf = file.name.toLowerCase().endsWith(".pdf");
             setFileNotice(
@@ -388,6 +407,23 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
 
     function removeChunk(index: number) {
         setEdited((rows) => (rows ?? chunks).filter((_, at) => at !== index));
+    }
+
+    /**
+     * 切れ目を足したときに、確定の番号をずらす。
+     *
+     * 印を入れると、その位置より後ろの話は番号が 1 つ増える。
+     * ずらさないと、確定していた話とは別の話が確定扱いになる。
+     */
+    /** その位置より前に、切れ目がいくつあるか */
+    function countPiecesBefore(text: string, at: number): number {
+        return text.slice(0, at).split(SPLIT_MARK).length - 1;
+    }
+
+    function shiftConfirmed(insertedAt: number) {
+        setConfirmed((list) =>
+            list.map((index) => (index >= insertedAt ? index + 1 : index)),
+        );
     }
 
     /** 提案を確定へ移す */
@@ -497,6 +533,8 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                             ref={rawRef}
                             onChange={(e) => {
                                 setRaw(e.target.value);
+                                /* 手で書き換えたら、切れ目が動くので確定もやり直し */
+                                setConfirmed([]);
                                 // 貼り直したら、手を入れたぶんは捨てる
                                 setEdited(null);
                             }}
