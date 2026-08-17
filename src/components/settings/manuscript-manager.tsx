@@ -80,6 +80,28 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
     );
 
     const chunks = edited ?? auto;
+
+    /*
+     * 確定した話の番号。
+     *
+     * 自動で見つけた切れ目は、まだ「提案」でしかない。
+     * 合っているものだけを確定へ移し、確定したものだけ取り込む。
+     * 間違った提案は ✕ で消す（前の話とつながる）。
+     */
+    const [confirmed, setConfirmed] = useState<number[]>([]);
+
+    /* 原稿が変わったら、確定はやり直し */
+    useEffect(() => {
+        setConfirmed([]);
+    }, [raw, detectHeadings, chapterAs]);
+
+    const confirmedChunks = confirmed
+        .map((index) => chunks[index])
+        .filter(Boolean);
+
+    const pendingIndexes = chunks
+        .map((_, index) => index)
+        .filter((index) => !confirmed.includes(index));
     const totalChars = chunks.reduce((sum, chunk) => sum + chunk.charCount, 0);
 
     /*
@@ -272,18 +294,19 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
     const [mode, setMode] = useState<"append" | "replace">("append");
 
     async function handleImport() {
-        if (chunks.length === 0 || isImporting) return;
+        /* 取り込むのは確定した分だけ */
+        if (confirmedChunks.length === 0 || isImporting) return;
 
         const message =
             mode === "replace"
-                ? `いまの${episodes.length}話をすべて消して、${chunks.length}話に入れ替えます。元には戻せません。`
-                : `${chunks.length}話を、いまの${episodes.length}話のうしろに足します。`;
+                ? `いまの${episodes.length}話をすべて消して、${confirmedChunks.length}話に入れ替えます。元には戻せません。`
+                : `${confirmedChunks.length}話を、いまの${episodes.length}話のうしろに足します。`;
 
         if (!window.confirm(message)) return;
 
         setIsImporting(true);
         await onImport(
-            chunks.map((chunk) => ({
+            confirmedChunks.map((chunk) => ({
                 title: chunk.title,
                 body: chunk.body,
                 chapterTitle: chunk.chapterTitle,
@@ -365,6 +388,55 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
 
     function removeChunk(index: number) {
         setEdited((rows) => (rows ?? chunks).filter((_, at) => at !== index));
+    }
+
+    /** 提案を確定へ移す */
+    function confirmChunk(index: number) {
+        setConfirmed((list) =>
+            list.includes(index) ? list : [...list, index].sort((a, b) => a - b),
+        );
+    }
+
+    /** 確定から提案へ戻す */
+    function unconfirmChunk(index: number) {
+        setConfirmed((list) => list.filter((at) => at !== index));
+    }
+
+    /** 残っている提案を、まとめて確定へ */
+    function confirmAll() {
+        setConfirmed(chunks.map((_, index) => index));
+    }
+
+    /**
+     * 間違った提案を消す。
+     *
+     * 切れ目が間違いだったということなので、
+     * 前の話とつなげ直す（その分だけ本文が前へ移る）。
+     * 先頭のときは、次の話とつなげる。
+     */
+    function rejectChunk(index: number) {
+        if (index === 0) {
+            /* 先頭は前が無いので、次とつなげる */
+            setEdited((rows) => {
+                const list = [...(rows ?? chunks)];
+                if (list.length < 2) return list;
+
+                const current = list[0];
+                const next = list[1];
+                list[1] = {
+                    ...next,
+                    body: `${current.body}\n\n${next.body}`,
+                    charCount: current.charCount + next.charCount,
+                };
+                list.splice(0, 1);
+                return list;
+            });
+        } else {
+            mergeUp(index);
+        }
+
+        /* 番号がずれるので、確定はやり直し */
+        setConfirmed([]);
     }
 
     function handleExportTxt() {
@@ -581,12 +653,15 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                             <button
                                 type="button"
                                 onClick={handleImport}
-                                disabled={chunks.length === 0 || isImporting}
+                                disabled={confirmedChunks.length === 0 || isImporting}
                                 className="rounded-md bg-forest px-5 py-2 text-sm text-white hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-40"
                             >
+                                {/* 取り込むのは確定した分だけ */}
                                 {chunks.length === 0
                                     ? "話に分割する"
-                                    : `${chunks.length}話として取り込む`}
+                                    : confirmedChunks.length === 0
+                                      ? "確定した話がありません"
+                                      : `${confirmedChunks.length}話として取り込む`}
                             </button>
 
                             <label
@@ -609,15 +684,36 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
 
                     <div>
                         <div className="flex items-center justify-between gap-2">
-                            <h3 className="text-sm font-medium text-ink">分割結果のプレビュー</h3>
+                            <h3 className="text-sm font-medium text-ink">
+                                切れ目の提案
+                                <span className="ml-1.5 text-[11px] font-normal text-faint">
+                                    合っていれば確定へ
+                                </span>
+                            </h3>
                             {chunks.length > 0 && (
                                 <span className="text-[11px] text-faint">
                                     {query.trim()
                                         ? `${matchedIndexes.length}話が一致`
-                                        : `${chunks.length}話`}
+                                        : `残り${pendingIndexes.length}／${chunks.length}話`}
                                 </span>
                             )}
                         </div>
+
+                        {/*
+                         * まとめて確定。
+                         *
+                         * うまく切れているときは、1 つずつ押させない。
+                         * 間違っているものだけ ✕ で消してもらう。
+                         */}
+                        {pendingIndexes.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={confirmAll}
+                                className="mt-2 w-full rounded-md border border-forest-line bg-forest-tint/40 py-2 text-xs text-forest hover:bg-forest-tint"
+                            >
+                                残り{pendingIndexes.length}話をまとめて確定
+                            </button>
+                        )}
 
                         {/*
                          * 貼った原稿の中を探す。
@@ -673,6 +769,8 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                         ) {
                                             return null;
                                         }
+                                        /* 確定したものは、下の確定の側に出す */
+                                        if (confirmed.includes(index)) return null;
                                         return (
                                         <li
                                             key={index}
@@ -724,13 +822,26 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                                 ↑結合
                                             </button>
 
+                                            {/*
+                                             * ✕ は「この切れ目が間違い」の意味。
+                                             * 前の話とつなげ直す（本文は消えない）。
+                                             */}
                                             <button
                                                 type="button"
-                                                onClick={() => removeChunk(index)}
-                                                title="この話を取り込まない"
-                                                className="shrink-0 px-1 text-xs text-faint opacity-0 hover:text-[var(--color-danger)] group-hover:opacity-100"
+                                                onClick={() => rejectChunk(index)}
+                                                title="この切れ目は間違い（前の話とつなげる）"
+                                                className="shrink-0 px-1 text-xs text-faint hover:text-[var(--color-danger)]"
                                             >
                                                 ✕
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => confirmChunk(index)}
+                                                title="この切れ目で確定する"
+                                                className="shrink-0 rounded border border-forest-line px-2 py-0.5 text-[10px] text-forest hover:bg-forest-tint"
+                                            >
+                                                確定 →
                                             </button>
                                         </li>
                                         );
@@ -742,9 +853,74 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                         </li>
                                     )}
                                 </ul>
-                                <p className="mt-2 text-right text-xs text-muted">
-                                    合計：{chunks.length}話　{formatNumber(totalChars)}文字
-                                </p>
+
+                                {pendingIndexes.length === 0 && chunks.length > 0 && (
+                                    <p className="px-3 py-4 text-center text-xs text-faint">
+                                        提案はすべて確定しました
+                                    </p>
+                                )}
+
+                                {/*
+                                 * 確定した話。
+                                 *
+                                 * ここに入っている分だけ取り込む。
+                                 * 間違えたら「戻す」で提案へ返せる。
+                                 */}
+                                <div className="mt-4 rounded-lg border border-forest-line">
+                                    <div className="flex items-center justify-between border-b border-line bg-forest-tint/30 px-3 py-2">
+                                        <span className="text-[12px] font-medium text-ink">
+                                            確定した話
+                                        </span>
+                                        <span className="text-[11px] text-muted">
+                                            {confirmedChunks.length}話　
+                                            {formatNumber(
+                                                confirmedChunks.reduce(
+                                                    (sum, row) => sum + row.charCount,
+                                                    0,
+                                                ),
+                                            )}
+                                            文字
+                                        </span>
+                                    </div>
+
+                                    {confirmedChunks.length === 0 ? (
+                                        <p className="px-3 py-6 text-center text-xs text-faint">
+                                            まだありません。
+                                            上の提案から「確定 →」で移してください。
+                                        </p>
+                                    ) : (
+                                        <ul className="thin-scroll max-h-64 divide-y divide-line overflow-y-auto">
+                                            {confirmed.map((index, order) => {
+                                                const chunk = chunks[index];
+                                                if (!chunk) return null;
+                                                return (
+                                                    <li
+                                                        key={index}
+                                                        className="flex items-center gap-2 px-3 py-2 text-sm"
+                                                    >
+                                                        <span className="w-5 shrink-0 text-right text-xs text-faint">
+                                                            {order + 1}
+                                                        </span>
+                                                        <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                                                            {chunk.title || "（タイトルなし）"}
+                                                        </span>
+                                                        <span className="shrink-0 text-[11px] text-faint">
+                                                            {formatNumber(chunk.charCount)}字
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => unconfirmChunk(index)}
+                                                            title="提案へ戻す"
+                                                            className="shrink-0 rounded border border-line px-2 py-0.5 text-[10px] text-muted hover:border-forest-line hover:text-forest"
+                                                        >
+                                                            ← 戻す
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
 
                                 {/*
                                  * すでに話があるときは、どうするか尋ねる。
