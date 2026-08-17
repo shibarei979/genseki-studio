@@ -389,19 +389,6 @@ export default function WorkspaceClient({ workId }: Props) {
                                 onToggleStatus={(ep) => void handleToggleStatus(ep)}
                                 onReorder={(ids) => void reorderEpisodes(ids)}
                                 chapters={chapters}
-                                showNumber={settings?.show_episode_number !== false}
-                                onToggleNumber={() => {
-                                    void (async () => {
-                                        const next =
-                                            settings?.show_episode_number === false;
-                                        setSettings(
-                                            await getRepository().saveDisplaySettings(
-                                                workId,
-                                                { show_episode_number: next },
-                                            ),
-                                        );
-                                    })();
-                                }}
                                 onRenameEpisode={(episodeId, title) =>
                                     void updateEpisode(episodeId, { title })
                                 }

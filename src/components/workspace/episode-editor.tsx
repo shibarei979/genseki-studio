@@ -337,15 +337,29 @@ export default function EpisodeEditor({
              */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line px-3 py-2 sm:flex-nowrap sm:gap-2.5 sm:px-5 sm:py-2.5">
                 <span className="shrink-0 text-[13px] font-medium text-ink">
-                    第{episode.ep_number}話
+                    {/*
+                     * 番号は薄く小さく。
+                     * 見出しではなく、いま何番目かの目印として置く。
+                     */}
+                    {episode.ep_number}話
                 </span>
                 <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     aria-label="話のタイトル"
-                    placeholder="タイトル"
-                    className="min-w-0 flex-1 border-b border-transparent bg-transparent text-[14px] font-medium text-ink outline-none focus:border-forest-line"
+                    placeholder="話の名前を入れてください"
+                    className={[
+                        "min-w-0 flex-1 border-b bg-transparent text-[14px] font-medium text-ink outline-none focus:border-forest-line",
+                        /*
+                         * 名前が空のときは、下線で気づかせる。
+                         *
+                         * 止めはしない。名前は書いているうちに決まることが多く、
+                         * 入り口で止めると書き始める気を削ぐ。
+                         * 投稿するときには必須にしてある。
+                         */
+                        title.trim() ? "border-transparent" : "border-amber",
+                    ].join(" ")}
                 />
 
                 <div className="thin-scroll flex w-full shrink-0 items-center gap-2 overflow-x-auto text-[11px] text-muted lg:w-auto lg:gap-2.5">

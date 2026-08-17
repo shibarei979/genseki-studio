@@ -47,10 +47,6 @@ interface Props {
     onRenameChapter?: (chapterId: string, title: string) => void;
     /** 章を消す。中の話は「章に入れていない」へ戻る */
     onDeleteChapter?: (chapterId: string) => void;
-    /** 「第◯話」を出すか */
-    showNumber?: boolean;
-    /** 番号の出し入れを切り替える */
-    onToggleNumber?: () => void;
     /** 話の題名を変える */
     onRenameEpisode?: (episodeId: string, title: string) => void;
 }
@@ -62,8 +58,6 @@ export default function EpisodeList({
     onCreateChapter,
     onRenameChapter,
     onDeleteChapter,
-    showNumber = true,
-    onToggleNumber,
     onRenameEpisode,
     selectedId,
     onSelect,
@@ -161,15 +155,7 @@ export default function EpisodeList({
                     className="min-w-0 flex-1 text-left"
                 >
                     <span className="block truncate text-[13px] text-ink">
-                        {/*
-                         * 番号を出すかは設定しだい。
-                         * 題名だけで並べたい人もいる。
-                         * 題名が空のときは、番号が無いと見分けが付かないので
-                         * そのときだけ番号を出す。
-                         */}
-                        {showNumber || !episode.title.trim()
-                            ? formatEpisodeLabel(episode)
-                            : episode.title}
+                        {formatEpisodeLabel(episode)}
                     </span>
                     <span className="mt-0.5 block text-xs text-faint">
                         {formatNumber(episode.char_count)}文字
@@ -232,26 +218,6 @@ export default function EpisodeList({
                         </button>
                     )}
 
-                    {/* 「第◯話」を出すか。押すたびに切り替わる */}
-                    {onToggleNumber && (
-                        <button
-                            type="button"
-                            onClick={onToggleNumber}
-                            title={
-                                showNumber
-                                    ? "「第◯話」を隠します"
-                                    : "「第◯話」を出します"
-                            }
-                            className={[
-                                "rounded-md border px-2.5 py-1 text-xs",
-                                showNumber
-                                    ? "border-forest-line bg-forest-tint/50 text-forest"
-                                    : "border-line text-muted hover:border-forest-line",
-                            ].join(" ")}
-                        >
-                            第◯話
-                        </button>
-                    )}
                 </span>
             </div>
 

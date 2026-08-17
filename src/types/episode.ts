@@ -98,9 +98,20 @@ export const EPISODE_STATUS_LABEL: Record<EpisodeStatus, string> = {
  * タイトルは未入力のままでも構わないので、
  * 空のときは「第3話」だけを返す。
  */
+/**
+ * 話の見出し。
+ *
+ * 番号は付けない。書き手の付けた題名をそのまま出す。
+ *
+ * 「序章」「プロローグ」「第一章」を自分で書く人にとって、
+ * 「第1話　序章」と番号が重なるのは邪魔になる。
+ * 話の数え方は書き手のもので、こちらが決めるものではない。
+ *
+ * 題名が空のときだけ、見分けが付くように番号で補う。
+ */
 export function formatEpisodeLabel(episode: Pick<Episode, "ep_number" | "title">): string {
     const title = episode.title.trim();
-    return title ? `第${episode.ep_number}話　${title}` : `第${episode.ep_number}話`;
+    return title || `${episode.ep_number}話`;
 }
 
 /** 次のステータスへ循環させる（一覧のマークをクリックしたとき） */

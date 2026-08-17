@@ -100,13 +100,26 @@ export default function PostPanel({ episode, isWorkPublic, onChange }: Props) {
                 </button>
             ) : (
                 <>
+                    {/*
+                     * 名前が無いと投稿できない。
+                     *
+                     * 書いている間は促すだけだが、出すときは必須。
+                     * 読者の目次に空欄が並ぶのを防ぐ。
+                     */}
                     <button
                         type="button"
+                        disabled={!episode.title.trim()}
                         onClick={() => onChange({ is_published: true, publish_at: null })}
-                        className="mt-2.5 w-full rounded-md bg-forest py-2 text-[11px] font-medium text-white hover:bg-forest-dark"
+                        className="mt-2.5 w-full rounded-md bg-forest py-2 text-[11px] font-medium text-white hover:bg-forest-dark disabled:opacity-40"
                     >
                         この話を投稿する
                     </button>
+
+                    {!episode.title.trim() && (
+                        <p className="mt-1.5 text-[10px] text-amber">
+                            話の名前を入れると投稿できます。
+                        </p>
+                    )}
 
                     <button
                         type="button"
