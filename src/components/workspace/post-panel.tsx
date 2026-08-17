@@ -72,7 +72,7 @@ export default function PostPanel({ episode, isWorkPublic, onChange }: Props) {
                     ].join(" ")}
                 />
                 <span className="min-w-0 flex-1 truncate text-[11px] text-muted">
-                    {episode.title || `第${episode.ep_number}話`}
+                    {episode.title || `${episode.ep_number}話`}
                     <span className="ml-1.5 text-ink">
                         {episode.is_published
                             ? "投稿済み"

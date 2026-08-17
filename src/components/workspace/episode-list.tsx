@@ -167,7 +167,7 @@ export default function EpisodeList({
                         type="button"
                         onClick={() => {
                             const next = window.prompt(
-                                `第${episode.ep_number}話の名前`,
+                                `${episode.ep_number}話目の名前`,
                                 episode.title ?? "",
                             );
                             if (next === null) return;

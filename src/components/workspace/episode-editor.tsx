@@ -336,13 +336,6 @@ export default function EpisodeEditor({
              * 1 段に詰めると、右のボタンが画面の外へ出る。
              */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line px-3 py-2 sm:flex-nowrap sm:gap-2.5 sm:px-5 sm:py-2.5">
-                <span className="shrink-0 text-[13px] font-medium text-ink">
-                    {/*
-                     * 番号は薄く小さく。
-                     * 見出しではなく、いま何番目かの目印として置く。
-                     */}
-                    {episode.ep_number}話
-                </span>
                 <input
                     type="text"
                     value={title}

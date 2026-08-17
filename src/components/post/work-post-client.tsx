@@ -115,8 +115,9 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                     { label: "作品", href: "/works" },
                     { label: work.title || "名前のない作品" },
                     {
+                        /* 話の名前で示す。番号は書き手の数え方と食い違う */
                         label: selected
-                            ? `第${selected.ep_number}話の投稿`
+                            ? `${selected.title || selected.ep_number + "話"}の投稿`
                             : "投稿",
                     },
                 ]}
@@ -218,7 +219,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                     >
                                                         <span className="flex items-center gap-2">
                                                             <span className="shrink-0 text-[11px] text-faint">
-                                                                第{episode.ep_number}話
+                                                                {episode.ep_number}話
                                                             </span>
                                                             <span
                                                                 className={[
@@ -432,10 +433,10 @@ function PostForm({
     return (
         <div>
             <h1 className="text-lg font-medium text-ink">
-                第{episode.ep_number}話を投稿
+                この話を投稿
             </h1>
             <p className="mt-1 text-xs text-muted">
-                公開内容を確認して、この話を投稿します。
+                公開内容を確認して、投稿します。
             </p>
 
             <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
