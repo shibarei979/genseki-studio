@@ -72,6 +72,50 @@ export default function WorkPostClient({ workId }: { workId: string }) {
         );
     }
 
+    /**
+     * 選んだ話を、まとめて投稿する／非公開にする。
+     *
+     * 投稿するときは名前が要る。
+     * 名前の無い話があれば、何もせずに知らせる。
+     */
+    async function bulkSet(publish: boolean) {
+        if (picked.length === 0) return;
+
+        const targets = episodes.filter((row) => picked.includes(row.id));
+
+        if (publish) {
+            const noTitle = targets.filter((row) => !row.title.trim());
+            if (noTitle.length > 0) {
+                window.alert(
+                    `名前の無い話が${noTitle.length}話あります。\n` +
+                        "先に名前を入れてください。",
+                );
+                return;
+            }
+        }
+
+        if (
+            !window.confirm(
+                publish
+                    ? `${targets.length}話を投稿します。読者に公開されます。`
+                    : `${targets.length}話を非公開にします。`,
+            )
+        ) {
+            return;
+        }
+
+        const repository = getRepository();
+        for (const row of targets) {
+            await repository.updateEpisode(row.id, {
+                is_published: publish,
+                publish_at: null,
+            });
+        }
+        setPicked([]);
+        setIsPicking(false);
+        await reload();
+    }
+
     async function deletePicked() {
         if (picked.length === 0) return;
 
@@ -403,9 +447,10 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                 setIsPicking(true);
                                                 setPicked([]);
                                             }}
-                                            className="text-[11px] text-faint hover:text-[var(--color-danger)]"
+                                            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-surface py-1.5 text-[11px] text-muted hover:border-forest-line hover:text-forest"
                                         >
-                                            選んで消す
+                                            <span aria-hidden="true">☑</span>
+                                            話を選ぶ
                                         </button>
                                     ) : (
                                         <div className="rounded-md border border-line bg-canvas px-2.5 py-2">
@@ -444,17 +489,41 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                         : "すべて選ぶ"}
                                                 </button>
 
-                                                <button
-                                                    type="button"
-                                                    disabled={picked.length === 0}
-                                                    onClick={() => void deletePicked()}
-                                                    className="ml-auto rounded bg-[var(--color-danger)] px-2.5 py-0.5 text-[10px] text-white disabled:opacity-40"
-                                                >
-                                                    {picked.length > 0
-                                                        ? `${picked.length}話を消す`
-                                                        : "消す"}
-                                                </button>
                                             </div>
+
+                                            {/* 選んだ話にできること */}
+                                            {picked.length > 0 && (
+                                                <div className="mt-2 border-t border-line pt-2">
+                                                    <p className="text-[10px] text-faint">
+                                                        選んだ{picked.length}話を
+                                                    </p>
+
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void bulkSet(true)}
+                                                            className="rounded-full border border-forest-line px-2.5 py-1 text-[10px] text-forest hover:bg-forest-tint"
+                                                        >
+                                                            投稿する
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void bulkSet(false)}
+                                                            className="rounded-full border border-line px-2.5 py-1 text-[10px] text-muted hover:border-forest-line"
+                                                        >
+                                                            非公開にする
+                                                        </button>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void deletePicked()}
+                                                        className="mt-2 w-full rounded bg-[var(--color-danger)] py-1.5 text-[10px] text-white hover:opacity-90"
+                                                    >
+                                                        {picked.length}話を消す
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
