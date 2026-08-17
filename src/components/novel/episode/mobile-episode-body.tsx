@@ -34,29 +34,73 @@ function VerticalText({ text }: { text: string }) {
   let processed = text.replace(/[0-9]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
   processed = processed.replace(/…/g, '・・・')
   processed = processed.replace(/‥/g, '・・')
-  processed = processed.replace(/ー/g, '｜')
-  processed = processed.replace(/ｰ/g, '｜')
-  processed = processed.replace(/〜/g, '｜')
-  processed = processed.replace(/－/g, '｜')
-  processed = processed.replace(/—/g, '｜')
-  processed = processed.replace(/―/g, '｜')
-  processed = processed.replace(/─/g, '｜')
-  const chars = processed.split('')
+  /*
+   * 伸ばし棒は置き換えない。
+   * 「コーヒー」が「コ｜ヒ｜」になるのを防ぐ。
+   * 向きは isHorizontalChar が 90 度回して合わせる。
+   */
+  /*
+   * ルビと傍点は、1 文字ずつに分ける前に取り出す。
+   * そのまま分けると ｜漢字《かんじ》 の記号が
+   * 素の文字として並んでしまう。
+   */
+  const parts: { type: 'text' | 'ruby' | 'dot'; body: string; ruby?: string }[] = []
+  const pattern = /｜([^《]+)《([^》]+)》|《《([^》]+)》》/g
+  let last = 0
+  let m: RegExpExecArray | null
+
+  while ((m = pattern.exec(processed)) !== null) {
+    if (m.index > last) parts.push({ type: 'text', body: processed.slice(last, m.index) })
+    if (m[1]) parts.push({ type: 'ruby', body: m[1], ruby: m[2] })
+    else if (m[3]) parts.push({ type: 'dot', body: m[3] })
+    last = m.index + m[0].length
+  }
+  if (last < processed.length) parts.push({ type: 'text', body: processed.slice(last) })
+
+  function renderChars(text: string, keyPrefix: string) {
+    return text.split('').map((ch, i) =>
+      ch === '\n'
+        ? <br key={`${keyPrefix}-${i}`}/>
+        : (
+          <span key={`${keyPrefix}-${i}`} style={{
+            display: 'inline-block',
+            transform: isHorizontalChar(ch) ? 'rotate(90deg)' : 'none',
+            lineHeight: 1.2,
+          }}>
+            {ch}
+          </span>
+        )
+    )
+  }
+
   return (
     <>
-      {chars.map((ch, i) =>
-        ch === '\n'
-          ? <br key={i}/>
-          : (
-            <span key={i} style={{
-              display: 'inline-block',
-              transform: isHorizontalChar(ch) ? 'rotate(90deg)' : 'none',
-              lineHeight: 1.2,
-            }}>
-              {ch}
+      {parts.map((part, i) => {
+        if (part.type === 'ruby') {
+          return (
+            <ruby key={`r-${i}`} style={{ rubyPosition: 'over' }}>
+              {part.body}
+              <rt style={{ fontSize: '0.5em' }}>{part.ruby}</rt>
+            </ruby>
+          )
+        }
+        if (part.type === 'dot') {
+          return (
+            <span
+              key={`d-${i}`}
+              style={{
+                textEmphasis: 'filled dot',
+                WebkitTextEmphasis: 'filled dot',
+                textEmphasisPosition: 'over right',
+                WebkitTextEmphasisPosition: 'over right',
+              } as React.CSSProperties}
+            >
+              {part.body}
             </span>
           )
-      )}
+        }
+        return <span key={`t-${i}`}>{renderChars(part.body, `t${i}`)}</span>
+      })}
     </>
   )
 }

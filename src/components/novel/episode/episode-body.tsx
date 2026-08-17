@@ -31,29 +31,95 @@ function VerticalText({ text }: { text: string }) {
   let processed = text.replace(/[0-9]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
   processed = processed.replace(/…/g, '・・・')
   processed = processed.replace(/‥/g, '・・')
-  processed = processed.replace(/ー/g, '｜')
-  processed = processed.replace(/ｰ/g, '｜')
-  processed = processed.replace(/〜/g, '｜')
-  processed = processed.replace(/－/g, '｜')
-  processed = processed.replace(/—/g, '｜')
-  processed = processed.replace(/―/g, '｜')
-  processed = processed.replace(/─/g, '｜')
-  const chars = processed.split('')
+  /*
+   * 伸ばし棒は置き換えない。
+   *
+   * 以前は ー や ― を「｜」に差し替えていた。
+   * だが「｜」は別の文字で、字形も太さも違う。
+   * 「コーヒー」が「コ｜ヒ｜」になり、
+   * ダッシュのように見えるという報告があった。
+   *
+   * 縦書きでの向きは、下の isHorizontalChar が
+   * 90 度回して合わせている。置き換える必要はない。
+   */
+  /*
+   * ルビと傍点は、1 文字ずつに分ける前に取り出す。
+   *
+   * ここは縦書きのために文字を 1 つずつ span で包む。
+   * そのまま分けると ｜漢字《かんじ》 の記号まで
+   * 別々の文字になり、ルビが素の記号のまま並んでしまう。
+   * 先に切り出しておき、ルビの部分だけは <ruby> で組む。
+   */
+  const parts: { type: 'text' | 'ruby' | 'dot'; body: string; ruby?: string }[] = []
+  const pattern = /｜([^《]+)《([^》]+)》|《《([^》]+)》》/g
+  let last = 0
+  let m: RegExpExecArray | null
+
+  while ((m = pattern.exec(processed)) !== null) {
+    if (m.index > last) {
+      parts.push({ type: 'text', body: processed.slice(last, m.index) })
+    }
+    if (m[1]) parts.push({ type: 'ruby', body: m[1], ruby: m[2] })
+    else if (m[3]) parts.push({ type: 'dot', body: m[3] })
+    last = m.index + m[0].length
+  }
+  if (last < processed.length) {
+    parts.push({ type: 'text', body: processed.slice(last) })
+  }
+
+  /** ふつうの文字を、1 文字ずつ縦に組む */
+  function renderChars(text: string, keyPrefix: string) {
+    return text.split('').map((ch, i) =>
+      ch === '\n'
+        ? <br key={`${keyPrefix}-${i}`}/>
+        : (
+          <span key={`${keyPrefix}-${i}`} style={{
+            display: 'inline-block',
+            transform: isHorizontalChar(ch) ? 'rotate(90deg)' : 'none',
+            lineHeight: 1.2,
+          }}>
+            {ch}
+          </span>
+        )
+    )
+  }
+
   return (
     <>
-      {chars.map((ch, i) =>
-        ch === '\n'
-          ? <br key={i}/>
-          : (
-            <span key={i} style={{
-              display: 'inline-block',
-              transform: isHorizontalChar(ch) ? 'rotate(90deg)' : 'none',
-              lineHeight: 1.2,
-            }}>
-              {ch}
+      {parts.map((part, i) => {
+        if (part.type === 'ruby') {
+          /*
+           * ルビは <ruby> のまま置く。
+           * 縦書きの中では、親文字の右に小さく添えられる。
+           * 1 文字ずつに割ると、ふりがなの掛かる先が分からなくなる。
+           */
+          return (
+            <ruby key={`r-${i}`} style={{ rubyPosition: 'over' }}>
+              {part.body}
+              <rt style={{ fontSize: '0.5em' }}>{part.ruby}</rt>
+            </ruby>
+          )
+        }
+
+        if (part.type === 'dot') {
+          /* 傍点。縦書きでは文字の右に打つ */
+          return (
+            <span
+              key={`d-${i}`}
+              style={{
+                textEmphasis: 'filled dot',
+                WebkitTextEmphasis: 'filled dot',
+                textEmphasisPosition: 'over right',
+                WebkitTextEmphasisPosition: 'over right',
+              } as React.CSSProperties}
+            >
+              {part.body}
             </span>
           )
-      )}
+        }
+
+        return <span key={`t-${i}`}>{renderChars(part.body, `t${i}`)}</span>
+      })}
     </>
   )
 }
