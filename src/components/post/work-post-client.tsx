@@ -44,6 +44,18 @@ export default function WorkPostClient({ workId }: { workId: string }) {
     const [publish, setPublish] = useState<PublishSettings | null>(null);
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+
+    /*
+     * まとめて投稿。
+     *
+     * 何十話も貯めてから出す人がいる。
+     * 1 話ずつ開いて押していくのは、それだけで日が暮れる。
+     */
+    const [isBulkOpen, setIsBulkOpen] = useState(false);
+    const [bulkFrom, setBulkFrom] = useState("");
+    const [bulkTo, setBulkTo] = useState("");
+    const [bulkError, setBulkError] = useState("");
+    const [bulkDoing, setBulkDoing] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
     const reload = useCallback(async () => {
@@ -91,6 +103,82 @@ export default function WorkPostClient({ workId }: { workId: string }) {
 
     const selected = episodes.find((row) => row.id === selectedId) ?? null;
     const posted = episodes.filter((row) => row.is_published).length;
+
+    /**
+     * 範囲でまとめて投稿する。
+     *
+     * 題名の無い話が 1 つでもあれば、何も投稿せずに止める。
+     * 途中まで出して止まると、どこまで出たか分からなくなる。
+     */
+    async function bulkPost() {
+        const from = Number(bulkFrom);
+        const to = Number(bulkTo);
+
+        if (!Number.isFinite(from) || !Number.isFinite(to) || from < 1 || to < from) {
+            setBulkError("範囲が正しくありません。");
+            return;
+        }
+
+        const targets = episodes.filter(
+            (row) =>
+                row.ep_number >= from &&
+                row.ep_number <= to &&
+                !row.is_published,
+        );
+
+        if (targets.length === 0) {
+            setBulkError("その範囲に、まだ投稿していない話がありません。");
+            return;
+        }
+
+        /* 題名の無い話を先に洗う */
+        const noTitle = targets.filter((row) => !row.title.trim());
+        if (noTitle.length > 0) {
+            setBulkError(
+                `名前の無い話が${noTitle.length}話あります（${noTitle
+                    .slice(0, 3)
+                    .map((row) => `${row.ep_number}話目`)
+                    .join("・")}${noTitle.length > 3 ? " ほか" : ""}）。` +
+                    "先に名前を入れてください。",
+            );
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `${targets.length}話をまとめて投稿します。\n` +
+                    `（${from}話目〜${to}話目のうち、まだ投稿していない分）\n\n` +
+                    "投稿すると読者に公開されます。",
+            )
+        ) {
+            return;
+        }
+
+        setBulkError("");
+        setBulkDoing(targets.length);
+
+        try {
+            const repository = getRepository();
+            for (const row of targets) {
+                await repository.updateEpisode(row.id, {
+                    is_published: true,
+                    publish_at: null,
+                });
+                setBulkDoing((left) => left - 1);
+            }
+            await reload();
+            setIsBulkOpen(false);
+            setBulkFrom("");
+            setBulkTo("");
+        } catch (caught) {
+            setBulkError(
+                caught instanceof Error
+                    ? caught.message
+                    : "投稿できませんでした。",
+            );
+        }
+        setBulkDoing(0);
+    }
 
     async function change(episodeId: string, patch: Partial<Episode>) {
         await getRepository().updateEpisode(episodeId, patch);
@@ -174,6 +262,91 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                         </Link>
                                     </span>
                                 </p>
+                            )}
+                            {/*
+                             * まとめて投稿。
+                             *
+                             * 話数の多い人のため。
+                             * 範囲を指すので、出すつもりの無い話まで
+                             * 巻き込まない。
+                             */}
+                            {episodes.some((row) => !row.is_published) && (
+                                <div className="mt-3 border-t border-line pt-3">
+                                    {!isBulkOpen ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsBulkOpen(true);
+                                                setBulkError("");
+                                            }}
+                                            className="w-full rounded-md border border-forest-line px-3 py-2 text-[11px] text-forest hover:bg-forest-tint"
+                                        >
+                                            まとめて投稿する
+                                        </button>
+                                    ) : (
+                                        <div>
+                                            <p className="text-[11px] text-ink">
+                                                何話目から何話目まで
+                                            </p>
+
+                                            <div className="mt-2 flex items-center gap-1.5">
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    value={bulkFrom}
+                                                    onChange={(e) => setBulkFrom(e.target.value)}
+                                                    placeholder="1"
+                                                    className="w-16 rounded border border-line px-2 py-1 text-[12px] outline-none focus:border-forest"
+                                                />
+                                                <span className="text-[11px] text-muted">〜</span>
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    value={bulkTo}
+                                                    onChange={(e) => setBulkTo(e.target.value)}
+                                                    placeholder={String(episodes.length)}
+                                                    className="w-16 rounded border border-line px-2 py-1 text-[12px] outline-none focus:border-forest"
+                                                />
+                                                <span className="text-[11px] text-muted">話目</span>
+                                            </div>
+
+                                            <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
+                                                この範囲のうち、まだ投稿していない話だけを出します。
+                                                名前の無い話があるときは、何も投稿しません。
+                                            </p>
+
+                                            {bulkError && (
+                                                <p className="mt-1.5 text-[10px] leading-relaxed text-[var(--color-danger)]">
+                                                    {bulkError}
+                                                </p>
+                                            )}
+
+                                            <div className="mt-2 flex gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsBulkOpen(false);
+                                                        setBulkError("");
+                                                    }}
+                                                    disabled={bulkDoing > 0}
+                                                    className="rounded-md border border-line px-3 py-1.5 text-[11px] text-muted hover:text-ink disabled:opacity-40"
+                                                >
+                                                    やめる
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void bulkPost()}
+                                                    disabled={bulkDoing > 0}
+                                                    className="flex-1 rounded-md bg-forest py-1.5 text-[11px] font-medium text-white hover:bg-forest-dark disabled:opacity-40"
+                                                >
+                                                    {bulkDoing > 0
+                                                        ? `投稿しています…（残り${bulkDoing}）`
+                                                        : "この範囲を投稿する"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
 
