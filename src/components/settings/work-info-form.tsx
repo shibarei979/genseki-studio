@@ -8,6 +8,8 @@
 "use client";
 
 import Link from "next/link";
+import { shrinkImage } from "@/lib/storage/image-store";
+import { uploadImage } from "@/lib/storage/remote-image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useState } from "react";
@@ -44,6 +46,11 @@ export default function WorkInfoForm({ work, onSave }: Props) {
     const [catchphrase, setCatchphrase] = useState(work.catchphrase ?? "");
     const [genre, setGenre] = useState(work.genre);
     const [format, setFormat] = useState<WorkFormat | null>(work.format ?? null);
+
+    /* 表紙。あらすじの横に出る */
+    const [coverUrl, setCoverUrl] = useState<string | null>(work.cover_url ?? null);
+    const [coverBusy, setCoverBusy] = useState(false);
+    const [coverError, setCoverError] = useState("");
     const [aiUsage, setAiUsage] = useState<AiUsage>(work.ai_usage ?? "none");
     const [tags, setTags] = useState<string[]>(work.tags);
     const [summary, setSummary] = useState(work.summary ?? "");
@@ -106,6 +113,7 @@ export default function WorkInfoForm({ work, onSave }: Props) {
             summary: summary.trim(),
             author_note: authorNote.trim() || null,
             age_rating: ageRating,
+            cover_url: coverUrl,
         });
         setIsSaving(false);
         setSavedMessage("保存しました");
@@ -189,6 +197,101 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                                 </option>
                             ))}
                         </select>
+                    </Field>
+
+                    {/*
+                     * 表紙。
+                     *
+                     * 作品ページで、あらすじの横に出る。
+                     * AI で作った絵は置けない。見分けは付かないので、
+                     * ここに書いて約束してもらう。
+                     */}
+                    <Field label="表紙" htmlFor="info-cover">
+                        <div className="flex items-start gap-3">
+                            {coverUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={coverUrl}
+                                    alt="表紙"
+                                    className="w-24 shrink-0 rounded-md border border-line object-cover"
+                                />
+                            ) : (
+                                <div className="flex h-32 w-24 shrink-0 items-center justify-center rounded-md border border-dashed border-line text-[10px] text-faint">
+                                    まだ無し
+                                </div>
+                            )}
+
+                            <div className="min-w-0 flex-1">
+                                <input
+                                    id="info-cover"
+                                    type="file"
+                                    accept="image/jpeg,image/png"
+                                    disabled={coverBusy}
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        e.target.value = "";
+                                        if (!file) return;
+
+                                        /* jpeg と png だけ。ほかは受け取らない */
+                                        if (
+                                            file.type !== "image/jpeg" &&
+                                            file.type !== "image/png"
+                                        ) {
+                                            setCoverError(
+                                                "JPEG か PNG の画像を選んでください。",
+                                            );
+                                            return;
+                                        }
+
+                                        setCoverBusy(true);
+                                        setCoverError("");
+                                        try {
+                                            /* 表紙は大きく出すので、縮める加減を緩める */
+                                            const shrunk = await shrinkImage(file, true);
+                                            const url = await uploadImage(shrunk, "cover");
+                                            setCoverUrl(url);
+                                        } catch (caught) {
+                                            setCoverError(
+                                                caught instanceof Error
+                                                    ? caught.message
+                                                    : "画像を置けませんでした。",
+                                            );
+                                        }
+                                        setCoverBusy(false);
+                                    }}
+                                    className="block w-full text-xs text-muted file:mr-2 file:rounded file:border file:border-line file:bg-surface file:px-2.5 file:py-1 file:text-xs file:text-ink"
+                                />
+
+                                <p className="mt-2 text-[11px] leading-relaxed text-muted">
+                                    JPEG または PNG。作品ページで、あらすじの横に出ます。
+                                </p>
+
+                                <p className="mt-1.5 rounded-md border border-amber bg-amber-tint/30 px-2.5 py-2 text-[11px] leading-relaxed text-ink">
+                                    <strong>AIで生成した画像は使えません。</strong>
+                                    <br />
+                                    自分で描いた絵、または権利者から許可を得た絵だけを
+                                    置いてください。ほかの人の絵を無断で使うことも
+                                    できません。違反が見つかった場合は、
+                                    画像の削除や作品の非公開などの対応をとることがあります。
+                                </p>
+
+                                {coverError && (
+                                    <p className="mt-1.5 text-[11px] text-[var(--color-danger)]">
+                                        {coverError}
+                                    </p>
+                                )}
+
+                                {coverUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setCoverUrl(null)}
+                                        className="mt-2 text-[11px] text-faint hover:text-[var(--color-danger)]"
+                                    >
+                                        表紙を外す
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </Field>
 
                     <Field label="作品の形" htmlFor="info-format">
