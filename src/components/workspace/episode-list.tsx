@@ -86,6 +86,26 @@ export default function EpisodeList({
      * 丸が出る。書いている最中に消す口が見えていると、
      * 手が滑ったときに戻せない。
      */
+    /*
+     * 閉じている章。
+     *
+     * 章が増えると、一覧が長くなって目当ての話まで遠い。
+     * 見出しを押すと、その章の中身をしまえる。
+     */
+    const [closedChapters, setClosedChapters] = useState<string[]>([]);
+
+    /*
+     * 章を作ったあと、入れる話を選ぶ窓。
+     *
+     * ドラッグで入れるには、話を掴んだまま
+     * 章の帯が出るまで画面を送らねばならない。
+     * 100 話を超えると、これがひどく辛い。
+     * 名前で探して選べるようにする。
+     */
+    const [fillingChapterId, setFillingChapterId] = useState<string | null>(null);
+    const [fillQuery, setFillQuery] = useState("");
+    const [fillPicked, setFillPicked] = useState<string[]>([]);
+
     const [isPicking, setIsPicking] = useState(false);
     const [picked, setPicked] = useState<string[]>([]);
 
@@ -273,7 +293,19 @@ export default function EpisodeList({
              * ふだんは丸を出さず、押したときだけ選べるようにする。
              */}
             {onDeleteMany && episodes.length > 0 && (
-                <div className="px-3.5 pb-2">
+                /*
+                 * 選んでいる間は、この帯を上に貼り付ける。
+                 *
+                 * 下のほうの話を選んでいると、
+                 * 「◯話を選んでいます」も操作の押し具も
+                 * 画面の外へ行ってしまい、何をしているのか分からなくなる。
+                 */
+                <div
+                    className={[
+                        "px-3.5 pb-2",
+                        isPicking ? "sticky top-0 z-10 bg-surface pt-2 shadow-sm" : "",
+                    ].join(" ")}
+                >
                     {!isPicking ? (
                         <button
                             type="button"
@@ -508,6 +540,38 @@ export default function EpisodeList({
                                     </span>
                                 )}
 
+                                {chapter && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setClosedChapters((list) =>
+                                                list.includes(chapter.id)
+                                                    ? list.filter((at) => at !== chapter.id)
+                                                    : [...list, chapter.id],
+                                            )
+                                        }
+                                        aria-expanded={!closedChapters.includes(chapter.id)}
+                                        title={
+                                            closedChapters.includes(chapter.id)
+                                                ? "開く"
+                                                : "しまう"
+                                        }
+                                        className="shrink-0 px-0.5 text-[10px] text-faint hover:text-forest"
+                                    >
+                                        <span
+                                            aria-hidden="true"
+                                            className="inline-block transition-transform"
+                                            style={{
+                                                transform: closedChapters.includes(chapter.id)
+                                                    ? "rotate(-90deg)"
+                                                    : "none",
+                                            }}
+                                        >
+                                            ▾
+                                        </span>
+                                    </button>
+                                )}
+
                                 <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-ink">
                                     {chapter
                                         ? formatChapterLabel(chapter, groupIndex)
@@ -516,6 +580,21 @@ export default function EpisodeList({
                                         {items.length}話
                                     </span>
                                 </span>
+
+                                {chapter && onAssignChapter && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setFillingChapterId(chapter.id);
+                                            setFillQuery("");
+                                            setFillPicked([]);
+                                        }}
+                                        title="この章に話を入れる"
+                                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-faint opacity-0 hover:text-forest group-hover/chapter:opacity-100"
+                                    >
+                                        話を入れる
+                                    </button>
+                                )}
 
                                 {chapter && onRenameChapter && (
                                     <button
@@ -557,7 +636,9 @@ export default function EpisodeList({
                                 )}
                             </div>
 
-                            <ul>{items.map(renderEpisode)}</ul>
+                            {!(chapter && closedChapters.includes(chapter.id)) && (
+                                <ul>{items.map(renderEpisode)}</ul>
+                            )}
 
                             {items.length === 0 && (
                                 <p className="px-3 py-2 text-[10px] text-faint">
@@ -573,6 +654,119 @@ export default function EpisodeList({
                 <p className="px-4 pb-4 text-xs text-faint">
                     まだ話がありません。「新規作成」で第1話を作ります。
                 </p>
+            )}
+
+            {/*
+             * 章に話を入れる窓。
+             *
+             * 名前で探して選ぶ。ドラッグで運ぶより確実で速い。
+             */}
+            {fillingChapterId && onAssignChapter && (
+                <div
+                    onClick={() => setFillingChapterId(null)}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex max-h-[70vh] w-[min(420px,100%)] flex-col overflow-hidden rounded-xl bg-surface"
+                    >
+                        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                            <span className="text-[13px] font-medium text-ink">
+                                {formatChapterLabel(
+                                    chapters.find((c) => c.id === fillingChapterId)!,
+                                    chapters.findIndex((c) => c.id === fillingChapterId),
+                                )}
+                                に入れる話
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setFillingChapterId(null)}
+                                className="text-[13px] text-faint hover:text-ink"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="px-4 pt-3">
+                            <input
+                                type="text"
+                                value={fillQuery}
+                                onChange={(e) => setFillQuery(e.target.value)}
+                                placeholder="話の名前で探す"
+                                className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-forest"
+                            />
+                        </div>
+
+                        <ul className="thin-scroll mt-2 min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+                            {episodes
+                                .filter(
+                                    (ep) =>
+                                        !fillQuery.trim() ||
+                                        formatEpisodeLabel(ep)
+                                            .toLowerCase()
+                                            .includes(fillQuery.trim().toLowerCase()),
+                                )
+                                .map((ep) => {
+                                    const isIn = ep.chapter_id === fillingChapterId;
+                                    const isPicked = fillPicked.includes(ep.id);
+                                    return (
+                                        <li key={ep.id}>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setFillPicked((list) =>
+                                                        list.includes(ep.id)
+                                                            ? list.filter((at) => at !== ep.id)
+                                                            : [...list, ep.id],
+                                                    )
+                                                }
+                                                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-canvas"
+                                            >
+                                                <span
+                                                    className={[
+                                                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[9px]",
+                                                        isPicked
+                                                            ? "border-forest bg-forest text-white"
+                                                            : "border-line text-transparent",
+                                                    ].join(" ")}
+                                                >
+                                                    ✓
+                                                </span>
+                                                <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                                                    {formatEpisodeLabel(ep)}
+                                                </span>
+                                                {isIn && (
+                                                    <span className="shrink-0 text-[10px] text-forest">
+                                                        この章
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                        </ul>
+
+                        <div className="flex items-center gap-2 border-t border-line px-4 py-3">
+                            <span className="text-[11px] text-muted">
+                                {fillPicked.length}話を選択
+                            </span>
+                            <button
+                                type="button"
+                                disabled={fillPicked.length === 0}
+                                onClick={() => {
+                                    fillPicked.forEach((id) =>
+                                        onAssignChapter(id, fillingChapterId),
+                                    );
+                                    setFillingChapterId(null);
+                                    setFillPicked([]);
+                                }}
+                                className="ml-auto rounded-md bg-forest px-4 py-1.5 text-[12px] text-white hover:bg-forest-dark disabled:opacity-40"
+                            >
+                                この章に入れる
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {episodes.length > 1 && (
