@@ -41,6 +41,21 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
     const [mode, setMode] = useState<Mode>(initialMode);
 
     /*
+     * ログインしたあとの行き先。
+     *
+     * 「執筆画面を開こうとしてログインを求められた」人は、
+     * 入ったあとその場所へ戻りたい。
+     * ホームへ放り出すと、もう一度たどることになる。
+     */
+    const [nextPath, setNextPath] = useState("/");
+
+    useEffect(() => {
+        const to = new URLSearchParams(window.location.search).get("next");
+        /* 外のサイトへは飛ばさない。「/」で始まる道だけ */
+        if (to && to.startsWith("/") && !to.startsWith("//")) setNextPath(to);
+    }, []);
+
+    /*
      * 戻ってきたときの理由を出す。
      *
      * 黙ってログイン画面に戻すと、
@@ -139,6 +154,13 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
         setIsBusy(true);
         setError("");
 
+        /* 戻ってきたときに読む。住所には付けられないので端末に控える */
+        try {
+            window.sessionStorage.setItem("genseki:login-next", nextPath);
+        } catch {
+            /* 控えられなくても、ホームへは戻れる */
+        }
+
         const { error: caught } = await createClient().auth.signInWithOAuth({
             provider,
             options: {
@@ -148,6 +170,10 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
                  * Supabase の Redirect URLs は ** を付けても
                  * 「?」以降が付いた住所を別物として扱う。
                  * 行き先はどのみちホームなので、付ける得が無い。
+                 */
+                /*
+                 * 戻り先は住所に付けず、端末に控える。
+                 * 問い符から後ろを付けると Supabase が弾く。
                  */
                 redirectTo: `${window.location.origin}/auth/callback`,
                 ...(provider === "google"
@@ -243,7 +269,7 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
 
         const { data: session } = await createClient().auth.getSession();
         if (session.session) {
-            router.push("/");
+            router.push(nextPath);
             router.refresh();
             return;
         }
@@ -279,7 +305,7 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
             return;
         }
 
-        router.push("/");
+        router.push(nextPath);
         router.refresh();
     }
 

@@ -27,8 +27,24 @@ export default function AuthFinishPage() {
             /* 住所から合鍵が拾われるまで、少しだけ待つ */
             const { data } = await supabase.auth.getSession();
 
-            const next =
-                new URLSearchParams(window.location.search).get("next") || "/";
+            /*
+             * 行き先。
+             *
+             * 住所に付いていても「/」なら、控えのほうを優先する。
+             * callback は行き先を知らないので「/」を付けてくるが、
+             * 本当の行き先は、ログインの前に端末へ控えてある。
+             */
+            const fromUrl =
+                new URLSearchParams(window.location.search).get("next") || "";
+            let next = fromUrl === "/" ? "" : fromUrl;
+            if (!next) {
+                try {
+                    next = window.sessionStorage.getItem("genseki:login-next") || "/";
+                    window.sessionStorage.removeItem("genseki:login-next");
+                } catch {
+                    next = "/";
+                }
+            }
 
             if (data.session) {
                 window.location.replace(next);

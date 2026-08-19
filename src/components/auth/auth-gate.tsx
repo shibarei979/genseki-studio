@@ -16,10 +16,10 @@
 
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-import LandingClient from "@/components/lp/landing-client";
 import { useAuth } from "@/hooks/use-auth";
 
 /**
@@ -104,14 +104,67 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     if (isOpen) return <>{children}</>;
 
     /*
-     * ホームは案内をそのまま出す。
-     * 「ログインしてください」と出すより、
-     * 何ができるかを見てもらうほうが先。
+     * ログインが要る場所。
+     *
+     * 案内へ送り返さない。
+     * せっかく開いた画面から追い出されると、
+     * 何をしようとしたのか分からなくなる。
+     *
+     * 中身は出さないが、その場に留めて小窓で伝える。
+     * 押せばログインへ行けるし、閉じれば前の画面へ戻れる。
      */
-    if (pathname === "/") return <LandingClient />;
+    return <LoginWall />;
+}
 
-    /* それ以外は案内へ送る */
-    return <Redirect to="/lp" />;
+/**
+ * ログインが要ることを、その場で伝える。
+ *
+ * 画面を移さずに小窓だけ出す。
+ */
+function LoginWall() {
+    const pathname = usePathname();
+
+    return (
+        <div
+            className="flex min-h-screen items-center justify-center px-5"
+            style={{ background: "var(--color-canvas)" }}
+        >
+            <div
+                className="w-full max-w-sm rounded-2xl border bg-surface px-7 py-8 text-center"
+                style={{ borderColor: "var(--color-brand)" }}
+            >
+                <p className="text-base font-medium text-ink">
+                    ログインが必要です
+                </p>
+                <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                    この場所は、ログインすると使えます。
+                    <br />
+                    読むだけなら、そのままでも大丈夫です。
+                </p>
+
+                <div className="mt-6 space-y-2">
+                    <Link
+                        href={`/login?next=${encodeURIComponent(pathname)}`}
+                        className="block w-full rounded-lg bg-forest py-2.5 text-sm font-medium text-white hover:bg-forest-dark"
+                    >
+                        ログインする
+                    </Link>
+                    <Link
+                        href={`/login?mode=signup&next=${encodeURIComponent(pathname)}`}
+                        className="block w-full rounded-lg border border-line py-2.5 text-sm text-ink hover:border-forest-line"
+                    >
+                        新しく登録する
+                    </Link>
+                    <Link
+                        href="/"
+                        className="block w-full py-2 text-[12px] text-faint hover:text-ink"
+                    >
+                        ホームへ戻る
+                    </Link>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 /**

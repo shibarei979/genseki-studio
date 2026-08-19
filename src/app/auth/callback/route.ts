@@ -106,7 +106,16 @@ export async function GET(request: NextRequest) {
         });
     }
 
-    const response = NextResponse.redirect(`${origin}${next}`);
+    /*
+     * finish を通して戻す。
+     *
+     * ログインの前に控えた行き先は端末の中にあり、
+     * ここ（サーバー）からは読めない。
+     * finish は client なので、そこで読んで送り出す。
+     */
+    const response = NextResponse.redirect(
+        `${origin}/auth/finish?next=${encodeURIComponent(next)}`,
+    );
     // 戻ったあとに古い画面を見せない
     response.headers.set("Cache-Control", "no-store");
     return response;
