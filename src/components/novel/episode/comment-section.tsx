@@ -105,7 +105,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
   }, [userId])
 
   async function handleSubmit() {
-    if (!userId) return
+    if (!userId) return guard('感想を書く', () => {})()
     const trimmed = body.trim()
     if (!trimmed) return
     setPosting(true)
@@ -208,7 +208,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
   }
 
   async function toggleLike(commentId: string) {
-    if (!userId) return
+    if (!userId) return guard('いいねする', () => {})()
     const isLiked = likedComments.has(commentId)
     if (isLiked) {
       await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId)

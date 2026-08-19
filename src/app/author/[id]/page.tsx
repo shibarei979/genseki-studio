@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import GuestFollowButton from '@/components/guest-follow-button'
 import { notFound } from 'next/navigation'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
@@ -238,12 +239,16 @@ export default async function AuthorPage({ params }: Props) {
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',marginBottom:6}}>
                   <h1 style={{fontSize:22,fontWeight:700,color:'var(--color-text)',margin:0}}>{author.display_name}</h1>
-                  {!isMe && user && (
-                    <>
+                  {!isMe && (
+                    user ? (
+                      <>
                       <FollowButton authorId={params.id} userId={user.id} initialFollowing={isFollowing} followerCount={followerCount || 0}/>
                       <MessageButton targetId={params.id} userId={user.id}/>
                       <BlockButton targetId={params.id} userId={user.id} initialBlocked={isBlocked} initialMuted={isMuted}/>
-                    </>
+                      </>
+                    ) : (
+                      <GuestFollowButton followerCount={followerCount || 0}/>
+                    )
                   )}
                 </div>
                 <div style={{display:'flex',gap:20,marginBottom:12,fontSize:13}}>
@@ -305,11 +310,21 @@ export default async function AuthorPage({ params }: Props) {
               <h1 style={{fontSize:17,fontWeight:700,color:'var(--color-text)',margin:0,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{author.display_name}</h1>
               <div style={{fontSize:11,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>{joinStr}から活動中</div>
             </div>
-            {!isMe && user && (
+            {/*
+             * 未ログインでもフォローの押し具は出す。
+             * 隠すと、その人を追えること自体が伝わらない。
+             */}
+            {!isMe && (
               <div style={{display:'flex',gap:6,flexWrap:'wrap',width:'100%'}}>
-                <FollowButton authorId={params.id} userId={user.id} initialFollowing={isFollowing} followerCount={followerCount || 0}/>
-                <MessageButton targetId={params.id} userId={user.id}/>
-                <BlockButton targetId={params.id} userId={user.id} initialBlocked={isBlocked} initialMuted={isMuted}/>
+                {user ? (
+                  <>
+                    <FollowButton authorId={params.id} userId={user.id} initialFollowing={isFollowing} followerCount={followerCount || 0}/>
+                    <MessageButton targetId={params.id} userId={user.id}/>
+                    <BlockButton targetId={params.id} userId={user.id} initialBlocked={isBlocked} initialMuted={isMuted}/>
+                  </>
+                ) : (
+                  <GuestFollowButton followerCount={followerCount || 0}/>
+                )}
               </div>
             )}
           </div>
