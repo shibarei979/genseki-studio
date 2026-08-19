@@ -415,15 +415,15 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
               return (
                 <div style={{display:'flex',gap:14,alignItems:'flex-start',marginBottom:14,flexWrap:'wrap'}}>
-                  {coverImg && (
-                    <img src={coverImg} alt={`${novel.title} 表紙`}
-                      style={{width:150,maxWidth:'40%',borderRadius:10,border:'1px solid var(--color-brand-border)',objectFit:'cover',flexShrink:0}}/>
-                  )}
-
                   {novel.summary && (
                     <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.85,padding:'10px 12px',background:'var(--color-bg)',borderRadius:8,borderLeft:'3px solid #f5a060',whiteSpace:'pre-wrap',flex:'1 1 240px',minWidth:0}}>
                       {novel.summary}
                     </div>
+                  )}
+
+                  {coverImg && (
+                    <img src={coverImg} alt={`${novel.title} 表紙`}
+                      style={{width:150,maxWidth:'40%',borderRadius:10,border:'1px solid var(--color-brand-border)',objectFit:'cover',flexShrink:0}}/>
                   )}
                 </div>
               )
