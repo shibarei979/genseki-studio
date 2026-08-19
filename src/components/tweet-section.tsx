@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { hasSupabase } from '@/config/env.client'
 import { createClient } from '@/lib/supabase/client'
+import { useLoginRequired } from '@/hooks/use-login-required'
 
 interface Tweet {
   id: string
@@ -151,6 +152,14 @@ const IconComment = () => (
 )
 
 export default function TweetSection({ authorId, scope = 'all', topic = null, currentUserId, currentUserName, currentUserIconUrl, isOwner }: Props) {
+  /*
+   * ログインが要る操作。
+   *
+   * 読むのは誰でもできる。
+   * つぶやく・いいね・控えるときにログインを求める。
+   */
+  const { guard, prompt, isLoggedIn } = useLoginRequired(currentUserId)
+
   const supabase = createClient()
   const [tweets, setTweets] = useState<Tweet[]>([])
   const [loading, setLoading] = useState(true)
@@ -447,7 +456,8 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
   }
 
   async function handlePost() {
-    if (!currentUserId || !body.trim()) return
+    if (!currentUserId) return guard('つぶやく', () => {})()
+    if (!body.trim()) return
     setPosting(true)
     let imageUrl: string | null = null
 
@@ -589,7 +599,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
    * もう一度押されてしまう。
    */
   async function toggleBookmark(tweetId: string) {
-    if (!currentUserId) return
+    if (!currentUserId) return guard('控える', () => {})()
 
     const now = tweets.find(t => t.id === tweetId)?.bookmarked ?? false
     setTweets(prev => prev.map(t =>
@@ -612,7 +622,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
    * 締め切ったあとは押せないようにしてある。
    */
   async function vote(tweetId: string, optionId: string) {
-    if (!currentUserId) return
+    if (!currentUserId) return guard('投票する', () => {})()
 
     const before = tweets.find(t => t.id === tweetId)?.myVote ?? null
     if (before === optionId) return
@@ -639,7 +649,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
   }
 
   async function handleLike(tweetId: string, liked: boolean) {
-    if (!currentUserId) return
+    if (!currentUserId) return guard('いいねする', () => {})()
 
     /*
      * 先に画面を変え、失敗したら戻す。
@@ -691,7 +701,8 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
    */
   async function handleComment(tweetId: string, parentId: string | null = null) {
     const key = parentId ?? tweetId
-    if (!currentUserId || !commentBody[key]?.trim()) return
+    if (!currentUserId) return guard('返信する', () => {})()
+    if (!commentBody[key]?.trim()) return
 
     setCommentPosting(prev => ({...prev, [key]: true}))
 
@@ -1295,6 +1306,7 @@ function SampleTweets() {
   ]
 
   return (
+    <>
     <div>
       <p style={{fontSize:12.5,lineHeight:1.9,color:'var(--color-text-muted)',marginBottom:14}}>
         まだ誰も書いていません。こんなふうに使えます。
@@ -1339,5 +1351,7 @@ function SampleTweets() {
         ))}
       </div>
     </div>
+    {prompt}
+    </>
   )
 }

@@ -93,8 +93,13 @@ function StartButton({
     }
 
     return (
-        // 「始める」は登録側を開く。持っていない合言葉を求めない
-        <Link href="/login?mode=signup" className={className} style={style}>
+        /*
+         * 登録させずに中へ通す。
+         *
+         * 何があるか分からないうちに登録を求めても、人は入らない。
+         * まず読んでもらい、書きたくなったときにログインを求める。
+         */
+        <Link href="/" className={className} style={style}>
             {children}
         </Link>
     );
@@ -139,7 +144,7 @@ function Nav({ onStart }: { onStart?: () => void }) {
                         className="rounded-md px-4 py-2 text-[12px] font-medium text-white hover:opacity-90"
                         style={{ background: NAVY.deep }}
                     >
-                        無料で始める
+                        ログインせずに始める
                     </StartButton>
                     {/*
                      * ログインの仕組みが無いときは出さない。
@@ -316,7 +321,7 @@ function Hero({ onStart }: { onStart?: () => void }) {
                         className="rounded-md py-2.5 text-center text-[12px] font-medium text-white hover:opacity-90 sm:py-3.5 sm:px-9 sm:text-[13px]"
                         style={{ background: NAVY.deep }}
                     >
-                        無料で始める
+                        ログインせずに始める
                     </StartButton>
                     {!onStart && (
                         <Link
@@ -1060,7 +1065,7 @@ function Closing({ onStart }: { onStart?: () => void }) {
                         className="rounded-md px-10 py-3.5 text-[13px] font-medium text-white hover:opacity-90"
                         style={{ background: "var(--color-forest-dark)" }}
                     >
-                        無料で始める
+                        ログインせずに始める
                     </StartButton>
                     {!onStart && (
                         <Link

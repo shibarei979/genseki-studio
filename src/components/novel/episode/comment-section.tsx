@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useLoginRequired } from '@/hooks/use-login-required'
 import Link from 'next/link'
 import { useQuote } from '@/components/novel/episode/quote-context'
 
@@ -42,6 +43,9 @@ function StarDisplay({ rating }: { rating?: number | null }) {
 }
 
 export default function CommentSection({ novelId, episodeId, userId, userName, userIconUrl, authorId, comments: initialComments }: Props) {
+  /* 読むのは誰でも。書くときにログインを求める */
+  const { guard, prompt } = useLoginRequired(userId)
+
   const supabase = createClient()
   const { quotedText, setQuotedText, selecting, setSelecting, commentAnchorRef } = useQuote()
 
@@ -91,7 +95,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
   }, [quotedText])
 
   useEffect(() => {
-    if (!userId) return
+    if (!userId) return guard('感想を書く', () => {})()
     const commentIds = comments.map(c => c.id)
     if (commentIds.length === 0) return
     supabase.from('comment_likes').select('comment_id').eq('user_id', userId).in('comment_id', commentIds)
@@ -252,6 +256,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
   })
 
   return (
+    <>
     <div ref={commentAnchorRef} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-border)', borderRadius: 12, overflow: 'hidden' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-brand-border)', background: 'var(--color-bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)' }}>コメント</span>
@@ -424,5 +429,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
         ))
       )}
     </div>
+    {prompt}
+    </>
   )
 }

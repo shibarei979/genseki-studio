@@ -23,16 +23,26 @@ import LandingClient from "@/components/lp/landing-client";
 import { useAuth } from "@/hooks/use-auth";
 
 /**
- * ログインしなくても見られる場所。
+ * ログインが要る場所。
  *
- * ここに無い場所は、すべてログインが要る。
- * コンテストやお知らせも、まずは登録してもらう。
+ * 考え方をひっくり返した。
  *
- * ただし、決まりごとと問い合わせ先は別。
- * 登録する前に読めなければ、何に同意するのか
- * 分からないまま登録することになる。
- * LP のフッターからも辿れる場所なので、開けておく。
+ * 以前は「ここだけ開ける」だったが、それだと
+ * 登録する前に中身が一切見えない。
+ * 何があるか分からないものに登録する人はいない。
+ *
+ * 読むだけなら誰でもできる。
+ * 書く・つぶやく・部屋に入るときにログインを求める。
  */
+const LOGIN_REQUIRED_PATHS = [
+    "/workspace",
+    "/post",
+    "/mypage",
+    "/messages",
+    "/admin",
+];
+
+/** いまは使わないが、参照している所があるので残す */
 const OPEN_PATHS = [
     "/lp",
     "/login",
@@ -58,9 +68,19 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     /* 繋いでいないときは、これまで通り誰でも使える */
     if (!isConnected) return <>{children}</>;
 
-    const isOpen = OPEN_PATHS.some(
+    /*
+     * ログインが要る場所かどうか。
+     *
+     * ここに挙げた場所だけ、入り口で止める。
+     * ほかは誰でも入れる。
+     * 個々の操作（つぶやく・いいね・部屋に入る）は、
+     * 押した時点でログインを求める。
+     */
+    const needsLogin = LOGIN_REQUIRED_PATHS.some(
         (path) => pathname === path || pathname.startsWith(`${path}/`),
     );
+
+    const isOpen = !needsLogin;
 
     if (isLoading) {
         return (
