@@ -43,7 +43,7 @@ function timeAgo(iso: string): string {
 
 const SEEN_KEY = "genseki:notices-seen-at";
 
-type IconName = "home" | "pen" | "search" | "book" | "trophy";
+type IconName = "home" | "pen" | "search" | "book" | "trophy" | "crown";
 
 /*
  * 行き先。
@@ -63,6 +63,12 @@ const NAV_ITEMS: {
     icon: IconName;
     /** 運営が入切する機能。切っていれば出さない */
     feature?: string;
+    /**
+     * 執筆集中モードでは出さないもの。
+     *
+     * 数を見ずに書きたい人に、順位の並びを見せない。
+     */
+    hideInFocus?: boolean;
 }[] = [
     { href: "/", label: "ホーム", icon: "home" },
     { href: "/post", label: "作品を書く", icon: "pen" },
@@ -72,6 +78,7 @@ const NAV_ITEMS: {
      */
     { href: "/search", label: "作品を探す", icon: "search" },
     { href: "/rooms", label: "コミュニティー", icon: "book", feature: "rooms" },
+    { href: "/ranking", label: "ランキング", icon: "crown", hideInFocus: true },
     { href: "/contest", label: "コンテスト", icon: "trophy", feature: "contest" },
 ];
 
@@ -121,7 +128,8 @@ export default function Header({ breadcrumbs = [] }: Props) {
     const shownNav = NAV_ITEMS.filter(
         (item) =>
             (!item.feature || !offKeys.includes(item.feature)) &&
-            !(isFocusWriting && item.href === "/rooms"),
+            /* 集中モードでは、コミュニティーと順位を出さない */
+            !(isFocusWriting && (item.href === "/rooms" || item.hideInFocus)),
     );
     const [seenAt, setSeenAt] = useState<string | null>(null);
     /** 運営が立てたお知らせ。無ければ既定のものを出す */
@@ -543,6 +551,15 @@ function NavIcon({ name }: { name: IconName }) {
             <svg {...common}>
                 <path d="M4.5 19.5h3.6L19.4 8.2a2.6 2.6 0 0 0-3.6-3.6L4.5 15.9Z" />
                 <path d="m14.6 5.8 3.6 3.6" />
+            </svg>
+        );
+    }
+    if (name === "crown") {
+        /* 冠。順位の並びであることが一目で伝わる */
+        return (
+            <svg {...common}>
+                <path d="M4 18h16" />
+                <path d="M4 18 3 7l5 3.5L12 4l4 6.5L21 7l-1 11" />
             </svg>
         );
     }

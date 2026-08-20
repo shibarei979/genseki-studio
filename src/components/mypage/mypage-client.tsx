@@ -325,7 +325,7 @@ export default function MypageClient({
       setTimeout(()=>setToast(''), 4000)
       return
     }
-    setToast(next === 'focus' ? '執筆に集中する表示にしました' : '執筆向けの表示にしました')
+    setToast(next === 'focus' ? '執筆集中モードにしました' : '執筆向けの表示にしました')
     setTimeout(()=>setToast(''), 2500)
   }
   const [notifyLike,       setNotifyLike]       = useState(profile.notify_like       !== false)
@@ -1356,8 +1356,9 @@ export default function MypageClient({
              * 押してから気づくのでは遅い。
              */}
             <div style={{fontSize:11.5,color:'var(--color-text-muted)',lineHeight:1.8,marginBottom:10}}>
-              「執筆に集中」にすると、フォロワー数・閲覧数・いいね・
-              ランキング・ミッションなどの数字と、コミュニティーへの入口を隠します。
+              「執筆集中モード」にすると、フォロワー数・閲覧数・いいね・
+              ランキング・ミッションなどの数字と、
+              コミュニティーやランキングへの入口を隠します。
               数えるのをやめるだけで、記録は残ります。
               いつでも「執筆向け」に戻せます。
             </div>
@@ -1403,7 +1404,7 @@ export default function MypageClient({
                 style={{padding:'8px 18px',fontSize:13,fontWeight:isFocusWriting?700:500,cursor:'pointer',border:'none',
                   background:isFocusWriting?'var(--color-brand)':'var(--color-bg-card)',
                   color:isFocusWriting?'var(--base-color-1)':'var(--color-text-muted)'}}>
-                執筆に集中
+                執筆集中モード
               </button>
             </div>
 
