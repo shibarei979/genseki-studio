@@ -71,9 +71,16 @@ const NAV_ITEMS: {
     hideInFocus?: boolean;
     /** 読者向けのときだけ出す。執筆向けには出さない */
     readerOnly?: boolean;
+    /** 執筆向けのときだけ出す。読者向けには出さない */
+    writerOnly?: boolean;
 }[] = [
     { href: "/", label: "ホーム", icon: "home" },
-    { href: "/post", label: "作品を書く", icon: "pen" },
+    /*
+     * 「作品を書く」。
+     * 読者向けモードでは出さない。
+     * 読む人に執筆への入口を見せる必要はない。
+     */
+    { href: "/post", label: "作品を書く", icon: "pen", writerOnly: true },
     /*
      * 「作品を探す」。
      * 中身（絞り込みと並べ替え）が入ったので出した。
@@ -135,7 +142,9 @@ export default function Header({ breadcrumbs = [] }: Props) {
             /* 集中モードでは、コミュニティーと順位を出さない */
             !(isFocusWriting && (item.href === "/rooms" || item.hideInFocus)) &&
             /* 読者向けのときだけ出す項目（執筆向けには出さない） */
-            !(item.readerOnly && !isReaderMode),
+            !(item.readerOnly && !isReaderMode) &&
+            /* 執筆向けのときだけ出す項目（読者向けには出さない） */
+            !(item.writerOnly && isReaderMode),
     );
     const [seenAt, setSeenAt] = useState<string | null>(null);
     /** 運営が立てたお知らせ。無ければ既定のものを出す */
