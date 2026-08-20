@@ -69,6 +69,8 @@ const NAV_ITEMS: {
      * 数を見ずに書きたい人に、順位の並びを見せない。
      */
     hideInFocus?: boolean;
+    /** 読者向けのときだけ出す。執筆向けには出さない */
+    readerOnly?: boolean;
 }[] = [
     { href: "/", label: "ホーム", icon: "home" },
     { href: "/post", label: "作品を書く", icon: "pen" },
@@ -125,11 +127,15 @@ export default function Header({ breadcrumbs = [] }: Props) {
      */
     const isFocusWriting = profile?.home_mode === "focus";
 
+    const isReaderMode = profile?.home_mode === "read";
+
     const shownNav = NAV_ITEMS.filter(
         (item) =>
             (!item.feature || !offKeys.includes(item.feature)) &&
             /* 集中モードでは、コミュニティーと順位を出さない */
-            !(isFocusWriting && (item.href === "/rooms" || item.hideInFocus)),
+            !(isFocusWriting && (item.href === "/rooms" || item.hideInFocus)) &&
+            /* 読者向けのときだけ出す項目（執筆向けには出さない） */
+            !(item.readerOnly && !isReaderMode),
     );
     const [seenAt, setSeenAt] = useState<string | null>(null);
     /** 運営が立てたお知らせ。無ければ既定のものを出す */
