@@ -671,7 +671,14 @@ export default function MypageClient({
               <span style={{fontSize:12,color:'#dc2626'}}>→</span>
             </Link>
           )}
-          {unreadRankingNow > 0 && (
+          {/*
+           * ランキング通知。
+           *
+           * 100作品を超えたら開始する。
+           * それまでは、通知が来ても出さない。
+           * RANKING_NOTIFY_ENABLED を true にするだけで有効になる。
+           */}
+          {false && unreadRankingNow > 0 && (
             <Link href="/mypage/ranking-history" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'11px 14px',textDecoration:'none',borderTop:'1px solid #fee2e2'}}>
               <span style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>ランクインしました！（{unreadRankingNow}）</span>
               <span style={{fontSize:12,color:'#dc2626'}}>→</span>
