@@ -369,10 +369,21 @@ export default async function ReaderHome() {
          * 本棚は右側の上に置く。
          * 画面いっぱいに広げると、左の柱が入らない。
          */}
-        <div className="rh_body">
-          <ReaderSidebar reading={sidebarReading} notices={sidebarNotices} />
+        {/*
+         * 左右の分け方は執筆向けと同じ。
+         *
+         * 幅 300px、右に境界線、白地、画面に貼りつく。
+         * 読む側と書く側で骨組みが違うと、
+         * 同じサイトを歩いている感じがしない。
+         */}
+        <div className="flex min-h-screen">
+          <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface xl:block">
+            <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
+              <ReaderSidebar reading={sidebarReading} notices={sidebarNotices} />
+            </div>
+          </aside>
 
-          <div className="rh_main">
+          <div className="rh_main min-w-0 flex-1">
             <BookshelfSection books={shelfBooks} />
         <WorksSection
           kind="pickup"
