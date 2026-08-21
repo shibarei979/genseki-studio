@@ -116,12 +116,19 @@ export default async function ReaderHome() {
 
   /* 作者の名前 */
   const authorIds = Array.from(new Set(rows.map((n) => n.author_id)))
+  /*
+   * 作者の名前。
+   *
+   * novels.author_id が指しているのは profiles.user_id。
+   * profiles.id で引くと、どれも見つからず
+   * 「不明な作者」ばかりになる。
+   */
   const { data: authors } = authorIds.length
-    ? await supabase.from('profiles').select('id, display_name').in('id', authorIds)
+    ? await supabase.from('profiles').select('user_id, display_name').in('user_id', authorIds)
     : { data: [] }
 
   const authorMap: Record<string, string> = {}
-  ;(authors || []).forEach((a: any) => { authorMap[a.id] = a.display_name })
+  ;(authors || []).forEach((a: any) => { authorMap[a.user_id] = a.display_name })
 
   /* いいねの数 */
   const { data: likes } = rows.length
@@ -175,9 +182,13 @@ export default async function ReaderHome() {
 
         {/*
          * 本棚を回す仕掛け。
+         *
          * 並べ方と回転は、この JS が受け持つ。
+         * lazyOnload にするのは、本棚が画面に出そろってから
+         * 測ってほしいため。早すぎると幅が 0 のまま計算され、
+         * 本が左端に潰れて重なる。
          */}
-        <Script src="/home/home.js" strategy="afterInteractive" />
+        <Script src="/home/home.js" strategy="lazyOnload" />
       </section>
 
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '0 16px 48px' }}>
