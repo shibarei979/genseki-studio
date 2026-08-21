@@ -7,6 +7,26 @@ import { appConfig } from "@/config";
 
 import "./globals.css";
 
+/*
+ * 読者向けホームの見た目。
+ *
+ * すべての規則を .reader-home の中に閉じてあるので、
+ * ほかの画面には効かない。
+ *
+ * 部品の中で import しても Next が確実には配らないため、
+ * ここ（layout）で読む。参照元も同じ形。
+ */
+import "@/styles/home/base.css";
+import "@/styles/home/ui.css";
+import "@/styles/home/loading.css";
+import "@/styles/home/bookshelf.css";
+import "@/styles/home/guide.css";
+import "@/styles/home/notice.css";
+import "@/styles/home/works.css";
+import "@/styles/home/reading_list.css";
+import "@/styles/home/book_info.css";
+import "@/styles/home/responsive.css";
+
 const notoSans = Noto_Sans_JP({
     subsets: ["latin"],
     /* 450・600 を足す。既定を少し太くし、見出しに中間の太さを使えるようにする */

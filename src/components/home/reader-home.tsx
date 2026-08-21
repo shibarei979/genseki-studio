@@ -1,22 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 
-/*
- * 読者向けホームの見た目。
- *
- * 参照元では全体に効かせていたが、
- * .reader-home の中だけに閉じてある。
- * 執筆向けの画面や作品ページには影響しない。
- */
-import '@/styles/home/base.css'
-import '@/styles/home/ui.css'
-import '@/styles/home/loading.css'
-import '@/styles/home/bookshelf.css'
-import '@/styles/home/guide.css'
-import '@/styles/home/notice.css'
-import '@/styles/home/works.css'
-import '@/styles/home/reading_list.css'
-import '@/styles/home/book_info.css'
-import '@/styles/home/responsive.css'
 import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
 import BookInfoPopup from '@/components/home/book-info-popup'
 import BookshelfSection from '@/components/home/bookshelf-section'
