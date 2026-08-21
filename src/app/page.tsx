@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import HomeClient from "@/components/home/home-client";
-import ReaderHome from "@/components/home/gk-home";
+import ReaderHome from "@/components/home/reader-home";
 
 /**
  * ホーム。
