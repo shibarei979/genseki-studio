@@ -26,6 +26,7 @@ import "@/styles/home/works.css";
 import "@/styles/home/reading_list.css";
 import "@/styles/home/book_info.css";
 import "@/styles/home/responsive.css";
+import "@/styles/home/reader-layout.css";
 
 const notoSans = Noto_Sans_JP({
     subsets: ["latin"],

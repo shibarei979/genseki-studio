@@ -2,11 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 
 import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
 import BookInfoPopup from '@/components/home/book-info-popup'
+import ReaderSidebar from '@/components/home/reader-sidebar'
 import BookshelfSection from '@/components/home/bookshelf-section'
-import GuideSection from '@/components/home/guide-section'
 import HomeEffects from '@/components/home/home-effects'
 import LoadingScreen from '@/components/home/loading-screen'
-import NoticeSection from '@/components/home/notice-section'
 import ReadingListSection from '@/components/home/reading-list-section'
 import WorksSection from '@/components/home/works-section'
 import Footer from '@/components/layout/footer'
@@ -303,6 +302,31 @@ export default async function ReaderHome() {
     createdAt: c.created_at,
   }))
   const noticeItems = datedNotices.map(strip)
+
+  /*
+   * 左の柱に渡すもの。
+   *
+   * 読みかけは、続きから読むの先頭。
+   * 一番最近ひらいた作品が来る。
+   */
+  const first = continueRows[0]
+  const sidebarReading = first
+    ? {
+        novelId: first.novel.id,
+        episodeId: first.epId,
+        title: first.novel.title,
+        updatedAt: first.novel.created_at,
+        episodeLabel: '続きから',
+      }
+    : null
+
+  /* お知らせは 3 件まで。柱に並べすぎない */
+  const sidebarNotices = datedNotices.slice(0, 3).map((n) => ({
+    id: n.id,
+    href: n.href,
+    date: formatMonthDay(n.createdAt),
+    title: n.title,
+  }))
   const contestItems = datedContests.map(strip)
   const allNotices = [...datedNotices, ...datedContests]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -330,9 +354,18 @@ export default async function ReaderHome() {
       <Header />
       <main>
         <BookInfoPopup />
-        <BookshelfSection books={shelfBooks} />
-        <GuideSection />
-        <NoticeSection all={allNotices} notices={noticeItems} contests={contestItems} />
+
+        {/*
+         * 左に自分のもの、右に新しい出会い。
+         *
+         * 本棚は右側の上に置く。
+         * 画面いっぱいに広げると、左の柱が入らない。
+         */}
+        <div className="rh_body">
+          <ReaderSidebar reading={sidebarReading} notices={sidebarNotices} />
+
+          <div className="rh_main">
+            <BookshelfSection books={shelfBooks} />
         <WorksSection
           kind="pickup"
           title="Pick Up!"
@@ -347,7 +380,9 @@ export default async function ReaderHome() {
           moreLabel="新着作品を見る"
           items={padWithPlaceholders(newReleasePool, 10, 'new')}
         />
-        {readingListColumns.length > 0 && <ReadingListSection columns={readingListColumns} />}
+            {readingListColumns.length > 0 && <ReadingListSection columns={readingListColumns} />}
+          </div>
+        </div>
       </main>
       <Footer />
       <HomeEffects pools={{ pickupPool, newReleasePool }} />

@@ -1,0 +1,192 @@
+/* scoped */
+/* ==========================================================
+   読者向けホームの骨組み
+
+   左に自分のもの（読みかけ・執筆室・お知らせ）、
+   右に新しい出会い（本棚・一覧）を置く。
+
+   狭い画面では、左の柱を上に積む。
+   横に並べたままだと、どちらも読めない幅になる。
+========================================================== */
+
+.reader-home .rh_body {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    width: min(1800px, 94%);
+    margin: 0 auto;
+}
+
+.reader-home .rh_main {
+    /* 右側。ここが本体 */
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+/*==================================================
+左の柱
+==================================================*/
+
+.reader-home .reader-side {
+    flex: 0 0 280px;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 24px;
+}
+
+.reader-home .rs_card {
+    background: var(--base-color-1);
+    border: 1px solid color-mix(in srgb, var(--text-color) 12%, transparent);
+    border-radius: 12px;
+    padding: 16px 18px;
+}
+
+.reader-home .rs_head {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.reader-home .rs_head-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.reader-home .rs_more {
+    font-size: 11px;
+    color: color-mix(in srgb, var(--text-color) 60%, transparent);
+}
+
+.reader-home .rs_note {
+    font-size: 12px;
+    line-height: 1.8;
+    color: color-mix(in srgb, var(--text-color) 65%, transparent);
+    margin: 8px 0 0;
+}
+
+/*==================================================
+読みかけの作品
+==================================================*/
+
+.reader-home .rs_reading {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.reader-home .rs_cover {
+    /*
+     * 表紙の代わりの色板。
+     * 実際の表紙が入るまでの間、
+     * ここに何かがあることだけ伝われば足りる。
+     */
+    flex: 0 0 48px;
+    height: 64px;
+    border-radius: 4px;
+    background: var(--main-color-1);
+}
+
+.reader-home .rs_meta {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.reader-home .rs_title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.reader-home .rs_sub {
+    font-size: 11px;
+    color: color-mix(in srgb, var(--text-color) 60%, transparent);
+    margin: 4px 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*==================================================
+押し具
+==================================================*/
+
+.reader-home .rs_button {
+    display: block;
+    margin-top: 14px;
+    padding: 9px 0;
+    border-radius: 8px;
+    background: var(--main-color-3);
+    color: var(--base-color-1);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.reader-home .rs_button-ghost {
+    background: transparent;
+    border: 1px solid var(--main-color-3);
+    color: var(--main-color-3);
+    font-weight: 500;
+}
+
+/*==================================================
+お知らせ
+==================================================*/
+
+.reader-home .rs_notices {
+    margin-top: 10px;
+}
+
+.reader-home .rs_notices li + li {
+    border-top: 1px solid color-mix(in srgb, var(--text-color) 10%, transparent);
+}
+
+.reader-home .rs_notice {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 0;
+}
+
+.reader-home .rs_date {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: color-mix(in srgb, var(--text-color) 55%, transparent);
+}
+
+.reader-home .rs_notice-title {
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*==================================================
+狭い画面
+==================================================*/
+
+@media (max-width: 1150px) {
+    .reader-home .rh_body {
+        flex-direction: column;
+        width: 92%;
+    }
+
+    .reader-home .reader-side {
+        flex: none;
+        width: 100%;
+        padding-top: 0;
+    }
+}
