@@ -32,11 +32,20 @@
 ==================================================*/
 
 .reader-home {
-    --page-zoom: 0.9;
-}
-
-.reader-home {
-    zoom: var(--page-zoom);
+    /*
+     * 表示倍率。
+     *
+     * 参照元は body 全体を 0.9 倍にして、
+     * デザイン（90%表示基準）と合わせていた。
+     *
+     * ここでは掛けない。
+     * zoom を div に付けると、JS が読む document.body の zoom と
+     * 食い違い、お知らせの画像や本棚の位置がずれる。
+     * （home.js は body の zoom を見て座標を割り戻している）
+     *
+     * 1 にしておけば、CSS の calc も JS の計算も同じ前提で動く。
+     */
+    --page-zoom: 1;
 }
 
 .reader-home * {
