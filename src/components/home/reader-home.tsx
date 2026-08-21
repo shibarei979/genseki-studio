@@ -332,7 +332,17 @@ export default async function ReaderHome() {
   // （src/app/layout.tsx がサイト全体で一元管理）
   // ============================================================
   return (
-    <div id="home-page" className="reader-home">
+    <div
+      id="home-page"
+      className="reader-home"
+      /*
+       * 参照元では body に付いていた印。
+       * CSS がこれを見て色を決めるので、囲いの側に付ける。
+       */
+      data-theme="light"
+      data-view="reader"
+      data-auth={user ? 'login' : 'guest'}
+    >
       <LoadingScreen />
       <Header />
       <main>
