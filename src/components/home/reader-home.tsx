@@ -4,10 +4,9 @@ import Link from 'next/link'
 import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
 import BookInfoPopup from '@/components/home/book-info-popup'
 import ReaderSidebar from '@/components/home/reader-sidebar'
+import ReaderWorkList from '@/components/home/reader-work-list'
 import BookshelfSection from '@/components/home/bookshelf-section'
 import HomeEffects from '@/components/home/home-effects'
-import ReadingListSection from '@/components/home/reading-list-section'
-import WorksSection from '@/components/home/works-section'
 import Footer from '@/components/layout/footer'
 import Header from '@/components/layout/header'
 import type { HomeBook, HomeNotice } from '@/types/home'
@@ -263,14 +262,33 @@ export default async function ReaderHome() {
   const pickupPool = pickupNovels.map((n) => toBook(n, extras))       // 「更新」用プール（実データのみ）
   const newReleasePool = newReleaseNovels.map((n) => toBook(n, extras))
 
-  const readingListColumns = user
-    ? [
-        { title: '続きから読む', items: continueRows.map((r) => toBook(r.novel, extras, `/novel/${r.novel.id}/episode/${r.epId}`)) },
-        { title: 'あなたへのおすすめ', items: recommendedNovels.map((n) => toBook(n, extras)) },
-        { title: 'フォローした作者の更新', items: followedUpdateRows.map((r) => toBook(r.novel, extras, `/novel/${r.novel.id}/episode/${r.epId}`)) },
-        { title: 'フォローした作者の新着', items: followedNewNovels.map((n) => toBook(n, extras)) },
-      ].map((col, i) => ({ ...col, items: padWithPlaceholders(col.items, READING_LIST_COUNT, `rl${i}`) }))
-    : []
+  /*
+   * 一覧に出す本。
+   *
+   * 10 件ずつ。2 列なので 5 行に収まる。
+   * 空の枠では埋めない。作品が無ければ、その枠ごと出さない。
+   */
+  const LIST_SIZE = 10
+
+  const followedBooks = [
+    ...followedUpdateRows.map((r) => toBook(r.novel, extras, `/novel/${r.novel.id}/episode/${r.epId}`)),
+    ...followedNewNovels.map((n) => toBook(n, extras)),
+  ].slice(0, LIST_SIZE)
+
+  /*
+   * おすすめ。
+   *
+   * ログインしていない人には作れないので、新着で代える。
+   * 空の枠を出すより、読めるものが並んでいるほうがよい。
+   */
+  const recommendBooks = (
+    recommendedNovels.length > 0
+      ? recommendedNovels.map((n) => toBook(n, extras))
+      : newReleasePool
+  ).slice(0, LIST_SIZE)
+
+  const popularBooks = pickupPool.slice(0, LIST_SIZE)
+
 
   // ----- お知らせ / コンテスト -----
   const [{ data: annRows }, { data: contestRows }] = await Promise.all([
@@ -426,21 +444,33 @@ export default async function ReaderHome() {
               </span>
               <span className="rh_search-go">詳細検索 ›</span>
             </Link>
-        <WorksSection
-          kind="pickup"
-          title="おすすめの作品"
-          moreHref="/ranking"
-          moreLabel="もっと見る"
-          items={padWithPlaceholders(pickupPool, 10, 'pickup')}
-        />
-        <WorksSection
-          kind="new_release"
-          title="新しく届いた作品"
-          moreHref="/search"
-          moreLabel="もっと見る"
-          items={padWithPlaceholders(newReleasePool, 10, 'new')}
-        />
-        {readingListColumns.length > 0 && <ReadingListSection columns={readingListColumns} />}
+
+            {/*
+             * 作品の一覧。
+             *
+             * 上から、追っている作者の新着・おすすめ・注目。
+             * 自分に近いものから、広いものへ順に降りる。
+             *
+             * フォローしていない人には、追っている作者の枠を出さない。
+             * 空の枠だけ並んでいても、することが無い。
+             */}
+            <ReaderWorkList
+              title="フォロー中の作家の新着"
+              books={followedBooks}
+              moreHref="/search?sort=new"
+            />
+
+            <ReaderWorkList
+              title="おすすめの作品"
+              books={recommendBooks}
+              moreHref="/search"
+            />
+
+            <ReaderWorkList
+              title="注目の作品"
+              books={popularBooks}
+              moreHref="/ranking"
+            />
         </div>
       </main>
 
