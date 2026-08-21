@@ -48,6 +48,18 @@
 左の柱
 ==================================================*/
 
+/*
+ * 柱の中は角ゴシック。
+ *
+ * 参照元は全部を明朝にしていたが、
+ * 操作する所まで明朝だと、読み物と区別が付かない。
+ * 現行サイトの見た目にも揃う。
+ */
+.reader-home .reader-side,
+.reader-home .reader-side * {
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+
 .reader-home .reader-side {
     flex: 0 0 280px;
     width: 280px;
@@ -210,4 +222,37 @@
         width: 100%;
         padding-top: 0;
     }
+}
+
+
+/*==================================================
+一覧の見出し
+
+参照元は "Pick Up!" のような英字を大きく出していた。
+日本語にすると 40px は大きすぎ、字面が間延びする。
+現行サイトの見出しの大きさに合わせる。
+==================================================*/
+
+.reader-home section.works h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 48px;
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+
+.reader-home section.works .w_head > a {
+    font-size: 12px;
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+
+/*==================================================
+下の 4 列
+
+見出しが明朝の大きな字だと、柱の見出しと釣り合わない。
+==================================================*/
+
+.reader-home section.reading_list h2 {
+    font-size: 15px;
+    font-weight: 700;
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
 }

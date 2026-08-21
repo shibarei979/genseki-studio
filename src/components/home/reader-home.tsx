@@ -376,16 +376,16 @@ export default async function ReaderHome() {
             <BookshelfSection books={shelfBooks} />
         <WorksSection
           kind="pickup"
-          title="Pick Up!"
+          title="おすすめの作品"
           moreHref="/ranking"
-          moreLabel="おすすめ作品を見る"
+          moreLabel="もっと見る"
           items={padWithPlaceholders(pickupPool, 10, 'pickup')}
         />
         <WorksSection
           kind="new_release"
-          title="New Release!"
+          title="新しく届いた作品"
           moreHref="/search"
-          moreLabel="新着作品を見る"
+          moreLabel="もっと見る"
           items={padWithPlaceholders(newReleasePool, 10, 'new')}
         />
             {readingListColumns.length > 0 && <ReadingListSection columns={readingListColumns} />}

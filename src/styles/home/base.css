@@ -11,16 +11,27 @@
 ========================================================== */
 
 .reader-home {
-    --text-color: #292929;
-    --base-color-1: #f7f7f0;
-    --base-color-2: #e5e0c3;
+    /*
+     * 色は現行サイトに合わせる。
+     *
+     * 参照元は緑を基調にしていたが、
+     * 原石航路は青緑（#1f4e6b）。
+     * ここだけ緑だと、別のサイトに来たように見える。
+     *
+     * 紙の色と木の色は、本棚の質感に要るので残す。
+     */
+    --text-color: #1a211d;
+    --base-color-1: #ffffff;
+    --base-color-2: #eef0ee;
     --base-color-3: #d9bf8d;
     --base-color-4: #b28647;
     --base-color-5: #73502e;
-    --main-color-1: #aacc99;
-    --main-color-2: #4c804c;
-    --main-color-3: #1f4c2e;
-    --main-color-4: #151d18;
+
+    /* 青緑。濃さの違う4段 */
+    --main-color-1: #7fa8bd;
+    --main-color-2: #3f7fa6;
+    --main-color-3: #1f4e6b;
+    --main-color-4: #14313f;
 }
 
 /*==================================================
@@ -65,7 +76,8 @@
 }
 
 .reader-home[data-theme="light"] {
-    background: var(--base-color-1);
+    /* 現行の下地の色。札の白が浮くように、わずかに灰を入れる */
+    background: var(--color-canvas, #f4f5f3);
 }
 
 .reader-home[data-theme="dark"] {
