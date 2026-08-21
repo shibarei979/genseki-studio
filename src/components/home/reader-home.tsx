@@ -406,7 +406,13 @@ export default async function ReaderHome() {
      */}
     <Header />
 
-    <div className="flex min-h-screen">
+    {/*
+     * 左右を並べる箱。
+     *
+     * items-stretch にして、柱を中身の高さまで伸ばす。
+     * 伸ばさないと、柱の下だけ地の色が覗く。
+     */}
+    <div className="flex min-h-screen items-stretch">
       {/*
        * 左の柱は囲いの外に置く。
        *
@@ -500,7 +506,8 @@ export default async function ReaderHome() {
       </div>
     </div>
 
-    <Footer />
+    {/* 中身が長いので、上の余白は詰める */}
+    <Footer tight />
     </>
   )
 }

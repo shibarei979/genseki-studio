@@ -42,7 +42,16 @@ const SECTIONS = [
     },
 ];
 
-export default function Footer() {
+export default function Footer({
+    /**
+     * 上の余白を詰めるか。
+     *
+     * ふだんは本文とのあいだを大きく空ける。
+     * ただし中身が画面より長いページでは、
+     * その空きがそのまま無駄な隙間になる。
+     */
+    tight = false,
+}: { tight?: boolean } = {}) {
     /*
      * 左右の余白は本体と同じ（px-6 / sm:px-10）。
      * ここだけ内側に寄せると、下で急にすぼまったように見える。
@@ -59,7 +68,7 @@ export default function Footer() {
      * 中身が長ければ、そのまま続きに出る。
      */
     return (
-        <footer className="footer-below-fold bg-[#2f2b26] px-6 py-11 text-white sm:px-10">
+        <footer className={`${tight ? "" : "footer-below-fold"} bg-[#2f2b26] px-6 py-11 text-white sm:px-10`}>
                     <div>
                         {/*
                          * 名乗りと道を横に並べる。
