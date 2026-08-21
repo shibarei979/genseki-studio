@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 
 import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
 import BookInfoPopup from '@/components/home/book-info-popup'
@@ -319,13 +320,44 @@ export default async function ReaderHome() {
       }
     : null
 
-  /* お知らせは 3 件まで。柱に並べすぎない */
-  const sidebarNotices = datedNotices.slice(0, 3).map((n) => ({
-    id: n.id,
-    href: n.href,
-    date: formatMonthDay(n.createdAt),
-    title: n.title,
-  }))
+  /*
+   * 柱に出すお知らせ。
+   *
+   * お知らせの置き場は 2 つある。
+   *   admin_notices  … Studio で作ったもの
+   *   announcements  … 前の版から引き継いだもの
+   * 片方だけ読むと、書いたのに出てこないことになる。
+   */
+  const { data: adminNoticeRows } = await supabase
+    .from('admin_notices')
+    .select('id, title, published_at, is_published')
+    .eq('is_published', true)
+    .order('published_at', { ascending: false })
+    .limit(NOTICE_COUNT)
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  const sidebarNotices = [
+    ...(adminNoticeRows || [])
+      /* 表に出す日が来たものだけ */
+      .filter((a: any) => String(a.published_at).slice(0, 10) <= today)
+      .map((a: any) => ({
+        id: `adm-${a.id}`,
+        href: '/announcements',
+        date: formatMonthDay(a.published_at),
+        title: a.title as string,
+        at: String(a.published_at),
+      })),
+    ...datedNotices.map((n) => ({
+      id: n.id,
+      href: n.href,
+      date: formatMonthDay(n.createdAt),
+      title: n.title,
+      at: n.createdAt,
+    })),
+  ]
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, 3)
   const contestItems = datedContests.map(strip)
   const allNotices = [...datedNotices, ...datedContests]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -373,6 +405,27 @@ export default async function ReaderHome() {
 
         <div className="rh_main">
             <BookshelfSection books={shelfBooks} />
+
+            {/*
+             * 作品を探す。
+             *
+             * 本棚のすぐ下に置く。
+             * 棚を眺めて目当てが無かった人が、
+             * そのまま探しに行ける。
+             */}
+            <Link href="/search" className="rh_search">
+              <span className="rh_search-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <circle cx="11" cy="11" r="7"/>
+                  <path d="m20 20-3.5-3.5"/>
+                </svg>
+              </span>
+              <span className="rh_search-text">
+                <span className="rh_search-title">作品を探す</span>
+                <span className="rh_search-note">ジャンル・タグ・キーワードで作品を検索できます</span>
+              </span>
+              <span className="rh_search-go">詳細検索 ›</span>
+            </Link>
         <WorksSection
           kind="pickup"
           title="おすすめの作品"

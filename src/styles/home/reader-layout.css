@@ -64,3 +64,68 @@
     font-weight: 700;
     font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
+
+
+/*==================================================
+作品を探す
+
+本棚のすぐ下。棚で見つからなかった人の受け皿。
+==================================================*/
+
+.reader-home .rh_search {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: min(1100px, 92%);
+    margin: 8px auto 0;
+    padding: 16px 20px;
+    background: #ffffff;
+    border: 1px solid color-mix(in srgb, var(--main-color-3) 14%, transparent);
+    border-radius: 12px;
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+
+.reader-home .rh_search-icon {
+    flex: 0 0 auto;
+    color: color-mix(in srgb, var(--main-color-3) 70%, transparent);
+}
+
+.reader-home .rh_search-text {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.reader-home .rh_search-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.reader-home .rh_search-note {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: color-mix(in srgb, var(--text-color) 60%, transparent);
+}
+
+.reader-home .rh_search-go {
+    flex: 0 0 auto;
+    padding: 9px 18px;
+    background: var(--main-color-3);
+    color: #ffffff;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/*==================================================
+一覧の幅
+
+柱のぶん狭くなったので、左右の余白を詰める。
+==================================================*/
+
+.reader-home section.works,
+.reader-home section.reading_list {
+    width: min(1100px, 92%);
+}

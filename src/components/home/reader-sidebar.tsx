@@ -49,6 +49,12 @@ export default function ReaderSidebar({
             {/* 読みかけの作品 */}
             {reading && (
                 <div className="rounded-xl border border-line bg-surface p-3.5">
+                    {/* 見出し。執筆向けの「執筆中の作品」と同じ位置 */}
+                    <p className="mb-2.5 flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+                        <RoomIcon />
+                        読みかけの作品
+                    </p>
+
                     <div className="flex gap-3">
                         {/*
                          * 小さな表紙。
@@ -73,8 +79,7 @@ export default function ReaderSidebar({
                             <p className="truncate text-[13px] font-semibold text-ink">
                                 {reading.title || "無題"}
                             </p>
-                            <p className="mt-0.5 text-[10px] text-muted">読みかけの作品</p>
-                            <p className="mt-1.5 truncate text-[11px] text-ink">
+                            <p className="mt-1 truncate text-[11px] text-muted">
                                 {reading.episodeLabel}
                             </p>
                         </div>
@@ -90,21 +95,52 @@ export default function ReaderSidebar({
                 </div>
             )}
 
-            {/* 執筆室 */}
-            <section className="rounded-xl border border-line bg-surface p-3.5">
-                <h2 className="text-[13px] font-semibold tracking-wide text-ink">
-                    執筆室に入る
-                </h2>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-                    静かな環境で、創作に集中しましょう。
-                </p>
-                <Link
-                    href="/rooms"
-                    className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-forest-line py-2 text-[12px] text-forest hover:bg-forest-tint"
-                >
-                    執筆室へ <span aria-hidden="true">→</span>
-                </Link>
-            </section>
+            {/*
+             * 執筆室への入口。
+             *
+             * 執筆向けの柱と同じ作り。
+             * 部屋は絵で誘う。読む人でも入れる。
+             */}
+            <Link
+                href="/rooms"
+                className="relative block overflow-hidden rounded-xl border border-forest-line/60 bg-surface hover:border-forest-line"
+            >
+                {/*
+                 * 机の絵は札いっぱいに敷く。
+                 * 右寄せで切り出し、机と窓が残るようにする。
+                 */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src="/images/room-desk.webp"
+                    alt=""
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full select-none object-cover object-right"
+                    aria-hidden="true"
+                />
+                {/* 文字の側を白く塗り、絵との境目はなだらかに透かす */}
+                <span
+                    className="absolute inset-0"
+                    style={{
+                        background:
+                            "linear-gradient(90deg, #ffffff 0%, #ffffff 42%, rgba(255,255,255,0) 80%)",
+                    }}
+                    aria-hidden="true"
+                />
+                <div className="relative z-10 p-3.5 pr-24">
+                    <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+                        <RoomIcon />
+                        執筆室に入る
+                    </p>
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+                        静かな環境で、
+                        <br />
+                        創作に集中しましょう。
+                    </p>
+                    <span className="mt-2.5 inline-flex items-center gap-1 rounded-md border border-line bg-surface px-3 py-1.5 text-[11px] text-ink">
+                        執筆室へ <span aria-hidden="true">→</span>
+                    </span>
+                </div>
+            </Link>
 
             {/* お知らせ */}
             <section className="rounded-xl border border-line bg-surface p-3.5">
@@ -145,6 +181,25 @@ export default function ReaderSidebar({
                 )}
             </section>
         </aside>
+    );
+}
+
+function RoomIcon() {
+    return (
+        <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M3 10.5 12 4l9 6.5" />
+            <path d="M5 10v9h14v-9" />
+        </svg>
     );
 }
 
