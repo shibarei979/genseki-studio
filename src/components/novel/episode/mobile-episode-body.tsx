@@ -57,7 +57,7 @@ function normalizeForHorizontalReading(text: string): string {
 
 function renderBody(text: string): string {
   /* 整えるのはルビを取り出したあと。先だと ｜《》 が壊れる */
-  let result = text.replace(/｜([^《]+)《([^》]+)》/g,
+  let result = text.replace(/[|｜]([^《]+)《([^》]+)》/g,
     (_m, base: string, ruby: string) =>
       `<ruby>${normalizeForHorizontalReading(base)}<rt>${normalizeForHorizontalReading(ruby)}</rt></ruby>`)
 
@@ -153,7 +153,7 @@ function VerticalText({ text }: { text: string }) {
    * 素の文字として並んでしまう。
    */
   const parts: { type: 'text' | 'ruby' | 'dot'; body: string; ruby?: string }[] = []
-  const pattern = /｜([^《]+)《([^》]+)》|《《([^》]+)》》/g
+  const pattern = /[|｜]([^《]+)《([^》]+)》|《《([^》]+)》》/g
   let last = 0
   let m: RegExpExecArray | null
 

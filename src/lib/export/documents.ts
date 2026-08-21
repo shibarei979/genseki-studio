@@ -19,7 +19,7 @@ import type { Episode, Work } from "@/types";
 function plain(body: string): string {
     return body
         // ルビ： ｜親文字《よみ》 → 親文字（よみ）
-        .replace(/｜([^《]+)《([^》]+)》/g, "$1（$2）")
+        .replace(/[|｜]([^《]+)《([^》]+)》/g, "$1（$2）")
         // 傍点は落とす。文字だけ残す
         .replace(/《《([^》]+)》》/g, "$1");
 }

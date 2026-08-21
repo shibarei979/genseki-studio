@@ -27,7 +27,7 @@ export type Segment =
 
 /** 傍点が先。《《》》を《》より先に食べないと入れ子を誤読する */
 const EMPHASIS_PATTERN = /《《([^》]+)》》/g;
-const EXPLICIT_RUBY_PATTERN = /｜([^《]+)《([^》]+)》/g;
+const EXPLICIT_RUBY_PATTERN = /[|｜]([^《]+)《([^》]+)》/g;
 /** 親文字の指定が無いときは、直前の漢字・カタカナの連なりに振る */
 const IMPLICIT_RUBY_PATTERN = /([一-龥々〆ヶァ-ヴー]+)《([^》]+)》/g;
 

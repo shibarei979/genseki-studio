@@ -64,7 +64,7 @@ function renderBodyH(text: string): string {
    * 先にかけると ｜ や 《》 が半角になり、
    * ルビの印として読めなくなる。
    */
-  let r = text.replace(/｜([^《]+)《([^》]+)》/g,
+  let r = text.replace(/[|｜]([^《]+)《([^》]+)》/g,
     (_m, base: string, ruby: string) =>
       `<ruby>${normalizeForHorizontalReading(base)}<rt>${normalizeForHorizontalReading(ruby)}</rt></ruby>`)
   r = r.replace(/《《([^》]+)》》/g,
@@ -173,7 +173,7 @@ function VerticalText({ text }: { text: string }) {
    * 先に切り出しておき、ルビの部分だけは <ruby> で組む。
    */
   const parts: { type: 'text' | 'ruby' | 'dot'; body: string; ruby?: string }[] = []
-  const pattern = /｜([^《]+)《([^》]+)》|《《([^》]+)》》/g
+  const pattern = /[|｜]([^《]+)《([^》]+)》|《《([^》]+)》》/g
   let last = 0
   let m: RegExpExecArray | null
 
@@ -250,7 +250,7 @@ function VerticalText({ text }: { text: string }) {
 // テキストのクリーニング
 function cleanForSpeech(text: string): string {
   let t = text
-    .replace(/｜([^《]+)《[^》]+》/g, '$1')
+    .replace(/[|｜]([^《]+)《[^》]+》/g, '$1')
     .replace(/《《([^》]+)》》/g, '$1')
     .replace(/<[^>]+>/g, '')
     .replace(/[#*`]/g, '')
@@ -508,7 +508,7 @@ function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecti
   function handleClick(raw: string, idx: number) {
     if (!selecting) return
     const clean = raw
-      .replace(/｜([^《]+)《[^》]+》/g, '$1')
+      .replace(/[|｜]([^《]+)《[^》]+》/g, '$1')
       .replace(/《《([^》]+)》》/g, '$1')
       .replace(/\n/g, '')
       .trim()
@@ -684,7 +684,7 @@ function VerticalBody({ title, body, preface, afterword, authorName, fontSize, f
   function handleClick(raw: string) {
     if (!selecting) return
     const clean = raw
-      .replace(/｜([^《]+)《[^》]+》/g, '$1')
+      .replace(/[|｜]([^《]+)《[^》]+》/g, '$1')
       .replace(/《《([^》]+)》》/g, '$1')
       .replace(/\n/g, '')
       .trim()
