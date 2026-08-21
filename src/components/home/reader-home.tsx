@@ -339,6 +339,15 @@ export default async function ReaderHome() {
   // （src/app/layout.tsx がサイト全体で一元管理）
   // ============================================================
   return (
+    <>
+    {/*
+     * ヘッダーと足は囲いの外に置く。
+     *
+     * 参照元の CSS は * に字と余白をあてているので、
+     * 中に入れるとヘッダーの並びまで崩れる。
+     */}
+    <Header />
+
     <div
       id="home-page"
       className="reader-home"
@@ -351,7 +360,6 @@ export default async function ReaderHome() {
       data-auth={user ? 'login' : 'guest'}
     >
       <LoadingScreen />
-      <Header />
       <main>
         <BookInfoPopup />
 
@@ -384,8 +392,11 @@ export default async function ReaderHome() {
           </div>
         </div>
       </main>
-      <Footer />
+
       <HomeEffects pools={{ pickupPool, newReleasePool }} />
     </div>
+
+    <Footer />
+    </>
   )
 }
