@@ -15,10 +15,16 @@ export default async function HomePage() {
     } = await supabase.auth.getUser();
 
     if (user) {
+        /*
+         * 照合は user_id。
+         *
+         * profiles の主キーは id だが、ログインした人と結びつくのは
+         * user_id のほう。id で引くと、いつまでも見つからない。
+         */
         const { data: profile } = await supabase
             .from("profiles")
             .select("home_mode")
-            .eq("id", user.id)
+            .eq("user_id", user.id)
             .maybeSingle();
 
         if (profile?.home_mode === "read") return <ReaderHome />;

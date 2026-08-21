@@ -325,7 +325,11 @@ export default function MypageClient({
       setTimeout(()=>setToast(''), 4000)
       return
     }
-    setToast(next === 'focus' ? '執筆集中モードにしました' : '執筆向けの表示にしました')
+    setToast(
+      next === 'focus' ? '執筆集中モードにしました'
+      : next === 'read' ? '読書向けの表示にしました'
+      : '執筆向けの表示にしました'
+    )
     setTimeout(()=>setToast(''), 2500)
   }
   const [notifyLike,       setNotifyLike]       = useState(profile.notify_like       !== false)
