@@ -278,16 +278,25 @@ export default async function ReaderHome() {
   /*
    * おすすめ。
    *
-   * ログインしていない人には作れないので、新着で代える。
-   * 空の枠を出すより、読めるものが並んでいるほうがよい。
+   * ログインしていない人には作れない。
+   * その場合はこの枠を出さない。
+   *
+   * 新着で代えると「新しく届いた作品」と
+   * 中身が同じ枠が 2 つ並ぶことになる。
    */
-  const recommendBooks = (
-    recommendedNovels.length > 0
-      ? recommendedNovels.map((n) => toBook(n, extras))
-      : newReleasePool
-  ).slice(0, LIST_SIZE)
+  const recommendBooks = recommendedNovels
+    .map((n) => toBook(n, extras))
+    .slice(0, LIST_SIZE)
 
   const popularBooks = pickupPool.slice(0, LIST_SIZE)
+
+  /* 続きから読む。読みかけの作品を並べる */
+  const continueBooks = continueRows
+    .map((r) => toBook(r.novel, extras, `/novel/${r.novel.id}/episode/${r.epId}`))
+    .slice(0, LIST_SIZE)
+
+  /* 新しく届いた作品 */
+  const newBooks = newReleasePool.slice(0, LIST_SIZE)
 
 
   // ----- お知らせ / コンテスト -----
@@ -455,6 +464,13 @@ export default async function ReaderHome() {
              * 空の枠だけ並んでいても、することが無い。
              */}
             <ReaderWorkList
+              title="続きから読む"
+              books={continueBooks}
+              /* 履歴のページはまだ無い。作品を探すへ送る */
+              moreHref="/search"
+            />
+
+            <ReaderWorkList
               title="フォロー中の作家の新着"
               books={followedBooks}
               moreHref="/search?sort=new"
@@ -464,6 +480,12 @@ export default async function ReaderHome() {
               title="おすすめの作品"
               books={recommendBooks}
               moreHref="/search"
+            />
+
+            <ReaderWorkList
+              title="新しく届いた作品"
+              books={newBooks}
+              moreHref="/search?sort=new"
             />
 
             <ReaderWorkList

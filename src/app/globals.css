@@ -1084,10 +1084,17 @@ body {
  *
  * どこか 1 か所が画面より広いだけで、
  * ページ全体が横に揺れて読みにくくなる。
+ *
+ * ただし html と body に overflow を付けると、
+ * position: sticky が画面ではなく body の中で
+ * 貼り付こうとして効かなくなる。
+ * （左の柱がスクロールに付いてこない原因）
+ *
+ * body だけに付ける。html は触らない。
+ * これで横揺れは止まり、貼り付きも効く。
  */
-html,
 body {
-    overflow-x: hidden;
+    overflow-x: clip;
 }
 
 @media (max-width: 1023px) {
