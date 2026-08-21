@@ -97,7 +97,14 @@ function toBook(
     href: href ?? `/novel/${novel.id}`,
     title: novel.title,
     author: extras.authorMap[novel.author_id] || '不明な作者',
-    tags: [novel.genre, ...(novel.tags || [])].filter(Boolean).slice(0, 7),
+    /*
+     * 本に挿す付箋。
+     *
+     * ジャンルだけ。1 枚に絞る。
+     * タグまで並べると、背表紙の上が付箋で埋まり、
+     * どれが何の印か分からなくなる。
+     */
+    tags: [novel.genre].filter(Boolean),
     head: extras.headMap[novel.id] || truncate(novel.summary, HEAD_LENGTH),
     excerpt: truncate(novel.catchcopy || novel.summary, EXCERPT_LENGTH),
     comment: extras.commentMap[novel.id] || '',

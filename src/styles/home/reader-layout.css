@@ -225,3 +225,53 @@
         border-top: 1px solid color-mix(in srgb, var(--main-color-3) 8%, transparent);
     }
 }
+
+/*==================================================
+本の背
+
+参照元は角がまっすぐで、板を並べたように見える。
+背を少し丸めると、本らしくなる。
+
+丸めるのは背の面と、正面の左端だけ。
+本を閉じたとき、丸みが出るのは背側だから。
+==================================================*/
+
+.reader-home .bookshelf-loop .b_spine {
+    border-radius: 3px 0 0 3px;
+}
+
+.reader-home .bookshelf-loop .b_front {
+    border-radius: 2px 3px 3px 2px;
+}
+
+.reader-home .bookshelf-loop .b_back {
+    border-radius: 3px 2px 2px 3px;
+}
+
+/*
+ * 上面。
+ *
+ * 背側の角だけ落とす。
+ * 四隅とも丸めると、本というより石けんに見える。
+ */
+.reader-home .bookshelf-loop .b_top {
+    border-radius: 3px 3px 0 0;
+}
+
+/*==================================================
+付箋
+
+ジャンルを 1 枚だけ挿す。
+頭を少し丸め、紙を挟んだように見せる。
+==================================================*/
+
+.reader-home .bookshelf-loop .b_tags li {
+    border-radius: 2px 2px 0 0;
+
+    /*
+     * 1 枚だけなので、少し広く取る。
+     * ジャンル名が「ハイファンタジー」のように長くても、
+     * 途中まで読めるようにする。
+     */
+    width: calc(52px * 0.9);
+}
