@@ -1,0 +1,147 @@
+/* scoped */
+/* デザイン home_10: style/loading.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   Loading
+   ・読み込み中は不透明な全画面オーバーレイで配置アニメーションを隠す
+   ・本のページが捲れるアニメーション
+   ・終了は js/loading.js が .is_done を付与（フェードアウト）
+========================================================== */
+
+.reader-home.is_loading {
+    overflow: hidden;
+}
+
+#loading {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    background: var(--base-color-1);
+    transition: opacity .5s ease;
+}
+
+.reader-home[data-theme="dark"] #loading {
+    background: var(--main-color-4);
+}
+
+#loading.is_done {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/*==================================================
+開いた本
+==================================================*/
+
+.ld_book {
+    position: relative;
+    width: 150px;
+    height: 100px;
+    perspective: 900px;
+}
+
+/* ベースの左右ページ */
+.ld_book::before,
+.ld_book::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    background: var(--base-color-2);
+}
+
+.ld_book::before {
+    left: 0;
+    border-radius: 8px 0 0 8px;
+    box-shadow: inset -3px 0 0 var(--base-color-3);
+}
+
+.ld_book::after {
+    right: 0;
+    border-radius: 0 8px 8px 0;
+    box-shadow: inset 3px 0 0 var(--base-color-3);
+}
+
+/*==================================================
+捲れるページ
+==================================================*/
+
+.ld_page {
+    position: absolute;
+    left: 50%;
+    top: 5px;
+    z-index: 1;
+    width: calc(50% - 6px);
+    height: calc(100% - 10px);
+    background: var(--base-color-1);
+    border: 1px solid var(--base-color-3);
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    transform-origin: left center;
+    animation: ld-flip 1.8s ease-in-out infinite;
+}
+
+.ld_p2 {
+    animation-delay: .25s;
+}
+
+.ld_p3 {
+    animation-delay: .5s;
+}
+
+@keyframes ld-flip {
+    0% {
+        transform: rotateY(0deg);
+        opacity: 0;
+    }
+
+    12% {
+        opacity: 1;
+    }
+
+    68% {
+        transform: rotateY(-180deg);
+        opacity: 1;
+    }
+
+    82%,
+    100% {
+        transform: rotateY(-180deg);
+        opacity: 0;
+    }
+}
+
+/*==================================================
+テキスト
+==================================================*/
+
+.ld_text {
+    font-size: 13px;
+    letter-spacing: .5em;
+    padding-left: .5em;
+    color: var(--text-color);
+    animation: ld-blink 1.8s ease-in-out infinite;
+}
+
+.reader-home[data-theme="dark"] #loading .ld_text {
+    color: var(--base-color-1);
+}
+
+@keyframes ld-blink {
+
+    0%,
+    100% {
+        opacity: .45;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}

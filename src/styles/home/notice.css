@@ -1,0 +1,255 @@
+/* scoped */
+/* デザイン home_10: style/notice.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   お知らせ
+   ・data-n-tab="all | notice | contest" でリスト切替
+   ・data-n-fold="on(4件) | off(8件)" で畳み込み
+   ・li 内 .n_img をセクション左に重ねて表示（時間で切替）
+   （旧 section.css のお知らせ部分 + notice_add.css）
+========================================================== */
+
+.reader-home[data-theme="light"] section.notice * {
+    color: var(--text-color);
+}
+
+.reader-home[data-theme="dark"] section.notice * {
+    color: var(--base-color-1);
+}
+
+section.notice {
+    position: relative;
+    margin-top: 50px;
+    margin-bottom: 50px;
+    margin-left: 50%;
+    margin-right: auto;
+    width: calc(50% - 150px);
+    max-width: 940px;
+    min-width: 500px;
+    height: 450px;
+}
+
+section.notice div {
+    position: absolute;
+    inset: 0;
+}
+
+section.notice h2 {
+    width: 100%;
+    height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+}
+
+section.notice div:nth-child(1) h2 {
+    text-align: left;
+    font-size: 36px;
+}
+
+section.notice div:nth-child(2) h2 {
+    text-align: right;
+    padding-right: 150px;
+    font-size: 24px;
+}
+
+section.notice div:nth-child(3) h2 {
+    text-align: right;
+    font-size: 24px;
+}
+
+section.notice ul {
+    display: none;
+}
+
+section.notice .n_pick ul{
+    margin-top: 50px;
+    display: flex;
+    flex-direction: column;
+    height: 300px;
+    overflow-y: hidden;
+    gap: 40px;
+}
+
+section.notice li {
+    position: relative;
+}
+
+section.notice li a{
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+section.notice .n_time {
+    width: 35px;
+    text-align: center;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+section.notice .n_title {
+    width: 400px;
+    font-size: 24px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+section.notice .n_detail {
+    width: calc(100% - 95px);
+    position: absolute;
+    top: 35px;
+    left: 95px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/*==================================================
+タブ（h2 クリック）
+==================================================*/
+
+/* 重なった div がクリックを奪わないようにする */
+section.notice>div {
+    pointer-events: none;
+}
+
+section.notice h2,
+section.notice ul,
+section.notice button,
+section.notice>a {
+    pointer-events: auto;
+}
+
+/* h2 の当たり判定を文字幅に絞る（見た目は section.css のまま） */
+section.notice div:nth-child(1) h2 {
+    width: fit-content;
+}
+
+section.notice div:nth-child(2) h2,
+section.notice div:nth-child(3) h2 {
+    width: fit-content;
+    margin-left: auto;
+}
+
+section.notice div:nth-child(2) h2,
+section.notice div:nth-child(3) h2 {
+    cursor: pointer;
+}
+
+section.notice div:nth-child(1) h2 {
+    cursor: pointer;
+}
+
+/* アクティブタブの表示 */
+section.notice[data-n-tab="notice"] div:nth-child(2) h2,
+section.notice[data-n-tab="contest"] div:nth-child(3) h2 {
+    text-decoration: underline;
+    text-underline-offset: 8px;
+}
+
+/*==================================================
+リスト切替
+==================================================*/
+
+/* 展開・画像はみ出しのため高さ / overflow を開放
+   （表示件数は下の fold ルールで制御） */
+section.notice .n_pick ul {
+    height: auto;
+    overflow-y: visible;
+}
+
+section.notice[data-n-tab="notice"] .n_pick ul,
+section.notice[data-n-tab="contest"] .n_pick ul {
+    display: none;
+}
+
+section.notice[data-n-tab="notice"] div:nth-child(2) ul,
+section.notice[data-n-tab="contest"] div:nth-child(3) ul {
+    margin-top: 50px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+/*==================================================
+畳み込み
+on  : 4件 + もっと見る(button)
+off : 8件 + もっと見る(aタグ・別ページ)
+==================================================*/
+
+section.notice[data-n-fold="on"] ul li:nth-child(n+5) {
+    display: none;
+}
+
+section.notice[data-n-fold="off"] {
+    height: 760px;
+}
+
+section.notice>button,
+section.notice>a {
+    position: absolute;
+    right: 0;
+    bottom: 20px;
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+section.notice>button::after,
+section.notice>a::after {
+    content: " ＞";
+    font-size: 11px;
+}
+
+section.notice[data-n-fold="on"]>a {
+    display: none;
+}
+
+section.notice[data-n-fold="off"]>button {
+    display: none;
+}
+
+/*==================================================
+重なる画像（.n_img）
+==================================================*/
+
+section.notice .n_img {
+    position: absolute;
+    top: 0;
+    right: 100%;
+    /* 大きさ：画面幅の約30% */
+    width: calc(30vw / var(--page-zoom));
+    max-width: 940px;
+    aspect-ratio: 16 / 9;
+    padding: 5px;
+    height: auto;
+    object-fit: cover;
+    font-size: 0;
+    /* 位置（左エリア内での中央寄せ・右上への重なり）は
+       js/notice/notice_img.js が transform で決める */
+    transition: transform 1s ease, opacity 0s ease;
+}
+
+/* src 未設定のプレースホルダー用の下地色（デザインの緑〜生成りの重なり） */
+section.notice li:nth-child(4n) .n_img {
+    background: var(--base-color-3);
+}
+
+section.notice li:nth-child(4n+1) .n_img {
+    background: var(--main-color-2);
+}
+
+section.notice li:nth-child(4n+2) .n_img {
+    background: var(--main-color-3);
+}
+
+section.notice li:nth-child(4n+3) .n_img {
+    background: var(--base-color-2);
+}

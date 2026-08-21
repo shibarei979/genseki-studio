@@ -1,0 +1,140 @@
+/* scoped */
+/* デザイン home_10: style/base.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   Base
+   ・:root カラーパレット / リセット / body・背景
+   ・テーマ（data-theme）・ビュー（data-view）・
+     ログイン状態（data-auth）の表示切替
+   （旧 main.css + auth.css）
+========================================================== */
+
+.reader-home {
+    --text-color: #292929;
+    --base-color-1: #f7f7f0;
+    --base-color-2: #e5e0c3;
+    --base-color-3: #d9bf8d;
+    --base-color-4: #b28647;
+    --base-color-5: #73502e;
+    --main-color-1: #aacc99;
+    --main-color-2: #4c804c;
+    --main-color-3: #1f4c2e;
+    --main-color-4: #151d18;
+}
+
+/*==================================================
+表示スケール
+・デザインはブラウザ90%表示を基準に組んでいるため、
+  100%表示でも同じ見え方になるよう全体を 0.9 倍にする
+・vw / vh はズームの影響を受けないため、使用箇所は
+  calc(●vw / var(--page-zoom)) で割り戻して補正する
+==================================================*/
+
+.reader-home {
+    --page-zoom: 0.9;
+}
+
+.reader-home {
+    zoom: var(--page-zoom);
+}
+
+.reader-home * {
+    box-sizing: border-box;
+    font-family: garamond, "Hiragino Mincho ProN", "Hiragino Mincho Pro", "游明朝", YuMincho, serif;
+    color: var(--text-color);
+    list-style: none;
+    text-decoration: none;
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+}
+
+.reader-home,
+.reader-home {
+    position: relative;
+}
+
+.reader-home[data-theme="light"] {
+    background: var(--base-color-1);
+}
+
+.reader-home[data-theme="dark"] {
+    background: var(--main-color-4);
+}
+
+main {
+    width: 100%;
+    max-width: 2000px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow-x: hidden;
+}
+
+.bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+}
+
+#bg-paper,
+#bg-binding {
+    width: 100%;
+    height: 100%;
+}
+
+.reader-home[data-theme="light"] .light {
+    display: block;
+}
+
+.reader-home[data-theme="light"] .dark {
+    display: none;
+}
+
+.reader-home[data-theme="dark"] .light {
+    display: none;
+}
+
+.reader-home[data-theme="dark"] .dark {
+    display: block;
+}
+
+.reader-home[data-view="reader"] .reader {
+    display: block;
+}
+
+.reader-home[data-view="reader"] .writer {
+    display: none;
+}
+
+.reader-home[data-view="writer"] .reader {
+    display: none;
+}
+
+.reader-home[data-view="writer"] .writer {
+    display: block;
+}
+
+/* ==========================================================
+   Auth 表示切替
+   .reader-home[data-auth="guest" | "login"]
+   ・.guest → ゲスト時のみ表示（新規登録 / ログイン など）
+   ・.login → ログイン時のみ表示（マイページ / 通知 など）
+   ※ 非表示側だけ display:none にして、表示側は各要素本来の
+     display を活かす（flex の li 等が壊れないように）
+========================================================== */
+
+.reader-home[data-auth="guest"] .login {
+    display: none;
+}
+
+.reader-home[data-auth="login"] .guest {
+    display: none;
+}
+
+/* auth × view の複合条件（例：メニューの「作品を投稿する」）は
+   class="login writer" を併記するだけで
+   上の data-view ルールと data-auth ルールが
+   両方効いて「ログイン かつ 書き手」のときのみ表示になる */

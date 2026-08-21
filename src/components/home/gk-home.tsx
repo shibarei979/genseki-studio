@@ -1,22 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-
-/*
- * 読者向けホームの見た目。
- *
- * 参照元では全体に効かせていたが、
- * .reader-home の中だけに閉じてある。
- * 執筆向けの画面や作品ページには影響しない。
- */
-import '@/styles/home/base.css'
-import '@/styles/home/ui.css'
-import '@/styles/home/loading.css'
-import '@/styles/home/bookshelf.css'
-import '@/styles/home/guide.css'
-import '@/styles/home/notice.css'
-import '@/styles/home/works.css'
-import '@/styles/home/reading_list.css'
-import '@/styles/home/book_info.css'
-import '@/styles/home/responsive.css'
 import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
 import BookInfoPopup from '@/components/home/book-info-popup'
 import BookshelfSection from '@/components/home/bookshelf-section'
@@ -30,10 +12,7 @@ import Footer from '@/components/layout/footer'
 import Header from '@/components/layout/header'
 import type { HomeBook, HomeNotice } from '@/types/home'
 
-/*
- * revalidate はページ側で持つ。
- * 部品に書いても効かないので、page.tsx へ移した。
- */
+export const revalidate = 30
 
 // ============================================================
 // 定数
@@ -127,6 +106,13 @@ function toBook(
 // ============================================================
 // ページ本体
 // ============================================================
+/**
+ * 読者向けのホーム。
+ *
+ * GENSEKIKORO のトップをそのまま持ってきたもの。
+ * 見た目と中身が既に噛み合っているので、
+ * 作り直さずに、まず動く形で置く。
+ */
 export default async function ReaderHome() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -332,7 +318,13 @@ export default async function ReaderHome() {
   // （src/app/layout.tsx がサイト全体で一元管理）
   // ============================================================
   return (
-    <div id="home-page" className="reader-home">
+    /*
+     * gk-home を付ける。
+     *
+     * 持ってきた CSS は、この名前の中でだけ効くようにしてある。
+     * 外すと、ほかの画面まで字と色が変わる。
+     */
+    <div id="home-page" className="gk-home" data-theme="light" data-view="reader">
       <LoadingScreen />
       <Header />
       <main>

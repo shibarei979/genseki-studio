@@ -1,0 +1,215 @@
+/* scoped */
+/* デザイン home_10: style/responsive.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   Responsive
+   ・ブレイクポイントは実ビューポート幅（メディアクエリは
+     body の zoom の影響を受けない）
+   ・レイアウト座標は実幅 ÷ 0.9 で計算される点に注意
+========================================================== */
+
+/*==================================================
+〜1500px：ヘッダーの絶対配置リンクを通常フローに戻す
+==================================================*/
+
+@media (max-width: 1500px) {
+    header {
+        padding: 0 48px;
+    }
+
+    header h1 {
+        width: 250px;
+    }
+
+    /* 中央寄せの絶対配置はこの幅からロゴ・チップと重なるため解除 */
+    header ul.main_nav>li:nth-child(1),
+    header ul.main_nav>li:nth-child(2) {
+        position: static;
+        width: auto;
+        right: auto;
+    }
+
+    header ul.main_nav>li:last-child {
+        margin-left: 10px;
+    }
+}
+
+/*==================================================
+〜1350px：すべてのお知らせテキストサイズ変更
+==================================================*/
+
+@media (max-width: 1350px) {
+    section.notice div:nth-child(1) h2 {
+        font-size: 24px;
+    }
+}
+
+/*==================================================
+〜1150px：お知らせ画像を畳む・グリッド段階減
+==================================================*/
+
+@media (max-width: 1150px) {
+    header {
+        padding: 0 28px;
+    }
+
+    header h1 {
+        width: 200px;
+    }
+
+    header ul.main_nav {
+        gap: 12px;
+    }
+
+    /* テキストリンクはハンバーガーメニュー側に集約 */
+    header ul.main_nav>li:nth-child(1),
+    header ul.main_nav>li:nth-child(2) {
+        display: none;
+    }
+
+    /* お知らせ：画像を非表示にして全幅レイアウトへ */
+    section.notice {
+        width: 88%;
+        min-width: 0;
+        margin: 0 auto;
+    }
+
+    section.notice .n_img {
+        display: none;
+    }
+
+    section.notice .n_title {
+        width: auto;
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* 4カラム → 1カラム（カラムは flex なので折返しのみ） */
+    section.reading_list {
+        flex-wrap: wrap;
+        row-gap: 80px;
+    }
+
+    section.reading_list .rl_col {
+        flex: 1 1 100%;
+    }
+
+    footer nav {
+        grid-template-columns: repeat(2, auto);
+        gap: 30px 50px;
+    }
+
+    section.guide>a {
+        font-size: 20px;
+    }
+}
+
+/*==================================================
+〜800px
+==================================================*/
+
+@media (max-width: 800px) {
+    header {
+        height: 110px;
+        padding: 0 18px;
+    }
+
+    header h1 {
+        width: 165px;
+    }
+
+    header .main_nav>li.nav_signup>a {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+
+    header .main_nav>li.nav_login>a {
+        padding: 0 8px;
+        font-size: 14px;
+    }
+
+    header .nav_avatar {
+        width: 44px;
+        height: 44px;
+        margin-left: 10px;
+    }
+
+    .bookshelf-loop {
+        margin-top: 160px;
+        height: calc(70vh / var(--page-zoom) - 160px);
+    }
+
+    section.guide {
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 80px;
+    }
+
+    section.works h2 {
+        font-size: 30px;
+    }
+
+    section.works .book {
+        height: 250px;
+    }
+
+    section.notice div:nth-child(1) h2 {
+        font-size: 28px;
+    }
+
+    section.notice div:nth-child(2) h2 {
+        padding-right: 120px;
+    }
+
+    section.notice div:nth-child(2) h2,
+    section.notice div:nth-child(3) h2 {
+        font-size: 20px;
+    }
+
+    /* ポップアップ：右ページのみの1枚表示に */
+    .bi_book {
+        grid-template-columns: 1fr;
+        width: min(560px, calc(92vw / var(--page-zoom)));
+    }
+
+    .bi_left {
+        display: none;
+    }
+
+    .reader-home[data-theme="light"] .bi_right,
+    .reader-home[data-theme="dark"] .bi_right {
+        border-radius: 10px;
+    }
+
+    footer {
+        padding: 36px 6% 20px;
+    }
+}
+
+/*==================================================
+〜560px
+==================================================*/
+
+@media (max-width: 560px) {
+    header h1 {
+        width: 140px;
+    }
+
+    header .sub_nav>ul {
+        min-width: 0;
+        width: 100%;
+    }
+
+    section.works .book {
+        height: 210px;
+    }
+
+    section.works .w_carousel {
+        gap: 8px;
+    }
+
+    footer nav {
+        grid-template-columns: 1fr;
+    }
+}

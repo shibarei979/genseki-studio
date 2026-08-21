@@ -1,0 +1,124 @@
+/* scoped */
+/* デザイン home_10: style/footer.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   Footer
+   デザインメモ：色味を揃える → 緑背景（--main-color-3）
+   　　　　　　 オレンジのボタン → 白ボタン
+========================================================== */
+
+footer {
+    margin-top: 200px;
+    background: var(--main-color-2);
+    padding: 48px 10% 24px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: start;
+    gap: 40px;
+}
+
+.reader-home[data-theme="dark"] footer{
+    background: var(--main-color-4);
+}
+
+footer * {
+    color: var(--base-color-1);
+}
+
+/*==================================================
+ブランド側（ロゴ・コピー・ボタン）
+==================================================*/
+
+footer .f_brand {
+    max-width: 340px;
+}
+
+footer .f_logo img {
+    width: 190px;
+    display: block;
+}
+
+footer .f_copy_text {
+    margin-top: 16px;
+    font-size: 12px;
+    line-height: 1.9;
+}
+
+footer .f_actions {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+footer .f_actions a {
+    display: inline-block;
+    padding: 11px 24px;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* 白ボタン */
+footer .f_post {
+    background: var(--base-color-1);
+    color: var(--main-color-3);
+}
+
+footer .f_actions a.f_find {
+    padding: 0 24px;
+}
+
+footer .f_actions a.oct_line {
+    border-image: var(--oct-img, var(--oct-line-light)) 15;
+}
+
+/*==================================================
+リンク列
+==================================================*/
+
+footer nav {
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+    gap: 50px;
+}
+
+footer nav h2 {
+    font-size: 14px;
+    margin-bottom: 16px;
+    white-space: nowrap;
+}
+
+footer nav ul {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+footer nav li a {
+    font-size: 12px;
+    opacity: .85;
+    white-space: nowrap;
+}
+
+footer nav li a:hover {
+    opacity: 1;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/*==================================================
+コピーライト
+==================================================*/
+
+footer .f_copyright {
+    width: 100%;
+    margin-top: 26px;
+    text-align: center;
+}
+
+footer .f_copyright small {
+    font-size: 11px;
+    opacity: .7;
+}

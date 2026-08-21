@@ -1,0 +1,228 @@
+/* scoped */
+/* デザイン home_10: style/works.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   Pick Up! / New Release!
+   表紙の bg-img は後日 CSS 側で入れる想定のため単色
+   （色は root の変数のみ使用）
+========================================================== */
+
+section.works {
+    width: min(1800px, 90%);
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+}
+
+/*==================================================
+見出し行
+==================================================*/
+
+section.works .w_head {
+    display: flex;
+    flex-direction: column;
+    align-items: baseline;
+}
+
+section.works h2 {
+    font-size: 40px;
+    letter-spacing: .02em;
+    margin-top: 80px;
+}
+
+section.works .w_head>a {
+    font-size: 18px;
+}
+
+section.works .w_head>a:hover {
+    text-decoration: underline;
+    text-underline-offset: 6px;
+}
+
+/*==================================================
+更新ボタン
+==================================================*/
+
+section.works .w_refresh {
+    background: none;
+    border: none;
+    cursor: pointer;
+    line-height: 0;
+    margin-top: 30px;
+}
+
+section.works .w_refresh svg {
+    width: 22px;
+    height: 22px;
+}
+
+section.works .w_refresh.is_spin svg {
+    animation: w-spin .6s ease;
+}
+
+@keyframes w-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.reader-home[data-theme="dark"] section.works .w_refresh svg,
+.reader-home[data-theme="dark"] section.works .w_refresh svg * {
+    color: var(--base-color-1);
+}
+
+/*==================================================
+カルーセル
+・横並びの本をループ表示、左右ボタンで1冊分送る
+　（送り・クローン生成は js/works_carousel.js）
+・本は統一フォーマット（.book / .b_*）。
+　このセクションで使うのは b_title / b_author のみで
+　残り（tags / head / excerpt / comment / likes）は非表示
+==================================================*/
+
+section.works .w_carousel {
+    width: 75%;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+section.works .w_view {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    padding: 20px 0 26px;
+    perspective: 2200px;
+}
+
+section.works .w_grid {
+    display: flex;
+    gap: 45px;
+    transition: transform .45s ease;
+    will-change: transform;
+    transform-style: preserve-3d;
+}
+
+section.works .w_grid li {
+    flex-shrink: 0;
+    background: linear-gradient(90deg, var(--base-color-1) 0%, var(--base-color-3) 10%);
+    box-shadow: inset 2px 0 4px var(--base-color-2);
+    transform-style: preserve-3d;
+}
+
+/* 左右ボタン */
+
+section.works .w_nav {
+    background: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    color: var(--main-color-2);
+}
+
+section.works .w_nav:hover .icn {
+    opacity: .7;
+}
+
+.reader-home[data-theme="dark"] section.works .w_nav {
+    color: var(--base-color-1);
+    --oct-img: var(--oct-line-light);
+}
+
+/* 本体 */
+
+section.works .book {
+    position: relative;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: center;
+    gap: 30px;
+    aspect-ratio: 245 / 300;
+    height: 230px;
+    background-color: var(--main-color-2);
+    background-image: url(/home/img/bookshelf/b_front_2.png);
+    background-size: cover;
+    background-position: center;
+    transition: transform .3s ease;
+    transform-origin: center right;
+    /* Safari 対策：15°回転では裏面は見えないため見た目は不変。
+       合成レイヤー化され、縦書きテキストの再ラスタライズによる
+       ちらつきを防ぐ */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+section.works .w_grid li:hover .book {
+    transform: rotate3d(0, 1, 0, 15deg);
+}
+
+section.works .book :is(.b_tags, .b_head, .b_excerpt, .b_comment, .b_likes) {
+    display: none;
+}
+
+/*==================================================
+表紙テキスト（縦書き）
+==================================================*/
+
+section.works .book .b_title,
+section.works .book .b_author {
+    margin-top: 30px;
+    writing-mode: vertical-rl;
+    /* Safari 対策：未指定だと WebKit が日本語を横倒しで描画することがある。
+       mixed は仕様上のデフォルト値のため Chrome の見た目は不変 */
+    -webkit-text-orientation: mixed;
+    text-orientation: mixed;
+    color: var(--base-color-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+section.works .book .b_title {
+    font-size: 20px;
+    line-height: 1.2;
+    max-height: 65%;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+section.works .book .b_author {
+    font-size: 11px;
+    max-height: 55%;
+    white-space: nowrap;
+    padding-top: 20px;
+}
+
+section.works .book .b_author::before {
+    content: "著";
+    padding-bottom: 10px;
+}
+
+/*==================================================
+テーマ色（見出し・リンクのみ。表紙上の文字は常に明色）
+==================================================*/
+
+.reader-home[data-theme="dark"] section.works h2,
+.reader-home[data-theme="dark"] section.works .w_head>a,
+.reader-home[data-theme="dark"] section.works .w_refresh svg {
+    color: var(--base-color-1);
+}
+
+/*==================================================
+Safari（WebKit）専用の代替行数制限
+・-webkit-box は縦書き（vertical-rl）を正しく組めず、
+  題名が横倒しの横書きになるため、WebKit だけ
+  行数ぶんの論理サイズ（max-block-size = line-height × 行数）
+  で制限する
+・`font: -apple-system-body` は WebKit のみ解釈するため
+  Chrome / Firefox には影響しない（見た目は不変）
+・差分：クランプ時の末尾「…」は付かず切り落としになる
+==================================================*/
+
+@supports (font: -apple-system-body) {
+    section.works .book .b_title {
+        display: block;
+        max-block-size: 2.4em;
+        /* 2行 × line-height 1.2 */
+    }
+}

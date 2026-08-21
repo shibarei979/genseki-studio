@@ -1,0 +1,87 @@
+/* scoped */
+/* デザイン home_10: style/guide.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   ユーザーガイド
+   デザインメモ：シェイプは関連あるものに
+   　見つける：虫眼鏡 / 投稿する：ペン
+   （旧 section.css のガイド部分 + guide.css）
+========================================================== */
+
+section.guide h2 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.reader-home[data-theme="light"] section.guide * {
+    color: var(--text-color);
+}
+
+.reader-home[data-theme="dark"] section.guide * {
+    color: var(--base-color-1);
+}
+
+section.guide {
+    width: 90%;
+    margin: 0 auto;
+    border-top: solid 1px color-mix(in srgb, var(--text-color) 50%, transparent);
+    border-bottom: solid 1px color-mix(in srgb, var(--text-color) 50%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 100px;
+    margin-top: 100px;
+}
+
+.reader-home[data-theme="dark"] section.guide {
+    border-top: solid 1px color-mix(in srgb, var(--base-color-1) 50%, transparent);
+    border-bottom: solid 1px color-mix(in srgb, var(--base-color-1) 50%, transparent);
+}
+
+section.guide>a {
+    position: relative;
+    z-index: 0;
+    font-size: 24px;
+    letter-spacing: .06em;
+    padding: 20px 0 20px 50px;
+}
+
+section.guide>a::before {
+    content: "";
+    display: block;
+    position: absolute;
+    left: 0;
+    top: calc(50% - 20px);
+    width: 40px;
+    height: 40px;
+    z-index: -1;
+    background-color: var(--base-color-2);
+    -webkit-mask: var(--guide-shape) center / contain no-repeat;
+    mask: var(--guide-shape) center / contain no-repeat;
+}
+
+/* 見つける：虫眼鏡 */
+section.guide>a:nth-of-type(1) {
+    --guide-shape: url(/home/img/guide/lupe.svg);
+}
+
+/* 投稿する：ペン */
+section.guide>a:nth-of-type(2) {
+    --guide-shape: url(/home/img/guide/pen.svg);
+}
+
+section.guide>a:hover {
+    opacity: .75;
+}
+
+/* ダークテーマ時のシェイプ色 */
+.reader-home[data-theme="dark"] section.guide>a::before {
+    background-color: var(--main-color-2);
+}

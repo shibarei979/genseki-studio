@@ -1,0 +1,139 @@
+/* scoped */
+/* デザイン home_10: style/reading_list.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   続きから読む / あなたへのおすすめ /
+   フォローした作者の更新 / フォローした作者の新着
+   ・本は統一フォーマット（.book / .b_*）
+   ・各作品は仕切り線区切りのリスト表示：
+     題名・著者は左揃え、著者の横にタグを1列表示
+     （はみ出した分は隠す）、最初の数行（b_head）は非表示
+   ・カラムは flex（flex:1 の均等割り）。
+     列数は HTML の .rl_col の数がそのまま反映されるため
+     将来3カラムにする場合も CSS 変更不要
+========================================================== */
+
+section.reading_list {
+    width: min(1300px, 92%);
+    margin: 100px auto 0;
+    display: flex;
+    justify-content: center;
+}
+
+section.reading_list .rl_col {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 15px;
+    border-left: 1px solid color-mix(in srgb, var(--text-color) 18%, transparent);
+}
+
+section.reading_list .rl_col:first-child {
+    border-left: none;
+}
+
+section.reading_list h2 {
+    font-size: 24px;
+    text-align: center;
+    margin-bottom: 40px;
+    white-space: nowrap;
+}
+
+section.reading_list ul {
+    display: flex;
+    flex-direction: column;
+}
+
+/*==================================================
+作品（仕切り線区切り）
+==================================================*/
+
+section.reading_list ul li {
+    border-top: 1px solid color-mix(in srgb, var(--text-color) 18%, transparent);
+    padding: 16px 0;
+}
+
+section.reading_list .book {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    column-gap: 10px;
+    row-gap: 8px;
+    padding: 0 2px;
+}
+
+section.reading_list .book :is(.b_head, .b_excerpt, .b_comment, .b_likes) {
+    display: none;
+}
+
+/* 題名（左揃え・2行まで） */
+
+section.reading_list .book .b_title {
+    flex-basis: 100%;
+    font-size: 17px;
+    line-height: 1.5;
+    text-align: left;
+    color: var(--main-color-2);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+section.reading_list .book:hover .b_title {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/* 著者（左揃え） */
+
+section.reading_list .book .b_author {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 45%;
+}
+
+/* タグ（著者の横に1列。入りきらない分は隠す） */
+
+section.reading_list .book .b_tags {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+section.reading_list .book .b_tags li {
+    font-size: 10px;
+    padding: 1px 8px;
+    border: 1px solid color-mix(in srgb, var(--text-color) 35%, transparent);
+    white-space: nowrap;
+    opacity: .85;
+}
+
+/*==================================================
+テーマ色
+==================================================*/
+
+.reader-home[data-theme="dark"] section.reading_list * {
+    color: var(--base-color-1);
+}
+
+.reader-home[data-theme="dark"] section.reading_list ul li {
+    border-top-color: color-mix(in srgb, var(--base-color-1) 25%, transparent);
+}
+
+.reader-home[data-theme="dark"] section.reading_list .book .b_title {
+    color: var(--main-color-1);
+}
+
+.reader-home[data-theme="dark"] section.reading_list .book .b_tags li {
+    border-color: color-mix(in srgb, var(--base-color-1) 40%, transparent);
+}
+
+.reader-home[data-theme="dark"] section.reading_list .rl_col {
+    border-left-color: color-mix(in srgb, var(--base-color-1) 18%, transparent);
+}

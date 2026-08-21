@@ -1,0 +1,395 @@
+/* scoped */
+/* デザイン home_10: style/header.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換、開発用 .sn_dev ルールを削除 */
+
+/* ==========================================================
+   Header / ハンバーガーメニュー
+   （旧 components.css + header_add.css のヘッダー固有部分）
+========================================================== */
+
+#header {
+    position: fixed;
+    z-index: 100;
+}
+
+header {
+    background: color-mix(in srgb, var(--base-color-1) 70%, transparent);
+    width: calc(100vw / var(--page-zoom));
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 200px;
+}
+
+/* ダークモード時は背景も反転（テキスト色は下のルールで追従） */
+.reader-home[data-theme="dark"] header {
+    background: color-mix(in srgb, var(--main-color-4) 70%, transparent);
+}
+
+header h1 {
+    width: 320px;
+}
+
+header ul.main_nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+header ul.main_nav>li>a {
+    font-size: 18px;
+}
+
+/* テキスト色（sub_nav には効かせない：メニュー内は白固定） */
+
+.reader-home[data-theme="light"] header ul.main_nav>li>a {
+    color: var(--text-color);
+}
+
+.reader-home[data-theme="dark"] header ul.main_nav>li>a {
+    color: var(--base-color-1);
+}
+
+.sub_nav {
+    opacity: 0;
+    pointer-events: none;
+    transition: .3s ease-out;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100vw / var(--page-zoom));
+    height: calc(100vh / var(--page-zoom));
+    background-color: color-mix(in srgb, var(--main-color-4) 50%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+header .sub_nav>ul {
+    background: var(--main-color-3);
+    width: 20%;
+    min-width: 400px;
+    height: 100%;
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transform: translateX(100%);
+    transition: .3s ease-out;
+}
+
+header ul.main_nav>li:last-child{
+    margin-left: 30px;
+}
+
+header ul.main_nav>li:nth-child(1){
+    width: 150px;
+    position: absolute;
+    right: calc(55vw / var(--page-zoom) - 75px);
+}
+
+header ul.main_nav>li:nth-child(2){
+    width: 150px;
+    position: absolute;
+    right: calc(45vw / var(--page-zoom) - 75px);
+}
+
+header ul.main_nav>li:nth-child(1) a,
+header ul.main_nav>li:nth-child(2) a{
+    justify-content: center;
+    text-align: center;
+}
+
+/*==================================================
+main_nav
+==================================================*/
+
+header .main_nav>li>a {
+    display: flex;
+    align-items: center;
+}
+
+/* 新規登録（塗り）/ ログイン（枠線）：8角形ザブトン */
+
+header .main_nav>li.nav_signup>a {
+    display: inline-block;
+    padding: 10px 26px;
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+header .main_nav>li.nav_login>a {
+    display: inline-block;
+    padding: 0 15px;
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+/* 塗りチップの文字は theme に依らず白固定
+   （components.css の theme ルールより優先させるため body から指定） */
+.reader-home header ul.main_nav>li.nav_signup>a {
+    background: var(--main-color-2);
+    color: var(--base-color-1);
+}
+
+header .main_nav>li.nav_login>a {
+    color: var(--text-color);
+}
+
+/* ダークモード時：ヘッダー内の枠線チップは白線に */
+.reader-home[data-theme="dark"] header .main_nav .oct_line {
+    --oct-img: var(--oct-line-light);
+}
+
+.reader-home[data-theme="dark"] header .main_nav>li.nav_login>a {
+    color: var(--base-color-1);
+}
+
+/* アイコンチップ（投稿ペン / 通知） */
+
+.icn_chip {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.icn_chip .icn {
+    width: 18px;
+    height: 18px;
+}
+
+/* マイアイコン */
+
+header .nav_avatar {
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--main-color-2);
+    margin-left: 30px;
+}
+
+/*==================================================
+sub_nav（ハンバーガーメニュー）
+デザイン：緑パネル・白文字固定
+==================================================*/
+
+.sub_nav.is_open {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+
+.sub_nav.is_open ul {
+    transform: none;
+}
+
+header .sub_nav>ul {
+    position: relative;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 42px 45px 36px;
+    gap: 26px;
+    overflow-y: auto;
+}
+
+.sub_nav>ul>li {
+    width: 100%;
+}
+
+/* パネル内は theme に関わらず白文字固定 */
+.sub_nav,
+.sub_nav * {
+    color: var(--base-color-1);
+}
+
+.sub_nav a,
+.sub_nav button {
+    background: none;
+    border: none;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+/* 上段：ロゴ + 閉じる */
+
+.sub_nav .sn_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 26px;
+}
+
+.sub_nav .sn_logo img {
+    width: 170px;
+    display: block;
+}
+
+.sub_nav .nav_menu_close .icn {
+    width: 22px;
+    height: 22px;
+}
+
+/* リンク（頭に小さな角丸四角） */
+
+.sub_nav .nav_link::before {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 16px;
+    border: 1.5px solid var(--base-color-1);
+    border-radius: 4px;
+    vertical-align: baseline;
+}
+
+.sub_nav li>ul {
+    margin: 16px 0 0 30px;
+}
+
+/* 区切り・下寄せ用スペーサー */
+
+.sub_nav .sn_gap {
+    height: 24px;
+}
+
+.sub_nav .sn_spacer {
+    flex: 1;
+    min-height: 30px;
+}
+
+/* 作品を投稿する（白ザブトン・ログイン×書き手のみ） */
+
+.sub_nav .nav_post_menu a {
+    display: block;
+    width: 100%;
+    padding: 13px 0;
+    text-align: center;
+    background: var(--base-color-1);
+    color: var(--main-color-3);
+    --cut: 12px;
+}
+
+/* アバター + 名前 */
+
+.sub_nav .sn_user a {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.sub_nav .sn_avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--base-color-1);
+    flex-shrink: 0;
+}
+
+/* 新規登録 / ログイン（ゲスト時・横並びザブトン） */
+
+.sub_nav .sn_auth {
+    display: flex;
+    justify-content: space-between;
+    gap: 0;
+}
+
+.sub_nav .sn_auth a {
+    width: calc(50% - 7px);
+    text-align: center;
+}
+
+.sub_nav .sn_signup,
+.sub_nav .sn_login {
+    padding: 11px 28px;
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+.sub_nav .sn_signup {
+    background: var(--base-color-1);
+    color: var(--main-color-3);
+}
+
+.sub_nav .sn_login {
+    padding: 0 17px;
+    margin-left: -6px;
+    align-items: center;
+}
+
+/*==================================================
+下部トグル行（スイッチ・通知・設定）
+==================================================*/
+
+.sub_nav .nav_toggles {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/* メニュー内の枠線チップは常に白線
+   ※ 上の a / button リセット（border:none）より後で
+     border を張り直す（border-image は border 幅が必須） */
+.sub_nav .oct_line {
+    --oct-img: var(--oct-line-light);
+    border: 11px solid transparent;
+    border-image: var(--oct-img) 15;
+}
+
+.sub_nav .nav_toggles .icn_chip {
+    flex-shrink: 0;
+}
+
+.sub_nav .nav_toggles>a:last-child {
+    margin-left: auto;
+}
+
+/* スイッチチップ（アイコン + ピル） */
+
+.sw_chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 3px;
+}
+
+.sw_chip .icn {
+    width: 18px;
+    height: 18px;
+}
+
+.sw {
+    position: relative;
+    width: 36px;
+    height: 18px;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--base-color-1) 35%, transparent);
+    transition: background .3s ease;
+}
+
+.sw::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--base-color-1);
+    transition: translate .3s ease;
+}
+
+.reader-home[data-theme="dark"] #theme-toggle .sw,
+.reader-home[data-view="writer"] #writer-toggle .sw {
+    background: color-mix(in srgb, var(--main-color-1) 70%, transparent);
+}
+
+.reader-home[data-theme="dark"] #theme-toggle .sw::before,
+.reader-home[data-view="writer"] #writer-toggle .sw::before {
+    translate: 18px 0;
+}

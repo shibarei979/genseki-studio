@@ -1,0 +1,111 @@
+/* scoped */
+/* デザイン home_10: style/ui.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   UI 共通部品
+   ・角を落とした8角形ザブトン（.oct_fill / .oct_line）
+   ・SVG アイコン（.icn / mask + currentColor）
+   （旧 header_add.css の共通部品部分）
+========================================================== */
+
+/*==================================================
+8角形ザブトン
+・塗り（.oct_fill）: clip-path。--cut で角の落とし量
+・枠線（.oct_line）: SVG（border-image）。
+  角はSVGのまま・辺だけ伸縮するので歪まず、内側は真の透過
+・SVG には width/height（固有サイズ）が必須：
+  無いと Firefox が border-image を描画しない
+・枠線色は --oct-img で切替（緑 / 白。root の
+  --main-color-2 / --base-color-1 と同値の埋め込みSVG）
+==================================================*/
+
+.reader-home {
+    --oct-line-green: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpolygon points='14 1 34 1 47 14 47 34 34 47 14 47 1 34 1 14' fill='none' stroke='%234c804c' stroke-width='2'/%3E%3C/svg%3E");
+    --oct-line-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpolygon points='14 1 34 1 47 14 47 34 34 47 14 47 1 34 1 14' fill='none' stroke='%23f7f7f0' stroke-width='2'/%3E%3C/svg%3E");
+}
+
+.oct_fill {
+    clip-path: polygon(var(--cut, 10px) 0,
+            calc(100% - var(--cut, 10px)) 0,
+            100% var(--cut, 10px),
+            100% calc(100% - var(--cut, 10px)),
+            calc(100% - var(--cut, 10px)) 100%,
+            var(--cut, 10px) 100%,
+            0 calc(100% - var(--cut, 10px)),
+            0 var(--cut, 10px));
+}
+
+.oct_line {
+    border: 11px solid transparent;
+    border-image: var(--oct-img, var(--oct-line-green)) 15;
+}
+
+/*==================================================
+SVG アイコン（mask + currentColor で theme 追従）
+==================================================*/
+
+.icn {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    /* 全称セレクタの color 指定を打ち消し、親（a / button）の色に追従させる */
+    color: inherit;
+    background: currentColor;
+    -webkit-mask: var(--icn) center / contain no-repeat;
+    mask: var(--icn) center / contain no-repeat;
+    font-size: 0;
+}
+
+.icn_menu {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='12' y='22' width='76' height='9' rx='4.5'/%3E%3Crect x='12' y='45.5' width='76' height='9' rx='4.5'/%3E%3Crect x='12' y='69' width='76' height='9' rx='4.5'/%3E%3C/svg%3E");
+    width: 26px;
+    height: 26px;
+}
+
+.icn_close {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M22 22 78 78M78 22 22 78' stroke='black' stroke-width='11' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+}
+
+.icn_pen {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M68 8 L92 32 L36 88 L8 92 L12 64 Z' fill='black'/%3E%3C/svg%3E");
+}
+
+.icn_bell {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 8c-13 0-23 10-23 25v18l-9 13v5h64v-5l-9-13V33c0-15-10-25-23-25z'/%3E%3Ccircle cx='50' cy='81' r='8'/%3E%3C/svg%3E");
+}
+
+.reader-home[data-theme="light"] .nav_post .icn_pen,
+.reader-home[data-theme="light"] .nav_bell .icn_bell {
+    color: var(--main-color-2);
+}
+
+.reader-home[data-theme="dark"] .icn_pen,
+.reader-home[data-theme="dark"] .icn_bell {
+    color: var(--base-color-1);
+}
+
+
+.icn_sun {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='17'/%3E%3Cpath d='M50 8v13M50 79v13M8 50h13M79 50h13M21 21l9 9M70 70l9 9M79 21l-9 9M30 70l-9 9' stroke='black' stroke-width='9' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+}
+
+.icn_moon {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M64 12a36 36 0 1 0 24 62A42 42 0 0 1 64 12z'/%3E%3C/svg%3E");
+}
+
+.icn_book {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M12 14c16 0 29 3 34 9v65c-5-6-18-9-34-9z'/%3E%3Cpath d='M88 14c-16 0-29 3-34 9v65c5-6 18-9 34-9z'/%3E%3C/svg%3E");
+}
+
+.icn_chev_l {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M62 16 30 50l32 34' fill='none' stroke='black' stroke-width='13' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.icn_chev_r {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M38 16 70 50 38 84' fill='none' stroke='black' stroke-width='13' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.icn_gear {
+    --icn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='15' fill='none' stroke='black' stroke-width='11'/%3E%3Cpath d='M50 26V12M50 74v14M74 50h14M26 50H12M67 33l10-10M33 67 23 77M67 67l10 10M33 33 23 23' stroke='black' stroke-width='10' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+}

@@ -1,0 +1,286 @@
+/* scoped */
+/* デザイン home_10: style/book_info.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   Book Info ポップアップ（開いた本）
+   ・本（.book）タッチで js/book_info.js が情報を流し込み
+     .is_open で表示する
+   ・本のページは theme で背景が変わらないため
+     テキストは --text-color 固定
+========================================================== */
+
+.book_info {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+}
+
+.book_info.is_open {
+    display: block;
+}
+
+.reader-home.is_modal_open {
+    overflow: hidden;
+}
+
+/*==================================================
+オーバーレイ
+==================================================*/
+
+.bi_overlay {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--main-color-4) 55%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/*==================================================
+開いた本
+==================================================*/
+
+.bi_book {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: min(1040px, calc(92vw / var(--page-zoom)));
+    height: min(620px, calc(82vh / var(--page-zoom)));
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    filter: drop-shadow(0 30px 50px color-mix(in srgb, var(--main-color-4) 45%, transparent));
+}
+
+.bi_page {
+    position: relative;
+    background: var(--base-color-1);
+    overflow: hidden;
+}
+
+.reader-home[data-theme="dark"] .bi_page * {
+    color: var(--base-color-1);
+}
+
+/* ノド（中央の綴じ）の陰影と小口の紙の重なり */
+
+.reader-home[data-theme="light"] .bi_left {
+    border-radius: 10px 0 0 10px;
+    background:
+        linear-gradient(90deg,
+            transparent 88%,
+            color-mix(in srgb, var(--base-color-3) 45%, transparent) 100%),
+        var(--base-color-1);
+    box-shadow: inset 6px 0 0 var(--base-color-2), inset 10px 0 0 var(--base-color-1), inset 14px 0 0 var(--base-color-2);
+}
+
+.reader-home[data-theme="light"] .bi_right {
+    border-radius: 0 10px 10px 0;
+    background:
+        linear-gradient(270deg,
+            transparent 88%,
+            color-mix(in srgb, var(--base-color-3) 45%, transparent) 100%),
+        var(--base-color-1);
+    box-shadow: inset -6px 0 0 var(--base-color-2), inset -10px 0 0 var(--base-color-1), inset -14px 0 0 var(--base-color-2);
+}
+
+.reader-home[data-theme="dark"] .bi_left {
+    border-radius: 10px 0 0 10px;
+    background: var(--main-color-4);
+}
+
+.reader-home[data-theme="dark"] .bi_right {
+    border-radius: 0 10px 10px 0;
+    background: var(--main-color-4);
+}
+
+/*==================================================
+右ページ（縦書き：題名・著者 / タグ / 読むボタン）
+==================================================*/
+
+.bi_right .bi_v {
+    position: absolute;
+    inset: 52px 48px 150px 44px;
+    writing-mode: vertical-rl;
+    /* Safari 対策：未指定だと WebKit が日本語を横倒しで描画することがある。
+       mixed は仕様上のデフォルト値のため Chrome の見た目は不変 */
+    -webkit-text-orientation: mixed;
+    text-orientation: mixed;
+    overflow: hidden;
+}
+
+.bi_title {
+    font-size: 30px;
+    line-height: 1.4;
+    max-width: 100%;
+    margin-left: 26px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+.bi_author {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bi_author::before {
+    content: "著";
+    padding-bottom: 12px;
+}
+
+.bi_tags {
+    position: absolute;
+    left: 44px;
+    right: 40px;
+    bottom: 104px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 48px;
+    overflow: hidden;
+}
+
+.bi_tags li {
+    border: solid 1px var(--main-color-2);
+    font-size: 11px;
+    padding: 3px 12px;
+    white-space: nowrap;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bi_read {
+    position: absolute;
+    left: 44px;
+    bottom: 40px;
+    padding: 12px 30px;
+    font-size: 16px;
+    background: var(--main-color-2);
+    color: var(--base-color-1);
+    --cut: 11px;
+    /* 8角形は共通の .oct_fill（clip-path）を HTML 側で併用 */
+}
+
+.bi_read:hover {
+    background: var(--main-color-3);
+}
+
+/*==================================================
+左ページ（最初の本文数行・抜粋・コメント）
+==================================================*/
+
+.bi_left .bi_head {
+    position: absolute;
+    inset: 52px 44px 150px 48px;
+    writing-mode: vertical-rl;
+    /* Safari 対策：未指定だと WebKit が日本語を横倒しで描画することがある。
+       mixed は仕様上のデフォルト値のため Chrome の見た目は不変 */
+    -webkit-text-orientation: mixed;
+    text-orientation: mixed;
+    font-size: 15px;
+    line-height: 2.3;
+    letter-spacing: .05em;
+    overflow: hidden;
+}
+
+.bi_quote {
+    position: absolute;
+    left: 48px;
+    right: 44px;
+    bottom: 40px;
+}
+
+.bi_excerpt {
+    font-size: 12px;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+.bi_excerpt::before {
+    content: "“ ";
+}
+
+.bi_excerpt::after {
+    content: " ”";
+}
+
+.bi_comment {
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.6;
+    opacity: .8;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+.bi_comment::before {
+    content: "─ ";
+}
+
+/* いいね数 */
+
+.bi_likes {
+    position: absolute;
+    right: 40px;
+    bottom: 44px;
+    font-size: 14px;
+}
+
+.bi_likes::before {
+    content: "♡ ";
+    color: var(--main-color-2);
+}
+
+/*==================================================
+閉じるボタン（右上）
+==================================================*/
+
+.bi_close {
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    z-index: 1;
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--main-color-2);
+    border: none;
+    cursor: pointer;
+    --cut: 12px;
+}
+
+.bi_close .icn {
+    width: 18px;
+    height: 18px;
+    background: var(--base-color-1);
+}
+
+/*==================================================
+Safari（WebKit）専用の代替行数制限
+・-webkit-box は縦書き（vertical-rl）を正しく組めず、
+  題名が横倒しの横書きになるため、WebKit だけ
+  行数ぶんの論理サイズ（max-block-size = line-height × 行数）
+  で制限する
+・`font: -apple-system-body` は WebKit のみ解釈するため
+  Chrome / Firefox には影響しない（見た目は不変）
+・差分：クランプ時の末尾「…」は付かず切り落としになる
+==================================================*/
+
+@supports (font: -apple-system-body) {
+    .bi_title {
+        display: block;
+        max-block-size: 2.8em; /* 2行 × line-height 1.4 */
+    }
+}

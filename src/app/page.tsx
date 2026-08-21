@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import HomeClient from "@/components/home/home-client";
-import ReaderHome from "@/components/home/reader-home";
+import ReaderHome from "@/components/home/gk-home";
 
 /**
  * ホーム。
@@ -8,6 +8,9 @@ import ReaderHome from "@/components/home/reader-home";
  * 表示設定によって、読む人向けと書く人向けを切り替える。
  * 同じ場所で切り替えるのは、行き先を覚え直さずに済むため。
  */
+/* 読者向けホームの一覧は 30 秒ごとに作り直す */
+export const revalidate = 30;
+
 export default async function HomePage() {
     const supabase = await createClient();
     const {
