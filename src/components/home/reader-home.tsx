@@ -5,7 +5,6 @@ import BookInfoPopup from '@/components/home/book-info-popup'
 import ReaderSidebar from '@/components/home/reader-sidebar'
 import BookshelfSection from '@/components/home/bookshelf-section'
 import HomeEffects from '@/components/home/home-effects'
-import LoadingScreen from '@/components/home/loading-screen'
 import ReadingListSection from '@/components/home/reading-list-section'
 import WorksSection from '@/components/home/works-section'
 import Footer from '@/components/layout/footer'
@@ -348,42 +347,31 @@ export default async function ReaderHome() {
      */}
     <Header />
 
-    <div
-      id="home-page"
-      className="reader-home"
-      /*
-       * 参照元では body に付いていた印。
-       * CSS がこれを見て色を決めるので、囲いの側に付ける。
-       */
-      data-theme="light"
-      data-view="reader"
-      data-auth={user ? 'login' : 'guest'}
-    >
-      <LoadingScreen />
+    <div className="flex min-h-screen">
+      {/*
+       * 左の柱は囲いの外に置く。
+       *
+       * 参照元の CSS は * に字・余白・色をあてているので、
+       * 中に入れると柱の組（Tailwind）が全部打ち消される。
+       */}
+      <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface xl:block">
+        <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
+          <ReaderSidebar reading={sidebarReading} notices={sidebarNotices} />
+        </div>
+      </aside>
+
+      {/* 右側だけを、参照元の見た目で囲う */}
+      <div
+        id="home-page"
+        className="reader-home min-w-0 flex-1"
+        data-theme="light"
+        data-view="reader"
+        data-auth={user ? 'login' : 'guest'}
+      >
       <main>
         <BookInfoPopup />
 
-        {/*
-         * 左に自分のもの、右に新しい出会い。
-         *
-         * 本棚は右側の上に置く。
-         * 画面いっぱいに広げると、左の柱が入らない。
-         */}
-        {/*
-         * 左右の分け方は執筆向けと同じ。
-         *
-         * 幅 300px、右に境界線、白地、画面に貼りつく。
-         * 読む側と書く側で骨組みが違うと、
-         * 同じサイトを歩いている感じがしない。
-         */}
-        <div className="flex min-h-screen">
-          <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface xl:block">
-            <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
-              <ReaderSidebar reading={sidebarReading} notices={sidebarNotices} />
-            </div>
-          </aside>
-
-          <div className="rh_main min-w-0 flex-1">
+        <div className="rh_main">
             <BookshelfSection books={shelfBooks} />
         <WorksSection
           kind="pickup"
@@ -399,12 +387,12 @@ export default async function ReaderHome() {
           moreLabel="もっと見る"
           items={padWithPlaceholders(newReleasePool, 10, 'new')}
         />
-            {readingListColumns.length > 0 && <ReadingListSection columns={readingListColumns} />}
-          </div>
+        {readingListColumns.length > 0 && <ReadingListSection columns={readingListColumns} />}
         </div>
       </main>
 
       <HomeEffects pools={{ pickupPool, newReleasePool }} />
+      </div>
     </div>
 
     <Footer />

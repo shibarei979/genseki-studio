@@ -34,19 +34,6 @@
 }
 
 /*==================================================
-左の柱
-
-見た目は執筆向けと同じ組（Tailwind）を使う。
-ここでは、参照元の CSS が柱に当たらないようにするだけ。
-==================================================*/
-
-.reader-home .reader-side,
-.reader-home .reader-side * {
-    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
-    color: inherit;
-}
-
-/*==================================================
 一覧の見出し
 
 参照元は "Pick Up!" のような英字を大きく出していた。
