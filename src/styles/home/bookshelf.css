@@ -1,0 +1,287 @@
+/* デザイン home_10: style/bookshelf.css
+   組み込み時の変更: 画像パスを /home/img/ へ書換 */
+
+/* ==========================================================
+   Bookshelf Loop
+========================================================== */
+
+.bookshelf-loop {
+    width: 100%;
+    height: calc(60vh / var(--page-zoom) - 250px);
+    min-height: 370px;
+    margin-top: 250px;
+    position: relative;
+    perspective: 2200px;
+    perspective-origin: center top;
+    z-index: 0;
+}
+
+/*==================================================
+Track
+==================================================*/
+
+.bsl_track {
+    position: absolute;
+    left: var(--bls-track-left);
+    top: 0%;
+    width: var(--bls-track-width);
+    height: 100%;
+    transform-style: preserve-3d;
+
+}
+
+/*==================================================
+Book
+==================================================*/
+
+.bookshelf-loop .book {
+    position: absolute;
+    left: 0%;
+    top: calc(50% - var(--b-height)/2);
+    width: var(--b-width);
+    height: var(--b-height);
+    opacity: var(--b-opacity);
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    transform:
+        translate(calc(var(--b-x)), calc(var(--b-y))) translateZ(var(--b-z)) rotateX(var(--b-rotate-x)) rotateY(var(--b-rotate-y)) rotateZ(var(--b-rotate-z)) scale(min(var(--b-scale), 2.5));
+    transition:
+        transform 1s cubic-bezier(.7, 0, .7, 1);
+    /* Safari のちらつき対策（コンテナ自体は透明のため見た目は不変） */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/*==================================================
+Front
+==================================================*/
+
+.bookshelf-loop .b_front {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(180deg, var(--main-color-2) 67%, var(--base-color-3) 67%);
+    background-image: url(/home/img/bookshelf/b_front.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    transform-style: preserve-3d;
+}
+
+/*==================================================
+Spine
+==================================================*/
+
+.bookshelf-loop .b_spine {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--b-depth);
+    height: 100%;
+    background-image: linear-gradient(180deg, var(--main-color-2) 67%, var(--base-color-3) 67%);
+    background-image: url(/home/img/bookshelf/b_spine.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    transform-origin: left top;
+    transform: rotateY(90deg) translateZ(var(--b-width));
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+/*==================================================
+Top
+==================================================*/
+
+.bookshelf-loop .b_top {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: var(--b-depth);
+    background-image: linear-gradient(90deg, var(--main-color-2) 3%, var(--base-color-3) 3%);
+    background-image: url(/home/img/bookshelf/b_top.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    transform-origin: left top;
+    transform: rotateX(-90deg);
+}
+
+/*==================================================
+Back
+==================================================*/
+
+.bookshelf-loop .b_back {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(180deg, var(--main-color-2) 67%, var(--base-color-3) 67%);
+    background-image: url(/home/img/bookshelf/b_front.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    transform: translateZ(calc(var(--b-depth) * -1));
+}
+
+/*==================================================
+Hidden
+==================================================*/
+
+.bsl_hidden {
+    display: none;
+}
+
+/*==================================================
+content
+==================================================*/
+
+/* 最初の本文数行（データ用・表紙では非表示。
+   ポップアップ側 js/book_info.js が読み取る） */
+.bookshelf-loop .b_head,
+.bookshelf-loop .b_likes {
+    display: none;
+}
+
+.bookshelf-loop .b_title,
+.bookshelf-loop .b_author,
+.bookshelf-loop .b_tags li {
+    color: var(--base-color-1);
+}
+
+.bookshelf-loop .b_excerpt,
+.bookshelf-loop .b_comment {
+    color: var(--text-color);
+}
+
+.bookshelf-loop .b_title,
+.bookshelf-loop .b_author {
+    writing-mode: vertical-rl;
+    /* Safari 対策：未指定だと WebKit が日本語を横倒しで描画することがある。
+       mixed は仕様上のデフォルト値のため Chrome の見た目は不変 */
+    -webkit-text-orientation: mixed;
+    text-orientation: mixed;
+}
+
+.bookshelf-loop .b_title {
+    position: absolute;
+    font-size: calc(24px*0.9);
+    height: calc(170px*0.9);
+    margin: calc(20px*0.9) 0 calc(10px*0.9) 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bookshelf-loop .b_front .b_title {
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    left: 50%;
+}
+
+.bookshelf-loop .b_spine .b_title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bookshelf-loop .b_author {
+    position: absolute;
+    left: 40%;
+    font-size: calc(12px*0.9);
+    height: calc(140px*0.9);
+    margin: calc(40px*0.9) 0 calc(10px*0.9) 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bookshelf-loop .b_author::before {
+    padding-bottom: calc(12px*0.9);
+    content: "著";
+}
+
+.bookshelf-loop .b_excerpt {
+    margin-top: calc(200px*0.9);
+    padding: calc(10px*0.9) calc(10px*0.9) 0 calc(10px*0.9);
+    font-size: calc(12px*0.9);
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+}
+
+.bookshelf-loop .b_comment {
+    font-size: calc(9px*0.9);
+    padding: calc(5px*0.9) calc(10px*0.9) 0 calc(10px*0.9);
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+
+}
+
+.bookshelf-loop .b_comment::before {
+    padding-right: calc(9px*0.9);
+    content: "─";
+}
+
+.bookshelf-loop .b_tags {
+    position: absolute;
+    height: calc(20px*0.9);
+    width: calc(205px*0.9);
+    top: calc(-20px*0.9);
+    left: calc(20px*0.9);
+    transform: translateZ(calc(-10px*0.9));
+    display: flex;
+    gap: calc(5px*0.9);
+    overflow: hidden;
+}
+
+.bookshelf-loop .b_tags li {
+    background-color: var(--main-color-2);
+    flex-shrink: 0;
+    width: calc(37px*0.9);
+    height: 100%;
+    font-size: calc(6px*0.9);
+    text-align: center;
+    padding-top: calc(2px*0.9);
+    padding-left: calc(2px*0.9);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/*==================================================
+Shadow
+==================================================*/
+
+.bookshelf-loop .b_shadow {
+    position: absolute;
+    left: -10px;
+    top: 0;
+    width: calc(100% + 20px);
+    height: calc(var(--b-depth) + 20px);
+    transform-origin: left top;
+    transform: rotateX(-90deg) translateZ(var(--b-height)) translateY(-10px);
+    background: #000;
+    opacity: .20;
+    filter: blur(15px);
+}
+
+/*==================================================
+Safari（WebKit）専用の代替行数制限
+・-webkit-box は縦書き（vertical-rl）を正しく組めず、
+  題名が横倒しの横書きになるため、WebKit だけ
+  行数ぶんの論理サイズ（max-block-size = line-height × 行数）
+  で制限する
+・`font: -apple-system-body` は WebKit のみ解釈するため
+  Chrome / Firefox には影響しない（見た目は不変）
+・差分：クランプ時の末尾「…」は付かず切り落としになる
+==================================================*/
+
+@supports (font: -apple-system-body) {
+    .bookshelf-loop .b_front .b_title {
+        display: block;
+        max-block-size: 3.6em; /* 3行 × line-height 1.2 */
+    }
+}
