@@ -84,7 +84,16 @@
     background: var(--main-color-4);
 }
 
-main {
+/*
+ * 読者向けホームの main。
+ *
+ * 囲いを付け忘れていて、サイト全体の <main> に効いていた。
+ * そのせいで執筆画面の main まで縦並びになり、
+ * 通し読みの窓が本文の下に積まれて、本文が潰れていた。
+ *
+ * .reader-home の中だけに閉じる。
+ */
+.reader-home main {
     width: 100%;
     max-width: 2000px;
     margin: 0 auto;
