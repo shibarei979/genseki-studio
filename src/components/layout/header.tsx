@@ -542,16 +542,16 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                 <nav
                     aria-label="パンくず"
                     /*
-                     * 横に溢れさせない。
+                     * 狭い画面では出さない。
                      *
-                     * 折り返しも縮みも指定が無く、
-                     * 狭い画面では「作品一覧 › ワークスペース › 執筆」が
-                     * 画面の幅を超えて全体を押し広げていた。
-                     * その結果、下の押し具まで右へずれて重なる。
+                     * 「作品一覧 › ワークスペース › 執筆」は
+                     * 携帯の幅に収まらず、全体を押し広げていた。
+                     * 戻る道はヘッダーの行き先にあるので、
+                     * ここに無くても困らない。
                      *
-                     * 狭い画面では字と余白を詰め、送れるようにする。
+                     * 640px 以上では今までどおり出す。
                      */
-                    className="thin-scroll flex items-center gap-2 overflow-x-auto whitespace-nowrap border-t border-line px-4 py-2 text-[12px] sm:px-8 sm:text-sm lg:px-12"
+                    className="thin-scroll hidden items-center gap-2 overflow-x-auto whitespace-nowrap border-t border-line px-4 py-2 text-[12px] sm:flex sm:px-8 sm:text-sm lg:px-12"
                 >
                     {breadcrumbs.map((crumb, index) => (
                         <span key={crumb.label} className="flex items-center gap-2">
