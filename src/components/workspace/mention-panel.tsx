@@ -22,9 +22,16 @@ interface Props {
     /** 本文で選択されている文字列 */
     selection: string;
     onClose: () => void;
+    /**
+     * 本文の中のその語へ飛ぶ。
+     *
+     * 資料を押したとき、結びつけるだけでなく
+     * 本文のどこに出てくるかを見に行けるようにする。
+     */
+    onJumpToWord?: (word: string) => void;
 }
 
-export default function MentionPanel({ workId, episodeId, selection, onClose }: Props) {
+export default function MentionPanel({ workId, episodeId, selection, onClose, onJumpToWord }: Props) {
     const [pages, setPages] = useState<ResourcePage[]>([]);
     const [entries, setEntries] = useState<ResourceEntry[]>([]);
     const [mentions, setMentions] = useState<EntryMention[]>([]);
@@ -131,11 +138,28 @@ export default function MentionPanel({ workId, episodeId, selection, onClose }: 
                 ) : (
                     <ul>
                         {matched.map((entry) => (
-                            <li key={entry.id}>
+                            <li key={entry.id} className="flex items-center gap-1">
                                 <button
                                     type="button"
-                                    onClick={() => void handleLink(entry.id)}
-                                    className="w-full rounded-md px-3 py-2 text-left hover:bg-canvas"
+                                    onClick={() => {
+                                        /*
+                                         * 押したら本文のその語へ飛ぶ。
+                                         *
+                                         * 選択中の文字があるときは、
+                                         * これまでどおり資料と結びつける。
+                                         */
+                                        if (selection.trim()) {
+                                            void handleLink(entry.id);
+                                            return;
+                                        }
+                                        onJumpToWord?.(entry.name);
+                                    }}
+                                    title={
+                                        selection.trim()
+                                            ? "選んだ文字を、この資料に結びつけます"
+                                            : "本文のこの語へ移動します"
+                                    }
+                                    className="min-w-0 flex-1 rounded-md px-3 py-2 text-left hover:bg-canvas"
                                 >
                                     <span className="flex items-center gap-2">
                                         <span className="truncate text-[13px] text-ink">

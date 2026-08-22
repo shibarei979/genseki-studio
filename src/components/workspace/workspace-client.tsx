@@ -683,6 +683,20 @@ export default function WorkspaceClient({ workId }: Props) {
                             episodeId={selected.id}
                             selection={selection}
                             onClose={() => setIsMentionsOpen(false)}
+                            onJumpToWord={(word) => {
+                                /*
+                                 * 本文からその語を探し、行番号で飛ぶ。
+                                 *
+                                 * 見つからなければ何もしない。
+                                 * 勝手に先頭へ戻すと、いま書いている所を
+                                 * 見失わせてしまう。
+                                 */
+                                const at = selected.body.indexOf(word);
+                                if (at < 0) return;
+
+                                const line = selected.body.slice(0, at).split("\n").length;
+                                setJumpLine(line);
+                            }}
                         />
                     )}
 

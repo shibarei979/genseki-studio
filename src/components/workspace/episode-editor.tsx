@@ -372,19 +372,28 @@ export default function EpisodeEditor({
                     >
                         通し読み
                     </button>
-                    <button
-                        type="button"
-                        onClick={onOpenProofread}
-                        aria-pressed={isProofreadOpen}
-                        className={[
-                            "shrink-0 rounded border px-2 py-0.5",
-                            isProofreadOpen
-                                ? "border-forest bg-forest-tint text-forest"
-                                : "border-line hover:border-forest-line hover:text-forest",
-                        ].join(" ")}
-                    >
-                        推敲
-                    </button>
+                    {/*
+                     * 推敲は出さない。
+                     *
+                     * 中身の作り込みが追いついていないので、
+                     * 押せる所だけ用意されている状態を避ける。
+                     * 仕上がったら、この囲みを外すだけで戻せる。
+                     */}
+                    {false && (
+                        <button
+                            type="button"
+                            onClick={onOpenProofread}
+                            aria-pressed={isProofreadOpen}
+                            className={[
+                                "shrink-0 rounded border px-2 py-0.5",
+                                isProofreadOpen
+                                    ? "border-forest bg-forest-tint text-forest"
+                                    : "border-line hover:border-forest-line hover:text-forest",
+                            ].join(" ")}
+                        >
+                            推敲
+                        </button>
+                    )}
                     <button
                         type="button"
                         onClick={onOpenMentions}
