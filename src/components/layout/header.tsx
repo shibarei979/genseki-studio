@@ -86,8 +86,12 @@ const NAV_ITEMS: {
      * 中身（絞り込みと並べ替え）が入ったので出した。
      */
     { href: "/search", label: "作品を探す", icon: "search" },
-    { href: "/rooms", label: "コミュニティー", icon: "book", feature: "rooms" },
+    /*
+     * 「ランキング」は「作品を探す」の隣。
+     * どちらも作品を見つけるための道なので、並べて置く。
+     */
     { href: "/ranking", label: "ランキング", icon: "crown", hideInFocus: true },
+    { href: "/rooms", label: "コミュニティー", icon: "book", feature: "rooms" },
     { href: "/contest", label: "コンテスト", icon: "trophy", feature: "contest" },
 ];
 
