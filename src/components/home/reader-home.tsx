@@ -312,7 +312,14 @@ export default async function ReaderHome() {
   const [{ data: annRows }, { data: contestRows }] = await Promise.all([
     supabase.from('announcements').select('id, title, body, link, image_url, created_at')
       .eq('is_published', true).order('created_at', { ascending: false }).limit(NOTICE_COUNT),
-    supabase.from('contests').select('id, title, description, image_url, banner_url, is_site_contest, apply_url, created_at')
+    /*
+     * コンテスト。
+     *
+     * 絵の見せ方（banner_fit / zoom / x / y）まで読む。
+     * これが無いと ContestBanner が既定値を使えず、
+     * 絵が拡大されて角しか映らない。
+     */
+    supabase.from('contests').select('id, title, description, image_url, banner_url, banner_fit, banner_zoom, banner_x, banner_y, is_site_contest, apply_url, created_at')
       .eq('is_published', true).order('created_at', { ascending: false }).limit(NOTICE_COUNT),
   ])
 
@@ -444,7 +451,17 @@ export default async function ReaderHome() {
    * 絵の列は banner_url。
    * image_url を見ていて、絵が出ていなかった。
    */
-  const sidebarContests = (contestRows || []).slice(0, 2) as any[]
+  const sidebarContests = (contestRows || []).slice(0, 2).map((c: any) => ({
+    ...c,
+    /*
+     * 絵の見せ方。
+     * 値が入っていない古いものでも崩れないよう、既定を当てる。
+     */
+    banner_fit: c.banner_fit ?? 'cover',
+    banner_zoom: c.banner_zoom ?? 100,
+    banner_x: c.banner_x ?? 50,
+    banner_y: c.banner_y ?? 50,
+  })) as any[]
   const allNotices = [...datedNotices, ...datedContests]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, NOTICE_COUNT)

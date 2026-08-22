@@ -237,14 +237,7 @@ export default function ReaderSidebar({
                                 <Link
                                     href={`/contest/${contest.id}`}
                                     title={contest.title || "コンテスト"}
-                                    /*
-                                     * 絵は小さめに。
-                                     *
-                                     * 読む人の柱では、コンテストは主役ではない。
-                                     * 上の読みかけと下のお知らせに挟まれるので、
-                                     * 大きいと柱の真ん中だけが騒がしくなる。
-                                     */
-                                    className="group/card relative mx-auto block w-[150px] max-w-full overflow-hidden rounded-lg border border-line"
+                                    className="group/card relative mx-auto block w-[200px] max-w-full overflow-hidden rounded-lg border border-line"
                                 >
                                     <span className="block aspect-video">
                                         <ContestBanner
