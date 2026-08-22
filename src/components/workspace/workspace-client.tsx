@@ -533,7 +533,20 @@ export default function WorkspaceClient({ workId }: Props) {
                  */}
                 <main
                     className={[
-                        "min-h-0 min-w-0 flex-1 gap-4 lg:flex",
+                        /*
+                         * 横並び。
+                         *
+                         * 本文の箱と、通し読みなどの窓を左右に置く。
+                         *
+                         * 以前は "lg:flex" と "flex" が混ざっていて、
+                         * どちらが効くかが揺れていた。
+                         * 効かないと 2 つが同じ場所に重なり、
+                         * あとから描かれる窓が本文を覆ってしまう。
+                         *
+                         * 狭い画面で一覧を開いているときだけ隠す。
+                         * それ以外は、広さに関わらず横に並べる。
+                         */
+                        "min-h-0 min-w-0 flex-1 gap-4",
                         isListOpen ? "hidden lg:flex" : "flex",
                     ].join(" ")}
                 >

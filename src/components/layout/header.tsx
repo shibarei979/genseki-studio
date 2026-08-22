@@ -94,9 +94,16 @@ const NAV_ITEMS: {
 interface Props {
     /** パンくず（左から順に並べる）。最後の要素が現在地 */
     breadcrumbs?: { label: string; href?: string }[];
+    /**
+     * 画面の上に貼り付けるか。
+     *
+     * 画面の高さちょうどに収める画面（執筆など）では切る。
+     * 浮いたままだと場所を取らず、下段が押し出される。
+     */
+    sticky?: boolean;
 }
 
-export default function Header({ breadcrumbs = [] }: Props) {
+export default function Header({ breadcrumbs = [], sticky = true }: Props) {
     const pathname = usePathname();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [isNoticeOpen, setIsNoticeOpen] = useState(false);
@@ -294,7 +301,21 @@ export default function Header({ breadcrumbs = [] }: Props) {
         href === "/" ? pathname === "/" : pathname.startsWith(href);
 
     return (
-        <header className="sticky top-0 z-30 border-b border-line bg-surface">
+        <header
+            className={[
+                /*
+                 * 貼り付き。
+                 *
+                 * ふだんは画面の上に留める。
+                 * ただし執筆画面は「画面の高さちょうど」に収める作りで、
+                 * ここで浮くと場所を取らず、下段がその分だけ
+                 * 押し下げられて画面の外へ出る。
+                 * （上の帯や本文の頭が見えなくなる原因）
+                 */
+                sticky ? "sticky top-0" : "shrink-0",
+                "z-30 border-b border-line bg-surface",
+            ].join(" ")}
+        >
             <div className="relative flex h-[72px] items-center px-6 sm:px-10">
                 {/*
                  * ロゴはヘッダーの高さより少し大きく見せたいので、
