@@ -504,25 +504,25 @@ export default function WorkspaceClient({ workId }: Props) {
                     </div>
                 </aside>
 
+                {/*
+                 * min-h-0 はここに付ける。
+                 *
+                 * 執筆画面は画面の高さちょうどに収める作り。
+                 * これが無いと中身の高さが親を押し広げ、
+                 * 上の帯（通し読みなどのボタン）と本文の頭が
+                 * 画面の外へ出てしまう。
+                 * 縦書きは横へ送るので、送り戻すこともできない。
+                 *
+                 * 中の箱に付けると、その箱の高さが 0 と見なされ、
+                 * 本文そのものが潰れて消える。
+                 */}
                 <main
                     className={[
-                        "min-w-0 flex-1 gap-4 lg:flex",
+                        "min-h-0 min-w-0 flex-1 gap-4 lg:flex",
                         isListOpen ? "hidden lg:flex" : "flex",
                     ].join(" ")}
                 >
-                    {/*
-                     * 高さを親に合わせる。
-                     *
-                     * min-h-0 が無いと、中身の高さが親を押し広げ、
-                     * 上の帯（通し読みなどのボタン）と本文の頭が
-                     * 画面の外へ出てしまう。
-                     * 縦書きは横へ送るので、送り戻すこともできない。
-                     *
-                     * 足すのは min-h-0 だけ。
-                     * flex や flex-col を足すと中の並びが変わり、
-                     * 通し読みなどの窓を開いたときに本文が隠れる。
-                     */}
-                    <div className="min-h-0 min-w-0 flex-1">
+                    <div className="min-w-0 flex-1">
                     {/*
                      * 話を選ぶ。
                      *
