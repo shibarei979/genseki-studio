@@ -37,6 +37,8 @@ import type {
     EpisodeVersion,
     FeatureFlag,
     NgWord,
+    Project,
+    ProjectInput,
     PlotScene,
     PlotStage,
     Profile,
@@ -1930,6 +1932,115 @@ export const supabaseRepository: Repository = {
                     (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity),
             );
     },
+
+    /**
+     * ==========================================================
+     * Project（自主企画）
+     * ==========================================================
+     */
+
+    async listProjects(): Promise<Project[]> {
+        const { data } = await db()
+            .from("projects")
+            .select("*")
+            .eq("is_published", true)
+            .order("created_at", { ascending: false })
+            .limit(200);
+
+        return rows<Record<string, unknown>>(data) as unknown as Project[];
+    },
+
+    async getProject(projectId: string): Promise<Project | null> {
+        const { data } = await db()
+            .from("projects")
+            .select("*")
+            .eq("id", projectId)
+            .maybeSingle();
+
+        return (data as Project | null) ?? null;
+    },
+
+    async listMyProjects(): Promise<Project[]> {
+        const userId = await currentUser();
+        if (!userId) return [];
+
+        const { data } = await db()
+            .from("projects")
+            .select("*")
+            .eq("owner_id", userId)
+            .order("created_at", { ascending: false });
+
+        return rows<Record<string, unknown>>(data) as unknown as Project[];
+    },
+
+    async isProjectTagTaken(tag: string): Promise<boolean> {
+        const needle = tag.trim().toLowerCase();
+        if (!needle) return false;
+
+        /*
+         * 合言葉は早い者勝ち。
+         *
+         * 大文字小文字だけ違うものも同じとみなす。
+         * 「夏の恋」と「夏の恋」が別々に立つと、
+         * どちらに参加したのか分からなくなる。
+         */
+        const { data } = await db()
+            .from("projects")
+            .select("id, tag")
+            .ilike("tag", needle)
+            .limit(1);
+
+        return rows<Record<string, unknown>>(data).length > 0;
+    },
+
+    async createProject(input: ProjectInput): Promise<Project> {
+        const userId = await currentUser();
+        if (!userId) throw new Error("ログインしてください");
+
+        const { data, error } = await db()
+            .from("projects")
+            .insert({
+                owner_id: userId,
+                title: input.title.trim(),
+                description: input.description.trim(),
+                tag: input.tag.trim(),
+                starts_at: input.starts_at,
+                ends_at: input.ends_at,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            /* 合言葉がぶつかったとき、そうと分かる言い方にする */
+            if (error.message.includes("projects_tag_key")) {
+                throw new Error("その合言葉は、すでに使われています");
+            }
+            throw new Error(describeError(error.message));
+        }
+
+        return data as Project;
+    },
+
+    async updateProject(
+        projectId: string,
+        patch: Partial<ProjectInput>,
+    ): Promise<Project> {
+        const { data, error } = await db()
+            .from("projects")
+            .update({ ...patch, updated_at: new Date().toISOString() })
+            .eq("id", projectId)
+            .select()
+            .single();
+
+        if (error) throw new Error(describeError(error.message));
+        return data as Project;
+    },
+
+    async deleteProject(projectId: string): Promise<void> {
+        const { error } = await db().from("projects").delete().eq("id", projectId);
+        if (error) throw new Error(describeError(error.message));
+    },
+
 
     async getContest(contestId: string): Promise<Contest | null> {
         const { data } = await db()

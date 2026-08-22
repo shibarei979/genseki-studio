@@ -47,6 +47,8 @@ import type {
     ContestEntry,
     FeatureFlag,
     NgWord,
+    Project,
+    ProjectInput,
     AiSettings,
     DisplaySettings,
     Episode,
@@ -125,6 +127,7 @@ const BANNERS_KEY = `genseki:${SCHEMA_VERSION}:admin-banners`;
 const NG_WORDS_KEY = `genseki:${SCHEMA_VERSION}:admin-ng-words`;
 const FEATURES_KEY = `genseki:${SCHEMA_VERSION}:admin-features`;
 const CONTESTS_KEY = `genseki:${SCHEMA_VERSION}:contests`;
+const PROJECTS_KEY = `genseki:${SCHEMA_VERSION}:projects`;
 const CONTEST_ENTRIES_KEY = `genseki:${SCHEMA_VERSION}:contest-entries`;
 const ROOM_PRESETS_KEY = `genseki:${SCHEMA_VERSION}:room-presets`;
 const ROOMS_KEY = `genseki:${SCHEMA_VERSION}:writing-rooms`;
@@ -1262,6 +1265,84 @@ export const localRepository: Repository = {
     async listContests(): Promise<Contest[]> {
         return readAll<Contest>(CONTESTS_KEY).sort((a, b) =>
             b.created_at.localeCompare(a.created_at),
+        );
+    },
+
+    /**
+     * ==========================================================
+     * Project（自主企画）
+     * ==========================================================
+     */
+
+    async listProjects(): Promise<Project[]> {
+        return readAll<Project>(PROJECTS_KEY)
+            .filter((row) => row.is_published)
+            .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    },
+
+    async getProject(projectId: string): Promise<Project | null> {
+        return readAll<Project>(PROJECTS_KEY).find((row) => row.id === projectId) ?? null;
+    },
+
+    async listMyProjects(): Promise<Project[]> {
+        return readAll<Project>(PROJECTS_KEY).sort((a, b) =>
+            b.created_at.localeCompare(a.created_at),
+        );
+    },
+
+    async isProjectTagTaken(tag: string): Promise<boolean> {
+        const needle = tag.trim().toLowerCase();
+        if (!needle) return false;
+        return readAll<Project>(PROJECTS_KEY).some(
+            (row) => row.tag.toLowerCase() === needle,
+        );
+    },
+
+    async createProject(input: ProjectInput): Promise<Project> {
+        if (await this.isProjectTagTaken(input.tag)) {
+            throw new Error("その合言葉は、すでに使われています");
+        }
+
+        const timestamp = new Date().toISOString();
+        const project: Project = {
+            id: crypto.randomUUID(),
+            owner_id: "local",
+            title: input.title.trim(),
+            description: input.description.trim(),
+            tag: input.tag.trim(),
+            starts_at: input.starts_at,
+            ends_at: input.ends_at,
+            is_published: true,
+            created_at: timestamp,
+            updated_at: timestamp,
+        };
+
+        writeAll(PROJECTS_KEY, [...readAll<Project>(PROJECTS_KEY), project]);
+        return project;
+    },
+
+    async updateProject(
+        projectId: string,
+        patch: Partial<ProjectInput>,
+    ): Promise<Project> {
+        const list = readAll<Project>(PROJECTS_KEY);
+        const at = list.findIndex((row) => row.id === projectId);
+        if (at < 0) throw new Error("その企画は見つかりませんでした");
+
+        const next: Project = {
+            ...list[at],
+            ...patch,
+            updated_at: new Date().toISOString(),
+        };
+        list[at] = next;
+        writeAll(PROJECTS_KEY, list);
+        return next;
+    },
+
+    async deleteProject(projectId: string): Promise<void> {
+        writeAll(
+            PROJECTS_KEY,
+            readAll<Project>(PROJECTS_KEY).filter((row) => row.id !== projectId),
         );
     },
 

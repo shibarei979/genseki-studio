@@ -7,6 +7,7 @@
 
 export * from "./admin";
 export * from "./contest";
+export * from "./project";
 export * from "./room-layout";
 
 export type {

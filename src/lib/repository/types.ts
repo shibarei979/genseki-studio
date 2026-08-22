@@ -28,6 +28,8 @@ import type {
     ContestEntry,
     FeatureFlag,
     NgWord,
+    Project,
+    ProjectInput,
     Report,
     ReportCreateInput,
     RoomLayout,
@@ -375,6 +377,30 @@ export interface Repository {
      * ==========================================================
      */
     listContests(): Promise<Contest[]>;
+
+    /**
+     * ==========================================================
+     * Project（自主企画）
+     *
+     * 利用者が立てる企画。参加はタグで決まる。
+     * ==========================================================
+     */
+
+    /** 表に出ている企画を、新しい順に */
+    listProjects(): Promise<Project[]>;
+    /** 1 つ読む。無ければ null */
+    getProject(projectId: string): Promise<Project | null>;
+    /** 自分が立てた企画 */
+    listMyProjects(): Promise<Project[]>;
+    /**
+     * その合言葉が使われているか。
+     *
+     * 早い者勝ちなので、立てる前に確かめる。
+     */
+    isProjectTagTaken(tag: string): Promise<boolean>;
+    createProject(input: ProjectInput): Promise<Project>;
+    updateProject(projectId: string, patch: Partial<ProjectInput>): Promise<Project>;
+    deleteProject(projectId: string): Promise<void>;
     getContest(contestId: string): Promise<Contest | null>;
     createContest(): Promise<Contest>;
     updateContest(contestId: string, patch: Partial<Contest>): Promise<Contest>;
