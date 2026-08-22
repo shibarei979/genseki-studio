@@ -510,7 +510,15 @@ export default function WorkspaceClient({ workId }: Props) {
                         isListOpen ? "hidden lg:flex" : "flex",
                     ].join(" ")}
                 >
-                    <div className="min-w-0 flex-1">
+                    {/*
+                     * 高さを親に合わせる。
+                     *
+                     * min-h-0 が無いと、中身の高さが親を押し広げ、
+                     * 上の帯（通し読みなどのボタン）と本文の頭が
+                     * 画面の外へ出てしまう。
+                     * 縦書きは横へ送るので、送り戻すこともできない。
+                     */}
+                    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                     {/*
                      * 話を選ぶ。
                      *
