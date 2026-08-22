@@ -81,7 +81,7 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
     }
 
     return (
-        <div className="flex h-full w-[320px] shrink-0 flex-col rounded-lg border border-line bg-surface">
+        <div className="flex h-full w-full shrink-0 flex-col rounded-lg border border-line bg-surface lg:w-[320px]">
             <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
                 <h2 className="text-[13px] font-medium text-ink">資料へのリンク</h2>
                 <button

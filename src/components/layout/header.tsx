@@ -316,7 +316,13 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                 "z-30 border-b border-line bg-surface",
             ].join(" ")}
         >
-            <div className="relative flex h-[72px] items-center px-6 sm:px-10">
+            {/*
+             * 左右の余白。
+             *
+             * 中くらいの画面では詰めて、真ん中の行き先が
+             * 収まる幅を空ける。
+             */}
+            <div className="relative flex h-[72px] items-center px-4 sm:px-6 xl:px-10">
                 {/*
                  * ロゴはヘッダーの高さより少し大きく見せたいので、
                  * 高さを固定したまま overflow を許して外へはみ出させる。
@@ -356,7 +362,15 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                             href={item.href}
                             aria-current={isCurrent(item.href) ? "page" : undefined}
                             className={[
-                                "relative flex items-center gap-2 px-4 text-[15px]",
+                                /*
+                                 * 中くらいの画面では、字と余白を詰める。
+                                 *
+                                 * 項目が増えたぶん、1024〜1280px あたりで
+                                 * 入りきらず 2 行に折り返していた。
+                                 * 詰めれば 1 行に収まる。
+                                 */
+                                "relative flex items-center gap-1.5 whitespace-nowrap px-2.5 text-[13px]",
+                                "xl:gap-2 xl:px-4 xl:text-[15px]",
                                 isCurrent(item.href)
                                     ? "font-semibold text-forest"
                                     : "text-muted hover:text-ink",

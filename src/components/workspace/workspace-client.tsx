@@ -78,6 +78,13 @@ export default function WorkspaceClient({ workId }: Props) {
     const [selection, setSelection] = useState("");
     const [isProofreadOpen, setIsProofreadOpen] = useState(false);
     const [isReadOpen, setIsReadOpen] = useState(false);
+
+    /*
+     * 窓がどれか開いているか。
+     *
+     * 狭い画面では、本文と窓のどちらかだけを出す。
+     */
+    const isAnyPanelOpen = isReadOpen || isMentionsOpen || isHistoryOpen;
     const aiStatus = useAiStatus();
     /** 推敲パネルが読む本文と、直した結果を戻す口 */
     const [draft, setDraft] = useState<{ body: string; apply: (next: string) => void }>({
@@ -562,7 +569,20 @@ export default function WorkspaceClient({ workId }: Props) {
                      * 通し読みなどの窓は main 直下の兄弟なので、
                      * 横並びには影響しない。
                      */}
-                    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                    {/*
+                     * 本文の箱。
+                     *
+                     * 狭い画面で窓（通し読み・資料リンク・履歴）を開いたときは隠す。
+                     * 並べる幅が無いので、そのままだと本文が下へ回り、
+                     * 窓と本文を行き来するたびに画面を大きく送ることになる。
+                     * 広い画面では今までどおり横に並べる。
+                     */}
+                    <div
+                        className={[
+                            "flex min-h-0 min-w-0 flex-1 flex-col",
+                            isAnyPanelOpen ? "hidden lg:flex" : "flex",
+                        ].join(" ")}
+                    >
                     {/*
                      * 話を選ぶ。
                      *
@@ -584,7 +604,14 @@ export default function WorkspaceClient({ workId }: Props) {
                              * 気づかれない。
                              * 枠の色を付け、右端は札の形にする。
                              */
-                            className="mb-2 flex w-full items-center justify-between gap-2 rounded-md border border-forest-line bg-forest-tint/40 px-3.5 py-2.5 text-[13px] text-ink hover:bg-forest-tint lg:hidden"
+                            /*
+                             * shrink-0 を付ける。
+                             *
+                             * 箱は縦並びの flex。付けないと高さが足りないとき
+                             * この押し具が潰され、上の行に食い込んで
+                             * パンくずと重なって見える。
+                             */
+                            className="mb-2 flex w-full shrink-0 items-center justify-between gap-2 rounded-md border border-forest-line bg-forest-tint/40 px-3.5 py-2.5 text-[13px] text-ink hover:bg-forest-tint lg:hidden"
                         >
                             <span className="min-w-0 truncate font-medium">
                                 {selected

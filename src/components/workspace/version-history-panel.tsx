@@ -63,7 +63,7 @@ export default function VersionHistoryPanel({ episode, onClose, onRestored }: Pr
     }
 
     return (
-        <div className="flex h-full w-[380px] shrink-0 flex-col rounded-lg border border-line bg-surface">
+        <div className="flex h-full w-full shrink-0 flex-col rounded-lg border border-line bg-surface lg:w-[380px]">
             <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
                 <h2 className="text-[13px] font-medium text-ink">履歴</h2>
                 <div className="flex items-center gap-2">
