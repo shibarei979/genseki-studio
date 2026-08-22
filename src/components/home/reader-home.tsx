@@ -20,13 +20,8 @@ import type { HomeBook, HomeNotice } from '@/types/home'
 // ============================================================
 // 定数
 // ============================================================
-/*
- * 本棚に並べる冊数。
- *
- * 左右 7 冊 + 中央 1 冊 + 裏側。
- * home.js の B_SIDE_COUNT=7 に合わせる。
- */
-const SHELF_COUNT = 18
+/* 本棚の冊数。home.js の B_SIDE_COUNT=10 に合わせる */
+const SHELF_COUNT = 25
 const WORKS_POOL_COUNT = 20   // Pick Up! / New Release! の候補プール数（初期表示は10冊）
 const READING_LIST_COUNT = 8  // 4カラムリストの各件数
 const NOTICE_COUNT = 8        // お知らせの最大表示件数（畳み込み時は4件）
