@@ -49,12 +49,19 @@
      * ここは柱の右なので幅が狭く、本が詰まりきらずに
      * 左右へこぼれる。棚ごと縮めて収める。
      */
-    margin-top: 8px;
-    margin-bottom: 16px;
-    height: 260px;
+    margin-top: 0;
+    margin-bottom: 8px;
+    height: 210px;
     min-height: 0;
 
-    transform: scale(0.7);
+    /*
+     * 棚ごと縮める。
+     *
+     * 参照元は画面いっぱい（左右10冊が並ぶ幅）を前提にしている。
+     * ここは柱の右なので、その幅が無い。
+     * 0.55 まで落とすと、両端の本まで収まる。
+     */
+    transform: scale(0.55);
     transform-origin: center top;
 }
 

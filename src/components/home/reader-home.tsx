@@ -345,16 +345,58 @@ export default async function ReaderHome() {
    * 読みかけは、続きから読むの先頭。
    * 一番最近ひらいた作品が来る。
    */
+  /*
+   * 柱に出す読みかけ。
+   *
+   * 執筆側の「執筆中の作品」と同じ形にする。
+   * 最後に読んだ日、いま何話目か、全体の何割かを出す。
+   */
   const first = continueRows[0]
-  const sidebarReading = first
-    ? {
-        novelId: first.novel.id,
-        episodeId: first.epId,
-        title: first.novel.title,
-        updatedAt: first.novel.created_at,
-        episodeLabel: '続きから',
-      }
-    : null
+  let sidebarReading: {
+    novelId: string
+    episodeId: string
+    title: string
+    lastReadAt: string
+    episodeLabel: string
+    readCount: number
+    totalCount: number
+  } | null = null
+
+  if (first && user) {
+    /* その作品の話を並べ、いま何話目かを数える */
+    const { data: eps } = await supabase
+      .from('episodes')
+      .select('id, ep_number')
+      .eq('novel_id', first.novel.id)
+      .eq('is_published', true)
+      .order('ep_number', { ascending: true })
+      .limit(5000)
+
+    const list = eps || []
+    const at = list.findIndex((e: any) => e.id === first.epId)
+
+    /* 最後に読んだ日 */
+    const { data: lastViewRows } = await supabase
+      .from('page_views')
+      .select('viewed_at')
+      .eq('user_id', user.id)
+      .eq('episode_id', first.epId)
+      .order('viewed_at', { ascending: false })
+      .limit(1)
+
+    const lastView = (lastViewRows || [])[0] as { viewed_at?: string } | undefined
+
+    sidebarReading = {
+      novelId: first.novel.id,
+      episodeId: first.epId,
+      title: first.novel.title,
+      lastReadAt: lastView?.viewed_at || '',
+      episodeLabel:
+        at >= 0 ? `${at + 1}話目まで` : '続きから',
+      readCount: at >= 0 ? at + 1 : 0,
+      totalCount: list.length,
+    }
+  }
 
   /*
    * 柱に出すお知らせ。
@@ -395,6 +437,13 @@ export default async function ReaderHome() {
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 3)
   const contestItems = datedContests.map(strip)
+
+  /* 柱に出すコンテスト。2 つまで */
+  const sidebarContests = (contestRows || []).slice(0, 2).map((c: any) => ({
+    id: c.id as string,
+    title: (c.title as string) || 'コンテスト',
+    bannerUrl: (c.image_url as string | null) ?? null,
+  }))
   const allNotices = [...datedNotices, ...datedContests]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, NOTICE_COUNT)
@@ -420,7 +469,11 @@ export default async function ReaderHome() {
     <div className="flex">
       <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
         <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
-          <ReaderSidebar reading={sidebarReading} notices={sidebarNotices} />
+          <ReaderSidebar
+            reading={sidebarReading}
+            notices={sidebarNotices}
+            contests={sidebarContests}
+          />
         </div>
       </aside>
 
