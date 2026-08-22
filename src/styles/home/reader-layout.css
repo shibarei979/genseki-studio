@@ -45,24 +45,13 @@
      * 本の寸法（home.js）は触らない。
      * 触ると位置の計算と噛み合わず、本が散らばる。
      *
-     * 参照元は画面いっぱいに置く前提だった。
-     * ここは柱の右なので幅が狭く、本が詰まりきらずに
-     * 左右へこぼれる。棚ごと縮めて収める。
+     * 上下の余白だけ詰める。
+     * 大きさは参照元のまま。
      */
-    margin-top: 0;
-    margin-bottom: 8px;
-    height: 210px;
+    margin-top: 32px;
+    margin-bottom: 48px;
+    height: 300px;
     min-height: 0;
-
-    /*
-     * 棚ごと縮める。
-     *
-     * 参照元は画面いっぱい（左右10冊が並ぶ幅）を前提にしている。
-     * ここは柱の右なので、その幅が無い。
-     * 0.55 まで落とすと、両端の本まで収まる。
-     */
-    transform: scale(0.55);
-    transform-origin: center top;
 }
 
 /*==================================================
@@ -296,23 +285,3 @@
     width: calc(52px * 0.9);
 }
 
-
-/*==================================================
-本の丸み
-
-角がまっすぐだと、板を並べたように見える。
-背と天を少し落として、本らしくする。
-==================================================*/
-
-.reader-home .bookshelf-loop .b_front,
-.reader-home .bookshelf-loop .b_back {
-    border-radius: 2px 4px 4px 2px;
-}
-
-.reader-home .bookshelf-loop .b_spine {
-    border-radius: 4px 0 0 4px;
-}
-
-.reader-home .bookshelf-loop .b_top {
-    border-radius: 4px 4px 0 0;
-}

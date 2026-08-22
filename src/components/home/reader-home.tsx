@@ -312,7 +312,7 @@ export default async function ReaderHome() {
   const [{ data: annRows }, { data: contestRows }] = await Promise.all([
     supabase.from('announcements').select('id, title, body, link, image_url, created_at')
       .eq('is_published', true).order('created_at', { ascending: false }).limit(NOTICE_COUNT),
-    supabase.from('contests').select('id, title, description, image_url, is_site_contest, apply_url, created_at')
+    supabase.from('contests').select('id, title, description, image_url, banner_url, is_site_contest, apply_url, created_at')
       .eq('is_published', true).order('created_at', { ascending: false }).limit(NOTICE_COUNT),
   ])
 
@@ -438,12 +438,13 @@ export default async function ReaderHome() {
     .slice(0, 3)
   const contestItems = datedContests.map(strip)
 
-  /* 柱に出すコンテスト。2 つまで */
-  const sidebarContests = (contestRows || []).slice(0, 2).map((c: any) => ({
-    id: c.id as string,
-    title: (c.title as string) || 'コンテスト',
-    bannerUrl: (c.image_url as string | null) ?? null,
-  }))
+  /*
+   * 柱に出すコンテスト。2 つまで。
+   *
+   * 絵の列は banner_url。
+   * image_url を見ていて、絵が出ていなかった。
+   */
+  const sidebarContests = (contestRows || []).slice(0, 2) as any[]
   const allNotices = [...datedNotices, ...datedContests]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, NOTICE_COUNT)

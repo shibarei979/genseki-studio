@@ -20,6 +20,8 @@
 import Link from "next/link";
 
 import { COVERS, hashOf } from "@/components/home/home-work-table";
+import ContestBanner from "@/components/common/contest-banner";
+import type { Contest } from "@/types";
 
 export interface SidebarReading {
     novelId: string;
@@ -51,7 +53,7 @@ export default function ReaderSidebar({
     reading: SidebarReading | null;
     notices: SidebarNotice[];
     /** 開催中のコンテスト。読む人にも出す */
-    contests?: { id: string; title: string; bannerUrl: string | null }[];
+    contests?: Contest[];
 }) {
     return (
         <aside className="reader-side space-y-5 pt-3">
@@ -227,29 +229,26 @@ export default function ReaderSidebar({
                     <ul className="mt-2.5 space-y-2.5">
                         {contests.map((contest) => (
                             <li key={contest.id}>
+                                {/*
+                                 * 絵は執筆側と同じ部品で出す。
+                                 * 保存先から読み直す仕組みが要るので、
+                                 * URL を直に img へ渡しても出ないことがある。
+                                 */}
                                 <Link
                                     href={`/contest/${contest.id}`}
-                                    title={contest.title}
+                                    title={contest.title || "コンテスト"}
                                     className="group/card relative mx-auto block w-[200px] max-w-full overflow-hidden rounded-lg border border-line"
                                 >
-                                    {contest.bannerUrl ? (
-                                        <>
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
-                                                src={contest.bannerUrl}
-                                                alt=""
-                                                className="block aspect-video w-full object-cover"
-                                            />
-                                            <span
-                                                className="absolute inset-0 bg-[rgba(20,56,78,0.28)] opacity-0 transition-opacity duration-300 group-hover/card:opacity-100"
-                                                aria-hidden="true"
-                                            />
-                                        </>
-                                    ) : (
-                                        <span className="block px-3 py-2 text-[12px] text-ink">
-                                            {contest.title}
-                                        </span>
-                                    )}
+                                    <span className="block aspect-video">
+                                        <ContestBanner
+                                            contest={contest}
+                                            className="h-full w-full"
+                                        />
+                                    </span>
+                                    <span
+                                        className="absolute inset-0 bg-[rgba(20,56,78,0.28)] opacity-0 transition-opacity duration-300 group-hover/card:opacity-100"
+                                        aria-hidden="true"
+                                    />
                                 </Link>
                             </li>
                         ))}
