@@ -45,15 +45,16 @@
      * 本の寸法（home.js）は触らない。
      * 触ると位置の計算と噛み合わず、本が散らばる。
      *
-     * 小さくしたいときは、棚ごと縮める。
-     * 見た目だけが変わり、計算はそのまま。
+     * 参照元は画面いっぱいに置く前提だった。
+     * ここは柱の右なので幅が狭く、本が詰まりきらずに
+     * 左右へこぼれる。棚ごと縮めて収める。
      */
-    margin-top: 16px;
-    margin-bottom: 24px;
-    height: 300px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    height: 260px;
     min-height: 0;
 
-    transform: scale(0.82);
+    transform: scale(0.7);
     transform-origin: center top;
 }
 

@@ -406,55 +406,43 @@ export default async function ReaderHome() {
   // （src/app/layout.tsx がサイト全体で一元管理）
   // ============================================================
   return (
-    <>
-    {/*
-     * ヘッダーと足は囲いの外に置く。
-     *
-     * 参照元の CSS は * に字と余白をあてているので、
-     * 中に入れるとヘッダーの並びまで崩れる。
-     */}
+    <div className="page-with-footer bg-canvas">
+    {/* ヘッダーは端から端まで */}
     <Header />
 
     {/*
-     * 左右を並べる箱。
+     * 左右の骨組みは執筆向けと同じ。
      *
-     * items-stretch にして、柱を中身の高さまで伸ばす。
-     * 伸ばさないと、柱の下だけ地の色が覗く。
+     * 白い地と縦の線は外側の aside に持たせ、
+     * 頁の下（フッターの手前）まで伸ばす。
+     * 貼りつくのは中の箱だけ。
      */}
-    <div className="flex min-h-screen items-stretch">
-      {/*
-       * 左の柱は囲いの外に置く。
-       *
-       * 参照元の CSS は * に字・余白・色をあてているので、
-       * 中に入れると柱の組（Tailwind）が全部打ち消される。
-       */}
-      <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface xl:block">
+    <div className="flex">
+      <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
         <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
           <ReaderSidebar reading={sidebarReading} notices={sidebarNotices} />
         </div>
       </aside>
 
-      {/* 右側だけを、参照元の見た目で囲う */}
-      <div
-        id="home-page"
-        className="reader-home min-w-0 flex-1"
-        data-theme="light"
-        data-view="reader"
-        data-auth={user ? 'login' : 'guest'}
-      >
-      <main>
-        <BookInfoPopup />
+      {/* 右 */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <main className="min-w-0 flex-1 space-y-3.5 px-5 py-4 sm:px-6">
+          {/*
+           * 見出し。
+           * 執筆向けの HomeHero と同じ置き方。
+           */}
+          <ReaderHero />
 
-        <div className="rh_main">
-            {/*
-             * 見出し。
-             *
-             * 棚を眺める前に、ここが何をする場所かを伝える。
-             */}
-            <div className="mx-auto w-[min(1100px,92%)] pt-5">
-              <ReaderHero />
-            </div>
-
+          {/* 本棚から下は、参照元の見た目で囲う */}
+          <div
+            id="home-page"
+            className="reader-home"
+            data-theme="light"
+            data-view="reader"
+            data-auth={user ? 'login' : 'guest'}
+          >
+            <BookInfoPopup />
+            <div className="rh_main">
             <BookshelfSection books={shelfBooks} />
 
             {/*
@@ -517,15 +505,15 @@ export default async function ReaderHome() {
               books={popularBooks}
               moreHref="/ranking"
             />
-        </div>
-      </main>
+            </div>
 
-      <HomeEffects pools={{ pickupPool, newReleasePool }} />
+            <HomeEffects pools={{ pickupPool, newReleasePool }} />
+          </div>
+        </main>
       </div>
     </div>
 
-    {/* 中身が長いので、上の余白は詰める */}
-    <Footer tight />
-    </>
+    <Footer />
+    </div>
   )
 }
