@@ -541,7 +541,17 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
             {breadcrumbs.length > 0 && (
                 <nav
                     aria-label="パンくず"
-                    className="flex items-center gap-2 border-t border-line px-8 py-2 text-sm sm:px-12"
+                    /*
+                     * 横に溢れさせない。
+                     *
+                     * 折り返しも縮みも指定が無く、
+                     * 狭い画面では「作品一覧 › ワークスペース › 執筆」が
+                     * 画面の幅を超えて全体を押し広げていた。
+                     * その結果、下の押し具まで右へずれて重なる。
+                     *
+                     * 狭い画面では字と余白を詰め、送れるようにする。
+                     */
+                    className="thin-scroll flex items-center gap-2 overflow-x-auto whitespace-nowrap border-t border-line px-4 py-2 text-[12px] sm:px-8 sm:text-sm lg:px-12"
                 >
                     {breadcrumbs.map((crumb, index) => (
                         <span key={crumb.label} className="flex items-center gap-2">
