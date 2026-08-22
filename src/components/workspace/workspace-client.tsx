@@ -342,12 +342,16 @@ export default function WorkspaceClient({ workId }: Props) {
                  * ヘッダーは縮ませず、貼り付きも切る。
                  *
                  * 執筆画面は画面の高さに収める作り。
-                 * sticky のままだと、ヘッダーが場所を取ったぶん
-                 * 下段が押し下げられ、画面の外へはみ出す。
-                 * ここではふつうに積むだけでよい。
+                 * 貼り付いたままだと場所を取らず、
+                 * 下の段が上に詰まってパンくずと重なる。
+                 *
+                 * 打ち消し（[&>header]:static）ではなく引数で切る。
+                 * static と sticky はどちらも position なので、
+                 * どちらが効くかが生成順しだいで揺れる。
                  */
-                <div className="shrink-0 [&>header]:static">
+                <div className="shrink-0">
                     <Header
+                        sticky={false}
                         breadcrumbs={[
                             { label: "作品一覧", href: "/" },
                             { label: "ワークスペース" },
