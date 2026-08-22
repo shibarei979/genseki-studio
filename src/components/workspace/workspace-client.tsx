@@ -317,7 +317,12 @@ export default function WorkspaceClient({ workId }: Props) {
     }
 
     return (
-        <div className="flex h-screen flex-col bg-page">
+        /*
+         * 画面の高さちょうどに収める。
+         * dvh にするのは、携帯で住所欄が出入りしても
+         * 高さが狂わないようにするため。
+         */
+        <div className="flex h-dvh flex-col bg-page">
             {/*
              * 集中モードでは、ヘッダーごと消す。
              *
@@ -326,13 +331,23 @@ export default function WorkspaceClient({ workId }: Props) {
              * 戻る道は道具の列の拡大の印（同じボタン）。
              */}
             {!isFocusMode && (
-                <Header
-                    breadcrumbs={[
-                        { label: "作品一覧", href: "/" },
-                        { label: "ワークスペース" },
-                        { label: "執筆" },
-                    ]}
-                />
+                /*
+                 * ヘッダーは縮ませず、貼り付きも切る。
+                 *
+                 * 執筆画面は画面の高さに収める作り。
+                 * sticky のままだと、ヘッダーが場所を取ったぶん
+                 * 下段が押し下げられ、画面の外へはみ出す。
+                 * ここではふつうに積むだけでよい。
+                 */
+                <div className="shrink-0 [&>header]:static">
+                    <Header
+                        breadcrumbs={[
+                            { label: "作品一覧", href: "/" },
+                            { label: "ワークスペース" },
+                            { label: "執筆" },
+                        ]}
+                    />
+                </div>
             )}
 
             <div
@@ -522,7 +537,19 @@ export default function WorkspaceClient({ workId }: Props) {
                         isListOpen ? "hidden lg:flex" : "flex",
                     ].join(" ")}
                 >
-                    <div className="min-w-0 flex-1">
+                    {/*
+                     * 高さの鎖を通す。
+                     *
+                     * min-h-0 が無いと、flex の既定（min-height:auto）で
+                     * 中身の高さまで膨らみ、親を突き抜けて上へはみ出す。
+                     * 実測では親 754 に対し箱が 1128、上端が -17 だった。
+                     * 上の帯と本文の頭が画面の外へ出ていたのはこれ。
+                     *
+                     * flex-col は箱の「中」の並び。
+                     * 通し読みなどの窓は main 直下の兄弟なので、
+                     * 横並びには影響しない。
+                     */}
+                    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                     {/*
                      * 話を選ぶ。
                      *

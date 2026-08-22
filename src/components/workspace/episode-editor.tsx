@@ -324,7 +324,8 @@ export default function EpisodeEditor({
     return (
         <div
             className={[
-                "flex h-full flex-col overflow-hidden bg-surface",
+                /* min-h-0 が無いと、親の高さを超えて膨らむ */
+                "flex h-full min-h-0 flex-col overflow-hidden bg-surface",
                 // 集中モードは画面の端まで使う。枠と角丸は普段だけ
                 isFocusMode ? "" : "rounded-lg border border-line",
             ].join(" ")}
@@ -666,7 +667,7 @@ export default function EpisodeEditor({
                  * 以前は横書きだけ 820px で止めていたが、
                  * 広く書きたいとの声で外した。
                  */}
-                <div className="mx-auto flex h-full w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded">
+                <div className="mx-auto flex h-full min-h-0 w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded">
                 <ManuscriptSurface
                     zoom={zoom}
                     settings={settings}
