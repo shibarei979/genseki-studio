@@ -13,11 +13,20 @@ class LayoutCalc {
     // Config
     //==================================================
 
-    static B_WIDTH = 245 * 0.9;
-    static B_HEIGHT = 300 * 0.9;
-    static B_DEPTH = 60 * 0.9;
+    /*
+     * 本の寸法。
+     *
+     * 参照元より一回り小さくした。
+     * 大きいと画面を占めすぎ、下の一覧まで遠くなる。
+     *
+     * 左右の冊数も 10 → 7 に減らす。
+     * 並べすぎると背表紙が潰れて、題名が読めない。
+     */
+    static B_WIDTH = 190 * 0.9;
+    static B_HEIGHT = 245 * 0.9;
+    static B_DEPTH = 52 * 0.9;
 
-    static B_SIDE_COUNT = 10;
+    static B_SIDE_COUNT = 7;
     static B_OVERFLOW_COUNT = 1.5;
 
     static SCALE = 1;

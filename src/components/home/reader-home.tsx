@@ -5,6 +5,7 @@ import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
 import BookInfoPopup from '@/components/home/book-info-popup'
 import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
+import ReaderHero from '@/components/home/reader-hero'
 import BookshelfSection from '@/components/home/bookshelf-section'
 import HomeEffects from '@/components/home/home-effects'
 import Footer from '@/components/layout/footer'
@@ -19,7 +20,13 @@ import type { HomeBook, HomeNotice } from '@/types/home'
 // ============================================================
 // 定数
 // ============================================================
-const SHELF_COUNT = 25        // 本棚ループの冊数（左右10冊 + 中央1冊 + 裏側 / layout_calc.js の B_SIDE_COUNT=10 に対応）
+/*
+ * 本棚に並べる冊数。
+ *
+ * 左右 7 冊 + 中央 1 冊 + 裏側。
+ * home.js の B_SIDE_COUNT=7 に合わせる。
+ */
+const SHELF_COUNT = 18
 const WORKS_POOL_COUNT = 20   // Pick Up! / New Release! の候補プール数（初期表示は10冊）
 const READING_LIST_COUNT = 8  // 4カラムリストの各件数
 const NOTICE_COUNT = 8        // お知らせの最大表示件数（畳み込み時は4件）
@@ -444,6 +451,15 @@ export default async function ReaderHome() {
         <BookInfoPopup />
 
         <div className="rh_main">
+            {/*
+             * 見出し。
+             *
+             * 棚を眺める前に、ここが何をする場所かを伝える。
+             */}
+            <div className="mx-auto w-[min(1100px,92%)] pt-5">
+              <ReaderHero />
+            </div>
+
             <BookshelfSection books={shelfBooks} />
 
             {/*

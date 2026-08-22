@@ -39,9 +39,13 @@
  * 詰めると次の枠に重なって見える。
  */
 .reader-home .rh_main .bookshelf-loop {
-    margin-top: 32px;
-    margin-bottom: 48px;
-    height: 300px;
+    /*
+     * 本を一回り小さくしたので、棚も詰める。
+     * 高さを取りすぎると、下の一覧まで遠くなる。
+     */
+    margin-top: 24px;
+    margin-bottom: 36px;
+    height: 250px;
     min-height: 0;
 }
 
@@ -274,4 +278,25 @@
      * 途中まで読めるようにする。
      */
     width: calc(52px * 0.9);
+}
+
+
+/*==================================================
+本の丸み
+
+角がまっすぐだと、板を並べたように見える。
+背と天を少し落として、本らしくする。
+==================================================*/
+
+.reader-home .bookshelf-loop .b_front,
+.reader-home .bookshelf-loop .b_back {
+    border-radius: 2px 4px 4px 2px;
+}
+
+.reader-home .bookshelf-loop .b_spine {
+    border-radius: 4px 0 0 4px;
+}
+
+.reader-home .bookshelf-loop .b_top {
+    border-radius: 4px 4px 0 0;
 }
