@@ -329,7 +329,7 @@ export default function WorkspaceClient({ workId }: Props) {
          * dvh にするのは、携帯で住所欄が出入りしても
          * 高さが狂わないようにするため。
          */
-        <div className="flex h-dvh flex-col bg-page">
+        <div className="flex h-dvh flex-col overflow-hidden bg-page">
             {/*
              * 集中モードでは、ヘッダーごと消す。
              *
@@ -376,10 +376,25 @@ export default function WorkspaceClient({ workId }: Props) {
                  */}
                 <aside
                     className={[
-                        "flex-col lg:flex",
-                        "w-full shrink-0 lg:w-72",
-                        isFocusMode ? "hidden lg:hidden" : "",
-                        isListOpen ? "flex" : "hidden",
+                        /*
+                         * 出す・隠すは 1 か所で決める。
+                         *
+                         * 以前は "lg:flex" と "flex"／"hidden" が
+                         * 混ざっていて、どちらが効くかが揺れていた。
+                         * 隠れきらないと本文の上に重なり、
+                         * パンくずと押し具が同じ行に見える。
+                         *
+                         *   集中モード       いつも隠す
+                         *   一覧を開いた     出す
+                         *   広い画面         いつも出す
+                         *   それ以外         隠す
+                         */
+                        "w-full shrink-0 flex-col lg:w-72",
+                        isFocusMode
+                            ? "hidden"
+                            : isListOpen
+                              ? "flex"
+                              : "hidden lg:flex",
                     ].join(" ")}
                 >
                     <WorkspaceNav workId={workId} current="write" episodeId={selectedId} />
