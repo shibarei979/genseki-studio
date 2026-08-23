@@ -200,8 +200,9 @@ export default async function RecommendPage() {
                         </h1>
                         <p
                             style={{
-                                fontSize: 12,
-                                color: "var(--color-text-muted)",
+                                fontSize: 12.5,
+                                color: "var(--color-text)",
+                                opacity: 0.75,
                                 marginTop: 6,
                                 lineHeight: 1.8,
                             }}
