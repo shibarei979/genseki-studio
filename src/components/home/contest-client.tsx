@@ -151,11 +151,6 @@ export default function ContestClient() {
                     <div className="flex items-baseline justify-between gap-3">
                         <h2 className="text-lg font-semibold tracking-wide text-ink">
                             自主企画
-                            {projects.length > 0 && (
-                                <span className="ml-2 text-sm font-normal text-muted">
-                                    {projects.length}
-                                </span>
-                            )}
                         </h2>
                         <Link
                             href="/projects"
@@ -170,6 +165,16 @@ export default function ContestClient() {
                         合言葉を作品のタグに入れると参加できます。
                     </p>
 
+                    {/*
+                     * 数はここに出す。
+                     * 見出しの横に付けると、題名の一部に見える。
+                     */}
+                    {projects.length > 0 && (
+                        <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-forest-line px-3 py-1 text-[11px] text-forest">
+                            募集中 {projects.length}件
+                        </p>
+                    )}
+
                     {projects.length === 0 ? (
                         <p className="mt-4 rounded-xl border border-line bg-surface px-5 py-8 text-center text-[13px] text-faint">
                             いま受付中の企画はありません。
@@ -183,12 +188,18 @@ export default function ContestClient() {
                          * 見分けられなくなる。
                          * こちらは行で並べ、軽い見た目にする。
                          */
-                        <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+                        /*
+                         * 2 列に並べる。
+                         *
+                         * 1 行 1 件だと、画面が広いとき
+                         * 題名の右が大きく空いて間延びする。
+                         */
+                        <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
                             {projects.map((project) => (
                                 <li key={project.id}>
                                     <Link
                                         href={`/projects/${project.id}`}
-                                        className="flex items-center gap-3 px-4 py-3 hover:bg-canvas"
+                                        className="flex h-full items-center gap-3 rounded-lg border border-l-[3px] border-line border-l-forest-line bg-surface px-4 py-3 hover:border-l-forest"
                                     >
                                         <span className="min-w-0 flex-1">
                                             <span className="block truncate text-[13px] text-ink">

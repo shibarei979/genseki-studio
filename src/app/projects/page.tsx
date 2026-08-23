@@ -20,7 +20,8 @@ import type { Project } from "@/types";
  * ============================================================
  */
 
-export const revalidate = 60;
+/* 立てた企画がすぐ並ぶよう、毎回作り直す */
+export const dynamic = "force-dynamic";
 
 export const metadata = {
     title: "自主企画 | 原石航路",
@@ -81,7 +82,7 @@ export default async function ProjectsPage() {
         <div className="page-with-footer bg-canvas">
             <Header breadcrumbs={[{ label: "自主企画" }]} />
 
-            <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-6">
+            <div className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-6">
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h1 className="text-[20px] font-semibold text-ink">自主企画</h1>
@@ -144,9 +145,17 @@ function ProjectList({
 
     return (
         <section className="mt-8">
-            <h2 className="text-[13px] font-semibold text-ink">{title}</h2>
+            <h2 className="text-[13px] font-semibold text-ink">
+                {title}
+                <span className="ml-2 font-normal text-muted">{projects.length}件</span>
+            </h2>
 
-            <ul className="mt-3 space-y-2.5">
+            {/*
+             * 2 列。
+             *
+             * 1 行 1 件だと、題名の右が大きく空いて間延びする。
+             */}
+            <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
                 {projects.map((project) => (
                     <li key={project.id}>
                         <Link

@@ -36,6 +36,9 @@ export default function ProjectJoin({
     const [busyId, setBusyId] = useState<string | null>(null);
     const [error, setError] = useState("");
 
+    /* 参加できた作品の名前。知らせを出すのに使う */
+    const [joined, setJoined] = useState<string | null>(null);
+
     useEffect(() => {
         if (!isOpen || works !== null) return;
 
@@ -70,7 +73,12 @@ export default function ProjectJoin({
                 tags: [...(work.tags || []), tag],
             });
 
-            /* 一覧に出るまで少し待つ必要はない。読み直せば出る */
+            /*
+             * 参加できたことを伝えてから閉じる。
+             *
+             * 黙って閉じると、押せたのかどうか分からない。
+             */
+            setJoined(work.title || "無題");
             setIsOpen(false);
             router.refresh();
         } catch (caught) {
@@ -83,13 +91,24 @@ export default function ProjectJoin({
 
     if (!isOpen) {
         return (
-            <button
-                type="button"
-                onClick={() => setIsOpen(true)}
-                className="mt-4 w-full rounded-lg bg-forest py-2.5 text-[13px] font-medium text-white hover:bg-forest-dark"
-            >
-                この企画に参加する
-            </button>
+            <>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setIsOpen(true);
+                        setJoined(null);
+                    }}
+                    className="mt-4 w-full rounded-lg bg-forest py-2.5 text-[13px] font-medium text-white hover:bg-forest-dark"
+                >
+                    この企画に参加する
+                </button>
+
+                {joined && (
+                    <p className="mt-2 rounded-lg border border-forest-line bg-forest-tint/40 px-3 py-2 text-[11px] leading-relaxed text-forest">
+                        「{joined}」が参加しました。下の一覧に並びます。
+                    </p>
+                )}
+            </>
         );
     }
 

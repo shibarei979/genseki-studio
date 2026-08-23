@@ -20,7 +20,14 @@ import type { Project } from "@/types";
  * ============================================================
  */
 
-export const revalidate = 60;
+/*
+ * 毎回作り直す。
+ *
+ * 作り置きにすると、参加しても一覧が変わらない。
+ * 「押したのに出てこない」と見えて、
+ * 参加できていないと思われる。
+ */
+export const dynamic = "force-dynamic";
 
 /** 一度に出す作品の数 */
 const ENTRY_LIMIT = 100;
