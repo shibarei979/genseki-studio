@@ -48,12 +48,15 @@ export default function ReaderSidebar({
     reading,
     notices,
     contests = [],
+    projects = [],
 }: {
     /** 一番最近読んでいた作品。無ければ出さない */
     reading: SidebarReading | null;
     notices: SidebarNotice[];
     /** 開催中のコンテスト。読む人にも出す */
     contests?: Contest[];
+    /** 受付中の自主企画 */
+    projects?: { id: string; title: string; tag: string }[];
 }) {
     return (
         <aside className="reader-side space-y-5 pt-3">
@@ -254,6 +257,58 @@ export default function ReaderSidebar({
                         ))}
                     </ul>
                 )}
+            </section>
+
+            {/*
+             * 自主企画。
+             *
+             * 利用者が立てる企画。コンテストの下に置く。
+             * 賞のあるものと無いものを、上下で分ける。
+             */}
+            <section className="rounded-xl border border-line bg-surface p-3.5">
+                <div className="flex items-baseline justify-between gap-3">
+                    <h2 className="text-[13px] font-semibold tracking-wide text-ink">
+                        自主企画
+                    </h2>
+                    <Link
+                        href="/projects"
+                        className="shrink-0 text-[11px] text-muted hover:text-forest"
+                    >
+                        すべて見る <span aria-hidden="true">›</span>
+                    </Link>
+                </div>
+
+                {projects.length === 0 ? (
+                    <p className="mt-2 text-[11px] leading-relaxed text-muted">
+                        いま受付中の企画はありません。
+                    </p>
+                ) : (
+                    <ul className="mt-2 divide-y divide-line">
+                        {projects.map((project) => (
+                            <li key={project.id}>
+                                <Link
+                                    href={`/projects/${project.id}`}
+                                    className="block py-2 hover:text-forest"
+                                >
+                                    <span className="block truncate text-[12px] text-ink">
+                                        {project.title}
+                                    </span>
+                                    <span className="mt-0.5 block text-[10px] text-faint">
+                                        #{project.tag}
+                                    </span>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                <Link
+                    href="/projects/new"
+                    className="mt-2.5 flex items-center justify-center gap-1.5 rounded-lg border border-line py-2 text-[11px] text-muted hover:border-forest-line hover:text-forest"
+                >
+                    <PlusIcon />
+                    企画を立てる
+                </Link>
             </section>
 
             {/* お知らせ */}

@@ -1,19 +1,42 @@
 -- ============================================================
 -- 原石航路 Studio
--- 自主企画
+-- 自主企画の置き場を作り直す
 --
--- 利用者が自分で立てる企画。運営のコンテストとは別。
--- 賞も審査も無く、集まって読み合うためのもの。
+-- 同じ名前の表が別の用途で先にあった。
+--   theme / deadline / host_id
+-- host_id は空を許さない列なので、
+-- こちらの形で入れようとすると必ず弾かれる。
 --
--- 参加はタグで決まる。
--- 企画ごとに合言葉（タグ）を決め、
--- そのタグを付けた作品が企画のページに並ぶ。
--- 承認は要らない。
+-- 中身は 0 行。失われるものは無い。
+-- 一度消して、きれいに作り直す。
 --
 -- 何度実行しても壊れない。
 -- ============================================================
 
-create table if not exists public.projects (
+-- ------------------------------------------------------------
+-- 1. 念のため、中身が空かを確かめる
+--
+-- 1 行でも入っていたら、ここで止まる。
+-- 消してよいのは、空のときだけ。
+-- ------------------------------------------------------------
+do $$
+declare
+    残り int;
+begin
+    select count(*) into 残り from public.projects;
+    if 残り > 0 then
+        raise exception '中身が % 行あります。消さずに止めました', 残り;
+    end if;
+end $$;
+
+-- ------------------------------------------------------------
+-- 2. 消して作り直す
+-- ------------------------------------------------------------
+drop table if exists public.projects cascade;
+
+create extension if not exists pgcrypto;
+
+create table public.projects (
     id uuid primary key default gen_random_uuid(),
 
     /* 立てた人 */
@@ -27,56 +50,40 @@ create table if not exists public.projects (
      *
      * これを作品のタグに付けると参加になる。
      * 早い者勝ちなので、同じものは作れない。
-     * 大文字小文字の違いで別物にならないよう、小文字で持つ。
      */
     tag text not null,
 
-    /* 期間。終わりを決めない企画もある */
+    /* 期間。決めない企画もある */
     starts_at date,
     ends_at date,
 
-    /* 表に出すか */
     is_published boolean not null default true,
 
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
 
-/* 合言葉は重複させない */
-create unique index if not exists projects_tag_key
-    on public.projects (lower(tag));
+-- ------------------------------------------------------------
+-- 3. 索引
+-- ------------------------------------------------------------
+create unique index projects_tag_key on public.projects (lower(tag));
+create index projects_owner_idx on public.projects (owner_id);
+create index projects_created_idx on public.projects (created_at desc);
 
-/* 立てた人で引く */
-create index if not exists projects_owner_idx
-    on public.projects (owner_id);
-
-/* 新しい順に並べる */
-create index if not exists projects_created_idx
-    on public.projects (created_at desc);
-
--- ============================================================
--- 決まりごと（RLS）
--- ============================================================
-
+-- ------------------------------------------------------------
+-- 4. 決まりごと（RLS）
+-- ------------------------------------------------------------
 alter table public.projects enable row level security;
 
-/* 表に出ているものは誰でも読める */
-drop policy if exists projects_select on public.projects;
 create policy projects_select on public.projects
     for select using (is_published = true or owner_id = auth.uid());
 
-/* 立てられるのはログインした人だけ。自分名義でのみ */
-drop policy if exists projects_insert on public.projects;
 create policy projects_insert on public.projects
     for insert with check (owner_id = auth.uid());
 
-/* 直せるのは立てた人だけ */
-drop policy if exists projects_update on public.projects;
 create policy projects_update on public.projects
     for update using (owner_id = auth.uid());
 
-/* 消せるのも立てた人だけ */
-drop policy if exists projects_delete on public.projects;
 create policy projects_delete on public.projects
     for delete using (owner_id = auth.uid());
 
@@ -86,10 +93,11 @@ notify pgrst, 'reload schema';
 -- 確認
 -- ============================================================
 select
+    (select count(*) from information_schema.columns
+      where table_schema = 'public' and table_name = 'projects') as 列の数,
     case
-        when exists (
-            select 1 from information_schema.tables
-            where table_schema = 'public' and table_name = 'projects'
-        ) then '自主企画の置き場を用意できました'
-        else '作れませんでした ← 失敗'
+        when (select count(*) from information_schema.columns
+               where table_schema = 'public' and table_name = 'projects') = 10
+        then '作り直せました'
+        else '列の数が合いません ← 確認してください'
     end as 状態;

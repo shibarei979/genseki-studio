@@ -451,6 +451,29 @@ export default async function ReaderHome() {
    * 絵の列は banner_url。
    * image_url を見ていて、絵が出ていなかった。
    */
+  /*
+   * 柱に出す自主企画。3 つまで。
+   *
+   * 受付中のものだけ。終わった企画を柱に出しても、
+   * 参加できないので用がない。
+   */
+  const todayForProjects = new Date().toISOString().slice(0, 10)
+  const { data: projectRows } = await supabase
+    .from('projects')
+    .select('id, title, tag, starts_at, ends_at')
+    .eq('is_published', true)
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  const sidebarProjects = (projectRows || [])
+    .filter((p: any) => {
+      if (p.starts_at && todayForProjects < p.starts_at) return false
+      if (p.ends_at && todayForProjects > p.ends_at) return false
+      return true
+    })
+    .slice(0, 3)
+    .map((p: any) => ({ id: p.id as string, title: p.title as string, tag: p.tag as string }))
+
   const sidebarContests = (contestRows || []).slice(0, 2).map((c: any) => ({
     ...c,
     /*
@@ -491,6 +514,7 @@ export default async function ReaderHome() {
             reading={sidebarReading}
             notices={sidebarNotices}
             contests={sidebarContests}
+            projects={sidebarProjects}
           />
         </div>
       </aside>
