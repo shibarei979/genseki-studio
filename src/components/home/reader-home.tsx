@@ -451,29 +451,6 @@ export default async function ReaderHome() {
    * 絵の列は banner_url。
    * image_url を見ていて、絵が出ていなかった。
    */
-  /*
-   * 柱に出す自主企画。3 つまで。
-   *
-   * 受付中のものだけ。終わった企画を柱に出しても、
-   * 参加できないので用がない。
-   */
-  const todayForProjects = new Date().toISOString().slice(0, 10)
-  const { data: projectRows } = await supabase
-    .from('projects')
-    .select('id, title, tag, starts_at, ends_at')
-    .eq('is_published', true)
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  const sidebarProjects = (projectRows || [])
-    .filter((p: any) => {
-      if (p.starts_at && todayForProjects < p.starts_at) return false
-      if (p.ends_at && todayForProjects > p.ends_at) return false
-      return true
-    })
-    .slice(0, 3)
-    .map((p: any) => ({ id: p.id as string, title: p.title as string, tag: p.tag as string }))
-
   const sidebarContests = (contestRows || []).slice(0, 2).map((c: any) => ({
     ...c,
     /*
@@ -509,12 +486,21 @@ export default async function ReaderHome() {
      */}
     <div className="flex">
       <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
-        <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
+        {/*
+         * 柱。
+         *
+         * 高さを画面で切らない。
+         *
+         * 切ると、中身が入りきらないとき柱の中だけを送ることになり、
+         * ページを送っても下の札が出てこない。
+         * 自然な高さにしておけば、短いときは貼り付いたまま、
+         * 長いときはページと一緒に流れて最後まで見える。
+         */}
+        <div className="sticky top-14 px-5 py-5">
           <ReaderSidebar
             reading={sidebarReading}
             notices={sidebarNotices}
             contests={sidebarContests}
-            projects={sidebarProjects}
           />
         </div>
       </aside>

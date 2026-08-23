@@ -43,7 +43,7 @@ function timeAgo(iso: string): string {
 
 const SEEN_KEY = "genseki:notices-seen-at";
 
-type IconName = "home" | "pen" | "search" | "book" | "trophy" | "crown";
+type IconName = "home" | "pen" | "search" | "book" | "trophy" | "crown" | "star";
 
 /*
  * 行き先。
@@ -91,6 +91,11 @@ const NAV_ITEMS: {
      * どちらも作品を見つけるための道なので、並べて置く。
      */
     { href: "/ranking", label: "ランキング", icon: "crown", hideInFocus: true },
+    /*
+     * 「おすすめ」。
+     * 読む人だけの道なので、執筆向けには出さない。
+     */
+    { href: "/recommend", label: "おすすめ", icon: "star", readerOnly: true },
     { href: "/rooms", label: "コミュニティー", icon: "book", feature: "rooms" },
     { href: "/contest", label: "コンテスト", icon: "trophy", feature: "contest" },
 ];
@@ -615,6 +620,14 @@ function NavIcon({ name }: { name: IconName }) {
             <svg {...common}>
                 <path d="M4.5 19.5h3.6L19.4 8.2a2.6 2.6 0 0 0-3.6-3.6L4.5 15.9Z" />
                 <path d="m14.6 5.8 3.6 3.6" />
+            </svg>
+        );
+    }
+    if (name === "star") {
+        /* 星。おすすめであることが一目で伝わる */
+        return (
+            <svg {...common}>
+                <path d="m12 3 2.6 5.6 6 .8-4.4 4.2 1.1 6.1L12 16.8 6.7 19.7l1.1-6.1L3.4 9.4l6-.8z" />
             </svg>
         );
     }

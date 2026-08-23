@@ -154,7 +154,13 @@ export default function HomeClient() {
                      * 余白の rem を変えたら h-72 も揃えること。
                      */}
                     <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
-                        <div className="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto px-5 py-5">
+                        {/*
+                         * 柱の高さを画面で切らない。
+                         *
+                         * 切ると、中身が入りきらないとき柱の中だけを送ることになり、
+                         * ページを送っても下の札が出てこない。
+                         */}
+                        <div className="sticky top-14 px-5 py-5">
                             {side}
                         </div>
                     </aside>

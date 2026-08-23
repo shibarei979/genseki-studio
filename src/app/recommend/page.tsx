@@ -1,0 +1,230 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import Footer from "@/components/layout/footer";
+import Header from "@/components/layout/header";
+import ReaderWorkList from "@/components/home/reader-work-list";
+import { createClient } from "@/lib/supabase/server";
+import { getCachedRecommendScores, buildRecommendation } from "@/lib/recommend";
+import { GENRES_SELECTABLE } from "@/types";
+import type { HomeBook } from "@/types/home";
+
+/**
+ * ============================================================
+ * 原石航路
+ * おすすめ
+ *
+ * 読む人が、次の一冊を見つけるための場所。
+ *
+ * 切り口をいくつか並べる。
+ * ひとつの物差しだけだと、同じ顔ぶれが並び続ける。
+ *
+ *   あなたへのおすすめ    読んだ傾向から
+ *   まだ知られていない作品  読まれた数が少なく、点数の高いもの
+ *   最近ふえている作品     新しく、読まれ始めたもの
+ *   ジャンルから探す       気分で選ぶ入口
+ * ============================================================
+ */
+
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+    title: "おすすめ | 原石航路",
+    description: "あなたに合いそうな作品と、まだ知られていない作品を並べます。",
+};
+
+/** 一覧ごとに出す数 */
+const LIST_SIZE = 12;
+
+/** 「まだ知られていない」とみなす読者数の上限 */
+const HIDDEN_READER_MAX = 20;
+
+function truncate(text: string | null | undefined, length: number): string {
+    if (!text) return "";
+    const t = text.replace(/\r?\n/g, " ").trim();
+    return t.length > length ? t.slice(0, length) + "…" : t;
+}
+
+export default async function RecommendPage() {
+    const supabase = await createClient();
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    /*
+     * 執筆向けでは出さない。
+     * まず読む側で形を確かめてから、書く側へ広げる。
+     */
+    if (user) {
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("home_mode")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+        if (profile && profile.home_mode !== "read") notFound();
+    }
+
+    const scored = await getCachedRecommendScores();
+
+    /*
+     * 好きなジャンル。
+     *
+     * 読んだ作品のジャンルを数え、多い順に。
+     * 読んでいない人には空で渡す。
+     */
+    let favoriteGenres: string[] = [];
+    if (user) {
+        const { data: reads } = await supabase
+            .from("read_episodes")
+            .select("novel_id")
+            .eq("user_id", user.id)
+            .limit(100);
+
+        const readIds = Array.from(
+            new Set((reads || []).map((r: { novel_id: string }) => r.novel_id)),
+        );
+
+        if (readIds.length > 0) {
+            const { data: readNovels } = await supabase
+                .from("novels")
+                .select("genre")
+                .in("id", readIds);
+
+            const count: Record<string, number> = {};
+            (readNovels || []).forEach((n: { genre: string }) => {
+                if (n.genre) count[n.genre] = (count[n.genre] || 0) + 1;
+            });
+
+            favoriteGenres = Object.entries(count)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([genre]) => genre);
+        }
+    }
+
+    /* 作者の名前 */
+    const authorIds = Array.from(new Set(scored.map((n) => n.author_id)));
+    const { data: authors } = authorIds.length
+        ? await supabase
+              .from("profiles")
+              .select("user_id, display_name")
+              .in("user_id", authorIds)
+        : { data: [] };
+
+    const authorName: Record<string, string> = {};
+    (authors || []).forEach((a: { user_id: string; display_name: string }) => {
+        authorName[a.user_id] = a.display_name;
+    });
+
+    function toBook(novel: (typeof scored)[number]): HomeBook {
+        return {
+            id: novel.id,
+            href: `/novel/${novel.id}`,
+            title: novel.title,
+            author: authorName[novel.author_id] || "不明な作者",
+            tags: [novel.genre, ...(novel.tags || [])].filter(Boolean).slice(0, 3),
+            head: truncate(novel.summary, 120),
+            excerpt: truncate(novel.catchcopy || novel.summary, 80),
+            comment: "",
+            likes: 0,
+        } as HomeBook;
+    }
+
+    /* あなたへのおすすめ */
+    const forYou = buildRecommendation(
+        scored,
+        LIST_SIZE,
+        favoriteGenres,
+        user?.id,
+    ).map(toBook);
+
+    /*
+     * まだ知られていない作品。
+     *
+     * 読者の数が少なく、それでも点数の高いもの。
+     * 「読まれていない」だけでは選べない。
+     */
+    const hidden = scored
+        .filter((n) => n.validReaders <= HIDDEN_READER_MAX)
+        .sort((a, b) => b.finalScore - a.finalScore)
+        .slice(0, LIST_SIZE)
+        .map(toBook);
+
+    /*
+     * 最近ふえている作品。
+     *
+     * 出てから日が浅く、点数の付いているもの。
+     */
+    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const rising = scored
+        .filter((n) => n.created_at >= monthAgo)
+        .sort((a, b) => b.finalScore - a.finalScore)
+        .slice(0, LIST_SIZE)
+        .map(toBook);
+
+    return (
+        <div className="page-with-footer bg-canvas">
+            <Header breadcrumbs={[{ label: "おすすめ" }]} />
+
+            <div className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-6">
+                <h1 className="text-[20px] font-semibold text-ink">おすすめ</h1>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+                    次の一冊を探すための場所です。
+                    <br />
+                    読んだ傾向から選んだものと、まだ知られていない作品を並べます。
+                </p>
+
+                <div className="mt-7 space-y-5">
+                    {forYou.length > 0 && (
+                        <ReaderWorkList
+                            title="あなたへのおすすめ"
+                            books={forYou}
+                            moreHref="/search"
+                        />
+                    )}
+
+                    <ReaderWorkList
+                        title="まだ知られていない作品"
+                        books={hidden}
+                        moreHref="/search?sort=new"
+                    />
+
+                    <ReaderWorkList
+                        title="最近ふえている作品"
+                        books={rising}
+                        moreHref="/ranking"
+                    />
+                </div>
+
+                {/*
+                 * ジャンルから探す。
+                 *
+                 * 上の一覧で見つからなかった人の受け皿。
+                 * 気分で選べるよう、名前だけを並べる。
+                 */}
+                <section className="mt-8 rounded-xl border border-line bg-surface px-5 py-5">
+                    <h2 className="text-[14px] font-semibold text-ink">
+                        ジャンルから探す
+                    </h2>
+
+                    <ul className="mt-3.5 flex flex-wrap gap-2">
+                        {GENRES_SELECTABLE.map((genre) => (
+                            <li key={genre}>
+                                <Link
+                                    href={`/search?genre=${encodeURIComponent(genre)}`}
+                                    className="block rounded-full border border-line px-3.5 py-1.5 text-[12px] text-ink hover:border-forest-line hover:text-forest"
+                                >
+                                    {genre}
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            </div>
+
+            <Footer />
+        </div>
+    );
+}
