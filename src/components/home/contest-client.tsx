@@ -33,16 +33,30 @@ import type { Contest, Project } from "@/types";
 export default function ContestClient() {
     const [contests, setContests] = useState<Contest[] | null>(null);
 
-    /* 自主企画。受付中のものだけ出す */
+    /*
+     * 自主企画。
+     *
+     * 読む側のときだけ出す。
+     * 執筆向けでは読み込みもしない。
+     */
     const [projects, setProjects] = useState<Project[]>([]);
+    const [isReaderMode, setIsReaderMode] = useState(false);
 
     useEffect(() => {
         void (async () => {
-            const rows = await getRepository().listContests();
+            const repository = getRepository();
+
+            const rows = await repository.listContests();
             setContests(rows.filter((row) => row.status !== "draft"));
 
-            const projectRows = await getRepository().listProjects();
-            setProjects(projectRows.filter((row) => isProjectOpen(row)));
+            const profile = await repository.getProfile();
+            const reader = profile?.home_mode === "read";
+            setIsReaderMode(reader);
+
+            if (reader) {
+                const projectRows = await repository.listProjects();
+                setProjects(projectRows.filter((row) => isProjectOpen(row)));
+            }
         })();
     }, []);
 
@@ -132,6 +146,7 @@ export default function ContestClient() {
                  * ここに来る人は「参加できるもの」を探しているので、
                  * 同じ場所にあったほうが見つかる。
                  */}
+                {isReaderMode && (
                 <section className="mt-10">
                     <div className="flex items-baseline justify-between gap-3">
                         <h2 className="text-lg font-semibold tracking-wide text-ink">
@@ -193,6 +208,7 @@ export default function ContestClient() {
                         </ul>
                     )}
                 </section>
+                )}
             </main>
         </div>
     );

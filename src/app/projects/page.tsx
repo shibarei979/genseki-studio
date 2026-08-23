@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
@@ -28,6 +29,27 @@ export const metadata = {
 
 export default async function ProjectsPage() {
     const supabase = await createClient();
+
+    /*
+     * 執筆向けでは出さない。
+     *
+     * まず読む側で形を確かめてから、書く側へ広げる。
+     * 読者向けに切り替えている人と、
+     * ログインしていない人には見せる。
+     */
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("home_mode")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+        if (profile && profile.home_mode !== "read") notFound();
+    }
 
     const { data } = await supabase
         .from("projects")
