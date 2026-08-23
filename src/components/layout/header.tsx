@@ -97,7 +97,12 @@ const NAV_ITEMS: {
      */
     { href: "/recommend", label: "おすすめ", icon: "star", readerOnly: true },
     { href: "/rooms", label: "コミュニティー", icon: "book", feature: "rooms" },
-    { href: "/contest", label: "コンテスト", icon: "trophy", feature: "contest" },
+    /*
+     * 「コンテスト」。
+     * 読者向けモードでは出さない。
+     * 賞に応募するのは書く側の用なので、読む人の道には置かない。
+     */
+    { href: "/contest", label: "コンテスト", icon: "trophy", feature: "contest", writerOnly: true },
 ];
 
 interface Props {

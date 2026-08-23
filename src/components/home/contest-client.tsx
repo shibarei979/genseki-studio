@@ -23,43 +23,18 @@ import { getRepository } from "@/lib/repository";
 import {
     compareDate,
     daysUntil,
-    formatProjectPeriod,
-    isProjectOpen,
     statusColor,
     statusLabel,
 } from "@/types";
-import type { Contest, Project } from "@/types";
+import type { Contest } from "@/types";
 
 export default function ContestClient() {
     const [contests, setContests] = useState<Contest[] | null>(null);
 
-    /*
-     * 自主企画。
-     *
-     * 読む側のときだけ出す。
-     * 執筆向けでは読み込みもしない。
-     */
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [isReaderMode, setIsReaderMode] = useState(false);
-
-    /* 「募集中」の色。コンテストの札と同じものを使う */
-    const openTone = statusColor("open");
-
     useEffect(() => {
         void (async () => {
-            const repository = getRepository();
-
-            const rows = await repository.listContests();
+            const rows = await getRepository().listContests();
             setContests(rows.filter((row) => row.status !== "draft"));
-
-            const profile = await repository.getProfile();
-            const reader = profile?.home_mode === "read";
-            setIsReaderMode(reader);
-
-            if (reader) {
-                const projectRows = await repository.listProjects();
-                setProjects(projectRows.filter((row) => isProjectOpen(row)));
-            }
         })();
     }, []);
 
@@ -149,103 +124,13 @@ export default function ContestClient() {
                  * ここに来る人は「参加できるもの」を探しているので、
                  * 同じ場所にあったほうが見つかる。
                  */}
-                {isReaderMode && (
-                <section className="mt-10">
-                    <div className="flex items-baseline justify-between gap-3">
-                        <h2 className="text-lg font-semibold tracking-wide text-ink">
-                            自主企画
-                        </h2>
-                        {/*
-                         * 「すべて見る」は置かない。
-                         *
-                         * ここに全部出ているので、押しても同じものが並ぶ。
-                         * 代わりに、立てる側への入口を置く。
-                         */}
-                        <Link
-                            href="/projects/new"
-                            className="shrink-0 rounded-lg border border-forest-line px-3.5 py-1.5 text-[12px] text-forest hover:bg-forest-tint"
-                        >
-                            企画を立てる
-                        </Link>
-                    </div>
-
-                    <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
-                        利用者が立てた企画です。賞や審査はありません。
-                        合言葉を作品のタグに入れると参加できます。
-                    </p>
-
-                    {/*
-                     * 数の札。
-                     *
-                     * 上のコンテストと同じ形（丸い枠に点と数）。
-                     * 見出しの横に付けると題名の一部に見えるので、
-                     * 説明の下に置く。
-                     */}
-                    {projects.length > 0 && (
-                        <ul className="mt-3 flex flex-wrap gap-2">
-                            <li
-                                className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px]"
-                                style={{
-                                    background: openTone.bg,
-                                    color: openTone.text,
-                                    borderColor: openTone.border,
-                                }}
-                            >
-                                <span
-                                    className="h-1.5 w-1.5 rounded-full"
-                                    style={{ background: openTone.chip }}
-                                />
-                                募集中
-                                <span className="font-semibold">{projects.length}</span>
-                            </li>
-                        </ul>
-                    )}
-
-                    {projects.length === 0 ? (
-                        <p className="mt-4 rounded-xl border border-line bg-surface px-5 py-8 text-center text-[13px] text-faint">
-                            いま受付中の企画はありません。
-                        </p>
-                    ) : (
-                        /*
-                         * 絵は出さず、文字だけで並べる。
-                         *
-                         * 上のコンテストは絵の札。
-                         * 同じ形にすると、賞のあるものと無いものが
-                         * 見分けられなくなる。
-                         * こちらは行で並べ、軽い見た目にする。
-                         */
-                        /*
-                         * 2 列に並べる。
-                         *
-                         * 1 行 1 件だと、画面が広いとき
-                         * 題名の右が大きく空いて間延びする。
-                         */
-                        <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
-                            {projects.map((project) => (
-                                <li key={project.id}>
-                                    <Link
-                                        href={`/projects/${project.id}`}
-                                        className="flex h-full items-center gap-3 rounded-lg border border-l-[3px] border-line border-l-forest-line bg-surface px-4 py-3 hover:border-l-forest"
-                                    >
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block truncate text-[13px] text-ink">
-                                                {project.title}
-                                            </span>
-                                            <span className="mt-1 block text-[11px] text-forest">
-                                                #{project.tag}
-                                            </span>
-                                        </span>
-
-                                        <span className="shrink-0 text-[11px] text-faint">
-                                            {formatProjectPeriod(project)}
-                                        </span>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </section>
-                )}
+                {/*
+                 * 自主企画は、この画面では出さない。
+                 *
+                 * コンテストは書く側の道になったので、
+                 * 読む人はここへ来ない。
+                 * 企画は /projects に置いてある。
+                 */}
             </main>
         </div>
     );

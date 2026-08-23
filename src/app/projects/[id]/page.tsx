@@ -1,3 +1,4 @@
+import { PROJECTS_ENABLED } from "@/config/projects";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -37,6 +38,9 @@ export default async function ProjectPage({
 }: {
     params: { id: string };
 }) {
+    /* いまは表に出さない。config/projects.ts で入切する */
+    if (!PROJECTS_ENABLED) notFound();
+
     const supabase = await createClient();
 
     const { data: row } = await supabase

@@ -1,3 +1,4 @@
+import { PROJECTS_ENABLED } from "@/config/projects";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -29,6 +30,9 @@ export const metadata = {
 };
 
 export default async function ProjectsPage() {
+    /* いまは表に出さない。config/projects.ts で入切する */
+    if (!PROJECTS_ENABLED) notFound();
+
     const supabase = await createClient();
 
     /*

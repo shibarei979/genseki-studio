@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+import { PROJECTS_ENABLED } from "@/config/projects";
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
 import ProjectForm from "@/components/projects/project-form";
@@ -14,6 +16,10 @@ export const metadata = {
 };
 
 export default function NewProjectPage() {
+    /* いまは表に出さない。config/projects.ts で入切する */
+    if (!PROJECTS_ENABLED) notFound();
+
+
     return (
         <div className="page-with-footer bg-canvas">
             <Header
