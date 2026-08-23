@@ -52,11 +52,36 @@ export default function ProjectJoin({
         })();
     }, [isOpen, works]);
 
+    /** 参加を取り消す。タグを外すだけ */
+    async function leave(work: WorkWithStats) {
+        if (busyId) return;
+
+        setBusyId(work.id);
+        setError("");
+
+        try {
+            await getRepository().updateWork(work.id, {
+                tags: (work.tags || []).filter((t) => t !== tag),
+            });
+            setJoined(null);
+            setIsOpen(false);
+            router.refresh();
+        } catch (caught) {
+            setError(
+                caught instanceof Error ? caught.message : "取り消せませんでした。",
+            );
+        }
+        setBusyId(null);
+    }
+
     async function join(work: WorkWithStats) {
         if (busyId) return;
 
-        /* すでに付いていれば、何もしない */
-        if ((work.tags || []).includes(tag)) return;
+        /* すでに付いていれば、外す */
+        if ((work.tags || []).includes(tag)) {
+            await leave(work);
+            return;
+        }
 
         if ((work.tags || []).length >= TAG_MAX_COUNT) {
             setError(
@@ -100,7 +125,7 @@ export default function ProjectJoin({
                     }}
                     className="mt-4 w-full rounded-lg bg-forest py-2.5 text-[13px] font-medium text-white hover:bg-forest-dark"
                 >
-                    この企画に参加する
+                    参加する作品を選ぶ
                 </button>
 
                 {joined && (
@@ -129,6 +154,8 @@ export default function ProjectJoin({
                             {tag}
                         </span>
                         が付き、「{projectTitle}」に並びます。
+                        <br />
+                        参加中の作品を押すと、取り消せます。
                     </p>
                 </div>
 
@@ -148,7 +175,7 @@ export default function ProjectJoin({
                                 <li key={work.id}>
                                     <button
                                         type="button"
-                                        disabled={joined || busyId !== null}
+                                        disabled={busyId !== null}
                                         onClick={() => void join(work)}
                                         className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-canvas disabled:opacity-50"
                                     >
@@ -161,11 +188,23 @@ export default function ProjectJoin({
                                             </span>
                                         </span>
 
-                                        <span className="shrink-0 text-[11px] text-forest">
-                                            {joined
-                                                ? "参加中"
-                                                : busyId === work.id
-                                                  ? "…"
+                                        {/*
+                                         * 参加中のものは、押すと取り消しになる。
+                                         * 別の押し具を並べると窮屈なので、
+                                         * 同じ所で切り替える。
+                                         */}
+                                        <span
+                                            className={[
+                                                "shrink-0 rounded-full border px-2.5 py-1 text-[11px]",
+                                                joined
+                                                    ? "border-line text-muted"
+                                                    : "border-forest-line text-forest",
+                                            ].join(" ")}
+                                        >
+                                            {busyId === work.id
+                                                ? "…"
+                                                : joined
+                                                  ? "取り消す"
                                                   : "参加する"}
                                         </span>
                                     </button>

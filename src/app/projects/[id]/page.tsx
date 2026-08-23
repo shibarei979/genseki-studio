@@ -63,14 +63,24 @@ export default async function ProjectPage({
      */
     const { data: entries } = await supabase
         .from("novels")
-        .select("id, title, summary, genre, tags, author_id, created_at")
+        .select("id, title, summary, genre, tags, author_id, created_at, visibility, published")
         .contains("tags", [project.tag])
-        .eq("visibility", "public")
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(ENTRY_LIMIT);
 
-    const novels = entries || [];
+    /*
+     * 読める作品だけ並べる。
+     *
+     * visibility = 'public' だけに絞ると、
+     * 昔からある作品（published だけが立っているもの）が
+     * 落ちてしまい、参加したのに出てこない。
+     * どちらかで公開されていれば出す。
+     */
+    const novels = (entries || []).filter(
+        (n: { visibility?: string; published?: boolean }) =>
+            n.visibility === "public" || n.published === true,
+    );
 
     /* 作者の名前 */
     const authorIds = Array.from(
