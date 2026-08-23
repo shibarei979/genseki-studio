@@ -165,18 +165,56 @@ export default async function RecommendPage() {
         .map(toBook);
 
     return (
-        <div className="page-with-footer bg-canvas">
-            <Header breadcrumbs={[{ label: "おすすめ" }]} />
+        /*
+         * 骨組みはランキング・検索と同じ。
+         *
+         * 見出しは枠の外に置き、その下に札を積む。
+         * 3 つの画面で形が違うと、行き来するたびに
+         * 目の置き所を探し直すことになる。
+         */
+        <div style={{ minHeight: "100vh" }}>
+            <Header />
 
-            <div className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-6">
-                <h1 className="text-[20px] font-semibold text-ink">おすすめ</h1>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
-                    次の一冊を探すための場所です。
-                    <br />
-                    読んだ傾向から選んだものと、まだ知られていない作品を並べます。
-                </p>
+            <div
+                className="main-layout"
+                style={{
+                    maxWidth: 1200,
+                    margin: "0 auto",
+                    padding: "20px 32px",
+                    display: "flex",
+                    gap: 20,
+                    alignItems: "flex-start",
+                }}
+            >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ marginBottom: 12 }}>
+                        <h1
+                            style={{
+                                fontSize: 20,
+                                fontWeight: 700,
+                                color: "var(--color-text)",
+                                marginBottom: 0,
+                            }}
+                        >
+                            おすすめ
+                        </h1>
+                        <p
+                            style={{
+                                fontSize: 12,
+                                color: "var(--color-text-muted)",
+                                marginTop: 6,
+                                lineHeight: 1.8,
+                            }}
+                        >
+                            読んだ傾向から選んだものと、まだ知られていない作品を並べます。
+                        </p>
+                    </div>
 
-                <div className="mt-7 space-y-5">
+                    {/*
+                     * 一覧の見た目は .reader-home の中でだけ効く。
+                     * 囲いを付けないと、素の並びで出てしまう。
+                     */}
+                    <div className="reader-home space-y-4" data-theme="light">
                     {forYou.length > 0 && (
                         <ReaderWorkList
                             title="あなたへのおすすめ"
@@ -196,32 +234,56 @@ export default async function RecommendPage() {
                         books={rising}
                         moreHref="/ranking"
                     />
-                </div>
+                    </div>
 
-                {/*
-                 * ジャンルから探す。
-                 *
-                 * 上の一覧で見つからなかった人の受け皿。
-                 * 気分で選べるよう、名前だけを並べる。
-                 */}
-                <section className="mt-8 rounded-xl border border-line bg-surface px-5 py-5">
-                    <h2 className="text-[14px] font-semibold text-ink">
-                        ジャンルから探す
-                    </h2>
+                    {/*
+                     * ジャンルから探す。
+                     *
+                     * 上の一覧で見つからなかった人の受け皿。
+                     * 検索の絞り込みと同じ見た目にする。
+                     */}
+                    <div
+                        style={{
+                            background: "var(--color-bg-card)",
+                            border: "1px solid var(--color-brand-border)",
+                            borderRadius: 12,
+                            padding: "16px 20px",
+                            marginTop: 16,
+                        }}
+                    >
+                        <div
+                            style={{
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "var(--color-text)",
+                                marginBottom: 12,
+                            }}
+                        >
+                            ジャンルから探す
+                        </div>
 
-                    <ul className="mt-3.5 flex flex-wrap gap-2">
-                        {GENRES_SELECTABLE.map((genre) => (
-                            <li key={genre}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {GENRES_SELECTABLE.map((genre) => (
                                 <Link
+                                    key={genre}
                                     href={`/search?genre=${encodeURIComponent(genre)}`}
-                                    className="block rounded-full border border-line px-3.5 py-1.5 text-[12px] text-ink hover:border-forest-line hover:text-forest"
+                                    style={{
+                                        padding: "6px 14px",
+                                        borderRadius: 16,
+                                        border: "1px solid var(--color-brand-border)",
+                                        background: "var(--color-bg)",
+                                        fontSize: 12,
+                                        color: "var(--color-text)",
+                                        textDecoration: "none",
+                                        whiteSpace: "nowrap",
+                                    }}
                                 >
                                     {genre}
                                 </Link>
-                            </li>
-                        ))}
-                    </ul>
-                </section>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <Footer />
