@@ -160,35 +160,32 @@ export default function ContestClient() {
                             いま受付中の企画はありません。
                         </p>
                     ) : (
-                        <ul className="mt-4 grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                        /*
+                         * 絵は出さず、文字だけで並べる。
+                         *
+                         * 上のコンテストは絵の札。
+                         * 同じ形にすると、賞のあるものと無いものが
+                         * 見分けられなくなる。
+                         * こちらは行で並べ、軽い見た目にする。
+                         */
+                        <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
                             {projects.map((project) => (
                                 <li key={project.id}>
                                     <Link
                                         href={`/projects/${project.id}`}
-                                        className="flex h-full flex-col overflow-hidden rounded-xl bg-surface shadow-sm transition-shadow hover:shadow-md"
-                                        style={{ borderTop: "3px solid var(--color-brand)" }}
+                                        className="flex items-center gap-3 px-4 py-3 hover:bg-canvas"
                                     >
-                                        {project.banner_url ? (
-                                            // eslint-disable-next-line @next/next/no-img-element
-                                            <img
-                                                src={project.banner_url}
-                                                alt=""
-                                                className="block aspect-video w-full object-cover"
-                                            />
-                                        ) : (
-                                            <span className="block aspect-video w-full bg-canvas" />
-                                        )}
-
-                                        <span className="flex min-w-0 flex-1 flex-col px-3.5 py-3">
-                                            <span className="truncate text-[13px] font-semibold text-ink">
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate text-[13px] text-ink">
                                                 {project.title}
                                             </span>
-                                            <span className="mt-1 text-[11px] text-forest">
+                                            <span className="mt-1 block text-[11px] text-forest">
                                                 #{project.tag}
                                             </span>
-                                            <span className="mt-auto pt-2 text-[11px] text-faint">
-                                                {formatProjectPeriod(project)}
-                                            </span>
+                                        </span>
+
+                                        <span className="shrink-0 text-[11px] text-faint">
+                                            {formatProjectPeriod(project)}
                                         </span>
                                     </Link>
                                 </li>

@@ -130,20 +130,25 @@ function ProjectList({
                         <Link
                             href={`/projects/${project.id}`}
                             className={[
-                                "block rounded-xl border border-line bg-surface px-4 py-3.5 hover:border-forest-line",
+                                /*
+                                 * 左に細い線を引く。
+                                 *
+                                 * コンテストは絵の札、こちらは文字の行。
+                                 * 線があると「誰かが立てたもの」が並んでいる
+                                 * 感じになり、公式のものと見分けが付く。
+                                 */
+                                "block border-l-[3px] border-l-forest-line bg-surface px-4 py-3.5",
+                                "rounded-r-lg border-y border-r border-line hover:border-l-forest",
                                 dim ? "opacity-60" : "",
                             ].join(" ")}
                         >
-                            {/* 画像があれば上に。無ければ題名から始まる */}
-                            {project.banner_url && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                    src={project.banner_url}
-                                    alt=""
-                                    className="mb-3 aspect-video w-full rounded-lg object-cover"
-                                />
-                            )}
-
+                            {/*
+                             * 一覧では画像を出さない。
+                             *
+                             * 絵が並ぶとコンテストと見分けが付かなくなる。
+                             * 自主企画は「文字で選ぶ」場所にして、
+                             * 絵は開いたページでだけ見せる。
+                             */}
                             <div className="flex items-baseline justify-between gap-3">
                                 <p className="min-w-0 truncate text-[14px] font-semibold text-ink">
                                     {project.title}
