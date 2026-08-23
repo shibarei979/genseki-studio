@@ -2006,6 +2006,7 @@ export const supabaseRepository: Repository = {
                 tag: input.tag.trim(),
                 starts_at: input.starts_at,
                 ends_at: input.ends_at,
+                banner_url: input.banner_url ?? null,
             })
             .select()
             .single();

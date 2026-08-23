@@ -1312,6 +1312,7 @@ export const localRepository: Repository = {
             tag: input.tag.trim(),
             starts_at: input.starts_at,
             ends_at: input.ends_at,
+            banner_url: input.banner_url ?? null,
             is_published: true,
             created_at: timestamp,
             updated_at: timestamp,

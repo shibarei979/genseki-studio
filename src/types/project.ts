@@ -29,6 +29,13 @@ export interface Project {
     starts_at: string | null;
     /** 終わり。決めないこともある */
     ends_at: string | null;
+    /**
+     * 画像。
+     *
+     * 任意。無ければ題名だけで出す。
+     * 企画の顔になるので、あると目に留まりやすい。
+     */
+    banner_url: string | null;
     is_published: boolean;
     created_at: string;
     updated_at: string;
@@ -41,6 +48,7 @@ export interface ProjectInput {
     tag: string;
     starts_at: string | null;
     ends_at: string | null;
+    banner_url?: string | null;
 }
 
 /**

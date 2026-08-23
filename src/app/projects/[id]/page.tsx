@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
 import { createClient } from "@/lib/supabase/server";
+import ProjectJoin from "@/components/projects/project-join";
 import { formatProjectPeriod, isProjectOpen } from "@/types";
 import type { Project } from "@/types";
 
@@ -93,7 +94,17 @@ export default async function ProjectPage({
 
             <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-6">
                 {/* 企画そのもの */}
-                <section className="rounded-xl border border-line bg-surface px-5 py-5">
+                <section className="overflow-hidden rounded-xl border border-line bg-surface">
+                    {project.banner_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src={project.banner_url}
+                            alt=""
+                            className="block aspect-[3/1] w-full object-cover"
+                        />
+                    )}
+
+                    <div className="px-5 py-5">
                     <div className="flex items-start justify-between gap-3">
                         <h1 className="text-[19px] font-semibold leading-snug text-ink">
                             {project.title}
@@ -137,8 +148,14 @@ export default async function ProjectPage({
                             を入れると、この一覧に並びます。
                         </p>
                         <p className="mt-1.5 text-[11px] text-faint">
-                            タグは作品の設定 → 基本情報から入れられます。
+                            下の押し具から選ぶと、タグが自動で付きます。
                         </p>
+
+                        {/* 受付中のときだけ出す。終わった企画には参加できない */}
+                        {open && (
+                            <ProjectJoin tag={project.tag} projectTitle={project.title} />
+                        )}
+                    </div>
                     </div>
                 </section>
 

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { getRepository } from "@/lib/repository";
 import { isValidProjectTag } from "@/types";
+import { shrinkImage } from "@/lib/storage/image-store";
+import { uploadImage } from "@/lib/storage/remote-image";
 
 /**
  * ============================================================
@@ -37,6 +39,11 @@ export default function ProjectForm() {
     const [tagState, setTagState] = useState<TagState>("empty");
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState("");
+
+    /* 画像。任意なので、無くても立てられる */
+    const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+    const [bannerBusy, setBannerBusy] = useState(false);
+    const [bannerError, setBannerError] = useState("");
 
     /*
      * 合言葉を確かめる。
@@ -88,6 +95,7 @@ export default function ProjectForm() {
                 tag: tag.trim(),
                 starts_at: startsAt || null,
                 ends_at: endsAt || null,
+                banner_url: bannerUrl,
             });
             router.push(`/projects/${project.id}`);
         } catch (caught) {
@@ -167,6 +175,92 @@ export default function ProjectForm() {
                     {tagState === "invalid" &&
                         "使えるのは、ひらがな・カタカナ・漢字・英数字と、ー ・ _ - です。空白や記号は入れられません。"}
                 </p>
+            </Field>
+
+            {/*
+             * 画像。
+             *
+             * 任意。無ければ題名だけで出る。
+             * あると一覧で目に留まりやすい。
+             */}
+            <Field label="画像">
+                <div className="flex items-start gap-3">
+                    {bannerUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src={bannerUrl}
+                            alt=""
+                            className="aspect-video w-32 shrink-0 rounded-md border border-line object-cover"
+                        />
+                    ) : (
+                        <div className="flex aspect-video w-32 shrink-0 items-center justify-center rounded-md border border-dashed border-line text-[10px] text-faint">
+                            まだ無し
+                        </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png"
+                            disabled={bannerBusy}
+                            onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                e.target.value = "";
+                                if (!file) return;
+
+                                if (
+                                    file.type !== "image/jpeg" &&
+                                    file.type !== "image/png"
+                                ) {
+                                    setBannerError("JPEG か PNG の画像を選んでください。");
+                                    return;
+                                }
+
+                                setBannerBusy(true);
+                                setBannerError("");
+                                try {
+                                    const shrunk = await shrinkImage(file, true);
+                                    const url = await uploadImage(shrunk, "project");
+                                    setBannerUrl(url);
+                                } catch (caught) {
+                                    setBannerError(
+                                        caught instanceof Error
+                                            ? caught.message
+                                            : "画像を置けませんでした。",
+                                    );
+                                }
+                                setBannerBusy(false);
+                            }}
+                            className="block w-full text-xs text-muted file:mr-2 file:rounded file:border file:border-line file:bg-surface file:px-2.5 file:py-1 file:text-xs file:text-ink"
+                        />
+
+                        <p className="mt-2 text-[11px] leading-relaxed text-muted">
+                            JPEG または PNG。無くても構いません。
+                        </p>
+
+                        <p className="mt-1.5 rounded-md border border-amber bg-amber-tint/30 px-2.5 py-2 text-[11px] leading-relaxed text-ink">
+                            <strong>AIで生成した画像は使えません。</strong>
+                            <br />
+                            自分で描いた絵、または権利者から許可を得た絵だけを置いてください。
+                        </p>
+
+                        {bannerError && (
+                            <p className="mt-1.5 text-[11px] text-[var(--color-danger)]">
+                                {bannerError}
+                            </p>
+                        )}
+
+                        {bannerUrl && (
+                            <button
+                                type="button"
+                                onClick={() => setBannerUrl(null)}
+                                className="mt-2 text-[11px] text-faint hover:text-[var(--color-danger)]"
+                            >
+                                画像を外す
+                            </button>
+                        )}
+                    </div>
+                </div>
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">

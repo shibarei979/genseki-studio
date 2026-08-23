@@ -23,18 +23,26 @@ import { getRepository } from "@/lib/repository";
 import {
     compareDate,
     daysUntil,
+    formatProjectPeriod,
+    isProjectOpen,
     statusColor,
     statusLabel,
 } from "@/types";
-import type { Contest } from "@/types";
+import type { Contest, Project } from "@/types";
 
 export default function ContestClient() {
     const [contests, setContests] = useState<Contest[] | null>(null);
+
+    /* 自主企画。受付中のものだけ出す */
+    const [projects, setProjects] = useState<Project[]>([]);
 
     useEffect(() => {
         void (async () => {
             const rows = await getRepository().listContests();
             setContests(rows.filter((row) => row.status !== "draft"));
+
+            const projectRows = await getRepository().listProjects();
+            setProjects(projectRows.filter((row) => isProjectOpen(row)));
         })();
     }, []);
 
@@ -115,6 +123,79 @@ export default function ContestClient() {
                         ))}
                     </ul>
                 )}
+
+                {/*
+                 * 自主企画。
+                 *
+                 * 運営のコンテストの下に置く。
+                 * 賞のあるものと無いものを、上下で分ける。
+                 * ここに来る人は「参加できるもの」を探しているので、
+                 * 同じ場所にあったほうが見つかる。
+                 */}
+                <section className="mt-10">
+                    <div className="flex items-baseline justify-between gap-3">
+                        <h2 className="text-lg font-semibold tracking-wide text-ink">
+                            自主企画
+                            {projects.length > 0 && (
+                                <span className="ml-2 text-sm font-normal text-muted">
+                                    {projects.length}
+                                </span>
+                            )}
+                        </h2>
+                        <Link
+                            href="/projects"
+                            className="shrink-0 text-[12px] text-muted hover:text-forest"
+                        >
+                            すべて見る ›
+                        </Link>
+                    </div>
+
+                    <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
+                        利用者が立てた企画です。賞や審査はありません。
+                        合言葉を作品のタグに入れると参加できます。
+                    </p>
+
+                    {projects.length === 0 ? (
+                        <p className="mt-4 rounded-xl border border-line bg-surface px-5 py-8 text-center text-[13px] text-faint">
+                            いま受付中の企画はありません。
+                        </p>
+                    ) : (
+                        <ul className="mt-4 grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                            {projects.map((project) => (
+                                <li key={project.id}>
+                                    <Link
+                                        href={`/projects/${project.id}`}
+                                        className="flex h-full flex-col overflow-hidden rounded-xl bg-surface shadow-sm transition-shadow hover:shadow-md"
+                                        style={{ borderTop: "3px solid var(--color-brand)" }}
+                                    >
+                                        {project.banner_url ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={project.banner_url}
+                                                alt=""
+                                                className="block aspect-video w-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="block aspect-video w-full bg-canvas" />
+                                        )}
+
+                                        <span className="flex min-w-0 flex-1 flex-col px-3.5 py-3">
+                                            <span className="truncate text-[13px] font-semibold text-ink">
+                                                {project.title}
+                                            </span>
+                                            <span className="mt-1 text-[11px] text-forest">
+                                                #{project.tag}
+                                            </span>
+                                            <span className="mt-auto pt-2 text-[11px] text-faint">
+                                                {formatProjectPeriod(project)}
+                                            </span>
+                                        </span>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
             </main>
         </div>
     );

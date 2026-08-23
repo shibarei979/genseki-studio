@@ -134,6 +134,16 @@ function ProjectList({
                                 dim ? "opacity-60" : "",
                             ].join(" ")}
                         >
+                            {/* 画像があれば上に。無ければ題名から始まる */}
+                            {project.banner_url && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={project.banner_url}
+                                    alt=""
+                                    className="mb-3 aspect-video w-full rounded-lg object-cover"
+                                />
+                            )}
+
                             <div className="flex items-baseline justify-between gap-3">
                                 <p className="min-w-0 truncate text-[14px] font-semibold text-ink">
                                     {project.title}
