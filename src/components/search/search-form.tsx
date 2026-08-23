@@ -189,15 +189,19 @@ export default function SearchForm({
   } as const
 
   return (
+    <>
+    {/*
+     * 見出しは枠の外。
+     *
+     * ランキングと同じ置き方にする。
+     * 枠の中にあると絞り込みの一項目に見えて、
+     * このページが何なのかが伝わりにくい。
+     */}
+    <h1 style={{fontSize:20,fontWeight:700,color:'var(--color-text)',marginBottom:12}}>
+      作品を探す
+    </h1>
+
     <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding: isMobile ? '16px' : '20px',marginBottom:16}}>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8}}>
-        <div style={{fontSize:15,fontWeight:700,color:'var(--color-text)',display:'flex',alignItems:'center',gap:8}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          探す
-        </div>
-      </div>
 
       {/* キーワード・除外 */}
       <div style={{display:'flex',flexDirection: isMobile ? 'column' : 'row',gap:10,marginBottom:12}}>
@@ -531,5 +535,6 @@ export default function SearchForm({
         </div>
       </div>
     </div>
+    </>
   )
 }
