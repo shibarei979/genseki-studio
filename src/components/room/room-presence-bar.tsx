@@ -26,6 +26,7 @@ import { useEffect, useState } from "react";
 import AvatarSprite from "@/components/room/avatar-sprite";
 import { assignColors } from "@/lib/room/avatar-colors";
 import { useRoomSession } from "@/hooks/use-room-session";
+import { releaseVoiceRoom } from "@/lib/room/voice-session";
 import { getRepository } from "@/lib/repository";
 import { createPresence, loadIdentity } from "@/lib/room/presence";
 import type { RoomState } from "@/lib/room/presence";
@@ -34,6 +35,19 @@ import type { WritingRoom } from "@/types";
 export default function RoomPresenceBar() {
     const pathname = usePathname();
     const { session, leave, toggleMic } = useRoomSession();
+
+    /*
+     * タブを閉じたら、声も切る。
+     *
+     * 入室の記録は sessionStorage が消えるので残らないが、
+     * マイクは掴まれたままになる。端末に「使用中」の印が
+     * 残り続けるので、ここで確実に離す。
+     */
+    useEffect(() => {
+        const handleUnload = () => releaseVoiceRoom();
+        window.addEventListener("pagehide", handleUnload);
+        return () => window.removeEventListener("pagehide", handleUnload);
+    }, []);
 
     const [room, setRoom] = useState<WritingRoom | null>(null);
     const [state, setState] = useState<RoomState>({ members: [], messages: [], isClosed: false });

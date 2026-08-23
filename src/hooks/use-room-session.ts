@@ -19,6 +19,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { peekVoiceRoom, releaseVoiceRoom } from "@/lib/room/voice-session";
 
 const KEY = "genseki:room-session";
 
@@ -73,11 +74,28 @@ export function useRoomSession() {
         write({ roomId, isMicOn: current?.roomId === roomId ? current.isMicOn : false });
     }, []);
 
-    const leave = useCallback(() => write(null), []);
+    const leave = useCallback(() => {
+        /*
+         * 声の繋がりも切る。
+         *
+         * 帯の「退室」からも出られるので、
+         * ここで切らないとマイクが掴まれたまま残る。
+         */
+        releaseVoiceRoom();
+        write(null);
+    }, []);
 
+    /**
+     * マイクの入り切り。
+     *
+     * 覚えている状態だけでなく、実際の繋がりにも伝える。
+     * 帯から押しても声が止まるようにする。
+     */
     const toggleMic = useCallback(() => {
         const current = read();
         if (!current) return;
+
+        void peekVoiceRoom()?.toggle();
         write({ ...current, isMicOn: !current.isMicOn });
     }, []);
 

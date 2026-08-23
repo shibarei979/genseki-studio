@@ -27,6 +27,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { hasSupabase } from "@/config/env.client";
 import { VoiceRoom } from "@/lib/room/voice";
+import { acquireVoiceRoom } from "@/lib/room/voice-session";
 import type { VoiceState } from "@/lib/room/voice";
 
 const IDLE: VoiceState = {
@@ -48,16 +49,28 @@ export function useRoomVoice(roomId: string | null, selfId: string) {
          */
         if (!roomId || !selfId || !hasSupabase()) return;
 
-        const room = new VoiceRoom(selfId, roomId);
+        /*
+         * 繋がりはアプリ全体で 1 つ保つ。
+         *
+         * ここで作って捨てていたので、別のページへ移ると
+         * 画面ごと消えて声が途切れていた。
+         * 出しっぱなしにしておき、部屋を出たときだけ切る。
+         */
+        const room = acquireVoiceRoom(roomId, selfId);
         roomRef.current = room;
 
         const stop = room.subscribe(setVoice);
 
         return () => {
+            /*
+             * 見るのをやめるだけ。繋がりは切らない。
+             *
+             * 切ってしまうと、執筆画面へ移った瞬間に
+             * 声が落ちる。部屋を出るときは
+             * releaseVoiceRoom を呼ぶ側で切る。
+             */
             stop();
-            room.dispose();
             roomRef.current = null;
-            setVoice(IDLE);
         };
     }, [roomId, selfId]);
 

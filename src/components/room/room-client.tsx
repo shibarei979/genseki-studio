@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getRepository } from "@/lib/repository";
 import { createPresence, loadIdentity, saveIdentity } from "@/lib/room/presence";
 import { useRoomVoice } from "@/hooks/use-room-voice";
+import { releaseVoiceRoom } from "@/lib/room/voice-session";
 import { AVATAR_COLORS, assignColors, takenColors } from "@/lib/room/avatar-colors";
 import { backgroundFor, clampToFloor } from "@/lib/room/room-backgrounds";
 import type { Presence, RoomState } from "@/lib/room/presence";
@@ -519,6 +520,8 @@ export default function RoomClient({ roomId }: Props) {
     /** ただ出る */
     function justLeave() {
         presenceRef.current?.leave();
+        /* 声の繋がりも切る。部屋を出るときだけここで切る */
+        releaseVoiceRoom();
         leave();
         router.push("/rooms");
     }
