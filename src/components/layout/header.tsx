@@ -43,8 +43,6 @@ function timeAgo(iso: string): string {
 
 const SEEN_KEY = "genseki:notices-seen-at";
 
-type IconName = "home" | "pen" | "search" | "book" | "trophy" | "crown" | "star";
-
 /*
  * 行き先。
  *
@@ -60,7 +58,6 @@ type IconName = "home" | "pen" | "search" | "book" | "trophy" | "crown" | "star"
 const NAV_ITEMS: {
     href: string;
     label: string;
-    icon: IconName;
     /** 運営が入切する機能。切っていれば出さない */
     feature?: string;
     /**
@@ -74,35 +71,35 @@ const NAV_ITEMS: {
     /** 執筆向けのときだけ出す。読者向けには出さない */
     writerOnly?: boolean;
 }[] = [
-    { href: "/", label: "ホーム", icon: "home" },
+    { href: "/", label: "ホーム" },
     /*
      * 「作品を書く」。
      * 読者向けモードでは出さない。
      * 読む人に執筆への入口を見せる必要はない。
      */
-    { href: "/post", label: "作品を書く", icon: "pen", writerOnly: true },
+    { href: "/post", label: "作品を書く", writerOnly: true },
     /*
      * 「作品を探す」。
      * 中身（絞り込みと並べ替え）が入ったので出した。
      */
-    { href: "/search", label: "作品を探す", icon: "search" },
+    { href: "/search", label: "作品を探す" },
     /*
      * 「ランキング」は「作品を探す」の隣。
      * どちらも作品を見つけるための道なので、並べて置く。
      */
-    { href: "/ranking", label: "ランキング", icon: "crown", hideInFocus: true },
+    { href: "/ranking", label: "ランキング", hideInFocus: true },
     /*
      * 「おすすめ」。
      * 読む人だけの道なので、執筆向けには出さない。
      */
-    { href: "/recommend", label: "おすすめ", icon: "star", readerOnly: true },
-    { href: "/rooms", label: "コミュニティー", icon: "book", feature: "rooms" },
+    { href: "/recommend", label: "おすすめ", readerOnly: true },
+    { href: "/rooms", label: "コミュニティー", feature: "rooms" },
     /*
      * 「コンテスト」。
      * 読者向けモードでは出さない。
      * 賞に応募するのは書く側の用なので、読む人の道には置かない。
      */
-    { href: "/contest", label: "コンテスト", icon: "trophy", feature: "contest", writerOnly: true },
+    { href: "/contest", label: "コンテスト", feature: "contest", writerOnly: true },
 ];
 
 interface Props {
@@ -390,7 +387,12 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                                     : "text-muted hover:text-ink",
                             ].join(" ")}
                         >
-                            <NavIcon name={item.icon} />
+                            {/*
+                             * 絵は出さない。
+                             *
+                             * 行き先が 6 つ並ぶと、絵のほうが先に目に入り、
+                             * 字が読みにくくなる。名前だけで足りる。
+                             */}
                             {item.label}
                             {isCurrent(item.href) && (
                                 <span className="absolute inset-x-2 bottom-0 h-[3px] rounded-t bg-forest" />
@@ -540,7 +542,6 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                                 : "text-muted hover:text-ink",
                         ].join(" ")}
                     >
-                        <NavIcon name={item.icon} />
                         {item.label}
                     </Link>
                 ))}
@@ -591,78 +592,6 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
  * ============================================================
  */
 
-function NavIcon({ name }: { name: IconName }) {
-    const common = {
-        /* 文字より少し大きく。並べたとき絵が沈まない */
-        width: 18,
-        height: 18,
-        viewBox: "0 0 24 24",
-        fill: "none",
-        stroke: "currentColor",
-        strokeWidth: 1.9,
-        strokeLinecap: "round" as const,
-        strokeLinejoin: "round" as const,
-        "aria-hidden": true,
-    };
-
-    if (name === "home") {
-        return (
-            <svg {...common}>
-                <path d="M3 10.5 12 3l9 7.5V20a1.5 1.5 0 0 1-1.5 1.5h-4V14h-7v7.5h-4A1.5 1.5 0 0 1 3 20Z" />
-            </svg>
-        );
-    }
-    if (name === "search") {
-        return (
-            <svg {...common}>
-                <circle cx="10.8" cy="10.8" r="6.3" />
-                <path d="m15.5 15.5 4 4" />
-            </svg>
-        );
-    }
-    if (name === "pen") {
-        return (
-            <svg {...common}>
-                <path d="M4.5 19.5h3.6L19.4 8.2a2.6 2.6 0 0 0-3.6-3.6L4.5 15.9Z" />
-                <path d="m14.6 5.8 3.6 3.6" />
-            </svg>
-        );
-    }
-    if (name === "star") {
-        /* 星。おすすめであることが一目で伝わる */
-        return (
-            <svg {...common}>
-                <path d="m12 3 2.6 5.6 6 .8-4.4 4.2 1.1 6.1L12 16.8 6.7 19.7l1.1-6.1L3.4 9.4l6-.8z" />
-            </svg>
-        );
-    }
-    if (name === "crown") {
-        /* 冠。順位の並びであることが一目で伝わる */
-        return (
-            <svg {...common}>
-                <path d="M4 18h16" />
-                <path d="M4 18 3 7l5 3.5L12 4l4 6.5L21 7l-1 11" />
-            </svg>
-        );
-    }
-    if (name === "book") {
-        /* 机と椅子。本より「書く場所」であることが伝わる */
-        return (
-            <svg {...common}>
-                <path d="M3 12h18" />
-                <path d="M5.5 12v7M18.5 12v7" />
-                <path d="M8 12V6.5a1.5 1.5 0 0 1 1.5-1.5h5A1.5 1.5 0 0 1 16 6.5V12" />
-            </svg>
-        );
-    }
-    return (
-        <svg {...common}>
-            <path d="M7 4h10v5a5 5 0 0 1-10 0Z" />
-            <path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3" />
-            <path d="M12 14v3M9 21h6l-.5-4h-5Z" />
-        </svg>
-    );
-}
 
 function MailIcon() {
     return (
