@@ -26,6 +26,7 @@ import { useEffect, useState } from "react";
 import AvatarSprite from "@/components/room/avatar-sprite";
 import { assignColors } from "@/lib/room/avatar-colors";
 import { useRoomSession } from "@/hooks/use-room-session";
+import { useRoomVoice } from "@/hooks/use-room-voice";
 import { releaseVoiceRoom } from "@/lib/room/voice-session";
 import { getRepository } from "@/lib/repository";
 import { createPresence, loadIdentity } from "@/lib/room/presence";
@@ -34,7 +35,23 @@ import type { WritingRoom } from "@/types";
 
 export default function RoomPresenceBar() {
     const pathname = usePathname();
-    const { session, leave, toggleMic } = useRoomSession();
+    const { session, leave } = useRoomSession();
+
+    /*
+     * マイクの状態は、実際の繋がりから取る。
+     *
+     * 覚えている値と繋がりの状態を別々に持っていたので、
+     * 部屋の画面で入れても帯には伝わらず、
+     * ページを移るたびに入切が食い違って見えた。
+     * 見る先を 1 つにすれば、ずれようがない。
+     *
+     * ここに置くのは、下に早い戻りがあるため。
+     * 呼ぶ順が回ごとに変わってはいけない。
+     */
+    const voice = useRoomVoice(
+        session?.roomId ?? null,
+        loadIdentity()?.id ?? null,
+    );
 
     /*
      * タブを閉じたら、声も切る。
@@ -157,17 +174,17 @@ export default function RoomPresenceBar() {
                 <span className="ml-auto flex shrink-0 items-center gap-1.5">
                     <button
                         type="button"
-                        onClick={toggleMic}
-                        aria-pressed={session.isMicOn}
-                        aria-label={`マイク${session.isMicOn ? "オン" : "オフ"}`}
+                        onClick={() => void voice.toggleMic()}
+                        aria-pressed={voice.isMicEnabled}
+                        aria-label={`マイク${voice.isMicEnabled ? "オン" : "オフ"}`}
                         className={[
                             "flex h-8 w-8 items-center justify-center rounded-full border transition-colors",
-                            session.isMicOn
+                            voice.isMicEnabled
                                 ? "border-forest bg-forest text-white"
                                 : "border-forest-line bg-surface text-faint hover:text-ink",
                         ].join(" ")}
                     >
-                        <MicIcon isOn={session.isMicOn} />
+                        <MicIcon isOn={voice.isMicEnabled} />
                     </button>
 
                     <Link

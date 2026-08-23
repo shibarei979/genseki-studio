@@ -25,7 +25,6 @@ const KEY = "genseki:room-session";
 
 export interface RoomSession {
     roomId: string;
-    isMicOn: boolean;
 }
 
 /** 別のタブや別の画面へ知らせる */
@@ -38,7 +37,7 @@ function read(): RoomSession | null {
         if (!raw) return null;
         const parsed = JSON.parse(raw) as Partial<RoomSession>;
         if (typeof parsed.roomId !== "string") return null;
-        return { roomId: parsed.roomId, isMicOn: parsed.isMicOn === true };
+        return { roomId: parsed.roomId };
     } catch {
         return null;
     }
@@ -71,7 +70,14 @@ export function useRoomSession() {
 
     const enter = useCallback((roomId: string) => {
         const current = read();
-        write({ roomId, isMicOn: current?.roomId === roomId ? current.isMicOn : false });
+        /*
+         * 覚えるのは部屋 id だけ。
+         *
+         * マイクの入切は繋がりの側が持つ。
+         * 両方で持つと必ず食い違う。
+         */
+        if (current?.roomId === roomId) return;
+        write({ roomId });
     }, []);
 
     const leave = useCallback(() => {
@@ -88,15 +94,12 @@ export function useRoomSession() {
     /**
      * マイクの入り切り。
      *
-     * 覚えている状態だけでなく、実際の繋がりにも伝える。
-     * 帯から押しても声が止まるようにする。
+     * 状態は繋がりの側だけが持つ。
+     * ここで覚えると、繋がりの実際と食い違い、
+     * ページを移るたびに入切がずれて見える。
      */
     const toggleMic = useCallback(() => {
-        const current = read();
-        if (!current) return;
-
         void peekVoiceRoom()?.toggle();
-        write({ ...current, isMicOn: !current.isMicOn });
     }, []);
 
     return { session, enter, leave, toggleMic };
