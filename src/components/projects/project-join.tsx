@@ -74,8 +74,32 @@ export default function ProjectJoin({
         setBusyId(null);
     }
 
+    /**
+     * その作品が読者に読めるか。
+     *
+     * 公開の状態は 2 つの列に分かれている。
+     * どちらかが立っていれば読める。
+     */
+    function isPublic(work: WorkWithStats): boolean {
+        return work.visibility === "public" || (work as { published?: boolean }).published === true;
+    }
+
     async function join(work: WorkWithStats) {
         if (busyId) return;
+
+        /*
+         * 下書きは参加できない。
+         *
+         * 並べても読者が押した先で読めない。
+         * 「参加したのに出てこない」と見えるより、
+         * ここで断ったほうが分かりやすい。
+         */
+        if (!isPublic(work) && !(work.tags || []).includes(tag)) {
+            setError(
+                `「${work.title || "無題"}」はまだ公開されていません。作品を公開してから参加してください。`,
+            );
+            return;
+        }
 
         /* すでに付いていれば、外す */
         if ((work.tags || []).includes(tag)) {
@@ -175,7 +199,9 @@ export default function ProjectJoin({
                                 <li key={work.id}>
                                     <button
                                         type="button"
-                                        disabled={busyId !== null}
+                                        disabled={
+                                            busyId !== null || (!isPublic(work) && !joined)
+                                        }
                                         onClick={() => void join(work)}
                                         className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-canvas disabled:opacity-50"
                                     >
@@ -185,6 +211,11 @@ export default function ProjectJoin({
                                             </span>
                                             <span className="mt-0.5 block text-[11px] text-faint">
                                                 {work.genre}
+                                                {!isPublic(work) && (
+                                                    <span className="ml-1.5 text-[var(--color-danger)]">
+                                                        未公開
+                                                    </span>
+                                                )}
                                             </span>
                                         </span>
 
@@ -205,7 +236,9 @@ export default function ProjectJoin({
                                                 ? "…"
                                                 : joined
                                                   ? "取り消す"
-                                                  : "参加する"}
+                                                  : isPublic(work)
+                                                    ? "参加する"
+                                                    : "公開が必要"}
                                         </span>
                                     </button>
                                 </li>
