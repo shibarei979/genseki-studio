@@ -42,6 +42,9 @@ export default function ContestClient() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [isReaderMode, setIsReaderMode] = useState(false);
 
+    /* 「募集中」の色。コンテストの札と同じものを使う */
+    const openTone = statusColor("open");
+
     useEffect(() => {
         void (async () => {
             const repository = getRepository();
@@ -152,11 +155,17 @@ export default function ContestClient() {
                         <h2 className="text-lg font-semibold tracking-wide text-ink">
                             自主企画
                         </h2>
+                        {/*
+                         * 「すべて見る」は置かない。
+                         *
+                         * ここに全部出ているので、押しても同じものが並ぶ。
+                         * 代わりに、立てる側への入口を置く。
+                         */}
                         <Link
-                            href="/projects"
-                            className="shrink-0 text-[12px] text-muted hover:text-forest"
+                            href="/projects/new"
+                            className="shrink-0 rounded-lg border border-forest-line px-3.5 py-1.5 text-[12px] text-forest hover:bg-forest-tint"
                         >
-                            すべて見る ›
+                            企画を立てる
                         </Link>
                     </div>
 
@@ -166,13 +175,30 @@ export default function ContestClient() {
                     </p>
 
                     {/*
-                     * 数はここに出す。
-                     * 見出しの横に付けると、題名の一部に見える。
+                     * 数の札。
+                     *
+                     * 上のコンテストと同じ形（丸い枠に点と数）。
+                     * 見出しの横に付けると題名の一部に見えるので、
+                     * 説明の下に置く。
                      */}
                     {projects.length > 0 && (
-                        <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-forest-line px-3 py-1 text-[11px] text-forest">
-                            募集中 {projects.length}件
-                        </p>
+                        <ul className="mt-3 flex flex-wrap gap-2">
+                            <li
+                                className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px]"
+                                style={{
+                                    background: openTone.bg,
+                                    color: openTone.text,
+                                    borderColor: openTone.border,
+                                }}
+                            >
+                                <span
+                                    className="h-1.5 w-1.5 rounded-full"
+                                    style={{ background: openTone.chip }}
+                                />
+                                募集中
+                                <span className="font-semibold">{projects.length}</span>
+                            </li>
+                        </ul>
                     )}
 
                     {projects.length === 0 ? (
