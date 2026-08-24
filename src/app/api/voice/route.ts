@@ -77,17 +77,16 @@ export async function POST(request: Request) {
         );
     }
 
+    /*
+     * 運営の鍵で読み書きする。
+     *
+     * 書き方はランキングに揃える。
+     * そちらは同じ鍵で動いているので、
+     * 余計な指定を足さないほうが確実。
+     */
     const admin = createAdminClient(
         serverEnv.supabaseUrl,
         serverEnv.supabaseServiceRoleKey,
-        {
-            /*
-             * サーバーで使うので、ログイン状態は持たない。
-             * 持たせると、その場の cookie を読みに行って
-             * 運営の鍵が効かなくなることがある。
-             */
-            auth: { persistSession: false, autoRefreshToken: false },
-        },
     );
 
     /* ---------------------------------------------------------
