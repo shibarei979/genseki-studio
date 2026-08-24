@@ -36,7 +36,37 @@ export const serverEnv = {
      */
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+
+    /*
+     * ------------------------------------------------------------
+     * Google の読み上げ（WaveNet）
+     *
+     * 鍵はサーバーでだけ使う。ブラウザへは送らない。
+     * 未設定なら読み上げの機能そのものを出さない。
+     * ------------------------------------------------------------
+     */
+    googleTtsProjectId: process.env.GOOGLE_TTS_PROJECT_ID ?? "",
+    googleTtsClientEmail: process.env.GOOGLE_TTS_CLIENT_EMAIL ?? "",
+    /*
+     * 鍵の中身。
+     *
+     * 環境変数に入れると改行が \n という 2 文字になる。
+     * そのままでは署名できないので、本物の改行へ戻す。
+     */
+    googleTtsPrivateKey: (process.env.GOOGLE_TTS_PRIVATE_KEY ?? "").replace(
+        /\\n/g,
+        "\n",
+    ),
 } as const;
+
+/** 読み上げが使えるか */
+export function hasGoogleTts(): boolean {
+    return (
+        serverEnv.googleTtsProjectId.length > 0 &&
+        serverEnv.googleTtsClientEmail.length > 0 &&
+        serverEnv.googleTtsPrivateKey.length > 0
+    );
+}
 
 /**
  * 運営用の鍵を取り出す。
