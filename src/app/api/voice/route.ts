@@ -144,11 +144,17 @@ export async function POST(request: Request) {
         /*
          * 読めなかった理由を返す。
          *
-         * 「見つかりません」とだけ出すと、
-         * id が違うのか権限が無いのか分からない。
+         * 権限が無いときは、鍵の取り違えがほとんど。
+         * anon の鍵を入れると、ここで必ず弾かれる。
          */
+        const isPermission = episodeError.message.includes("permission denied");
+
         return NextResponse.json(
-            { error: `話を読めませんでした: ${episodeError.message}` },
+            {
+                error: isPermission
+                    ? "読み上げの設定が正しくありません。運営用の鍵（service_role）を確かめてください。"
+                    : `話を読めませんでした: ${episodeError.message}`,
+            },
             { status: 500 },
         );
     }

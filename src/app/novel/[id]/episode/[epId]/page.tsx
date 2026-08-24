@@ -186,16 +186,15 @@ export default async function EpisodePage({ params }: Props) {
               <img src={episode.illust_url} alt="挿絵" style={{maxWidth:'100%',maxHeight:480,objectFit:'contain',borderRadius:8}}/>
             </div>
           )}
-          <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name}/>
-
           {/*
            * 音声で聴く。
            *
-           * 本文のすぐ下に置く。
-           * 読み終えてから聴く人より、
-           * 読む代わりに聴く人のほうが多い。
+           * 本文の上に置く。
+           * 読む前に選ぶものなので、読み終えた先にあっても遅い。
            */}
           <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
+
+          <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name}/>
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
             <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
             {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
