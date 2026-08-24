@@ -703,7 +703,14 @@ export default function EpisodeEditor({
 function SaveIndicator({ state, savedAt }: { state: string; savedAt: string | null }) {
     if (state === "saving") return <span>保存中</span>;
     if (state === "pending") return <span className="text-faint">未保存の変更</span>;
-    if (state === "saved" && savedAt) return <span>自動保存済み {formatTime(savedAt)}</span>;
+    /*
+     * 保存できたときは青緑にする。
+     *
+     * 黒のままだと、他の文字に紛れて気づかない。
+     * 「保存された」と分かることが、書く人の安心になる。
+     */
+    if (state === "saved" && savedAt)
+        return <span className="text-forest">自動保存済み {formatTime(savedAt)}</span>;
     return <span className="text-faint">自動保存</span>;
 }
 
