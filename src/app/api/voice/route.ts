@@ -70,9 +70,24 @@ export async function POST(request: Request) {
      * 音声の記録は誰でも読めるが、書くのはここだけ。
      * 決まりごとを飛び越える必要があるので、運営の鍵を使う。
      */
+    if (!serverEnv.supabaseServiceRoleKey) {
+        return NextResponse.json(
+            { error: "読み上げの設定が足りません（運営用の鍵）" },
+            { status: 503 },
+        );
+    }
+
     const admin = createAdminClient(
         serverEnv.supabaseUrl,
         serverEnv.supabaseServiceRoleKey,
+        {
+            /*
+             * サーバーで使うので、ログイン状態は持たない。
+             * 持たせると、その場の cookie を読みに行って
+             * 運営の鍵が効かなくなることがある。
+             */
+            auth: { persistSession: false, autoRefreshToken: false },
+        },
     );
 
     /* ---------------------------------------------------------
@@ -119,14 +134,30 @@ export async function POST(request: Request) {
     /* ---------------------------------------------------------
      * 3. 本文を読む
      * --------------------------------------------------------- */
-    const { data: episode } = await admin
+    const { data: episode, error: episodeError } = await admin
         .from("episodes")
         .select("body, title, novel_id")
         .eq("id", episodeId)
         .maybeSingle();
 
+    if (episodeError) {
+        /*
+         * 読めなかった理由を返す。
+         *
+         * 「見つかりません」とだけ出すと、
+         * id が違うのか権限が無いのか分からない。
+         */
+        return NextResponse.json(
+            { error: `話を読めませんでした: ${episodeError.message}` },
+            { status: 500 },
+        );
+    }
+
     if (!episode) {
-        return NextResponse.json({ error: "話が見つかりません" }, { status: 404 });
+        return NextResponse.json(
+            { error: `話が見つかりません（id: ${episodeId.slice(0, 8)}…）` },
+            { status: 404 },
+        );
     }
 
     /*
