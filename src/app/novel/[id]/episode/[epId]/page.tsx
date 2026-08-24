@@ -26,6 +26,7 @@ import CommentSection from '@/components/novel/episode/comment-section'
 import EpisodeLikeButton from '@/components/novel/episode/episode-like-button'
 import ReadButton from '@/components/novel/episode/read-button'
 import EpisodeBody from '@/components/novel/episode/episode-body'
+import VoicePlayer from '@/components/novel/episode/voice-player'
 import TypoReportButton from '@/components/novel/episode/typo-report-button'
 import ValidReadTracker from '@/components/novel/episode/valid-read-tracker'
 import { QuoteProvider } from '@/components/novel/episode/quote-context'
@@ -186,6 +187,15 @@ export default async function EpisodePage({ params }: Props) {
             </div>
           )}
           <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name}/>
+
+          {/*
+           * 音声で聴く。
+           *
+           * 本文のすぐ下に置く。
+           * 読み終えてから聴く人より、
+           * 読む代わりに聴く人のほうが多い。
+           */}
+          <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
             <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
             {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
