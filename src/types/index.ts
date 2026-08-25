@@ -29,6 +29,8 @@ export {
     GENRE_LEGACY_MATCH,
     GENRE_COLOR,
     genreColor,
+    GENRE_SHORT,
+    genreShort,
     SUGGESTED_TAGS,
     AI_USAGE_DESCRIPTION,
     AI_USAGE_LABEL,

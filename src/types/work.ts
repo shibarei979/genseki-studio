@@ -257,6 +257,29 @@ export function genreColor(genre: string): string {
     return GENRE_COLOR[genre] ?? "#8a8f93";
 }
 
+/**
+ * 付箋に出す、短いジャンル名。
+ *
+ * 本の背表紙に挿す紙は細い。
+ * 「異世界ファンタジー」では、はみ出すか読めなくなる。
+ *
+ * 意味が変わらない範囲で詰める。
+ * ここに無いものは、そのまま出して幅で切る。
+ */
+export const GENRE_SHORT: Record<string, string> = {
+    ハイファンタジー: "ハイF",
+    異世界ファンタジー: "異世界",
+    ローファンタジー: "ローF",
+    "歴史・時代": "歴史",
+    ミステリー: "ミステリ",
+    アクション: "アクション",
+};
+
+/** 付箋に出す名前。短いものがあればそちら */
+export function genreShort(genre: string): string {
+    return GENRE_SHORT[genre] ?? genre;
+}
+
 export const AGE_RATING_LABEL: Record<AgeRating, string> = {
     all: "全年齢",
     r15: "R15",

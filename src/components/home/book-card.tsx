@@ -1,5 +1,5 @@
 import type { HomeBook } from "@/types/home";
-import { genreColor } from "@/types";
+import { genreColor, genreShort } from "@/types";
 
 /**
  * 本の統一フォーマット（デザイン home_10 の book_template.js と同一構造）
@@ -24,8 +24,12 @@ function BookFields({ book }: { book: HomeBook }) {
              */}
             <ul className="b_tags">
                 {book.tags.map((tag, i) => (
-                    <li key={i} style={{ backgroundColor: genreColor(tag) }}>
-                        {tag}
+                    <li
+                        key={i}
+                        style={{ backgroundColor: genreColor(tag) }}
+                        title={tag}
+                    >
+                        {genreShort(tag)}
                     </li>
                 ))}
             </ul>
