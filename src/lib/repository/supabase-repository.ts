@@ -411,6 +411,14 @@ export const supabaseRepository: Repository = {
             avatar_hue: (data.avatar_hue as number) ?? 120,
             x_account: (data.x_account as string) ?? "",
             home_mode: (data.home_mode as string | null) ?? null,
+            /*
+             * 作品を押したときの見せ方。
+             *
+             * 返し忘れていたので、設定を変えても
+             * いつも札のままになっていた。
+             */
+            work_popup_style:
+                (data.work_popup_style as "card" | "book" | null) ?? null,
             website: (data.website as string) ?? "",
             claimed_missions: (data.claimed_missions as string[]) ?? [],
             started_at: (data.created_at as string) ?? new Date().toISOString(),
