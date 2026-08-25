@@ -319,7 +319,25 @@
     /* 紙を挟んだ感じにする。頭を丸め、下に影を落とす */
     border-radius: 2px 2px 0 0;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-    width: calc(46px * 0.9);
+
+    /*
+     * 付箋。
+     *
+     * 参照元の字は 5.4px で、何と書いてあるか読めない。
+     * 札を大きくして、字も読める大きさにする。
+     */
+    width: calc(64px * 0.9);
+    font-size: calc(9px * 0.9);
+    line-height: 1.3;
+    padding-top: calc(3px * 0.9);
+    letter-spacing: 0;
+}
+
+/* 付箋そのものの高さも、字に合わせて広げる */
+.reader-home .bookshelf-loop .b_tags {
+    height: calc(26px * 0.9);
+    top: calc(-26px * 0.9);
+    width: calc(240px * 0.9);
 }
 
 /*==================================================
@@ -341,7 +359,14 @@
      * 幅を絞れば、真ん中の 7 冊ほどだけが見える。
      * 並びはそのままなので、崩れようがない。
      */
-    max-width: 1000px;
+    /*
+     * 1000px だと左右の本が切れて、真ん中だけが浮いて見えた。
+     * 少し広げて、両脇の本まで収める。
+     *
+     * 本どうしの間隔は home.js が決めるので、
+     * ここを広げても中央と脇の距離は変わらない。
+     */
+    max-width: 1400px;
     margin: 0 auto;
     overflow: hidden;
 }
