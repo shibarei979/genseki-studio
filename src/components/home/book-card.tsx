@@ -29,7 +29,15 @@ function BookFields({ book }: { book: HomeBook }) {
                         style={{ backgroundColor: genreColor(tag) }}
                         title={tag}
                     >
-                        {genreShort(tag)}
+                        {/*
+                         * 名前を 2 つ持たせる。
+                         *
+                         * 正面の本は幅があるので、そのまま。
+                         * 横向きの本は細いので、短いほう。
+                         * どちらを出すかは CSS が決める。
+                         */}
+                        <span className="b_tag-full">{tag}</span>
+                        <span className="b_tag-short">{genreShort(tag)}</span>
                     </li>
                 ))}
             </ul>

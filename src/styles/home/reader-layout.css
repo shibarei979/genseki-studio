@@ -358,7 +358,13 @@
      *
      * 入りきらない字は「…」で切る。
      */
-    width: calc(var(--b-depth, 54px) * 0.68);
+    /*
+     * 幅。
+     *
+     * 本の厚みに合わせる。横から見たとき、
+     * 背表紙のすぐ後ろに挿さっているように見せる。
+     */
+    max-width: calc(var(--b-depth, 54px) * 0.8);
     font-size: calc(7.5px * 0.9);
     line-height: 1.3;
     padding: calc(4px * 0.9) 2px 0;
@@ -371,10 +377,20 @@
 
 /* 付箋そのものの高さも、字に合わせて広げる */
 .reader-home .bookshelf-loop .b_tags {
-    height: calc(24px * 0.9);
-    top: calc(-24px * 0.9);
-    width: calc(300px * 0.9);
+    /*
+     * 付箋の入れ物。
+     *
+     * 参照元は何枚も横に並べる前提で、
+     * 隙間（gap）と左の余白が入っていた。
+     * 1 枚しか出さないので、そのぶん右へずれる。
+     *
+     * 隙間を消し、本の幅と同じにして真ん中に置く。
+     */
+    height: calc(26px * 0.9);
+    top: calc(-26px * 0.9);
+    width: 100%;
     left: 0;
+    gap: 0;
     justify-content: center;
 }
 
@@ -495,7 +511,7 @@
      * 中央の本は手前へせり出しているので、
      * その足元まで届くだけの奥行きを取る。
      */
-    height: 52px;
+    height: 45px;
     z-index: 0;
 
     background: linear-gradient(to bottom, #f4ddb6 0%, #e6c28f 45%, #d6a261 100%);
@@ -522,4 +538,56 @@
         rgba(90, 55, 25, 0)
     );
     filter: blur(2px);
+}
+
+
+/*==================================================
+正面を向いている本の付箋
+
+横向きの本は背表紙が細いので、付箋も細くする。
+正面の本は幅があるので、ジャンル名をそのまま出せる。
+==================================================*/
+
+.reader-home .bookshelf-loop .book.is-front .b_tags li {
+    max-width: none;
+    width: auto;
+    padding: calc(5px * 0.9) calc(10px * 0.9) 0;
+    font-size: calc(11px * 0.9);
+}
+
+.reader-home .bookshelf-loop .book.is-front .b_tags {
+    height: calc(30px * 0.9);
+    top: calc(-30px * 0.9);
+}
+
+/* ふだんは短いほう。正面の本だけ、そのままの名前 */
+.reader-home .bookshelf-loop .b_tag-full {
+    display: none;
+}
+
+.reader-home .bookshelf-loop .book.is-front .b_tag-full {
+    display: inline;
+}
+
+.reader-home .bookshelf-loop .book.is-front .b_tag-short {
+    display: none;
+}
+
+
+/*==================================================
+正面の本を、もう少し手前へ
+
+板の上に乗っているように見せる。
+奥にあると、板から浮いて見える。
+==================================================*/
+
+.reader-home .bookshelf-loop .book.is-front {
+    /*
+     * 手前へ出す。
+     *
+     * 位置そのものは JS が決めているので、
+     * ここでは最後に少しだけ足す。
+     * 大きく動かすと、隣の本と重なる。
+     */
+    translate: 0 0 26px;
 }
