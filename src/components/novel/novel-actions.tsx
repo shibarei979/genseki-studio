@@ -230,9 +230,13 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
             : btn(discovered,'var(--color-brand)','var(--color-brand-light)')}
           title={isAuthor ? '自分の作品は拡散できません' : reachedLimit ? `本日の拡散上限（${DAILY_LIMIT}回）に達しました` : 'この作品をもっと広めたい！という気持ちを伝える'}>
           拡散する {!hideStats && discovers > 0 && fmtNum(discovers)}
-          {userId && !isAuthor && todayShares > 0 && !discovered && (
-            <span style={{fontSize:10,marginLeft:2,color:'var(--color-text-faint)'}}>({DAILY_LIMIT - todayShares}回残)</span>
-          )}
+          {/*
+           * 残り回数はここに出さない。
+           *
+           * 押したあとの窓の中に書いてある。
+           * 押し具の横に添えると、数が 2 つ並んで
+           * どちらが拡散の数か分からなくなる。
+           */}
         </button>
         <button onClick={handleXShare}
           style={{display:'inline-flex',alignItems:'center',gap:5,padding:'11px 14px',borderRadius:20,
