@@ -237,17 +237,10 @@ export async function POST(request: Request) {
         );
     }
 
-    /*
-     * 中身が空でないか確かめる。
-     *
-     * 保存に成功しても、大きさが 0 なら鳴らない。
-     * 「作れたのに再生されない」の切り分けに要る。
-     */
+    /* 中身が空なら、記録せずに断る。空のまま残ると作り直せない */
     if (audio.length < 1000) {
         return NextResponse.json(
-            {
-                error: `音声が空でした（${audio.length}バイト）。もう一度お試しください。`,
-            },
+            { error: "音声を作れませんでした。もう一度お試しください。" },
             { status: 500 },
         );
     }

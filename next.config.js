@@ -13,8 +13,14 @@ const contentSecurityPolicy = [
     "style-src 'self' 'unsafe-inline'",
     // 絵は自前・Supabase の置き場・貼り付け(data/blob)から
     "img-src 'self' data: blob: https://*.supabase.co https://www.googletagmanager.com",
-    // 声(blob)と取り込んだ音
-    "media-src 'self' blob:",
+    /*
+     * 声(blob)と取り込んだ音、それに読み上げの音声。
+     *
+     * 読み上げは Supabase の置き場から読む。
+     * ここに入れないと、作れても再生できない。
+     * 絵（img-src）と同じ扱いにする。
+     */
+    "media-src 'self' blob: https://*.supabase.co",
     // PDF を読む働き手
     "worker-src 'self' blob:",
     "font-src 'self' data:",
