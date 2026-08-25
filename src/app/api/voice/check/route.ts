@@ -40,9 +40,25 @@ export async function GET() {
 
     const { error } = await admin.from("episodes").select("id").limit(1);
 
+    /*
+     * 実際にどの役割で動いているかを聞く。
+     *
+     * 新方式の鍵は service_role とは限らない。
+     * 許可を与えても読めないなら、
+     * そもそも別の役割で動いている。
+     */
+    let 実際の役割 = "分かりません";
+    try {
+        const { data } = await admin.rpc("current_role_name");
+        実際の役割 = String(data ?? "分かりません");
+    } catch {
+        実際の役割 = "聞けませんでした（下のSQLが要ります）";
+    }
+
     return NextResponse.json({
         鍵の長さ: key.length,
-        鍵の役割: role,
+        鍵の形: role,
+        実際の役割,
         話を読めたか: error ? `いいえ: ${error.message}` : "はい",
     });
 }
