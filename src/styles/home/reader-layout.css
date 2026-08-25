@@ -284,13 +284,6 @@
 
 .reader-home .bookshelf-loop .b_tags li {
     border-radius: 2px 2px 0 0;
-
-    /*
-     * 1 枚だけなので、少し広く取る。
-     * ジャンル名が「ハイファンタジー」のように長くても、
-     * 途中まで読めるようにする。
-     */
-    width: calc(52px * 0.9);
 }
 
 
@@ -311,7 +304,17 @@
  * 真ん中なら、どの向きから見ても上に出ている。
  */
 .reader-home .bookshelf-loop .b_tags {
-    transform: translateZ(0);
+    /*
+     * 付箋。
+     *
+     * 本の厚みの真ん中に置き、少し前へ倒す。
+     *
+     * 参照元は本と同じ向きだったので、
+     * 背表紙の本では付箋も横を向き、字が読めなかった。
+     * 手前へ倒せば、どの本の付箋もこちらを向く。
+     */
+    transform: translateZ(calc(30px * 0.9)) rotateX(-14deg);
+    transform-origin: bottom center;
     z-index: 2;
 }
 
@@ -326,18 +329,22 @@
      * 参照元の字は 5.4px で、何と書いてあるか読めない。
      * 札を大きくして、字も読める大きさにする。
      */
-    width: calc(64px * 0.9);
-    font-size: calc(9px * 0.9);
-    line-height: 1.3;
-    padding-top: calc(3px * 0.9);
+    width: calc(90px * 0.9);
+    font-size: calc(13px * 0.9);
+    line-height: 1.35;
+    padding-top: calc(5px * 0.9);
+    padding-left: 0;
+    text-align: center;
     letter-spacing: 0;
+    font-weight: 600;
 }
 
 /* 付箋そのものの高さも、字に合わせて広げる */
 .reader-home .bookshelf-loop .b_tags {
-    height: calc(26px * 0.9);
-    top: calc(-26px * 0.9);
-    width: calc(240px * 0.9);
+    height: calc(34px * 0.9);
+    top: calc(-34px * 0.9);
+    width: calc(300px * 0.9);
+    left: calc(10px * 0.9);
 }
 
 /*==================================================
@@ -360,39 +367,81 @@
      * 並びはそのままなので、崩れようがない。
      */
     /*
-     * 1000px だと左右の本が切れて、真ん中だけが浮いて見えた。
-     * 少し広げて、両脇の本まで収める。
+     * 幅で、見える冊数を決める。
      *
-     * 本どうしの間隔は home.js が決めるので、
-     * ここを広げても中央と脇の距離は変わらない。
+     * 冊数（home.js の B_SIDE_COUNT）は触らない。
+     * あれを変えると位置の計算が崩れ、本が散らばる。
+     *
+     * 広げるほど端の本まで見える。
+     *   1000px  中央＋左右2冊ずつ。少ない
+     *   1150px  中央＋左右3冊ずつ
+     *   1400px  中央＋左右5冊ずつ。多い
      */
-    max-width: 1400px;
+    max-width: 1150px;
     margin: 0 auto;
     overflow: hidden;
 }
 
 .reader-home .rh_shelf-board {
     /*
-     * 板。
+     * 棚の板。
      *
-     * 本棚のすぐ下に横一文字。
-     * 木目までは描かず、色の重なりで厚みを出す。
-     *
-     * 本の足元に接するよう、上へ深く重ねる。
-     * 離れていると、本が宙に浮いて見える。
+     * 執筆向けの本棚（globals.css の .book-shelf-board）と同じ作り。
+     * 3 つの部品でできている。
+     *   ::before  本の後ろに奥へ寝ている斜めの板
+     *   本体      手前の正面板
+     *   ::after   板の下に落ちる影
      */
-    height: 16px;
-    margin: -34px auto 0;
-    width: 100%;
     position: relative;
+    height: 18px;
+    margin: -30px auto 0;
+    width: 100%;
     z-index: 1;
-    border-radius: 2px;
+
     background: linear-gradient(
-        180deg,
-        #b08a5a 0%,
-        #a07c4e 45%,
-        #8a6840 46%,
-        #7a5c38 100%
+        to bottom,
+        #d8a764 0%,
+        #c98b47 45%,
+        #a86830 100%
     );
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+
+    border-top: 1px solid rgba(255, 255, 255, 0.55);
+    border-bottom: 1px solid rgba(98, 58, 27, 0.8);
+    box-shadow: 0 4px 8px rgba(70, 40, 20, 0.22);
+}
+
+/* 本の後ろに見える、奥へ寝ている斜めの板 */
+.reader-home .rh_shelf-board::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 16px;
+    z-index: 0;
+
+    background: linear-gradient(to bottom, #f4ddb6 0%, #e6c28f 45%, #d6a261 100%);
+
+    /* 端を内へ絞ると、奥に向かって寝ている板に見える */
+    clip-path: polygon(0 100%, 100% 100%, 99% 0, 1% 0);
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        inset 0 -1px 0 rgba(120, 75, 35, 0.18);
+}
+
+/* 板の下の影 */
+.reader-home .rh_shelf-board::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 12px;
+    background: linear-gradient(
+        to bottom,
+        rgba(90, 55, 25, 0.22),
+        rgba(90, 55, 25, 0)
+    );
+    filter: blur(2px);
 }
