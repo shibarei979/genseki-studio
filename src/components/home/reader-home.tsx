@@ -26,7 +26,16 @@ const SHELF_COUNT = 25
 const WORKS_POOL_COUNT = 20   // Pick Up! / New Release! の候補プール数（初期表示は10冊）
 const READING_LIST_COUNT = 8  // 4カラムリストの各件数
 const NOTICE_COUNT = 8        // お知らせの最大表示件数（畳み込み時は4件）
-const HEAD_LENGTH = 120       // 本文冒頭の文字数
+/*
+ * 本を開いたときの左ページに出す字数。
+ *
+ * 1 話の冒頭ではなく、あらすじを出す。
+ * 冒頭は「読めば分かる」もので、
+ * どんな話かを知りたい人には遠回り。
+ *
+ * ページが広いので、書けるだけ書く。
+ */
+const HEAD_LENGTH = 400
 const EXCERPT_LENGTH = 80     // 抜粋の文字数
 const NOTICE_FALLBACK_IMAGE = '/home/img/notice/tmp.png'
 
@@ -108,7 +117,8 @@ function toBook(
      * どれが何の印か分からなくなる。
      */
     tags: [novel.genre].filter(Boolean),
-    head: extras.headMap[novel.id] || truncate(novel.summary, HEAD_LENGTH),
+    /* 左ページ。あらすじを出す。無ければ 1 話の冒頭で代える */
+    head: truncate(novel.summary, HEAD_LENGTH) || extras.headMap[novel.id] || '',
     excerpt: truncate(novel.catchcopy || novel.summary, EXCERPT_LENGTH),
     comment: extras.commentMap[novel.id] || '',
     likes: extras.likeMap[novel.id] || 0,
