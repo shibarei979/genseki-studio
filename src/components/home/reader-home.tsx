@@ -161,7 +161,38 @@ export default async function ReaderHome() {
   pickupNovels.forEach((n) => { if (!novelById[n.id]) novelById[n.id] = n })
 
   const newReleaseNovels = newest.slice(0, WORKS_POOL_COUNT)
-  const shelfNovels = shuffle(newest).slice(0, SHELF_COUNT)
+  /*
+   * 本棚に並べる作品。
+   *
+   * 帯（拡散のひとことか、読者が描いたドット絵）が
+   * ある作品を先に並べる。
+   *
+   * 本棚は「読んだ人の声が付いた本」を見せる場所にする。
+   * 声の無い本ばかりでは、ただの新着一覧と変わらない。
+   *
+   * 帯のある作品だけでは冊数が足りないので、
+   * 残りは新着から埋める。その本の帯は空になる。
+   */
+  const { data: obiRows } = await supabase
+    .from('obi_dots')
+    .select('novel_id')
+    .eq('approved', true)
+
+  const { data: obiCommentRows } = await supabase
+    .from('discovers')
+    .select('novel_id, comment')
+    .not('comment', 'is', null)
+
+  const withObi = new Set<string>()
+  ;(obiRows || []).forEach((r: any) => withObi.add(r.novel_id as string))
+  ;(obiCommentRows || []).forEach((r: any) => {
+    if (String(r.comment ?? '').trim()) withObi.add(r.novel_id as string)
+  })
+
+  const shelfWithObi = shuffle(newest.filter((n) => withObi.has(n.id)))
+  const shelfWithout = shuffle(newest.filter((n) => !withObi.has(n.id)))
+
+  const shelfNovels = [...shelfWithObi, ...shelfWithout].slice(0, SHELF_COUNT)
 
   // ----- ログインユーザー向け 4カラムリストの素材 -----
   const continueRows: { novel: NovelRow; epId: string }[] = []
