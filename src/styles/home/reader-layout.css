@@ -293,3 +293,63 @@
     width: calc(52px * 0.9);
 }
 
+
+/*==================================================
+本棚（読者向けの調整）
+
+参照元のままだと、
+付箋が本の裏に回って見えなくなる。
+==================================================*/
+
+/*
+ * 付箋。
+ *
+ * 本の厚みの真ん中に置く。
+ *
+ * 参照元は奥へ押し込んでいたので、
+ * 本が回ると背表紙の裏に隠れていた。
+ * 真ん中なら、どの向きから見ても上に出ている。
+ */
+.reader-home .bookshelf-loop .b_tags {
+    transform: translateZ(0);
+    z-index: 2;
+}
+
+.reader-home .bookshelf-loop .b_tags li {
+    /* 紙を挟んだ感じにする。頭を丸め、下に影を落とす */
+    border-radius: 2px 2px 0 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+    width: calc(46px * 0.9);
+}
+
+/*==================================================
+棚の板
+
+本が浮いて見えるので、下に板を敷く。
+==================================================*/
+
+.reader-home .rh_shelf {
+    position: relative;
+    width: 100%;
+}
+
+.reader-home .rh_shelf-board {
+    /*
+     * 板。
+     *
+     * 本棚のすぐ下に横一文字。
+     * 木目までは描かず、色の重なりで厚みを出す。
+     */
+    height: 14px;
+    margin: -10px auto 0;
+    width: min(1000px, 88%);
+    border-radius: 2px;
+    background: linear-gradient(
+        180deg,
+        #b08a5a 0%,
+        #a07c4e 45%,
+        #8a6840 46%,
+        #7a5c38 100%
+    );
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+}

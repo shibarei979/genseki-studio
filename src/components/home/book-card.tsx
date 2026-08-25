@@ -1,4 +1,5 @@
 import type { HomeBook } from "@/types/home";
+import { genreColor } from "@/types";
 
 /**
  * 本の統一フォーマット（デザイン home_10 の book_template.js と同一構造）
@@ -15,9 +16,17 @@ function BookFields({ book }: { book: HomeBook }) {
         <>
             <p className="b_title">{book.title}</p>
             <p className="b_author">{book.author}</p>
+            {/*
+             * 付箋。
+             *
+             * ジャンルごとに色を変える。
+             * 色を見ただけで、どんな話かの見当がつく。
+             */}
             <ul className="b_tags">
                 {book.tags.map((tag, i) => (
-                    <li key={i}>{tag}</li>
+                    <li key={i} style={{ backgroundColor: genreColor(tag) }}>
+                        {tag}
+                    </li>
                 ))}
             </ul>
             <p className="b_head">{book.head}</p>

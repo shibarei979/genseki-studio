@@ -221,6 +221,42 @@ export const GENRE_LEGACY_MATCH: Record<string, string[]> = {
     SF: ["SF / ファンタジー"],
 };
 
+/**
+ * ジャンルごとの付箋の色。
+ *
+ * 本棚で、背表紙の上に挿す小さな紙の色。
+ * 色を見ただけで、どんな話かの見当がつく。
+ *
+ * 近いものは近い色にしてある。
+ *   ファンタジー3種   緑〜青緑
+ *   SF               藍
+ *   恋愛・学園        桃〜橙
+ *   ミステリー・ホラー 紫〜黒
+ *   歴史             茶
+ *   日常・コメディ     黄
+ *   アクション         赤
+ */
+export const GENRE_COLOR: Record<string, string> = {
+    ハイファンタジー: "#3f7f5a",
+    異世界ファンタジー: "#4f9e7a",
+    ローファンタジー: "#6fae96",
+    SF: "#2f5f8f",
+    恋愛: "#d2708f",
+    学園: "#e39a5a",
+    ミステリー: "#6b4f8f",
+    ホラー: "#3a3340",
+    "歴史・時代": "#8a6a45",
+    日常: "#d9b84a",
+    アクション: "#c04a3a",
+    コメディ: "#e0c04a",
+    その他: "#8a8f93",
+};
+
+/** そのジャンルの色。決めていないものは灰 */
+export function genreColor(genre: string): string {
+    return GENRE_COLOR[genre] ?? "#8a8f93";
+}
+
 export const AGE_RATING_LABEL: Record<AgeRating, string> = {
     all: "全年齢",
     r15: "R15",

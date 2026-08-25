@@ -21,7 +21,8 @@ import type { HomeBook, HomeNotice } from '@/types/home'
 // 定数
 // ============================================================
 /* 本棚の冊数。home.js の B_SIDE_COUNT=10 に合わせる */
-const SHELF_COUNT = 25
+/* 左右 3 冊 + 中央 1 冊 + 裏側。home.js の B_SIDE_COUNT=3 に合わせる */
+const SHELF_COUNT = 9
 const WORKS_POOL_COUNT = 20   // Pick Up! / New Release! の候補プール数（初期表示は10冊）
 const READING_LIST_COUNT = 8  // 4カラムリストの各件数
 const NOTICE_COUNT = 8        // お知らせの最大表示件数（畳み込み時は4件）
@@ -524,7 +525,15 @@ export default async function ReaderHome() {
           >
             <BookInfoPopup />
             <div className="rh_main">
-            <BookshelfSection books={shelfBooks} />
+            {/*
+             * 本棚と、その下の板。
+             *
+             * 板が無いと本が宙に浮いて見える。
+             */}
+            <div className="rh_shelf">
+              <BookshelfSection books={shelfBooks} />
+              <div className="rh_shelf-board" aria-hidden="true" />
+            </div>
 
             {/*
              * 作品を探す。

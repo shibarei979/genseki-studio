@@ -184,6 +184,29 @@ export default function WorkPostClient({ workId }: { workId: string }) {
         void reload();
     }, [reload]);
 
+    /*
+     * 予約の時刻が来たら、読み直す。
+     *
+     * 公開するのは裏の見回りなので、
+     * 開いたままの画面は「出た」ことに気づかない。
+     * 投稿されたのに予約の札が残って見える。
+     *
+     * 予約があるときだけ、1 分ごとに見に行く。
+     * 無いときは何もしない。
+     */
+    useEffect(() => {
+        const hasScheduled = episodes.some(
+            (row) => !row.is_published && row.publish_at,
+        );
+        if (!hasScheduled) return;
+
+        const timer = window.setInterval(() => {
+            void reload();
+        }, 60_000);
+
+        return () => window.clearInterval(timer);
+    }, [episodes, reload]);
+
     const selected = episodes.find((row) => row.id === selectedId) ?? null;
     const posted = episodes.filter((row) => row.is_published).length;
 

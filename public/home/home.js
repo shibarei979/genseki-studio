@@ -25,7 +25,16 @@ class LayoutCalc {
     static B_HEIGHT = 300 * 0.9;
     static B_DEPTH = 60 * 0.9;
 
-    static B_SIDE_COUNT = 10;
+    /*
+     * 左右に並べる冊数。
+     *
+     * 10 だと背表紙が潰れて題名が読めない。
+     * 3 にすると、中央 1 冊と合わせて 7 冊。
+     *
+     * 本の寸法（B_WIDTH など）は触らないこと。
+     * そこを変えると位置の計算と噛み合わず、本が散らばる。
+     */
+    static B_SIDE_COUNT = 3;
     static B_OVERFLOW_COUNT = 1.5;
 
     static SCALE = 1;
