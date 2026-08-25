@@ -15,10 +15,26 @@ interface Props {
     tags?: string[]
   }
   children: React.ReactNode
+  /**
+   * 最初から開いた状態で出すか。
+   *
+   * 本棚の本は home.js が並べているので、
+   * この部品で包めない。押されたのを拾って、
+   * 開いた状態で呼び出す。
+   */
+  openAtOnce?: boolean
+  /** 閉じたときに知らせる */
+  onClosed?: () => void
 }
 
-export default function NovelPreviewPopup({ novel, children }: Props) {
-  const [show, setShow] = useState(false)
+export default function NovelPreviewPopup({ novel, children, openAtOnce = false, onClosed }: Props) {
+  const [show, setShow] = useState(openAtOnce)
+
+  /* 閉じたことを、呼んだ側にも伝える */
+  function close() {
+    setShow(false)
+    onClosed?.()
+  }
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -75,7 +91,7 @@ export default function NovelPreviewPopup({ novel, children }: Props) {
   const modal = show && mounted ? createPortal(
     <div
       style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:isMobile?'16px':20}}
-      onClick={()=>setShow(false)}>
+      onClick={()=>close()}>
       <div
         onClick={e=>e.stopPropagation()}
         style={{
@@ -94,7 +110,7 @@ export default function NovelPreviewPopup({ novel, children }: Props) {
 
         {/* ヘッダー */}
         <div style={{background:'var(--color-brand-light)',padding:'10px 14px',borderBottom:'1px solid var(--color-brand-border)',position:'relative',flexShrink:0}}>
-          <button onClick={()=>setShow(false)}
+          <button onClick={()=>close()}
             style={{position:'absolute',top:8,right:10,background:'none',border:'none',fontSize:18,color:'var(--color-text-faint)',cursor:'pointer'}}>
             ×
           </button>
@@ -186,7 +202,7 @@ export default function NovelPreviewPopup({ novel, children }: Props) {
 
         {/* ボタン */}
         <div style={{padding:'10px 14px',borderTop:'1px solid var(--color-brand-border)',background:'var(--color-bg)',display:'flex',gap:8,flexShrink:0}}>
-          <button onClick={()=>setShow(false)}
+          <button onClick={()=>close()}
             style={{flex:1,padding:'9px',border:'1px solid var(--color-brand-border)',borderRadius:8,background:'var(--color-bg-card)',color:'var(--color-text-muted)',fontSize:13,cursor:'pointer'}}>
             閉じる
           </button>
