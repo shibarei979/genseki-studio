@@ -82,6 +82,21 @@ export default async function EpisodePage({ params }: Props) {
   const epLikeCount = epLikeCountRes.count
 
   /*
+   * 朗読ができているか。
+   *
+   * 裏で作り置きした話にだけ「聴く」を出す。
+   * できていない話に出すと、押しても待たされる。
+   */
+  const { data: voiceRow } = await supabase
+    .from('episode_voices')
+    .select('episode_id')
+    .eq('episode_id', params.epId)
+    .limit(1)
+    .maybeSingle()
+
+  const hasVoice = Boolean(voiceRow)
+
+  /*
    * コメントは、画面が出たあとに読む。
    *
    * いいねの数と書いた人の名前で 3 回かかるが、
@@ -189,10 +204,13 @@ export default async function EpisodePage({ params }: Props) {
           {/*
            * 音声で聴く。
            *
-           * 本文の上に置く。
-           * 読む前に選ぶものなので、読み終えた先にあっても遅い。
+           * 裏で作り置きした話にだけ出す。
+           * 押してから作ると待たせるので、
+           * できているものだけを見せる。
            */}
-          <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
+          {hasVoice && (
+            <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
+          )}
 
           <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name}/>
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>

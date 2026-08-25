@@ -18,11 +18,15 @@ import { useState } from 'react'
  * ============================================================
  */
 
+/*
+ * 選べる声。
+ *
+ * 裏で作り置きするのはこの 2 つだけ。
+ * 増やすと、その分だけ聴ける話が増えるのが遅くなる。
+ */
 const VOICES = [
-  { id: 'ja-JP-Wavenet-A', label: '女性A' },
-  { id: 'ja-JP-Wavenet-B', label: '女性B' },
-  { id: 'ja-JP-Wavenet-C', label: '男性A' },
-  { id: 'ja-JP-Wavenet-D', label: '男性B' },
+  { id: 'ja-JP-Wavenet-A', label: '女性' },
+  { id: 'ja-JP-Wavenet-C', label: '男性' },
 ] as const
 
 export default function VoicePlayer({
@@ -210,7 +214,7 @@ export default function VoicePlayer({
       )}
 
       <p style={{ fontSize: 10, lineHeight: 1.7, color: 'var(--color-text-faint)', marginTop: 8 }}>
-        AIが読み上げます。新しく作れるのは1日3回まで。すでに作られた声は何度でも聴けます。
+        AIが読み上げます。人の朗読ではありません。
       </p>
     </div>
   )
