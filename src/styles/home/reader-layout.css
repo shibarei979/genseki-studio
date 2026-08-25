@@ -38,6 +38,17 @@
  * 本は棚から手前へせり出すので、
  * 詰めると次の枠に重なって見える。
  */
+/*
+ * 本は板より前。
+ *
+ * 板を後ろに置いただけでは足りない。
+ * 本の側にも順を与えて、確実に前へ出す。
+ */
+.reader-home .rh_shelf .bookshelf-loop {
+    position: relative;
+    z-index: 1;
+}
+
 .reader-home .rh_main .bookshelf-loop {
     /*
      * 棚。
@@ -313,8 +324,7 @@
      * 背表紙の本では付箋も横を向き、字が読めなかった。
      * 手前へ倒せば、どの本の付箋もこちらを向く。
      */
-    transform: translateZ(calc(30px * 0.9)) rotateX(-14deg);
-    transform-origin: bottom center;
+    transform: translateZ(0);
     z-index: 2;
 }
 
@@ -329,20 +339,19 @@
      * 参照元の字は 5.4px で、何と書いてあるか読めない。
      * 札を大きくして、字も読める大きさにする。
      */
-    width: calc(90px * 0.9);
-    font-size: calc(13px * 0.9);
-    line-height: 1.35;
-    padding-top: calc(5px * 0.9);
+    width: calc(70px * 0.9);
+    font-size: calc(10px * 0.9);
+    line-height: 1.3;
+    padding-top: calc(4px * 0.9);
     padding-left: 0;
     text-align: center;
     letter-spacing: 0;
-    font-weight: 600;
 }
 
 /* 付箋そのものの高さも、字に合わせて広げる */
 .reader-home .bookshelf-loop .b_tags {
-    height: calc(34px * 0.9);
-    top: calc(-34px * 0.9);
+    height: calc(28px * 0.9);
+    top: calc(-28px * 0.9);
     width: calc(300px * 0.9);
     left: calc(10px * 0.9);
 }
@@ -377,9 +386,14 @@
      *   1150px  中央＋左右3冊ずつ
      *   1400px  中央＋左右5冊ずつ。多い
      */
-    max-width: 1150px;
+    max-width: 1400px;
     margin: 0 auto;
-    overflow: hidden;
+
+    /*
+     * 端の本は隠すが、板は通す。
+     * clip ではなく hidden にすると板も切れる。
+     */
+    overflow-x: hidden;
 }
 
 .reader-home .rh_shelf-board {
@@ -395,8 +409,24 @@
     position: relative;
     height: 18px;
     margin: -30px auto 0;
-    width: 100%;
-    z-index: 1;
+
+    /*
+     * 板は端まで伸ばす。
+     *
+     * 棚の幅で切ると、板の左右が途中で切れて
+     * 宙に浮いた棒のように見える。
+     * 少しはみ出させて、壁まで届いている形にする。
+     */
+    width: calc(100% + 120px);
+    margin-left: -60px;
+
+    /*
+     * 本より後ろに置く。
+     *
+     * 前に出すと板が本の上にかぶさり、
+     * 本が板に埋まって見える。
+     */
+    z-index: 0;
 
     background: linear-gradient(
         to bottom,
