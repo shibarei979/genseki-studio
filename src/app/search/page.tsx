@@ -5,7 +5,7 @@ import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import AdBanner from '@/components/layout/ad-banner'
 import Link from 'next/link'
-import NovelPreviewPopup from '@/components/novel-preview-popup'
+import NovelPopup from '@/components/novel-popup'
 import SearchForm from '@/components/search/search-form'
 
 const PAGE_SIZE = 50
@@ -391,7 +391,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 <div style={{fontSize:12}}>検索条件を変えてお試しください</div>
               </div>
             ) : novels.map((n: any, idx: number) => (
-              <NovelPreviewPopup key={n.id} novel={{...n, like_count: n.hideStats ? 0 : (n.likeCount||0)}}>
+              <NovelPopup key={n.id} novel={{...n, like_count: n.hideStats ? 0 : (n.likeCount||0)}}>
               <div style={{cursor:'pointer',padding:'16px 20px',borderBottom:idx<novels.length-1?'1px solid var(--color-brand-light)':'none'}}>
                 <span style={{display:'flex',gap:5,marginBottom:6,flexWrap:'wrap',alignItems:'center'}}>
                   <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 6px',borderRadius:3}}>{n.genre}</span>
@@ -422,7 +422,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   {!n.hideStats && n.likeCount > 0 && <span style={{color:'var(--color-text-muted)',fontWeight:600}}>♡ {fmtNum(n.likeCount)}</span>}
                 </span>
               </div>
-              </NovelPreviewPopup>
+              </NovelPopup>
             ))}
           </div>
 

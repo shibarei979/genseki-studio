@@ -1,3 +1,4 @@
+import NovelPopup from '@/components/novel-popup'
 import Link from 'next/link'
 
 import type { HomeBook } from '@/types/home'
@@ -39,9 +40,24 @@ export default function ReaderWorkList({
 
       <div className="rwl_grid">
         {books.map((book) => (
-          <Link
+          /*
+           * 押すと小窓が開く。
+           *
+           * いきなり作品のページへ飛ばさない。
+           * あらすじを見てから決めたい人のほうが多い。
+           */
+          <NovelPopup
             key={book.id}
-            href={book.href}
+            novel={{
+              id: book.href.replace('/novel/', ''),
+              title: book.title,
+              genre: book.tags?.[0] || '',
+              summary: book.head || null,
+              display_name: book.author,
+              tags: book.tags,
+            }}
+          >
+          <div
             className={`rwl_item${book.href === '#' ? ' is-empty' : ''}`}
           >
             <span className="rwl_item-text">
@@ -60,7 +76,8 @@ export default function ReaderWorkList({
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
               </svg>
             </span>
-          </Link>
+          </div>
+          </NovelPopup>
         ))}
       </div>
     </section>

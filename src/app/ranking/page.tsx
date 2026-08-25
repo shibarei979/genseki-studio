@@ -5,7 +5,7 @@ import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import AdBanner from '@/components/layout/ad-banner'
 import Link from 'next/link'
-import NovelPreviewPopup from '@/components/novel-preview-popup'
+import NovelPopup from '@/components/novel-popup'
 import { serverEnv } from '@/config/env.server'
 import { clientEnv } from '@/config/env.client'
 
@@ -463,7 +463,7 @@ export default async function RankingPage({ searchParams }: Props) {
               const abs = offset + i
               return (
                 <div key={n.id} style={{borderBottom:'1px solid var(--color-brand-light)'}}>
-                  <NovelPreviewPopup novel={{...n, like_count: n.hideStats ? 0 : (n.score||n.like_count||0)}}>
+                  <NovelPopup novel={{...n, like_count: n.hideStats ? 0 : (n.score||n.like_count||0)}}>
                   <div style={{display:'flex',gap:12,padding:'12px 14px',alignItems:'flex-start',cursor:'pointer'}}>
                     <div style={{width:28,textAlign:'center',flexShrink:0,paddingTop:2}}>
                       <span style={{fontSize:rankSize(abs),fontWeight:800,color:rankColor(abs),fontFamily:"'Noto Serif JP',serif"}}>{abs+1}</span>
@@ -499,7 +499,7 @@ export default async function RankingPage({ searchParams }: Props) {
                       </div>
                     </div>
                   </div>
-                  </NovelPreviewPopup>
+                  </NovelPopup>
                 </div>
               )
             })}
