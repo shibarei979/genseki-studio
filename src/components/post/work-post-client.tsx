@@ -187,6 +187,17 @@ export default function WorkPostClient({ workId }: { workId: string }) {
     const selected = episodes.find((row) => row.id === selectedId) ?? null;
     const posted = episodes.filter((row) => row.is_published).length;
 
+    /*
+     * 予約している話。
+     *
+     * 出る順に並べる。近いものから見たい。
+     */
+    const scheduled = episodes
+        .filter((row) => !row.is_published && row.publish_at)
+        .sort((a, b) =>
+            String(a.publish_at).localeCompare(String(b.publish_at)),
+        );
+
     /**
      * 範囲でまとめて投稿する。
      *
@@ -306,6 +317,39 @@ export default function WorkPostClient({ workId }: { workId: string }) {
             <div className="flex flex-col gap-4 p-3 sm:p-4 lg:flex-row">
                 <aside className="w-full shrink-0 lg:w-64">
                     <WorkspaceNav workId={workId} current="post" />
+
+                    {/*
+                     * 予約の一覧。
+                     *
+                     * 予約した話は、話の一覧の中に紛れて見つけにくい。
+                     * いつ何が出るかを、まとめて上に出す。
+                     */}
+                    {scheduled.length > 0 && (
+                        <div className="mt-4 rounded-lg border border-[var(--color-amber)] bg-[var(--color-amber-tint)]/40 px-4 py-3.5">
+                            <p className="text-[12px] font-medium text-ink">
+                                投稿の予約（{scheduled.length}件）
+                            </p>
+
+                            <ul className="mt-2 space-y-1.5">
+                                {scheduled.map((row) => (
+                                    <li key={row.id}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedId(row.id)}
+                                            className="flex w-full items-baseline gap-2 text-left hover:text-forest"
+                                        >
+                                            <span className="shrink-0 text-[10px] tabular-nums text-muted">
+                                                {formatAt(row.publish_at)}
+                                            </span>
+                                            <span className="min-w-0 truncate text-[11px] text-ink">
+                                                {row.title || "無題"}
+                                            </span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
 
                     <div className="mt-4 rounded-lg border border-line bg-surface">
                         <div className="border-b border-line px-4 py-4">
@@ -979,9 +1023,38 @@ function PostForm({
                         </Field>
 
                         {isScheduled && (
-                            <p className="rounded-md bg-[var(--color-amber-tint)] px-3 py-2 text-[11px] text-ink">
-                                {formatAt(episode.publish_at)}に投稿されます。
-                            </p>
+                            <div className="rounded-md bg-[var(--color-amber-tint)] px-3 py-2.5">
+                                <p className="text-[11px] text-ink">
+                                    {formatAt(episode.publish_at)}に投稿されます。
+                                </p>
+
+                                {/*
+                                 * 予約の取り消し。
+                                 *
+                                 * 日時を消して押し直す道もあるが、
+                                 * 分かりにくい。ここに 1 つ置く。
+                                 */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (
+                                            !window.confirm(
+                                                "予約を取り消します。この話は下書きに戻ります。",
+                                            )
+                                        ) {
+                                            return;
+                                        }
+                                        setAt("");
+                                        onChange({
+                                            is_published: false,
+                                            publish_at: null,
+                                        });
+                                    }}
+                                    className="mt-2 text-[11px] text-[var(--color-danger)] hover:underline"
+                                >
+                                    予約を取り消す
+                                </button>
+                            </div>
                         )}
 
                         {error && (
@@ -1390,13 +1463,20 @@ function toLocalInput(iso: string | null | undefined): string {
 /**
  * 時刻を 5 分単位に丸める。
  *
- * 公開の見回りが 5 分ごとなので、7 分や 13 分を選べても
- * 実際に出るのは次の見回りのとき。
- * 選んだ時刻と出る時刻を合わせるため、切り捨てて揃える。
- * （切り上げにすると、選んだ時刻より後になって驚く）
+ * 見回りは 1 分ごと。
+ * 選んだ分のとおりに出る。
  */
 function floorTo5Min(date: Date): Date {
+    /*
+     * 秒だけ落とす。
+     *
+     * 見回りが 1 分ごとになったので、分を丸める必要がなくなった。
+     *
+     * 丸めていた頃は、12:03 を選ぶと 12:00 になっていた。
+     * すでに過ぎた時刻なので、次の見回りで即座に出てしまう。
+     * 「3 分後に出すつもりが、すぐ出た」の元。
+     */
     const at = new Date(date);
-    at.setMinutes(Math.floor(at.getMinutes() / 5) * 5, 0, 0);
+    at.setSeconds(0, 0);
     return at;
 }

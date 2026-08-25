@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/publish",
-      "schedule": "*/5 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/cron/voice",
