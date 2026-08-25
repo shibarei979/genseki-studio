@@ -1261,8 +1261,22 @@ window.BookTemplate = (() => {
         // 本棚・Pick Up・New Release・4カラムなど、すべての .book が対象
         const book = e.target.closest("a.book");
         if (book) {
+            if (book.dataset.placeholder) {
+                e.preventDefault();
+                return; // 準備中の本は開かない
+            }
+
+            /*
+             * 見開きを開くか、そのまま作品ページへ行くか。
+             *
+             * 設定が「札」の人には、ここで見開きを出さない。
+             * React 側の小窓（NovelPopup）が受け持つ。
+             *
+             * 印は body に付けてある（reader-home が付ける）。
+             */
+            if (document.body.dataset.workPopup === "card") return;
+
             e.preventDefault();
-            if (book.dataset.placeholder) return; // 準備中の本は開かない
             open(collect(book));
             return;
         }

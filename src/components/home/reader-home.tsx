@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
 import BookInfoPopup from '@/components/home/book-info-popup'
+import WorkPopupFlag from '@/components/home/work-popup-flag'
 import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
 import ReaderHero from '@/components/home/reader-hero'
@@ -574,6 +575,8 @@ export default async function ReaderHome() {
             data-auth={user ? 'login' : 'guest'}
           >
             <BookInfoPopup />
+            {/* 見せ方の設定を body に伝える。home.js がそれを見る */}
+            <WorkPopupFlag />
             <div className="rh_main">
             {/*
              * 本棚と、その下の板。
