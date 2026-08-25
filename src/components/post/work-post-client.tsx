@@ -195,17 +195,32 @@ export default function WorkPostClient({ workId }: { workId: string }) {
      * 無いときは何もしない。
      */
     useEffect(() => {
-        const hasScheduled = episodes.some(
-            (row) => !row.is_published && row.publish_at,
-        );
-        if (!hasScheduled) return;
-
-        const timer = window.setInterval(() => {
+        /*
+         * 30 秒ごとに読み直す。
+         *
+         * 予約の有無で止めていたが、それだと
+         * 「予約が消えた瞬間」にタイマーも止まり、
+         * 最後の更新を取り逃すことがあった。
+         *
+         * 常に見に行き、画面を離れている間は休む。
+         */
+        function refresh() {
+            if (document.hidden) return;
             void reload();
-        }, 60_000);
+        }
 
-        return () => window.clearInterval(timer);
-    }, [episodes, reload]);
+        const timer = window.setInterval(refresh, 30_000);
+
+        /* 別の画面から戻ってきたときも、すぐ読み直す */
+        document.addEventListener("visibilitychange", refresh);
+        window.addEventListener("focus", refresh);
+
+        return () => {
+            window.clearInterval(timer);
+            document.removeEventListener("visibilitychange", refresh);
+            window.removeEventListener("focus", refresh);
+        };
+    }, [reload]);
 
     const selected = episodes.find((row) => row.id === selectedId) ?? null;
     const posted = episodes.filter((row) => row.is_published).length;
