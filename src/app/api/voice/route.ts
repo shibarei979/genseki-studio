@@ -232,7 +232,22 @@ export async function POST(request: Request) {
 
     if (uploadError) {
         return NextResponse.json(
-            { error: "音声を保存できませんでした" },
+            { error: `音声を保存できませんでした: ${uploadError.message}` },
+            { status: 500 },
+        );
+    }
+
+    /*
+     * 中身が空でないか確かめる。
+     *
+     * 保存に成功しても、大きさが 0 なら鳴らない。
+     * 「作れたのに再生されない」の切り分けに要る。
+     */
+    if (audio.length < 1000) {
+        return NextResponse.json(
+            {
+                error: `音声が空でした（${audio.length}バイト）。もう一度お試しください。`,
+            },
             { status: 500 },
         );
     }
