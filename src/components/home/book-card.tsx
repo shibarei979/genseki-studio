@@ -16,31 +16,6 @@ function BookFields({ book }: { book: HomeBook }) {
         <>
             <p className="b_title">{book.title}</p>
             <p className="b_author">{book.author}</p>
-            {/*
-             * 付箋。
-             *
-             * ジャンルごとに色を変える。
-             * 色を見ただけで、どんな話かの見当がつく。
-             */}
-            <ul className="b_tags">
-                {book.tags.map((tag, i) => (
-                    <li
-                        key={i}
-                        style={{ backgroundColor: genreColor(tag) }}
-                        title={tag}
-                    >
-                        {/*
-                         * 名前を 2 つ持たせる。
-                         *
-                         * 正面の本は幅があるので、そのまま。
-                         * 横向きの本は細いので、短いほう。
-                         * どちらを出すかは CSS が決める。
-                         */}
-                        <span className="b_tag-full">{tag}</span>
-                        <span className="b_tag-short">{genreShort(tag)}</span>
-                    </li>
-                ))}
-            </ul>
             <p className="b_head">{book.head}</p>
             <p className="b_excerpt">{book.excerpt}</p>
             <p className="b_comment">{book.comment}</p>
@@ -67,7 +42,27 @@ export default function BookCard({
                 <div className="b_spine">
                     <p className="b_title">{book.title}</p>
                 </div>
-                <div className="b_top"></div>
+                {/*
+                 * 付箋は本の上面に置く。
+                 *
+                 * これまでは正面（b_front）の中にあったので、
+                 * 正面の面を基準に並び、背表紙とずれていた。
+                 * 上面なら、どちらから見ても本の天に載っている。
+                 */}
+                <div className="b_top">
+                    <ul className="b_tags">
+                        {book.tags.map((tag, i) => (
+                            <li
+                                key={i}
+                                style={{ backgroundColor: genreColor(tag) }}
+                                title={tag}
+                            >
+                                <span className="b_tag-full">{tag}</span>
+                                <span className="b_tag-short">{genreShort(tag)}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
                 <div className="b_back"></div>
                 <div className="b_shadow"></div>
             </a>

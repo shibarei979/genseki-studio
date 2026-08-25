@@ -314,30 +314,6 @@
  * 本が回ると背表紙の裏に隠れていた。
  * 真ん中なら、どの向きから見ても上に出ている。
  */
-.reader-home .bookshelf-loop .b_tags {
-    /*
-     * 付箋。
-     *
-     * 本の厚みの真ん中に置き、少し前へ倒す。
-     *
-     * 参照元は本と同じ向きだったので、
-     * 背表紙の本では付箋も横を向き、字が読めなかった。
-     * 手前へ倒せば、どの本の付箋もこちらを向く。
-     */
-    /*
-     * 付箋を正面へ向ける。
-     *
-     * 本は --b-rotate-y だけ回っている。
-     * 付箋を同じ角度だけ逆に回せば、
-     * 本が横を向いても付箋はこちらを向いたままになる。
-     *
-     * 倒す（rotateX）のは駄目だった。浮いて見える。
-     */
-    transform: translateZ(calc(var(--b-depth, 54px) / 2))
-        rotateY(calc(var(--b-rotate-y, 0deg) * -1));
-    transform-origin: center bottom;
-    z-index: 2;
-}
 
 .reader-home .bookshelf-loop .b_tags li {
     /* 紙を挟んだ感じにする。頭を丸め、下に影を落とす */
@@ -374,18 +350,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
 
-    /*
-     * 紙らしさ。
-     *
-     * 字を白くはっきり出し、下へ影を落とす。
-     * 平らな色板だと、本に貼った紙に見えない。
-     */
+    /* 字は白。背の色が濃いので、これで読める */
     color: #ffffff;
-    font-weight: 700;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
-    box-shadow:
-        0 2px 3px rgba(0, 0, 0, 0.28),
-        inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 /* 付箋そのものの高さも、字に合わせて広げる */
@@ -393,29 +359,29 @@
     /*
      * 付箋の入れ物。
      *
-     * 参照元は何枚も横に並べる前提で、
-     * 隙間（gap）と左の余白が入っていた。
-     * 1 枚しか出さないので、そのぶん右へずれる。
+     * 本の上面（b_top）の中に置いてある。
+     * 上面は寝ているので、そのままだと付箋も水平になる。
+     * 起こして、背表紙の側に立てる。
      *
-     * 隙間を消し、本の幅と同じにして真ん中に置く。
+     * 左端に寄せ、幅を背表紙と同じにする。
+     * 背表紙は本の左端にあるので、これで真上に来る。
      */
-    /*
-     * 付箋の入れ物。
-     *
-     * 背表紙の真上に置く。
-     *
-     * 本の幅（220px）で中央に寄せると、
-     * 本の面の中央になってしまう。
-     * 横向きの本は背表紙しか見えないので、
-     * そこから右へ大きくずれて見えていた。
-     */
-    height: calc(26px * 0.9);
-    top: calc(-26px * 0.9);
-    width: var(--b-depth, 54px);
+    position: absolute;
     left: 0;
+    top: 0;
+    width: var(--b-depth, 54px);
+    height: calc(26px * 0.9);
+
+    transform-origin: left top;
+    transform: rotateX(90deg) translateY(calc(-26px * 0.9));
+
+    display: flex;
     gap: 0;
     justify-content: center;
+    overflow: visible;
+    z-index: 2;
 }
+
 
 /*==================================================
 棚の板
