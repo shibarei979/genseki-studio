@@ -6,6 +6,7 @@ import BookInfoPopup from '@/components/home/book-info-popup'
 import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
 import ReaderHero from '@/components/home/reader-hero'
+import ShelfNav from '@/components/home/shelf-nav'
 import BookshelfSection from '@/components/home/bookshelf-section'
 import HomeEffects from '@/components/home/home-effects'
 import Footer from '@/components/layout/footer'
@@ -119,7 +120,15 @@ function toBook(
     tags: [novel.genre].filter(Boolean),
     /* 左ページ。あらすじを出す。無ければ 1 話の冒頭で代える */
     head: truncate(novel.summary, HEAD_LENGTH) || extras.headMap[novel.id] || '',
-    excerpt: truncate(novel.catchcopy || novel.summary, EXCERPT_LENGTH),
+    /*
+     * 帯に出す文。
+     *
+     * 拡散のひとことだけを出す。
+     * あらすじやキャッチコピーは、作者が書いたもの。
+     * 帯は「読んだ人の声」を載せる場所なので、
+     * 拡散されていない本の帯は空にする。
+     */
+    excerpt: '',
     comment: extras.commentMap[novel.id] || '',
     likes: extras.likeMap[novel.id] || 0,
   }
@@ -574,6 +583,9 @@ export default async function ReaderHome() {
             <div className="rh_shelf">
               <BookshelfSection books={shelfBooks} />
               <div className="rh_shelf-board" aria-hidden="true" />
+
+              {/* 手で前後に送る */}
+              <ShelfNav />
             </div>
 
             {/*
