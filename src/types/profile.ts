@@ -25,6 +25,13 @@ export interface Profile {
      *   focus  執筆に集中（数字と他の人の痕跡を隠す）
      */
     home_mode?: string | null;
+    /**
+     * 作品を押したときの見せ方。
+     *
+     *   card  札。情報が多く、すぐ読める（初期）
+     *   book  本の見開き。読み物らしい
+     */
+    work_popup_style?: "card" | "book" | null;
     website: string;
     /** 受け取り済みのミッション。受け取ると一覧から消える */
     claimed_missions: string[];

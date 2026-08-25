@@ -623,3 +623,82 @@
 .reader-home .rh_shelf-nav-next {
     right: 12px;
 }
+
+/*==================================================
+本を開いたとき（見開き）
+==================================================*/
+
+/*
+ * 作品名。
+ *
+ * 参照元は 2 行で切っていた。
+ * 縦書きなので「2 行」は 2 列ぶん。
+ * 長い題名が途中で消えるので、全部出す。
+ */
+.reader-home .bi_title {
+    display: block;
+    -webkit-line-clamp: none;
+    overflow: visible;
+    margin-left: 0;
+    max-height: 100%;
+}
+
+/*
+ * 作品名と著者を別の行に。
+ *
+ * 縦書きでは「行」が縦の列。
+ * 続けて置くと同じ列に流れ込むので、
+ * 著者を必ず次の列から始める。
+ */
+.reader-home .bi_v {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 18px;
+}
+
+.reader-home .bi_author {
+    /* 縦の列として独立させる */
+    flex: 0 0 auto;
+    align-self: flex-start;
+}
+
+/*
+ * 左ページ。
+ *
+ * あらすじが 2 か所（bi_head と bi_excerpt）に出ていた。
+ * bi_excerpt は空にしたので、いまは拡散のひとことだけが
+ * bi_comment に出る。
+ * 空の枠が残らないよう、中身が無ければ畳む。
+ */
+.reader-home .bi_excerpt:empty {
+    display: none;
+}
+
+.reader-home .bi_quote:has(.bi_excerpt:empty):has(.bi_comment:empty) {
+    display: none;
+}
+
+/*==================================================
+狭い画面では片面だけ
+
+見開きを 2 ページ並べると、どちらも読めない幅になる。
+作品名のある右側だけを出す。
+==================================================*/
+
+@media (max-width: 720px) {
+    .reader-home .bi_left {
+        display: none;
+    }
+
+    .reader-home .bi_right {
+        width: 100%;
+        left: 0;
+        right: 0;
+    }
+
+    .reader-home .bi_book {
+        max-width: 92vw;
+    }
+}

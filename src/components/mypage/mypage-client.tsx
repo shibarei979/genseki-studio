@@ -308,6 +308,40 @@ export default function MypageClient({
    * user_role は運営かどうかの権限に使っている列なので、
    * そこには書かない。home_mode に持つ。
    */
+  /*
+   * 作品を押したときの見せ方。
+   *
+   * 決めていない人は札。
+   * 初めて来た人には、情報が多いほうが親切。
+   */
+  const [popupStyle, setPopupStyle] = useState(
+    (profile as { work_popup_style?: string }).work_popup_style === 'book'
+      ? 'book'
+      : 'card',
+  )
+
+  async function savePopupStyle(next: string) {
+    if (next === popupStyle) return
+    setPopupStyle(next)
+    setRoleSaving(true)
+
+    const { error } = await supabase
+      .from('profiles').update({ work_popup_style: next }).eq('user_id', profile.user_id)
+
+    setRoleSaving(false)
+
+    if (error) {
+      /* 保存できなければ戻す。切り替えた気にさせない */
+      setPopupStyle(popupStyle)
+      setToast(`設定を保存できませんでした：${error.message}`)
+      setTimeout(()=>setToast(''), 4000)
+      return
+    }
+
+    setToast(next === 'book' ? '本を開く表示にしました' : '札で見る表示にしました')
+    setTimeout(()=>setToast(''), 2500)
+  }
+
   async function saveHomeMode(next: string) {
     if (next === homeMode) return
     setHomeMode(next)
@@ -1420,6 +1454,44 @@ export default function MypageClient({
             </div>
 
             {roleSaving && <span style={{fontSize:11,color:'var(--color-brand)',marginLeft:10}}>保存中...</span>}
+
+            {/*
+             * 作品を押したときの見せ方。
+             *
+             * 札は情報が多く、すぐ読める。
+             * 本の見開きは読み物らしいが、出る情報は少ない。
+             * 好みが分かれるので選べるようにする。
+             */}
+            <div style={{marginTop:20}}>
+              <div style={{fontSize:12,fontWeight:700,color:'var(--color-text)',marginBottom:8}}>
+                作品を押したとき
+              </div>
+
+              <div style={{display:'inline-flex',border:'1px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden'}}>
+                <button
+                  onClick={()=>savePopupStyle('card')}
+                  style={{padding:'8px 18px',fontSize:13,cursor:'pointer',border:'none',
+                    fontWeight:popupStyle==='book'?500:700,
+                    background:popupStyle==='book'?'var(--color-bg-card)':'var(--color-brand)',
+                    color:popupStyle==='book'?'var(--color-text-muted)':'var(--base-color-1)'}}>
+                  札で見る
+                </button>
+                <button
+                  onClick={()=>savePopupStyle('book')}
+                  style={{padding:'8px 18px',fontSize:13,cursor:'pointer',border:'none',
+                    fontWeight:popupStyle==='book'?700:500,
+                    background:popupStyle==='book'?'var(--color-brand)':'var(--color-bg-card)',
+                    color:popupStyle==='book'?'var(--base-color-1)':'var(--color-text-muted)'}}>
+                  本を開く
+                </button>
+              </div>
+
+              <p style={{fontSize:11,lineHeight:1.8,color:'var(--color-text-faint)',marginTop:8}}>
+                札は、あらすじやタグをまとめて読めます。
+                <br />
+                本を開くと、見開きであらすじを読めます。
+              </p>
+            </div>
           </div>
 
           {/* プロフィール設定 */}
