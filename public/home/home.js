@@ -421,13 +421,6 @@ class BookshelfLoop {
         book.style.setProperty("--b-rotate-x", `${style.rotateX}deg`);
         book.style.setProperty("--b-rotate-y", `${style.rotateY}deg`);
 
-        /*
-         * 正面を向いている本に印を付ける。
-         *
-         * 位置の計算には触らない。印を足すだけ。
-         * 付箋の大きさを、正面と横で変えるのに使う。
-         */
-        book.classList.toggle("is-front", Math.abs(style.rotateY) < 20);
         book.style.setProperty("--b-rotate-z", `${style.rotateZ}deg`);
         book.style.setProperty("--b-opacity", style.opacity);
     }

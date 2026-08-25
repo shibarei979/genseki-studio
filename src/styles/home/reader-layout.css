@@ -355,32 +355,51 @@
 }
 
 /* 付箋そのものの高さも、字に合わせて広げる */
+/*==================================================
+付箋
+
+面ごとに 1 枚ずつ置く。
+1 枚を回して両方に見せようとすると、
+どちらかの向きで必ずずれる。
+==================================================*/
+
+/* 共通 */
 .reader-home .bookshelf-loop .b_tags {
-    /*
-     * 付箋の入れ物。
-     *
-     * 本の上面（b_top）の中に置いてある。
-     * 上面は寝ているので、そのままだと付箋も水平になる。
-     * 起こして、背表紙の側に立てる。
-     *
-     * 左端に寄せ、幅を背表紙と同じにする。
-     * 背表紙は本の左端にあるので、これで真上に来る。
-     */
     position: absolute;
-    left: 0;
-    top: 0;
-    width: var(--b-depth, 54px);
-    height: calc(26px * 0.9);
-
-    transform-origin: left top;
-    transform: rotateX(90deg) translateY(calc(-26px * 0.9));
-
     display: flex;
     gap: 0;
     justify-content: center;
     overflow: visible;
     z-index: 2;
 }
+
+/* 正面から見たとき。本の幅があるので、名前はそのまま */
+.reader-home .bookshelf-loop .b_tags-front {
+    left: 0;
+    right: 0;
+    top: calc(-28px * 0.9);
+    height: calc(28px * 0.9);
+}
+
+.reader-home .bookshelf-loop .b_tags-front li {
+    padding: calc(5px * 0.9) calc(10px * 0.9) 0;
+    font-size: calc(11px * 0.9);
+}
+
+/* 背表紙から見たとき。細いので短い名前 */
+.reader-home .bookshelf-loop .b_tags-spine {
+    left: 0;
+    right: 0;
+    top: calc(-24px * 0.9);
+    height: calc(24px * 0.9);
+}
+
+.reader-home .bookshelf-loop .b_tags-spine li {
+    width: calc(var(--b-depth, 54px) * 0.72);
+    padding: calc(4px * 0.9) 1px 0;
+    font-size: calc(8.5px * 0.9);
+}
+
 
 
 /*==================================================
@@ -527,56 +546,4 @@
         rgba(90, 55, 25, 0)
     );
     filter: blur(2px);
-}
-
-
-/*==================================================
-正面を向いている本の付箋
-
-横向きの本は背表紙が細いので、付箋も細くする。
-正面の本は幅があるので、ジャンル名をそのまま出せる。
-==================================================*/
-
-.reader-home .bookshelf-loop .book.is-front .b_tags li {
-    max-width: none;
-    width: auto;
-    padding: calc(5px * 0.9) calc(10px * 0.9) 0;
-    font-size: calc(11px * 0.9);
-}
-
-.reader-home .bookshelf-loop .book.is-front .b_tags {
-    height: calc(30px * 0.9);
-    top: calc(-30px * 0.9);
-}
-
-/* ふだんは短いほう。正面の本だけ、そのままの名前 */
-.reader-home .bookshelf-loop .b_tag-full {
-    display: none;
-}
-
-.reader-home .bookshelf-loop .book.is-front .b_tag-full {
-    display: inline;
-}
-
-.reader-home .bookshelf-loop .book.is-front .b_tag-short {
-    display: none;
-}
-
-
-/*==================================================
-正面の本を、もう少し手前へ
-
-板の上に乗っているように見せる。
-奥にあると、板から浮いて見える。
-==================================================*/
-
-.reader-home .bookshelf-loop .book.is-front {
-    /*
-     * 手前へ出す。
-     *
-     * 位置そのものは JS が決めているので、
-     * ここでは最後に少しだけ足す。
-     * 大きく動かすと、隣の本と重なる。
-     */
-    translate: 0 0 26px;
 }

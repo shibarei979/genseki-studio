@@ -38,31 +38,35 @@ export default function BookCard({
             <a className="book" href={book.href} data-index={index} data-id={book.id} data-placeholder={book.placeholder ? "1" : undefined}>
                 <div className="b_front">
                     <BookFields book={book} />
-                </div>
-                <div className="b_spine">
-                    <p className="b_title">{book.title}</p>
-                </div>
-                {/*
-                 * 付箋は本の上面に置く。
-                 *
-                 * これまでは正面（b_front）の中にあったので、
-                 * 正面の面を基準に並び、背表紙とずれていた。
-                 * 上面なら、どちらから見ても本の天に載っている。
-                 */}
-                <div className="b_top">
-                    <ul className="b_tags">
+
+                    {/*
+                     * 付箋（正面から見たとき）。
+                     *
+                     * 面ごとに置く。
+                     * 1 つだけ置いて回そうとすると、
+                     * どちらかの向きで必ずずれる。
+                     */}
+                    <ul className="b_tags b_tags-front">
                         {book.tags.map((tag, i) => (
-                            <li
-                                key={i}
-                                style={{ backgroundColor: genreColor(tag) }}
-                                title={tag}
-                            >
-                                <span className="b_tag-full">{tag}</span>
-                                <span className="b_tag-short">{genreShort(tag)}</span>
+                            <li key={i} style={{ backgroundColor: genreColor(tag) }} title={tag}>
+                                {tag}
                             </li>
                         ))}
                     </ul>
                 </div>
+                <div className="b_spine">
+                    <p className="b_title">{book.title}</p>
+
+                    {/* 付箋（背表紙から見たとき）。細いので短い名前 */}
+                    <ul className="b_tags b_tags-spine">
+                        {book.tags.map((tag, i) => (
+                            <li key={i} style={{ backgroundColor: genreColor(tag) }} title={tag}>
+                                {genreShort(tag)}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="b_top"></div>
                 <div className="b_back"></div>
                 <div className="b_shadow"></div>
             </a>
