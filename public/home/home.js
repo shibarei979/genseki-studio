@@ -1254,6 +1254,18 @@ window.BookTemplate = (() => {
         window.bookshelfLoops?.forEach((loop) => loop.start());
     }
 
+
+    /*
+     * 外から開けるようにする。
+     *
+     * ランキングや検索など、本棚の外からも
+     * 同じ見開きを使いたい。
+     * 器も見た目も 1 つにしておけば、
+     * 直すときに片方だけ古くなることがない。
+     */
+    window.openBookInfo = open;
+    window.closeBookInfo = close;
+
     //------------------------------------------
     // Event
     //------------------------------------------

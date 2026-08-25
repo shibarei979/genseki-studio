@@ -1,4 +1,5 @@
 import AuthGate from "@/components/auth/auth-gate";
+import BookInfoHost from "@/components/book-info-host";
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
 import Script from "next/script";
@@ -144,6 +145,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     </>
                 )}
                 <AuthGate>{children}</AuthGate>
+
+                {/*
+                 * 見開きの器。
+                 *
+                 * どのページからも同じものを開けるよう、
+                 * ここに 1 つだけ置く。
+                 */}
+                <BookInfoHost />
             </body>
         </html>
     );
