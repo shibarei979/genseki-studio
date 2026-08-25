@@ -331,6 +331,19 @@
 .reader-home .rh_shelf {
     position: relative;
     width: 100%;
+
+    /*
+     * 棚の幅を狭めて、端の本を隠す。
+     *
+     * 冊数（home.js の B_SIDE_COUNT）は触らない。
+     * あれを変えると位置の計算が崩れ、本が散らばる。
+     *
+     * 幅を絞れば、真ん中の 7 冊ほどだけが見える。
+     * 並びはそのままなので、崩れようがない。
+     */
+    max-width: 1000px;
+    margin: 0 auto;
+    overflow: hidden;
 }
 
 .reader-home .rh_shelf-board {
@@ -339,10 +352,15 @@
      *
      * 本棚のすぐ下に横一文字。
      * 木目までは描かず、色の重なりで厚みを出す。
+     *
+     * 本の足元に接するよう、上へ深く重ねる。
+     * 離れていると、本が宙に浮いて見える。
      */
-    height: 14px;
-    margin: -10px auto 0;
-    width: min(1000px, 88%);
+    height: 16px;
+    margin: -34px auto 0;
+    width: 100%;
+    position: relative;
+    z-index: 1;
     border-radius: 2px;
     background: linear-gradient(
         180deg,
