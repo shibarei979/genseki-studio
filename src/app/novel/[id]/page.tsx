@@ -416,14 +416,32 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
               return (
                 <div style={{display:'flex',gap:14,alignItems:'flex-start',marginBottom:14,flexWrap:'wrap'}}>
                   {novel.summary && (
-                    <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.85,padding:'10px 12px',background:'var(--color-bg)',borderRadius:8,borderLeft:'3px solid #f5a060',whiteSpace:'pre-wrap',flex:'1 1 240px',minWidth:0}}>
+                    <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.85,padding:'10px 12px',background:'var(--color-bg)',borderRadius:8,borderLeft:'3px solid #f5a060',whiteSpace:'pre-wrap',flex:'1 1 300px',minWidth:0}}>
                       {novel.summary}
                     </div>
                   )}
 
                   {coverImg && (
+                    /*
+                     * 表紙。
+                     *
+                     * 150px では、描いた絵の細部が潰れる。
+                     * 作品の顔なので、読む前にきちんと見せたい。
+                     *
+                     * 縦横は切らずに全体を出す（contain）。
+                     * cover で切ると、題字や人物が欠けることがある。
+                     */
                     <img src={coverImg} alt={`${novel.title} 表紙`}
-                      style={{width:150,maxWidth:'40%',borderRadius:10,border:'1px solid var(--color-brand-border)',objectFit:'cover',flexShrink:0}}/>
+                      style={{
+                        width:260,
+                        maxWidth:'100%',
+                        borderRadius:10,
+                        border:'1px solid var(--color-brand-border)',
+                        objectFit:'contain',
+                        background:'var(--color-bg)',
+                        flexShrink:0,
+                        alignSelf:'flex-start',
+                      }}/>
                   )}
                 </div>
               )

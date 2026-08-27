@@ -8,6 +8,7 @@
 "use client";
 
 import Link from "next/link";
+import IconCropper from "@/components/mypage/icon-cropper";
 import { shrinkImage } from "@/lib/storage/image-store";
 import { uploadImage } from "@/lib/storage/remote-image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -51,6 +52,28 @@ export default function WorkInfoForm({ work, onSave }: Props) {
     const [coverUrl, setCoverUrl] = useState<string | null>(work.cover_url ?? null);
     const [coverBusy, setCoverBusy] = useState(false);
     const [coverError, setCoverError] = useState("");
+
+    /* 切り抜く前の絵。選んだ直後だけ入る */
+    const [cropTarget, setCropTarget] = useState<File | null>(null);
+
+    /** 切り抜いた絵を置く */
+    async function putCover(blob: Blob) {
+        setCoverBusy(true);
+        setCoverError("");
+
+        try {
+            const file = new File([blob], "cover.jpg", { type: "image/jpeg" });
+            const shrunk = await shrinkImage(file, true);
+            const url = await uploadImage(shrunk, "cover");
+            setCoverUrl(url);
+        } catch (caught) {
+            setCoverError(
+                caught instanceof Error ? caught.message : "画像を置けませんでした。",
+            );
+        }
+
+        setCoverBusy(false);
+    }
     const [aiUsage, setAiUsage] = useState<AiUsage>(work.ai_usage ?? "none");
     const [tags, setTags] = useState<string[]>(work.tags);
     const [summary, setSummary] = useState(work.summary ?? "");
@@ -206,6 +229,21 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                      * AI で作った絵は置けない。見分けは付かないので、
                      * ここに書いて約束してもらう。
                      */}
+                    {cropTarget && (
+                        <IconCropper
+                            file={cropTarget}
+                            shape="rect"
+                            title="表紙を切り抜く"
+                            /* 本の表紙らしい縦長。文庫に近い比 */
+                            aspect={0.7}
+                            onCancel={() => setCropTarget(null)}
+                            onDone={(blob) => {
+                                setCropTarget(null);
+                                void putCover(blob);
+                            }}
+                        />
+                    )}
+
                     <Field label="表紙" htmlFor="info-cover">
                         <div className="flex items-start gap-3">
                             {coverUrl ? (
@@ -213,7 +251,7 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                                 <img
                                     src={coverUrl}
                                     alt="表紙"
-                                    className="w-24 shrink-0 rounded-md border border-line object-cover"
+                                    className="w-24 shrink-0 rounded-md border border-line object-contain"
                                 />
                             ) : (
                                 <div className="flex h-32 w-24 shrink-0 items-center justify-center rounded-md border border-dashed border-line text-[10px] text-faint">
@@ -243,21 +281,15 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                                             return;
                                         }
 
-                                        setCoverBusy(true);
+                                        /*
+                                         * そのまま上げず、切り抜きへ。
+                                         *
+                                         * 縦横の合わない絵をそのまま出すと、
+                                         * 余白ができたり端が切れたりする。
+                                         * どこを見せるかは、描いた人が決める。
+                                         */
                                         setCoverError("");
-                                        try {
-                                            /* 表紙は大きく出すので、縮める加減を緩める */
-                                            const shrunk = await shrinkImage(file, true);
-                                            const url = await uploadImage(shrunk, "cover");
-                                            setCoverUrl(url);
-                                        } catch (caught) {
-                                            setCoverError(
-                                                caught instanceof Error
-                                                    ? caught.message
-                                                    : "画像を置けませんでした。",
-                                            );
-                                        }
-                                        setCoverBusy(false);
+                                        setCropTarget(file);
                                     }}
                                     className="block w-full text-xs text-muted file:mr-2 file:rounded file:border file:border-line file:bg-surface file:px-2.5 file:py-1 file:text-xs file:text-ink"
                                 />

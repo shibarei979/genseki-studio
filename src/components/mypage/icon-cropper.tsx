@@ -27,11 +27,28 @@ export default function IconCropper({
     file,
     onDone,
     onCancel,
+    shape = 'circle',
+    title = 'アイコンを切り抜く',
+    aspect = 1,
 }: {
     file: File
     onDone: (blob: Blob) => void
     onCancel: () => void
+    /**
+     * 枠の形。
+     *
+     *   circle  丸。アイコン用
+     *   rect    角。表紙用
+     */
+    shape?: 'circle' | 'rect'
+    title?: string
+    /** 縦横の比。表紙は縦長にする */
+    aspect?: number
 }) {
+    /* 枠の高さ。比が 1 なら正方形、小さいほど縦長 */
+    const viewH = Math.round(VIEW_SIZE / aspect)
+    const outH = Math.round(OUTPUT_SIZE / aspect)
+
     const [image, setImage] = useState<HTMLImageElement | null>(null)
     const [scale, setScale] = useState(1)
     const [pos, setPos] = useState({ x: 0, y: 0 })
@@ -52,7 +69,7 @@ export default function IconCropper({
              * 短いほうの辺が枠いっぱいになるようにする。
              * こうすると、どの絵でも隙間なく始まる。
              */
-            const fit = VIEW_SIZE / Math.min(img.width, img.height)
+            const fit = Math.max(VIEW_SIZE / img.width, viewH / img.height)
             setScale(fit)
             setPos({ x: 0, y: 0 })
         }
@@ -68,7 +85,7 @@ export default function IconCropper({
         const w = image.width * s
         const h = image.height * s
         const maxX = Math.max(0, (w - VIEW_SIZE) / 2)
-        const maxY = Math.max(0, (h - VIEW_SIZE) / 2)
+        const maxY = Math.max(0, (h - viewH) / 2)
 
         return {
             x: Math.min(maxX, Math.max(-maxX, next.x)),
@@ -111,7 +128,7 @@ export default function IconCropper({
 
         const canvas = document.createElement('canvas')
         canvas.width = OUTPUT_SIZE
-        canvas.height = OUTPUT_SIZE
+        canvas.height = outH
 
         const ctx = canvas.getContext('2d')
         if (!ctx) {
@@ -124,10 +141,10 @@ export default function IconCropper({
         const w = image.width * scale * ratio
         const h = image.height * scale * ratio
         const x = (OUTPUT_SIZE - w) / 2 + pos.x * ratio
-        const y = (OUTPUT_SIZE - h) / 2 + pos.y * ratio
+        const y = (outH - h) / 2 + pos.y * ratio
 
         ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
+        ctx.fillRect(0, 0, OUTPUT_SIZE, outH)
         ctx.drawImage(image, x, y, w, h)
 
         canvas.toBlob(
@@ -160,7 +177,7 @@ export default function IconCropper({
                 }}
             >
                 <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
-                    アイコンを切り抜く
+                    {title}
                 </p>
                 <p style={{ fontSize: 11.5, lineHeight: 1.8, color: 'var(--color-text-muted)', marginTop: 6 }}>
                     絵を動かして、見せたい場所を決めてください。
@@ -182,9 +199,9 @@ export default function IconCropper({
                     onTouchEnd={handleUp}
                     style={{
                         position: 'relative',
-                        width: VIEW_SIZE, height: VIEW_SIZE,
+                        width: VIEW_SIZE, height: viewH,
                         margin: '16px auto 0',
-                        borderRadius: '50%',
+                        borderRadius: shape === 'circle' ? '50%' : 10,
                         overflow: 'hidden',
 
                         /*
@@ -228,7 +245,7 @@ export default function IconCropper({
                     color: 'var(--color-text-faint)',
                     marginTop: 8,
                 }}>
-                    この丸の中が、アイコンになります
+                    {shape === 'circle' ? 'この丸の中が、アイコンになります' : 'この枠の中が、表紙になります'}
                 </p>
 
                 {/* 大きさ */}
