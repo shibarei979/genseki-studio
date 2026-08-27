@@ -750,3 +750,35 @@
     /* 右の余白を広げたぶん、中央寄りになる */
     inset: 52px 88px 150px 48px;
 }
+
+/*==================================================
+保存したときの輪
+
+押した所から、淡い輪が一度だけ広がる。
+色が変わるだけより、残ったという手応えが出る。
+==================================================*/
+
+@keyframes rwl-save-ring {
+    from {
+        opacity: .55;
+        transform: scale(.4);
+    }
+    to {
+        opacity: 0;
+        transform: scale(1.9);
+    }
+}
+
+.reader-home .rwl_mark {
+    position: relative;
+}
+
+.reader-home .rwl_mark[data-popping="1"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid #f5b731;
+    animation: rwl-save-ring .45s ease-out forwards;
+    pointer-events: none;
+}

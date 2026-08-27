@@ -21,6 +21,9 @@ import { useLoginRequired } from '@/hooks/use-login-required'
 export default function BookmarkMark({ novelId }: { novelId: string }) {
     const [saved, setSaved] = useState(false)
     const [busy, setBusy] = useState(false)
+
+    /* 押した直後だけ立つ。少し経つと戻る */
+    const [popping, setPopping] = useState(false)
     const [userId, setUserId] = useState<string | null>(null)
 
     const { guard, prompt } = useLoginRequired(userId)
@@ -59,6 +62,16 @@ export default function BookmarkMark({ novelId }: { novelId: string }) {
         const next = !saved
         setSaved(next)
 
+        /*
+         * 保存したときだけ弾ませる。
+         * 外すときに跳ねると、消したのに祝われている気がする。
+         */
+        if (next) {
+            setPopping(true)
+            /* 輪が消えきるまで待つ */
+            window.setTimeout(() => setPopping(false), 450)
+        }
+
         void (async () => {
             const supabase = createClient()
 
@@ -96,18 +109,28 @@ export default function BookmarkMark({ novelId }: { novelId: string }) {
                 aria-label={saved ? '保存をやめる' : '保存する'}
                 title={saved ? '保存をやめる' : 'あとで読む'}
                 className="rwl_mark"
+                data-popping={popping ? "1" : undefined}
                 style={{
                     border: 'none',
                     background: 'transparent',
                     cursor: 'pointer',
                     /*
-                     * 保存したら、はっきり色を変える。
-                     * 薄いままだと押せたのか分からない。
+                     * 保存したら、明るい山吹に。
+                     * 暗いと、栞というより汚れに見える。
                      */
-                    color: saved ? '#e0a020' : undefined,
+                    color: saved ? '#f5b731' : undefined,
+
+                    /*
+                     * 押した瞬間だけ、少し弾ませる。
+                     *
+                     * 色が変わるだけだと、
+                     * 押せたのかどうか手応えがない。
+                     */
+                    transform: popping ? 'scale(1.35)' : 'scale(1)',
+                    transition: 'transform .22s cubic-bezier(.34,1.56,.64,1), color .15s ease',
                 }}
             >
-                <svg width="26" height="26" viewBox="0 0 24 24"
+                <svg width="19" height="19" viewBox="0 0 24 24"
                     fill={saved ? 'currentColor' : 'none'}
                     stroke="currentColor" strokeWidth="1.6"
                     strokeLinecap="round" strokeLinejoin="round">
