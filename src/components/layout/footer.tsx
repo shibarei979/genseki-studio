@@ -40,6 +40,21 @@ const SECTIONS = [
             { href: "/guidelines", label: "投稿ガイドライン" },
         ],
     },
+    {
+        /*
+         * サイトの中への道。
+         *
+         * 説明や規約だけでは、下まで読んだ人の行き先が無い。
+         * ここから作品や投稿へ戻れるようにする。
+         */
+        title: "サービス",
+        links: [
+            { href: "/post", label: "作品を投稿する" },
+            { href: "/search", label: "作品を探す" },
+            { href: "/ranking", label: "ランキング" },
+            { href: "/mypage", label: "マイページ" },
+        ],
+    },
 ];
 
 export default function Footer({
@@ -74,7 +89,13 @@ export default function Footer({
                          * 名乗りと道を横に並べる。
                          * 縦に積むと、下に長い帯ができて重い。
                          */}
-                        <div className="grid gap-10 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
+                        {/*
+                         * 中央に寄せる。
+                         *
+                         * 画面いっぱいに広げると、
+                         * 左端と右端が遠すぎて一続きに見えない。
+                         */}
+                        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
                             <div>
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
@@ -88,16 +109,41 @@ export default function Footer({
                                     <br />
                                     あなたの物語が、誰かの心を照らします。
                                 </p>
+
+                                {/*
+                                 * 主な道を 2 つだけ。
+                                 *
+                                 * 下まで読んだ人が、次に何をするかを示す。
+                                 * 並べすぎると、どれも押されない。
+                                 */}
+                                <div className="mt-5 flex flex-wrap gap-2.5">
+                                    <Link
+                                        href="/post"
+                                        className="rounded-full bg-forest px-5 py-2 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90"
+                                    >
+                                        作品を投稿する
+                                    </Link>
+                                    <Link
+                                        href="/search"
+                                        className="rounded-full border border-white/30 px-5 py-2 text-[12.5px] text-white/85 transition-colors hover:border-white/60 hover:text-white"
+                                    >
+                                        作品を探す
+                                    </Link>
+                                </div>
                             </div>
 
-                            <nav className="grid gap-8 sm:grid-cols-3">
+                            <nav className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
                                 {SECTIONS.map((section) => (
                                     <div key={section.title}>
                                         <h2 className="text-[13px] font-semibold">
                                             {section.title}
                                         </h2>
 
-                                        <ul className="mt-3 space-y-2">
+                                        {/*
+                                         * 行の間を詰める。
+                                         * 空きすぎると、どこまでが一組か分からない。
+                                         */}
+                                        <ul className="mt-2.5 space-y-1.5">
                                             {section.links.map((link) => (
                                                 <li key={link.href}>
                                                     <Link
@@ -115,7 +161,8 @@ export default function Footer({
                         </div>
 
                         {/* 区切ってから年を出す */}
-                        <p className="mt-9 border-t border-white/10 pt-5 text-[11px] text-white/35">
+                        {/* 区切ってから、中央に年を出す */}
+                        <p className="mx-auto mt-9 max-w-6xl border-t border-white/10 pt-5 text-center text-[11px] text-white/35">
                             <small>© 2026 原石航路 All Rights Reserved.</small>
                         </p>
                     </div>
