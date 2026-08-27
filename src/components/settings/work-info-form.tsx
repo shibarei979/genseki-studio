@@ -66,6 +66,16 @@ export default function WorkInfoForm({ work, onSave }: Props) {
             const shrunk = await shrinkImage(file, true);
             const url = await uploadImage(shrunk, "cover");
             setCoverUrl(url);
+
+            /*
+             * ここではまだ作品に結びついていない。
+             *
+             * 下の「保存」を押して初めて表紙になる。
+             * それを言わないと、変えたつもりで
+             * 前の絵のままになる。
+             */
+            setSavedMessage("下の「保存」を押すと、この表紙になります");
+            window.setTimeout(() => setSavedMessage(""), 6000);
         } catch (caught) {
             setCoverError(
                 caught instanceof Error ? caught.message : "画像を置けませんでした。",
