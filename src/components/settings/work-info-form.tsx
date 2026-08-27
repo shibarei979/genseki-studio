@@ -93,6 +93,16 @@ export default function WorkInfoForm({ work, onSave }: Props) {
      */
     const [authorNote] = useState(work.author_note ?? "");
     const [ageRating, setAgeRating] = useState<AgeRating>(work.age_rating);
+
+    /*
+     * すすめる読む向き。
+     *
+     * 決めなくてもよい。読む人の設定はそのまま。
+     * 「こちらで読んでほしい」という印を出すだけ。
+     */
+    const [recommendedMode, setRecommendedMode] = useState<
+        "vertical" | "horizontal" | null
+    >(work.recommended_mode ?? null);
     const [isSaving, setIsSaving] = useState(false);
     const [savedMessage, setSavedMessage] = useState("");
 
@@ -146,6 +156,7 @@ export default function WorkInfoForm({ work, onSave }: Props) {
             summary: summary.trim(),
             author_note: authorNote.trim() || null,
             age_rating: ageRating,
+            recommended_mode: recommendedMode,
             cover_url: coverUrl,
         });
         setIsSaving(false);
@@ -411,6 +422,43 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                         </div>
                         <p className="mt-1.5 text-xs text-muted">
                             {AGE_RATING_DESCRIPTION[ageRating]}
+                        </p>
+                    </Field>
+
+                    {/*
+                     * すすめる読む向き。
+                     *
+                     * 縦書きを前提に組んだ作品もある。
+                     * 決めておけば、読む人に印で伝わる。
+                     */}
+                    <Field label="すすめる読む向き">
+                        <div className="grid grid-cols-3 gap-2">
+                            {[
+                                { key: null, label: "決めない" },
+                                { key: "vertical" as const, label: "縦書き" },
+                                { key: "horizontal" as const, label: "横書き" },
+                            ].map((item) => (
+                                <button
+                                    key={item.label}
+                                    type="button"
+                                    onClick={() => setRecommendedMode(item.key)}
+                                    className={[
+                                        "rounded-md border px-3 py-2 text-sm",
+                                        recommendedMode === item.key
+                                            ? "border-forest bg-forest-tint text-forest"
+                                            : "border-line text-muted hover:bg-canvas",
+                                    ].join(" ")}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="mt-1.5 text-xs text-muted">
+                            {recommendedMode === null
+                                ? "読む人の設定にまかせます。"
+                                : recommendedMode === "vertical"
+                                  ? "話のページに「縦書き推奨」と出ます。読む人の設定は変わりません。"
+                                  : "話のページに「横書き推奨」と出ます。読む人の設定は変わりません。"}
                         </p>
                     </Field>
 

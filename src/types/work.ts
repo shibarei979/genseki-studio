@@ -34,6 +34,16 @@ export interface Work {
     /** 作者メモ（作者のみ閲覧） */
     author_note: string | null;
     age_rating: AgeRating;
+    /**
+     * 作者がすすめる読む向き。
+     *
+     * 縦書きを前提に組んだ作品もあれば、
+     * 横書きで読んでほしい作品もある。
+     *
+     * 決めていなければ null。
+     * 読む人の設定を書き換えはせず、印を出すだけ。
+     */
+    recommended_mode?: "vertical" | "horizontal" | null;
     keywords: string[];
     /** カバー画像 URL。v1 では未使用 */
     cover_url: string | null;
