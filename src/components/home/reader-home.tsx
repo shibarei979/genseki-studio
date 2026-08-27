@@ -764,12 +764,20 @@ export default async function ReaderHome() {
               moreHref="/search?type=短編"
             />
 
-            {/* 終わりまで書かれている */}
-            <ReaderWorkList
-              title="完結した作品"
-              books={completedBooks}
-              moreHref="/search?serial=completed"
-            />
+            {/*
+             * 完結した作品。
+             *
+             * 数が揃うまでは出さない。
+             * 2 冊しか並ばない棚は、かえって寂しく見える。
+             * 増えたら false を外す。
+             */}
+            {false && (
+              <ReaderWorkList
+                title="完結した作品"
+                books={completedBooks}
+                moreHref="/search?serial=completed"
+              />
+            )}
             </div>
 
             <HomeEffects pools={{ pickupPool, newReleasePool }} />
