@@ -96,6 +96,10 @@ interface NovelRow {
   tags: string[] | null
   author_id: string
   created_at: string
+  /* 並べ替えと絞り込みに使う */
+  updated_at?: string | null
+  novel_type?: string | null
+  serial_status?: string | null
 }
 
 /** novels 行 + 付随情報 → 本の統一フォーマット（デザインの book_template.js と同一キー） */
@@ -407,6 +411,49 @@ export default async function ReaderHome() {
   /* 新しく届いた作品 */
   const newBooks = newReleasePool.slice(0, LIST_SIZE)
 
+  /*
+   * 最新話更新。
+   *
+   * 新しく作品が出たのではなく、
+   * 続きが出たものを並べる。
+   * 追っている人にとっては、こちらのほうが用がある。
+   */
+  const updatedBooks = [...newest]
+    .filter((n) => n.updated_at && n.updated_at !== n.created_at)
+    .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))
+    .slice(0, LIST_SIZE)
+    .map((n) => toBook(n, extras))
+
+  /*
+   * 新作（おすすめ）。
+   *
+   * 出たばかりで、点数の高いもの。
+   * ただ新しいだけでは、読む手がかりにならない。
+   */
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const freshPickBooks = scoredForViewer
+    .filter((n) => n.created_at >= monthAgo)
+    .sort((a, b) => b.finalScore - a.finalScore)
+    .slice(0, LIST_SIZE)
+    .map((n) => toBook(n as unknown as NovelRow, extras))
+
+  /* 短編。ひと息で読み切れるもの */
+  const shortBooks = newest
+    .filter((n) => n.novel_type === '短編')
+    .slice(0, LIST_SIZE)
+    .map((n) => toBook(n, extras))
+
+  /*
+   * 完結作品。
+   *
+   * 終わりまで書かれている。
+   * 途中で止まるのが嫌な人に向けて出す。
+   */
+  const completedBooks = newest
+    .filter((n) => n.serial_status === 'completed')
+    .slice(0, LIST_SIZE)
+    .map((n) => toBook(n, extras))
+
 
   // ----- お知らせ / コンテスト -----
   const [{ data: annRows }, { data: contestRows }] = await Promise.all([
@@ -693,16 +740,35 @@ export default async function ReaderHome() {
               moreHref="/search"
             />
 
+            {/*
+             * 最新話更新。
+             * 追っている人には、新作より続きのほうが用がある。
+             */}
             <ReaderWorkList
-              title="新しく届いた作品"
-              books={newBooks}
+              title="最新話が届いた作品"
+              books={updatedBooks}
+              moreHref="/search?sort=updated"
+            />
+
+            {/* 新作のうち、点数の高いもの */}
+            <ReaderWorkList
+              title="新作のおすすめ"
+              books={freshPickBooks}
               moreHref="/search?sort=new"
             />
 
+            {/* ひと息で読み切れる */}
             <ReaderWorkList
-              title="注目の作品"
-              books={popularBooks}
-              moreHref="/ranking"
+              title="短編"
+              books={shortBooks}
+              moreHref="/search?type=短編"
+            />
+
+            {/* 終わりまで書かれている */}
+            <ReaderWorkList
+              title="完結した作品"
+              books={completedBooks}
+              moreHref="/search?serial=completed"
             />
             </div>
 
