@@ -76,7 +76,13 @@
     align-items: center;
     gap: 14px;
     width: min(1100px, 92%);
-    margin: 8px auto 0;
+    /*
+     * 本棚との間を空ける。
+     *
+     * 8px では棚板とくっついて、
+     * 棚の一部のように見えていた。
+     */
+    margin: 40px auto 0;
     padding: 16px 20px;
     background: #ffffff;
     border: 1px solid color-mix(in srgb, var(--main-color-3) 14%, transparent);

@@ -1,5 +1,5 @@
-import NovelPopup from '@/components/novel-popup'
 import Link from 'next/link'
+import BookmarkMark from '@/components/home/bookmark-mark'
 
 import type { HomeBook } from '@/types/home'
 
@@ -40,24 +40,9 @@ export default function ReaderWorkList({
 
       <div className="rwl_grid">
         {books.map((book) => (
-          /*
-           * 押すと小窓が開く。
-           *
-           * いきなり作品のページへ飛ばさない。
-           * あらすじを見てから決めたい人のほうが多い。
-           */
-          <NovelPopup
+          <Link
             key={book.id}
-            novel={{
-              id: book.href.replace('/novel/', ''),
-              title: book.title,
-              genre: book.tags?.[0] || '',
-              summary: book.head || null,
-              display_name: book.author,
-              tags: book.tags,
-            }}
-          >
-          <div
+            href={book.href}
             className={`rwl_item${book.href === '#' ? ' is-empty' : ''}`}
           >
             <span className="rwl_item-text">
@@ -65,19 +50,9 @@ export default function ReaderWorkList({
               <span className="rwl_item-author">著：{book.author}</span>
             </span>
 
-            {/*
-             * 保存の印。
-             *
-             * いまは飾りとして置く。
-             * 押せるようにするのは、保存の仕組みを繋いでから。
-             */}
-            <span className="rwl_mark" aria-hidden="true">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-              </svg>
-            </span>
-          </div>
-          </NovelPopup>
+            {/* 押すと保存できる。気になった本をその場で残す */}
+            <BookmarkMark novelId={book.href.replace('/novel/', '')} />
+          </Link>
         ))}
       </div>
     </section>
