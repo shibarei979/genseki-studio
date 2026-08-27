@@ -8,6 +8,12 @@ interface Props {
   preface?: string | null
   afterword?: string | null
   authorName?: string
+  /**
+   * 作者がすすめる読む向き。
+   *
+   * 読む人の設定は変えない。印を出すだけ。
+   */
+  recommendedMode?: 'vertical' | 'horizontal' | null
 }
 
 const DEFAULTS: Settings = { font: 'serif', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -211,7 +217,7 @@ function VerticalText({ text }: { text: string }) {
   )
 }
 
-export default function MobileEpisodeBody({ title, body, preface, afterword, authorName }: Props) {
+export default function MobileEpisodeBody({ title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
   const [isVertical, setIsVertical] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
   const [containerHeight, setContainerHeight] = useState(600)
@@ -264,7 +270,7 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
     return (
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
         <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-          <ReadingSettings onChange={handleSettingsChange} isMobile={true}/>
+          <ReadingSettings onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
         </div>
 
         {preface && (
@@ -340,7 +346,7 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
   return (
     <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
       <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-        <ReadingSettings onChange={handleSettingsChange} isMobile={true}/>
+        <ReadingSettings onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
       </div>
 
       <div style={{padding:'20px 16px 28px'}}>

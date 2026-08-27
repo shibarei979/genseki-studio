@@ -42,7 +42,7 @@ export default async function EpisodePage({ params }: Props) {
   const [profileRes, episodeRes, novelRes] = await Promise.all([
     user ? supabase.from('profiles').select('*').eq('user_id', user.id).single() : Promise.resolve({ data: null }),
     supabase.from('episodes').select('*').eq('id', params.epId).maybeSingle(),
-    supabase.from('novels').select('id, title, genre, is_serial, author_id, views').eq('id', params.id).maybeSingle(),
+    supabase.from('novels').select('id, title, genre, is_serial, author_id, views, recommended_mode').eq('id', params.id).maybeSingle(),
   ])
   const profile = profileRes.data
   const episode = episodeRes.data
@@ -212,7 +212,7 @@ export default async function EpisodePage({ params }: Props) {
             <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
           )}
 
-          <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name}/>
+          <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
             <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
             {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
@@ -288,7 +288,7 @@ export default async function EpisodePage({ params }: Props) {
           </div>
         )}
 
-        <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name}/>
+        <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
 
         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:14,flexWrap:'wrap'}}>
           <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>

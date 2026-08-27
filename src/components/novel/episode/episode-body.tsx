@@ -12,6 +12,14 @@ interface Props {
   authorName?: string
   episodeId?: string
   onQuote?: (text: string) => void
+  /**
+   * 作者がすすめる読む向き。
+   *
+   * 読む人の設定は変えない。印を出すだけ。
+   * 縦書きを前提に組んだ作品もあるので、
+   * それを伝える手立てが要る。
+   */
+  recommendedMode?: 'vertical' | 'horizontal' | null
 }
 
 const DEFAULTS: Settings = { font: 'serif', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -563,7 +571,7 @@ function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecti
   )
 }
 
-export default function EpisodeBody({ title, body, preface, afterword, authorName, episodeId, onQuote }: Props) {
+export default function EpisodeBody({ title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
   const { setQuotedText, selecting, setSelecting, commentAnchorRef } = useQuote()
   const handleQuote = onQuote || setQuotedText
 
@@ -613,7 +621,14 @@ export default function EpisodeBody({ title, body, preface, afterword, authorNam
       <SpeechPanel title={title} body={body} isMobile={false}/>
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
         <div style={{padding:'8px 16px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-          <ReadingSettings onChange={setSettings} isMobile={false} showWritingMode={true}/>
+          {/*
+           * 作者のすすめは、設定の中で出す。
+           *
+           * ここに長い札を置くと場所を取るうえ、
+           * どの押し具のことか分かりにくい。
+           * すすめる向きの押し具そのものに印を重ねる。
+           */}
+          <ReadingSettings onChange={setSettings} isMobile={false} showWritingMode={true} recommendedMode={recommendedMode}/>
         </div>
 
         {vertical ? (

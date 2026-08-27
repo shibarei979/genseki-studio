@@ -34,9 +34,17 @@ interface Props {
   onChange: (s: Settings) => void
   isMobile?: boolean
   showWritingMode?: boolean
+  /**
+   * 作者がすすめる読む向き。
+   *
+   * その押し具の斜め上に、小さく「推奨」と出す。
+   * 押しても切り替わらない印なので、
+   * 読む人が選ぶ邪魔をしない。
+   */
+  recommendedMode?: 'vertical' | 'horizontal' | null
 }
 
-export default function ReadingSettings({ onChange, isMobile = false, showWritingMode = false }: Props) {
+export default function ReadingSettings({ onChange, isMobile = false, showWritingMode = false, recommendedMode = null }: Props) {
   const [open, setOpen] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
 
@@ -99,12 +107,19 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                 <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>読み方向</div>
                 <div style={{display:'flex',gap:6}}>
                   {/* horizontal = 横書き（縦スクロール）、vertical = 縦書き（横スクロール） */}
-                  <button onClick={()=>update({writingMode:'horizontal'})} style={btnBase(settings.writingMode==='horizontal')}>
-                    横書き
-                  </button>
-                  <button onClick={()=>update({writingMode:'vertical'})} style={btnBase(settings.writingMode==='vertical')}>
-                    縦書き
-                  </button>
+                  <span style={{position:'relative',display:'inline-block'}}>
+                    <button onClick={()=>update({writingMode:'horizontal'})} style={btnBase(settings.writingMode==='horizontal')}>
+                      横書き
+                    </button>
+                    {recommendedMode === 'horizontal' && <RecommendMark/>}
+                  </span>
+
+                  <span style={{position:'relative',display:'inline-block'}}>
+                    <button onClick={()=>update({writingMode:'vertical'})} style={btnBase(settings.writingMode==='vertical')}>
+                      縦書き
+                    </button>
+                    {recommendedMode === 'vertical' && <RecommendMark/>}
+                  </span>
                 </div>
               </div>
             )}
@@ -145,5 +160,34 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
         </>
       )}
     </div>
+  )
+}
+
+
+/**
+ * 作者のすすめを表す小さな印。
+ *
+ * 押し具の斜め上に、少し重なるように置く。
+ * 離すと、どの向きをすすめているのか分かりにくい。
+ */
+function RecommendMark() {
+  return (
+    <span style={{
+      position: 'absolute',
+      top: -7,
+      right: -8,
+      padding: '1px 6px',
+      borderRadius: 8,
+      background: 'var(--color-brand)',
+      color: 'var(--color-text-inverse, #fff)',
+      fontSize: 9,
+      fontWeight: 700,
+      lineHeight: 1.5,
+      whiteSpace: 'nowrap',
+      pointerEvents: 'none',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+    }}>
+      推奨
+    </span>
   )
 }
