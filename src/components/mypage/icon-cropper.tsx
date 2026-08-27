@@ -186,7 +186,18 @@ export default function IconCropper({
                         margin: '16px auto 0',
                         borderRadius: '50%',
                         overflow: 'hidden',
-                        background: '#f0f0f0',
+
+                        /*
+                         * 枠の輪郭。
+                         *
+                         * 背景と同じ色だと、
+                         * どこまでが切り抜かれるのか分からない。
+                         * 線と影で、丸をはっきりさせる。
+                         */
+                        background: '#e8e8e8',
+                        border: '2px solid var(--color-brand)',
+                        boxShadow: '0 0 0 4px rgba(0,0,0,0.06)',
+
                         cursor: 'move',
                         touchAction: 'none',
                     }}
@@ -210,6 +221,15 @@ export default function IconCropper({
                         />
                     )}
                 </div>
+
+                <p style={{
+                    fontSize: 10.5,
+                    textAlign: 'center',
+                    color: 'var(--color-text-faint)',
+                    marginTop: 8,
+                }}>
+                    この丸の中が、アイコンになります
+                </p>
 
                 {/* 大きさ */}
                 <div style={{ marginTop: 16 }}>
