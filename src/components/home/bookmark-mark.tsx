@@ -100,10 +100,14 @@ export default function BookmarkMark({ novelId }: { novelId: string }) {
                     border: 'none',
                     background: 'transparent',
                     cursor: 'pointer',
-                    color: saved ? 'var(--color-brand)' : undefined,
+                    /*
+                     * 保存したら、はっきり色を変える。
+                     * 薄いままだと押せたのか分からない。
+                     */
+                    color: saved ? '#e0a020' : undefined,
                 }}
             >
-                <svg width="15" height="15" viewBox="0 0 24 24"
+                <svg width="19" height="19" viewBox="0 0 24 24"
                     fill={saved ? 'currentColor' : 'none'}
                     stroke="currentColor" strokeWidth="1.6"
                     strokeLinecap="round" strokeLinejoin="round">

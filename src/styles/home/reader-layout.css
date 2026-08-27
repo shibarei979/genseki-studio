@@ -241,8 +241,35 @@
 
 .reader-home .rwl_mark {
     flex: 0 0 auto;
-    margin-top: 2px;
-    color: color-mix(in srgb, var(--main-color-3) 45%, transparent);
+
+    /*
+     * 上下の真ん中に置く。
+     *
+     * margin-top で下げていたが、
+     * 題名と著者の 2 行に対して上に寄って見えた。
+     */
+    align-self: center;
+    margin-top: 0;
+
+    /* 押せる大きさに。指で触れるだけの広さを持たせる */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+
+    /*
+     * 45% では薄すぎて、あるのかどうか分からない。
+     * 押せるものだと気づく濃さにする。
+     */
+    color: color-mix(in srgb, var(--main-color-3) 70%, transparent);
+    transition: background .12s ease, color .12s ease;
+}
+
+.reader-home .rwl_mark:hover {
+    background: color-mix(in srgb, var(--main-color-3) 8%, transparent);
+    color: var(--main-color-3);
 }
 
 /* 狭い画面では 1 列 */
