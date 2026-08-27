@@ -124,12 +124,66 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
     /* 切ったほうがよさそうな場所 */
     const suggestions = useMemo(() => suggestSplitPoints(raw), [raw]);
 
+    /*
+     * 文字で切る場所を探す。
+     *
+     * 「第二章」「＊＊＊」など、自分で決めた区切りがある人は、
+     * それを打てば場所を一覧にできる。
+     * 提案だけでは、その人の書き方に合わないことがある。
+     */
+    const [findWord, setFindWord] = useState("");
+
+    const foundPoints = useMemo(() => {
+        const needle = findWord.trim();
+        if (needle.length === 0) return [];
+
+        const text = raw.replace(/\r\n/g, "\n");
+        const points: { at: number; preview: string }[] = [];
+
+        let from = 0;
+        while (points.length < 200) {
+            const at = text.indexOf(needle, from);
+            if (at < 0) break;
+
+            /* 前後を少し見せる。どの箇所かを見分けるため */
+            const head = text.slice(Math.max(0, at - 10), at).replace(/\n/g, " ");
+            const tail = text.slice(at, at + 40).replace(/\n/g, " ");
+
+            points.push({ at, preview: `${head}${tail}` });
+            from = at + needle.length;
+        }
+
+        return points;
+    }, [raw, findWord]);
+
     /**
      * 指した場所に切り印を入れる。
      *
      * 入れたあと、その位置へカーソルを移す。
      * どこに入ったか見えないと、続けて指せない。
      */
+    /**
+     * まとめて印を入れる。
+     *
+     * 後ろから入れるのが肝。
+     * 前から入れると、入れたぶんだけ後ろの位置がずれて、
+     * 2 か所目からは見当違いの所に入る。
+     */
+    function insertSplitAtAll(positions: number[]) {
+        if (positions.length === 0) return;
+
+        const sorted = [...positions].sort((a, b) => b - a);
+        let next = raw;
+
+        for (const at of sorted) {
+            next = next.slice(0, at) + SPLIT_MARK + "\n" + next.slice(at);
+        }
+
+        setRaw(next);
+        setEdited(null);
+        setConfirmed([]);
+    }
+
     function insertSplitAt(at: number) {
         const next = raw.slice(0, at) + SPLIT_MARK + "\n" + raw.slice(at);
         setRaw(next);
@@ -349,33 +403,73 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         setIsImporting(false);
     }
 
-    async function handleSelectFile(file: File | undefined) {
-        if (!file) return;
+    async function handleSelectFile(files: FileList | File[] | undefined) {
+        const list = files ? Array.from(files) : [];
+        if (list.length === 0) return;
+
         setIsReadingFile(true);
         setFileNotice("");
 
-        try {
-            const result = await readManuscriptFile(file);
-            // すでに書きかけの内容があれば後ろに足す。上書きで消さない
-            /* 読み込んだ原稿を足したら、確定はやり直し */
-            setRaw((current) => (current ? `${current}\n\n${result.text}` : result.text));
-            setConfirmed([]);
+        /*
+         * 名前の順に並べる。
+         *
+         * 1 話ずつ別のファイルにしている人は、
+         * 「01.txt」「02.txt」のように番号を付けていることが多い。
+         * 選んだ順ではなく、名前の順に読む。
+         */
+        list.sort((a, b) =>
+            a.name.localeCompare(b.name, "ja", { numeric: true }),
+        );
 
-            const isPdf = file.name.toLowerCase().endsWith(".pdf");
-            setFileNotice(
-                isPdf
-                    ? `${file.name} を読み込みました。PDF は改行や段落が原稿どおりに戻らないことがあります。`
-                    : `${file.name} を読み込みました（${result.encoding}）。`,
-            );
-        } catch {
-            setFileNotice(
-                `${file.name} を読み込めませんでした。別の形式で保存し直してみてください。`,
-            );
-        } finally {
-            setIsReadingFile(false);
-            // 同じファイルを選び直せるように値を空にする
-            if (fileInputRef.current) fileInputRef.current.value = "";
+        const texts: string[] = [];
+        const failed: string[] = [];
+        let hasPdf = false;
+
+        for (const file of list) {
+            try {
+                const result = await readManuscriptFile(file);
+                texts.push(result.text.trim());
+                if (file.name.toLowerCase().endsWith(".pdf")) hasPdf = true;
+            } catch {
+                failed.push(file.name);
+            }
         }
+
+        if (texts.length > 0) {
+            /*
+             * ファイルごとに切り印を挟む。
+             *
+             * 1 ファイル = 1 話として分かれる。
+             * 中でさらに分けたければ、印を足せばよい。
+             */
+            const joined = texts.join(`\n\n${SPLIT_MARK}\n\n`);
+
+            setRaw((current) =>
+                current ? `${current}\n\n${SPLIT_MARK}\n\n${joined}` : joined,
+            );
+            setConfirmed([]);
+        }
+
+        const parts: string[] = [];
+        if (texts.length === 1) {
+            parts.push(`${list[0].name} を読み込みました。`);
+        } else if (texts.length > 1) {
+            parts.push(
+                `${texts.length}個のファイルを読み込み、${texts.length}話に分けました。`,
+            );
+        }
+        if (hasPdf) {
+            parts.push("PDF は改行や段落が原稿どおりに戻らないことがあります。");
+        }
+        if (failed.length > 0) {
+            parts.push(`読み込めませんでした：${failed.join("、")}`);
+        }
+
+        setFileNotice(parts.join(" "));
+        setIsReadingFile(false);
+
+        // 同じファイルを選び直せるように値を空にする
+        if (fileInputRef.current) fileInputRef.current.value = "";
     }
 
     function handleExportPdf() {
@@ -581,7 +675,14 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                             ref={fileInputRef}
                             type="file"
                             accept={ACCEPTED_IMPORT_TYPES}
-                            onChange={(e) => void handleSelectFile(e.target.files?.[0])}
+                            /*
+                             * 何個でも選べる。
+                             *
+                             * 1 話ずつ別のファイルにしている人が、
+                             * まとめて選んで一度に取り込める。
+                             */
+                            multiple
+                            onChange={(e) => void handleSelectFile(e.target.files ?? undefined)}
                             className="hidden"
                             id="manuscript-file"
                         />
@@ -716,6 +817,66 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                          * 見出しらしい行と、空行が続いた所を挙げて、
                          * 押せばそこに印が入るようにする。
                          */}
+                        {/*
+                         * 文字で探す。
+                         *
+                         * 打った文字がある場所を挙げ、
+                         * 押すとそこに印が入る。
+                         */}
+                        <div className="mt-3 rounded-md border border-line px-3.5 py-3">
+                            <label className="text-[11px] text-ink">
+                                文字で切る場所を探す
+                            </label>
+
+                            <input
+                                type="text"
+                                value={findWord}
+                                onChange={(e) => setFindWord(e.target.value)}
+                                placeholder="第　＊＊＊　◇　など"
+                                className="mt-1.5 w-full rounded border border-line px-2.5 py-1.5 text-[12px] outline-none focus:border-forest"
+                            />
+
+                            {findWord.trim().length > 0 && (
+                                foundPoints.length === 0 ? (
+                                    <p className="mt-2 text-[11px] text-faint">
+                                        見つかりませんでした。
+                                    </p>
+                                ) : (
+                                    <>
+                                        <p className="mt-2 text-[10px] text-faint">
+                                            {foundPoints.length}か所。押すと、その手前に印が入ります
+                                        </p>
+                                        <ul className="thin-scroll mt-1.5 max-h-32 space-y-1 overflow-y-auto">
+                                            {foundPoints.map((point, index) => (
+                                                <li key={index}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertSplitAt(point.at)}
+                                                        className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-canvas"
+                                                    >
+                                                        <span className="shrink-0 rounded bg-canvas px-1.5 py-0.5 text-[9px] text-muted">
+                                                            {index + 1}
+                                                        </span>
+                                                        <span className="min-w-0 flex-1 truncate text-[11px] text-muted">
+                                                            {point.preview}
+                                                        </span>
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => insertSplitAtAll(foundPoints.map((x) => x.at))}
+                                            className="mt-2 w-full rounded border border-forest-line py-1.5 text-[11px] text-forest hover:bg-forest-tint"
+                                        >
+                                            {foundPoints.length}か所すべてに印を入れる
+                                        </button>
+                                    </>
+                                )
+                            )}
+                        </div>
+
                         {suggestions.length > 0 && (
                             <div className="mt-3 rounded-md border border-line px-3.5 py-3">
                                 <p className="text-[11px] text-ink">
@@ -766,7 +927,7 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                             >
                                 ファイルから読み込む
                                 <span className="ml-2 text-xs text-faint">
-                                    {isReadingFile ? "読み込み中" : "TXT / MD / PDF"}
+                                    {isReadingFile ? "読み込み中" : "何個でも選べます"}
                                 </span>
                             </label>
                         </div>
@@ -776,6 +937,13 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                 {fileNotice}
                             </p>
                         )}
+
+                        <p className="mt-2 text-[11px] leading-relaxed text-faint">
+                            TXT / MD / PDF に対応しています。
+                            <br />
+                            1話ずつ別のファイルにしている場合は、まとめて選ぶと
+                            ファイルごとに1話として分かれます（名前の順に並びます）。
+                        </p>
                     </div>
 
                     <div>
