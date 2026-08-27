@@ -446,8 +446,17 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                      */
                     <img src={coverImg} alt={`${novel.title} 表紙`}
                       style={{
-                        width:200,
-                        maxWidth:'100%',
+                        /*
+                         * 幅。
+                         *
+                         * 縦長を基準に 200px。
+                         * ただし横長の絵は、同じ幅だと高さが半分以下になり
+                         * 切手のように小さく見える。
+                         * 上限を高さで決め、横長は横へ伸ばす。
+                         */
+                        width:'auto',
+                        maxWidth:'min(340px, 100%)',
+                        maxHeight:290,
                         borderRadius:10,
                         border:'1px solid var(--color-brand-border)',
                         objectFit:'contain',
