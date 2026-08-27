@@ -24,8 +24,11 @@
      *
      * フッター側の大きな空き（18rem）は詰めてあるので、
      * ここで適度に取る。
+     *
+     * 72px では空きすぎて、
+     * 最後の欄と足が切り離されて見えた。
      */
-    padding-bottom: 72px;
+    padding-bottom: 28px;
 }
 
 /*
@@ -786,13 +789,14 @@
 /*==================================================
 コンテストとお知らせ
 
-一覧を見終えた先に置く。
-絵をそのまま見せたいので、柱ではなく中央に。
+執筆向けの柱と同じ形。
+絵の札を縦に積むだけで、外側の箱は付けない。
+箱で囲むと、上の一覧と重なって見える。
 ==================================================*/
 
 .reader-home .rnb {
     display: grid;
-    gap: 18px;
+    gap: 26px;
     width: min(1100px, 92%);
     margin: 22px auto 0;
 }
@@ -804,13 +808,6 @@
     }
 }
 
-.reader-home .rnb_block {
-    padding: 16px 18px;
-    background: #ffffff;
-    border: 1px solid color-mix(in srgb, var(--main-color-3) 14%, transparent);
-    border-radius: 12px;
-}
-
 .reader-home .rnb_head {
     display: flex;
     align-items: baseline;
@@ -820,10 +817,26 @@
 }
 
 .reader-home .rnb_title {
+    /* 一覧の見出しと同じ形にする */
+    position: relative;
     margin: 0;
-    font-size: 15px;
+    padding-left: 12px;
+    font-size: 16px;
     font-weight: 700;
+    letter-spacing: .02em;
     color: var(--text-color);
+}
+
+.reader-home .rnb_title::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 16px;
+    border-radius: 2px;
+    background: var(--main-color-3);
 }
 
 .reader-home .rnb_more {
@@ -834,9 +847,10 @@
 }
 
 .reader-home .rnb_grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
+    /* 絵の札を縦に積む。執筆向けの柱と同じ */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -844,6 +858,8 @@
 
 .reader-home .rnb_card {
     display: block;
+    width: 100%;
+    max-width: 260px;
     text-decoration: none;
 }
 
@@ -852,7 +868,7 @@
     aspect-ratio: 16 / 9;
     overflow: hidden;
     border-radius: 8px;
-    border: 1px solid color-mix(in srgb, var(--main-color-3) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--main-color-3) 14%, transparent);
     background: color-mix(in srgb, var(--main-color-3) 5%, transparent);
 }
 
@@ -863,14 +879,13 @@
 }
 
 .reader-home .rnb_label {
-    display: block;
-    margin-top: 7px;
+    display: -webkit-box;
+    margin-top: 6px;
     font-size: 12px;
     line-height: 1.5;
     color: var(--text-color);
 
-    /* 長い題名は 2 行で切る。棚の高さが揃う */
-    display: -webkit-box;
+    /* 長い題名は 2 行で切る */
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     overflow: hidden;
