@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import IconCropper from '@/components/mypage/icon-cropper'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -227,6 +228,8 @@ export default function MypageClient({
   const [deleteLoading,  setDeleteLoading]  = useState(false)
   const [loading,        setLoading]        = useState(false)
   const [iconUrl,        setIconUrl]        = useState(profile.icon_url || '')
+  /* 切り抜く前の絵。選んだ直後だけ入る */
+  const [cropTarget, setCropTarget] = useState<File | null>(null)
   const [iconUploading,  setIconUploading]  = useState(false)
   const iconInputRef = React.useRef<HTMLInputElement>(null)
   const [editingName,    setEditingName]    = useState(false)
@@ -678,7 +681,24 @@ export default function MypageClient({
       )}
       <div style={{display:'flex',alignItems:'flex-start',gap:24,marginBottom:20,flexWrap:'wrap',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding: isMobile ? '16px 14px' : '20px 22px'}}>
         <div style={{position:'relative',flexShrink:0,cursor:'pointer'}} onClick={()=>iconInputRef.current?.click()}>
-          <input ref={iconInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f){handleIconUpload(f);e.target.value=''}}}/>
+          {/*
+           * 選んだら、そのまま上げずに切り抜きへ。
+           * 丸の中でどこを見せるかを決めてもらう。
+           */}
+          <input ref={iconInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f){setCropTarget(f);e.target.value=''}}}/>
+
+          {cropTarget && (
+            <IconCropper
+              file={cropTarget}
+              onCancel={()=>setCropTarget(null)}
+              onDone={(blob)=>{
+                setCropTarget(null)
+                void handleIconUpload(
+                  new File([blob], 'icon.jpg', { type: 'image/jpeg' }),
+                )
+              }}
+            />
+          )}
           {iconUrl
             ? <img src={iconUrl} alt={profile.display_name} style={{width:88,height:88,borderRadius:'50%',objectFit:'cover',border:'3px solid var(--color-brand)'}}/>
             : <div style={{width:88,height:88,borderRadius:'50%',background:'var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:34,fontWeight:700,color:'var(--color-text-inverse)'}}>{initial}</div>

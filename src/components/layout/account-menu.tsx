@@ -104,7 +104,13 @@ export default function AccountMenu({ isCurrent }: { isCurrent: boolean }) {
                 aria-expanded={isOpen}
                 className={buttonClass(isCurrent)}
                 style={
-                    profile
+                    /*
+                     * 絵があるときは、地の色を付けない。
+                     *
+                     * 絵の縁が透けていると、
+                     * 後ろの色が滲んで見える。
+                     */
+                    profile && !profile.icon_url
                         ? {
                               background: `hsl(${profile.avatar_hue} 38% 90%)`,
                               color: `hsl(${profile.avatar_hue} 48% 28%)`,
