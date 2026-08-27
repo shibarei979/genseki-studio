@@ -21,7 +21,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
 import EpisodeStatusMark from "@/components/workspace/episode-status-mark";
@@ -158,6 +158,39 @@ export default function EpisodeList({
           ]
         : [{ chapter: null, items: episodes }];
 
+    /*
+     * 選ばれた話まで送る。
+     *
+     * 新しく作った話は一番下に来るので、
+     * 話が多いと画面の外にできる。
+     * 見えていなければ、そこまで滑らせる。
+     */
+    useEffect(() => {
+        if (!selectedId) return;
+
+        /* 描き終わってから探す。すぐだとまだ無い */
+        const timer = window.setTimeout(() => {
+            const row = document.querySelector<HTMLElement>(
+                'li[data-selected="1"]',
+            );
+            if (!row) return;
+
+            /*
+             * すでに見えているなら動かさない。
+             *
+             * 一覧の話を押すたびに画面が跳ねると、
+             * 選んだつもりの場所を見失う。
+             */
+            const box = row.getBoundingClientRect();
+            const isVisible = box.top >= 0 && box.bottom <= window.innerHeight;
+            if (isVisible) return;
+
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 60);
+
+        return () => window.clearTimeout(timer);
+    }, [selectedId, episodes.length]);
+
     function renderEpisode(episode: Episode) {
         const isSelected = episode.id === selectedId;
         const isOver = episode.id === overId && episode.id !== draggingId;
@@ -165,6 +198,15 @@ export default function EpisodeList({
         return (
             <li
                 key={episode.id}
+                /*
+                 * 選ばれた行に印を付ける。
+                 *
+                 * 新しく作った話は一覧の一番下に来る。
+                 * 話が増えると画面の外なので、
+                 * 作ってもどこへ行ったか分からない。
+                 * この印を目印に、そこまで送る。
+                 */
+                data-selected={isSelected ? "1" : undefined}
                 draggable
                 onDragStart={() => setDraggingId(episode.id)}
                 onDragEnd={() => {
