@@ -40,6 +40,22 @@ export default function AccountMenu({ isCurrent }: { isCurrent: boolean }) {
         })();
     }, [user]);
 
+    /*
+     * アイコンが変わったら、すぐ差し替える。
+     *
+     * マイページで変えても、ヘッダーは別に読んでいるので
+     * 頁を読み直すまで古いままだった。
+     */
+    useEffect(() => {
+        function handle(event: Event) {
+            const url = (event as CustomEvent<string>).detail;
+            setProfile((prev) => (prev ? { ...prev, icon_url: url } : prev));
+        }
+
+        window.addEventListener("icon-changed", handle);
+        return () => window.removeEventListener("icon-changed", handle);
+    }, []);
+
     /* 運営かどうか。ログインしていないときは調べない */
     useEffect(() => {
         if (!isConnected || !user) {
@@ -169,13 +185,33 @@ export default function AccountMenu({ isCurrent }: { isCurrent: boolean }) {
 
 function buttonClass(isCurrent: boolean): string {
     return [
-        "flex h-8 w-8 items-center justify-center rounded-full border",
+        /* overflow-hidden がないと、絵が丸からはみ出す */
+        "flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border",
         isCurrent ? "border-2 border-forest" : "border-line hover:border-forest-line",
     ].join(" ");
 }
 
 function Face({ profile }: { profile: Profile | null }) {
     if (!profile) return <UserIcon />;
+
+    /*
+     * アイコンがあれば、それを出す。
+     *
+     * 無ければ名前の 1 文字目。
+     * ここでアイコンを見ていなかったので、
+     * 変えてもヘッダーはずっと文字のままだった。
+     */
+    if (profile.icon_url) {
+        return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+                src={profile.icon_url}
+                alt=""
+                className="h-full w-full rounded-full object-cover"
+            />
+        );
+    }
+
     return (
         <span className="text-sm font-semibold">
             {Array.from(profile.display_name)[0] ?? "？"}

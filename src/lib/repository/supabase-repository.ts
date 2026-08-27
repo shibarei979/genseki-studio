@@ -419,6 +419,14 @@ export const supabaseRepository: Repository = {
              */
             work_popup_style:
                 (data.work_popup_style as "card" | "book" | null) ?? null,
+            /*
+             * アイコン。
+             *
+             * 返し忘れていたので、変えてもヘッダーに出なかった。
+             * ここは項目を 1 つずつ選んで返す作りなので、
+             * 足し忘れると読めない。
+             */
+            icon_url: (data.icon_url as string | null) ?? null,
             website: (data.website as string) ?? "",
             claimed_missions: (data.claimed_missions as string[]) ?? [],
             started_at: (data.created_at as string) ?? new Date().toISOString(),

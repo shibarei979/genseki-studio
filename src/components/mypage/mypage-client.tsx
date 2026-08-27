@@ -491,17 +491,70 @@ export default function MypageClient({
     setToast('プロフィールを保存しました'); setTimeout(()=>setToast(''),2000)
   }
   async function handleIconUpload(file: File) {
-    if (!file.type.startsWith('image/')) return
-    setIconUploading(true)
-    const ext = file.name.split('.').pop()
-    const path = `avatars/${profile.user_id}.${ext}`
-    const { error: upErr } = await supabase.storage.from('illustrations').upload(path, file, { upsert:true })
-    if (!upErr) {
-      const { data } = supabase.storage.from('illustrations').getPublicUrl(path)
-      await supabase.from('profiles').update({ icon_url: data.publicUrl }).eq('user_id', profile.user_id)
-      setIconUrl(data.publicUrl)
+    if (!file.type.startsWith('image/')) {
+      setToast('画像を選んでください')
+      setTimeout(()=>setToast(''), 3000)
+      return
     }
+
+    setIconUploading(true)
+
+    /*
+     * 置き場の道。
+     *
+     * 拡張子を付け替えると、前の絵が残ってしまう。
+     *   一度 png を上げ、次に jpg を上げると
+     *   avatars/xxx.png と avatars/xxx.jpg の両方が残り、
+     *   古いほうを指したままになることがある。
+     * 名前を固定して、必ず上書きする。
+     */
+    const path = `avatars/${profile.user_id}`
+
+    const { error: upErr } = await supabase.storage
+      .from('illustrations')
+      .upload(path, file, { upsert: true, contentType: file.type })
+
+    if (upErr) {
+      /*
+       * 黙って終わらせない。
+       * 「変更できない」と言われても、理由が分からなかった。
+       */
+      setIconUploading(false)
+      setToast(`画像を置けませんでした：${upErr.message}`)
+      setTimeout(()=>setToast(''), 5000)
+      return
+    }
+
+    const { data } = supabase.storage.from('illustrations').getPublicUrl(path)
+
+    /*
+     * 同じ道に上書きするので、見た目が変わらないことがある。
+     * 時刻を足して、新しいものとして読ませる。
+     */
+    const url = `${data.publicUrl}?t=${Date.now()}`
+
+    const { error: dbErr } = await supabase
+      .from('profiles').update({ icon_url: url }).eq('user_id', profile.user_id)
+
     setIconUploading(false)
+
+    if (dbErr) {
+      setToast(`保存できませんでした：${dbErr.message}`)
+      setTimeout(()=>setToast(''), 5000)
+      return
+    }
+
+    setIconUrl(url)
+    setToast('アイコンを変えました')
+    setTimeout(()=>setToast(''), 2500)
+
+    /*
+     * ヘッダーにも伝える。
+     *
+     * ヘッダーは別に読み込んでいるので、
+     * ここで変えても気づかない。
+     */
+    window.dispatchEvent(new CustomEvent('icon-changed', { detail: url }))
   }
   async function handleSaveName() {
     if (!nameInput.trim()) { setNameError('名前を入力してください'); return }
@@ -1634,7 +1687,22 @@ export default function MypageClient({
         ) : (
           <div style={{display:'flex',minHeight:'calc(100vh - 60px)'}}>
             {/* 左サイドナビ */}
-            <div style={{width:232, maxWidth:'100%',flexShrink:0,borderRight:'1px solid var(--color-brand-border)',padding:'24px 12px',position:'sticky',top:60,height:'calc(100vh - 60px)',background:'var(--color-bg-card)',overflowY:'auto'}}>
+            <div style={{
+              /*
+               * 左の柱。
+               *
+               * 高さを画面ぶんで切っていたので、
+               * 中身が長いとき、その下に地の色が見えていた。
+               *
+               * 貼りつきは中の箱に持たせ、
+               * 外側は中身の高さまで伸ばす。
+               */
+              width:232, maxWidth:'100%', flexShrink:0,
+              borderRight:'1px solid var(--color-brand-border)',
+              background:'var(--color-bg-card)',
+              alignSelf:'stretch',
+            }}>
+              <div style={{padding:'24px 12px',position:'sticky',top:60,maxHeight:'calc(100vh - 60px)',overflowY:'auto'}}>
               {visibleTabs.map(tab => {
                 const on = activeTab===tab.id
                 return (
@@ -1667,6 +1735,7 @@ export default function MypageClient({
                   <path d="M40 14c-8 2-16 9-19 17-2 5-3 10-2 15l-4 4a1.5 1.5 0 0 0 2 2l4-4c5 1 10 0 15-2 8-3 15-11 17-19 1-4 2-9 2-12 0-1-1-2-2-2-3 0-8 1-13 1z"
                     fill="#dce9f1" stroke="var(--color-brand)" strokeWidth="1.5" strokeLinejoin="round"/>
                 </svg>
+              </div>
               </div>
             </div>
             {/* 右コンテンツ */}

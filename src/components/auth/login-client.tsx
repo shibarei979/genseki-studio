@@ -4,7 +4,7 @@
  * LoginClient — ログインと登録
  *
  * 登録は 2 段。
- *   1. ペンネーム・メール・合言葉
+ *   1. ペンネーム・メール・パスワード
  *   2. 生年月日・同意
  *
  * 分けるのは、最初の画面で並ぶ入力欄を減らすため。
@@ -30,7 +30,7 @@ interface Props {
     /**
      * 開いたときにどちら側を出すか。
      * 「無料で始める」から来た人にログイン画面を出すと、
-     * 持っていない合言葉を求められて行き止まりになる。
+     * 持っていないパスワードを求められて行き止まりになる。
      */
     initialMode?: Mode;
 }
@@ -201,11 +201,11 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
             return;
         }
         if (password.length < 6) {
-            setError("合言葉は6文字以上にしてください。");
+            setError("パスワードは6文字以上にしてください。");
             return;
         }
         if (password !== confirm) {
-            setError("合言葉が一致しません。");
+            setError("パスワードが一致しません。");
             return;
         }
 
@@ -281,7 +281,7 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
         setError("");
 
         if (!email.trim() || !password) {
-            setError("メールと合言葉を入れてください。");
+            setError("メールとパスワードを入れてください。");
             return;
         }
 
@@ -440,7 +440,7 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
 
                         <Field
                             label={
-                                mode === "signup" ? "合言葉（6文字以上）" : "合言葉"
+                                mode === "signup" ? "パスワード（6文字以上）" : "パスワード"
                             }
                         >
                             <div className="relative">
@@ -474,7 +474,7 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
                         </Field>
 
                         {mode === "signup" && (
-                            <Field label="合言葉（確認）">
+                            <Field label="パスワード（確認）">
                                 <input
                                     type="password"
                                     value={confirm}
@@ -767,7 +767,7 @@ function range(from: number, to: number): number[] {
 /** Supabase の英語の返事を、対処が分かる言い方にする */
 function describe(message: string): string {
     if (message.includes("Invalid login credentials")) {
-        return "メールか合言葉が違います。";
+        return "メールかパスワードが違います。";
     }
     if (message.includes("already registered") || message.includes("User already")) {
         return "このメールアドレスはすでに登録されています。ログインしてください。";
