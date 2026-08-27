@@ -15,6 +15,9 @@ import { NextResponse } from "next/server";
 
 import { hasModelAccess, serverEnv } from "@/config/env.server";
 
+/* 組み立ての段階で走らせない。呼ばれたときだけ動かす */
+export const dynamic = "force-dynamic";
+
 export async function GET() {
     return NextResponse.json({
         connected: hasModelAccess(),

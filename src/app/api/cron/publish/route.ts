@@ -17,6 +17,15 @@ import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
+/*
+ * 作り置きしない。
+ *
+ * 指定が無いと、site を組み立てる段階で
+ * この処理が実際に走ってしまう。
+ */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request: Request) {
     /*
      * 誰でも叩ける入口にしない。

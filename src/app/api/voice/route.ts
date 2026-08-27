@@ -24,6 +24,15 @@ import { isValidVoice } from "@/lib/voice/google-tts";
 /** 音声の置き場 */
 const BUCKET = "episode-voices";
 
+/*
+ * 作り置きしない。
+ *
+ * 指定が無いと、site を組み立てる段階で
+ * この処理が実際に走ってしまう。
+ */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(request: Request) {
     if (!hasGoogleTts()) {
         return NextResponse.json(

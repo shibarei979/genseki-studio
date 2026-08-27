@@ -17,6 +17,9 @@ import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 
+/* 組み立ての段階で走らせない。呼ばれたときだけ動かす */
+export const dynamic = "force-dynamic";
+
 export async function GET() {
     const supabase = await createClient();
 

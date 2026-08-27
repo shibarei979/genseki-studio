@@ -35,6 +35,22 @@ const BUCKET = "episode-voices";
 /** 短すぎる話は作らない */
 const MIN_CHARS = 200;
 
+/*
+ * 作り置きしない。
+ *
+ * 指定が無いと、site を組み立てる段階で
+ * この処理が実際に走ってしまう。
+ * Google へ音声を作りに行って時間切れになり、
+ * 組み立てそのものが失敗する。
+ *
+ * 呼ばれたときだけ動かす。
+ */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+/* 音声づくりは時間がかかる。上限を伸ばす */
+export const maxDuration = 300;
+
 export async function GET(request: Request) {
     /* 誰でも叩ける入口にしない */
     const secret = process.env.CRON_SECRET;
