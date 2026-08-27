@@ -45,9 +45,18 @@ export default function IconCropper({
     /** 縦横の比。表紙は縦長にする */
     aspect?: number
 }) {
+    /*
+     * 縦横の比。
+     *
+     * 表紙は絵によって向きが違う。
+     * 縦長に決め打ちすると、横長の絵が上下に切られる。
+     * 選べるようにする。
+     */
+    const [ratio, setRatio] = useState(aspect)
+
     /* 枠の高さ。比が 1 なら正方形、小さいほど縦長 */
-    const viewH = Math.round(VIEW_SIZE / aspect)
-    const outH = Math.round(OUTPUT_SIZE / aspect)
+    const viewH = Math.round(VIEW_SIZE / ratio)
+    const outH = Math.round(OUTPUT_SIZE / ratio)
 
     const [image, setImage] = useState<HTMLImageElement | null>(null)
     const [scale, setScale] = useState(1)
@@ -69,7 +78,10 @@ export default function IconCropper({
              * 短いほうの辺が枠いっぱいになるようにする。
              * こうすると、どの絵でも隙間なく始まる。
              */
-            const fit = Math.max(VIEW_SIZE / img.width, viewH / img.height)
+            const fit = Math.max(
+                VIEW_SIZE / img.width,
+                Math.round(VIEW_SIZE / aspect) / img.height,
+            )
             setScale(fit)
             setPos({ x: 0, y: 0 })
         }
@@ -120,6 +132,19 @@ export default function IconCropper({
     function changeScale(next: number) {
         setScale(next)
         setPos((prev) => clamp(prev, next))
+    }
+
+    /* 向きを変える。枠の形が変わるので、絵を収め直す */
+    function changeRatio(next: number) {
+        setRatio(next)
+        if (!image) return
+
+        const fit = Math.max(
+            VIEW_SIZE / image.width,
+            Math.round(VIEW_SIZE / next) / image.height,
+        )
+        setScale(fit)
+        setPos({ x: 0, y: 0 })
     }
 
     async function crop() {
@@ -247,6 +272,54 @@ export default function IconCropper({
                 }}>
                     {shape === 'circle' ? 'この丸の中が、アイコンになります' : 'この枠の中が、表紙になります'}
                 </p>
+
+                {/*
+                 * 向き。
+                 *
+                 * アイコンは丸で固定なので出さない。
+                 */}
+                {shape === 'rect' && (
+                    <div style={{ marginTop: 14 }}>
+                        <label style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>
+                            向き
+                        </label>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
+                            {[
+                                { label: '縦長', value: 0.7 },
+                                { label: '正方形', value: 1 },
+                                { label: '横長', value: 1.6 },
+                            ].map((item) => (
+                                <button
+                                    key={item.label}
+                                    type="button"
+                                    onClick={() => changeRatio(item.value)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '7px 0',
+                                        borderRadius: 8,
+                                        fontSize: 12,
+                                        cursor: 'pointer',
+                                        border: '1px solid',
+                                        borderColor:
+                                            ratio === item.value
+                                                ? 'var(--color-brand)'
+                                                : 'var(--color-brand-border)',
+                                        background:
+                                            ratio === item.value
+                                                ? 'var(--color-brand)'
+                                                : 'var(--color-bg-card)',
+                                        color:
+                                            ratio === item.value
+                                                ? 'var(--base-color-1, #fff)'
+                                                : 'var(--color-text-muted)',
+                                    }}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* 大きさ */}
                 <div style={{ marginTop: 16 }}>

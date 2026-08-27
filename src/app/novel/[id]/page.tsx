@@ -414,9 +414,22 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
               if (!coverImg && !novel.summary) return null
 
               return (
-                <div style={{display:'flex',gap:14,alignItems:'flex-start',marginBottom:14,flexWrap:'wrap'}}>
+                <div style={{
+                  display:'flex',
+                  gap:14,
+                  alignItems:'flex-start',
+                  marginBottom:14,
+                  flexWrap:'wrap',
+                  /*
+                   * あらすじが無いときは、表紙を真ん中に。
+                   *
+                   * 左に寄せたままだと、右が大きく空いて
+                   * 置き忘れたように見える。
+                   */
+                  justifyContent: novel.summary ? 'flex-start' : 'center',
+                }}>
                   {novel.summary && (
-                    <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.85,padding:'10px 12px',background:'var(--color-bg)',borderRadius:8,borderLeft:'3px solid #f5a060',whiteSpace:'pre-wrap',flex:'1 1 300px',minWidth:0}}>
+                    <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.85,padding:'10px 12px',background:'var(--color-bg)',borderRadius:8,borderLeft:'3px solid #f5a060',whiteSpace:'pre-wrap',flex:'1 1 320px',minWidth:0}}>
                       {novel.summary}
                     </div>
                   )}
@@ -433,7 +446,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                      */
                     <img src={coverImg} alt={`${novel.title} 表紙`}
                       style={{
-                        width:260,
+                        width:200,
                         maxWidth:'100%',
                         borderRadius:10,
                         border:'1px solid var(--color-brand-border)',
