@@ -674,9 +674,19 @@ export default function MypageClient({
   const MypageTab = () => (
     <div>
       {!profile.birthdate && (
-        <div style={{background:'var(--color-brand-light)',border:'1px solid var(--color-tag-border)',borderRadius:10,padding:'12px 16px',display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
-          <div style={{flex:1,fontSize:13,color:'var(--color-text)',lineHeight:1.6}}>生年月日が登録されていません。登録するとR18コンテンツが閲覧できます。</div>
-          <button onClick={()=>setShowBdModal(true)} style={{padding:'6px 14px',background:'var(--color-brand)',color:'var(--color-text-inverse)',border:'none',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0}}>設定する</button>
+        /*
+         * 未設定の促し。
+         *
+         * 青のままだと案内に紛れて気づかない。
+         * 見えない作品があることを伝える帯なので、赤で出す。
+         */
+        <div style={{background:'color-mix(in srgb, var(--color-danger) 7%, transparent)',border:'1px solid var(--color-danger)',borderRadius:10,padding:'12px 16px',display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
+          <div style={{flex:1,fontSize:13,color:'var(--color-text)',lineHeight:1.6}}>
+            <strong style={{color:'var(--color-danger)'}}>生年月日が未設定です。</strong>
+            <br/>
+            設定するまで、R15・R18の作品は表示されません。年齢の確認にだけ使い、ほかの人には見えません。
+          </div>
+          <button onClick={()=>setShowBdModal(true)} style={{padding:'8px 16px',background:'var(--color-danger)',color:'#fff',border:'none',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0}}>設定する</button>
         </div>
       )}
       <div style={{display:'flex',alignItems:'flex-start',gap:24,marginBottom:20,flexWrap:'wrap',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding: isMobile ? '16px 14px' : '20px 22px'}}>

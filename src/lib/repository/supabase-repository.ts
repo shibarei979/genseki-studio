@@ -427,6 +427,8 @@ export const supabaseRepository: Repository = {
              * 足し忘れると読めない。
              */
             icon_url: (data.icon_url as string | null) ?? null,
+            /* 年齢の判定に使う。画面には出さない */
+            birthdate: (data.birthdate as string | null) ?? null,
             website: (data.website as string) ?? "",
             claimed_missions: (data.claimed_missions as string[]) ?? [],
             started_at: (data.created_at as string) ?? new Date().toISOString(),

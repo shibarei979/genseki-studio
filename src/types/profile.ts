@@ -54,6 +54,13 @@ export interface Profile {
     email?: string;
     /** 絵。設定していなければ空 */
     icon_url?: string | null;
+    /**
+     * 生年月日。
+     *
+     * 年齢の判定にだけ使う。誰にも見せない。
+     * 入っていなければ R15・R18 を出さない。
+     */
+    birthdate?: string | null;
     login_provider?: string;
     /** 通し番号。「◯番目の書き手」 */
     user_number?: number | null;

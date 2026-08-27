@@ -8,6 +8,7 @@ import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
 import ReaderHero from '@/components/home/reader-hero'
 import ShelfNav from '@/components/home/shelf-nav'
+import BirthdateNotice from '@/components/birthdate-notice'
 import BookshelfSection from '@/components/home/bookshelf-section'
 import HomeEffects from '@/components/home/home-effects'
 import Footer from '@/components/layout/footer'
@@ -564,6 +565,9 @@ export default async function ReaderHome() {
            * 見出し。
            * 執筆向けの HomeHero と同じ置き方。
            */}
+          {/* 生年月日が未設定なら促す */}
+          <BirthdateNotice />
+
           <ReaderHero />
 
           {/* 本棚から下は、参照元の見た目で囲う */}

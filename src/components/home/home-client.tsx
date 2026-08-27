@@ -20,6 +20,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import BirthdateNotice from "@/components/birthdate-notice";
 
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
@@ -168,6 +169,9 @@ export default function HomeClient() {
                     {/* 右 */}
                     <div className="flex min-w-0 flex-1 flex-col">
                         <main className="min-w-0 flex-1 space-y-3.5 px-5 py-4 sm:px-6">
+                        {/* 生年月日が未設定なら促す */}
+                        <BirthdateNotice />
+
                             {error && (
                                 <LoadError message={error} onRetry={() => void reload()} />
                             )}
