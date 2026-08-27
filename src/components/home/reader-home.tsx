@@ -170,7 +170,7 @@ export default async function ReaderHome() {
   // ----- 作品プール（新着60冊）とおすすめスコア -----
   const poolQuery = supabase
     .from('novels')
-    .select('id, title, summary, catchcopy, genre, tags, author_id, created_at, age_rating')
+    .select('id, title, summary, catchcopy, genre, tags, author_id, created_at, age_rating, novel_type, serial_status, updated_at')
     .eq('published', true)
     .order('created_at', { ascending: false })
     .limit(60)
