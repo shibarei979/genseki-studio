@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { ageFromBirthdate, allowedRatings } from '@/lib/age'
+import { ROOT_ADMIN_EMAIL } from '@/types'
 import Link from 'next/link'
 
 import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
@@ -143,14 +145,47 @@ export default async function ReaderHome() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  /*
+   * その人が見てよい区分。
+   *
+   * 生年月日が未設定なら all だけ。
+   * 自分の作品と、運営は例外にする。
+   */
+  const { data: viewer } = user
+    ? await supabase
+        .from('profiles')
+        .select('birthdate, role')
+        .eq('user_id', user.id)
+        .maybeSingle()
+    : { data: null }
+
+  const ratings = allowedRatings(
+    ageFromBirthdate((viewer as { birthdate?: string } | null)?.birthdate),
+  )
+
+  const isAdmin =
+    user?.email === ROOT_ADMIN_EMAIL ||
+    (viewer as { role?: string } | null)?.role === 'admin'
+
   // ----- 作品プール（新着60冊）とおすすめスコア -----
+  const poolQuery = supabase
+    .from('novels')
+    .select('id, title, summary, catchcopy, genre, tags, author_id, created_at, age_rating')
+    .eq('published', true)
+    .order('created_at', { ascending: false })
+    .limit(60)
+
   const [{ data: newestRaw }, scoredAll] = await Promise.all([
-    supabase
-      .from('novels')
-      .select('id, title, summary, catchcopy, genre, tags, author_id, created_at')
-      .eq('published', true)
-      .order('created_at', { ascending: false })
-      .limit(60),
+    isAdmin
+      ? poolQuery
+      : /*
+         * 自分の作品は年齢に関わらず出す。
+         * 書いた本人から自作が消えると、
+         * 消されたのかと思って問い合わせが来る。
+         */
+        poolQuery.or(
+          `age_rating.in.(${ratings.join(',')})${user ? `,author_id.eq.${user.id}` : ''}`,
+        ),
     getCachedRecommendScores(),
   ])
   const newest: NovelRow[] = newestRaw || []
@@ -172,7 +207,19 @@ export default async function ReaderHome() {
   }
 
   // ----- Pick Up!（おすすめアルゴリズム）/ New Release! -----
-  const pickedScored = buildRecommendation(scoredAll, WORKS_POOL_COUNT, favoriteGenres, user?.id)
+  /*
+   * おすすめも同じ物差しで絞る。
+   *
+   * 集計そのものは全員で共有しているので、
+   * 使う直前にここで落とす。
+   */
+  const scoredForViewer = isAdmin
+    ? scoredAll
+    : scoredAll.filter((n) =>
+        ratings.includes((n.age_rating as 'all' | 'r15' | 'r18') ?? 'all'),
+      )
+
+  const pickedScored = buildRecommendation(scoredForViewer, WORKS_POOL_COUNT, favoriteGenres, user?.id)
   const pickupNovels: NovelRow[] = pickedScored.length > 0
     ? pickedScored.map((s) => ({
         id: s.id, title: s.title, summary: s.summary, catchcopy: s.catchcopy,
@@ -250,7 +297,7 @@ export default async function ReaderHome() {
     }
 
     // あなたへのおすすめ
-    recommendedNovels = buildRecommendation(scoredAll, READING_LIST_COUNT, favoriteGenres, user.id)
+    recommendedNovels = buildRecommendation(scoredForViewer, READING_LIST_COUNT, favoriteGenres, user.id)
       .map((s) => ({
         id: s.id, title: s.title, summary: s.summary, catchcopy: s.catchcopy,
         genre: s.genre, tags: s.tags, author_id: s.author_id, created_at: s.created_at,
