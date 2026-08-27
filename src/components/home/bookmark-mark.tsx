@@ -107,7 +107,7 @@ export default function BookmarkMark({ novelId }: { novelId: string }) {
                     color: saved ? '#e0a020' : undefined,
                 }}
             >
-                <svg width="19" height="19" viewBox="0 0 24 24"
+                <svg width="26" height="26" viewBox="0 0 24 24"
                     fill={saved ? 'currentColor' : 'none'}
                     stroke="currentColor" strokeWidth="1.6"
                     strokeLinecap="round" strokeLinejoin="round">
