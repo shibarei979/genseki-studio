@@ -8,6 +8,7 @@ import WorkPopupFlag from '@/components/home/work-popup-flag'
 import ShelfCardPopup from '@/components/home/shelf-card-popup'
 import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
+import ReaderNoticeBoard from '@/components/home/reader-notice-board'
 import ReaderHero from '@/components/home/reader-hero'
 import ShelfNav from '@/components/home/shelf-nav'
 import BirthdateNotice from '@/components/birthdate-notice'
@@ -609,6 +610,23 @@ export default async function ReaderHome() {
     banner_x: c.banner_x ?? 50,
     banner_y: c.banner_y ?? 50,
   })) as any[]
+  /*
+   * 中央に出すお知らせ。
+   *
+   * 柱には文字だけが出る。
+   * 絵は柱の幅では小さすぎて、何の告知か伝わらない。
+   * 絵のあるものだけを、中央へ回す。
+   */
+  const boardNotices = (annRows || [])
+    .filter((a: any) => a.image_url)
+    .slice(0, 3)
+    .map((a: any) => ({
+      id: String(a.id),
+      title: a.title as string,
+      image: a.image_url as string,
+      link: (a.link as string | null) || null,
+    }))
+
   const allNotices = [...datedNotices, ...datedContests]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, NOTICE_COUNT)
@@ -778,6 +796,16 @@ export default async function ReaderHome() {
                 moreHref="/search?serial=completed"
               />
             )}
+            {/*
+             * コンテストとお知らせ。
+             *
+             * 作品の一覧を見終えた先に置く。
+             * 上に置くと、本を探しに来た人の邪魔になる。
+             */}
+            <ReaderNoticeBoard
+              contests={sidebarContests}
+              notices={boardNotices}
+            />
             </div>
 
             <HomeEffects pools={{ pickupPool, newReleasePool }} />

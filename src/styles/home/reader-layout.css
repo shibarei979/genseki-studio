@@ -782,3 +782,128 @@
     animation: rwl-save-ring .45s ease-out forwards;
     pointer-events: none;
 }
+
+/*==================================================
+コンテストとお知らせ
+
+一覧を見終えた先に置く。
+絵をそのまま見せたいので、柱ではなく中央に。
+==================================================*/
+
+.reader-home .rnb {
+    display: grid;
+    gap: 18px;
+    width: min(1100px, 92%);
+    margin: 22px auto 0;
+}
+
+@media (min-width: 900px) {
+    /* 広い画面では、コンテストとお知らせを横に並べる */
+    .reader-home .rnb:has(.rnb_block + .rnb_block) {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.reader-home .rnb_block {
+    padding: 16px 18px;
+    background: #ffffff;
+    border: 1px solid color-mix(in srgb, var(--main-color-3) 14%, transparent);
+    border-radius: 12px;
+}
+
+.reader-home .rnb_head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.reader-home .rnb_title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.reader-home .rnb_more {
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: color-mix(in srgb, var(--text-color) 70%, transparent);
+    text-decoration: none;
+}
+
+.reader-home .rnb_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.reader-home .rnb_card {
+    display: block;
+    text-decoration: none;
+}
+
+.reader-home .rnb_thumb {
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--main-color-3) 12%, transparent);
+    background: color-mix(in srgb, var(--main-color-3) 5%, transparent);
+}
+
+.reader-home .rnb_blank {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.reader-home .rnb_label {
+    display: block;
+    margin-top: 7px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-color);
+
+    /* 長い題名は 2 行で切る。棚の高さが揃う */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+/*==================================================
+一覧の見出し
+
+質素に見えていたので、大きさと色をはっきりさせる。
+左に短い線を引き、欄の始まりを分かるようにする。
+==================================================*/
+
+.reader-home .rwl_head {
+    align-items: center;
+}
+
+.reader-home .rwl_title {
+    position: relative;
+    padding-left: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: var(--text-color);
+}
+
+.reader-home .rwl_title::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 16px;
+    border-radius: 2px;
+    background: var(--main-color-3);
+}
