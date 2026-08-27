@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import { createClient as createSbClient } from '@supabase/supabase-js'
 import { unstable_cache } from 'next/cache'
 import Header from '@/components/layout/header'
@@ -11,7 +12,11 @@ import { clientEnv } from '@/config/env.client'
 
 const PAGE_SIZE = 50
 
-async function computeRanking(period: string, novelType: string, serial: string, genre: string, aiMode: string, offset: number, displaySize: number, showMore: boolean): Promise<{ items: any[]; total: number }> {
+/*
+ * ratings は、その人が見てよい区分。
+ * 呼ぶ側で決めて渡す。ここでは人を知らない。
+ */
+async function computeRanking(period: string, novelType: string, serial: string, genre: string, aiMode: string, offset: number, displaySize: number, showMore: boolean, ratings: string[] = ['all']): Promise<{ items: any[]; total: number }> {
   // キャッシュ内ではcookies非依存の素のクライアントを使用（ランキングは公開データのみ）
   const supabase: any = createSbClient(serverEnv.supabaseUrl, clientEnv.supabaseAnonKey)
   const likeMap: Record<string,number> = {}
@@ -25,7 +30,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
     let poolQuery = supabase
       .from('novels')
       .select('id, title, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at')
-      .eq('published', true).eq('is_r18', false).neq('genre', '官能')
+      .eq('published', true).eq('is_r18', false).neq('genre', '官能').in('age_rating', ratings)
     if (aiMode === 'ai') poolQuery = (poolQuery as any).eq('ai_usage', 'full')
     else poolQuery = (poolQuery as any).neq('ai_usage', 'full')
     const { data: poolNovels } = await poolQuery
@@ -153,7 +158,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
 
   let q = supabase.from('novels')
     .select('id, title, genre, novel_type, is_serial, author_id, summary, tags, created_at')
-    .in('id', likeIds).eq('published', true).eq('is_r18', false).neq('genre', '官能')
+    .in('id', likeIds).eq('published', true).eq('is_r18', false).neq('genre', '官能').in('age_rating', ratings)
   // AI作品ランキングと人間作品ランキングを分離
   if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
   else q = (q as any).neq('ai_usage', 'full')
@@ -293,6 +298,17 @@ export default async function RankingPage({ searchParams }: Props) {
     profile = data
   }
 
+  /*
+   * その人が見てよい区分。
+   *
+   * 生年月日が未設定なら all だけ。
+   * ランキングは R18 をもともと出さないが、
+   * R15 は絞られていなかった。
+   */
+  const ratings = allowedRatings(
+    ageFromBirthdate((profile as { birthdate?: string } | null)?.birthdate),
+  )
+
   const period    = searchParams.period || 'weekly'
   const genre     = searchParams.genre  || '全て'
   const aiMode    = (profile as any)?.show_ai_works === false ? 'human' : (searchParams.ai === 'ai' ? 'ai' : 'human')  // AI非表示設定の読み手は常にhuman
@@ -304,7 +320,7 @@ export default async function RankingPage({ searchParams }: Props) {
   const offset    = (page - 1) * PAGE_SIZE
 
 
-  const { items: ranking, total } = await getCachedRanking(period, novelType, serial, genre, aiMode, offset, displaySize, showMore)
+  const { items: ranking, total } = await getCachedRanking(period, novelType, serial, genre, aiMode, offset, displaySize, showMore, ratings)
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   function fmtDate(s: string) {

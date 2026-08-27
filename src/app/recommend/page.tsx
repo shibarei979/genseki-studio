@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ageFromBirthdate, allowedRatings } from "@/lib/age";
 import { notFound } from "next/navigation";
 
 import Footer from "@/components/layout/footer";
@@ -66,7 +67,30 @@ export default async function RecommendPage() {
         if (profile && profile.home_mode !== "read") notFound();
     }
 
-    const scored = await getCachedRecommendScores();
+    const all = await getCachedRecommendScores();
+
+    /*
+     * 年齢で絞る。
+     *
+     * 集計そのものは全員で共有し、
+     * 見せる直前にここで絞る。
+     * 人ごとに集計すると、そのたび計算し直しになる。
+     */
+    const { data: viewer } = user
+        ? await supabase
+              .from("profiles")
+              .select("birthdate")
+              .eq("user_id", user.id)
+              .maybeSingle()
+        : { data: null };
+
+    const ratings = allowedRatings(
+        ageFromBirthdate((viewer as { birthdate?: string } | null)?.birthdate),
+    );
+
+    const scored = all.filter((n) =>
+        ratings.includes((n.age_rating as "all" | "r15" | "r18") ?? "all"),
+    );
 
     /*
      * 好きなジャンル。

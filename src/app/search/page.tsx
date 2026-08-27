@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { ageFromBirthdate, allowedRatings } from '@/lib/age'
+import { ROOT_ADMIN_EMAIL } from '@/types'
 import { GENRE_LEGACY_MATCH } from '@/types'
 export const dynamic = 'force-dynamic'
 import Header from '@/components/layout/header'
@@ -49,6 +51,22 @@ export default async function SearchPage({ searchParams }: Props) {
 
   const isAgeVerified = profile?.age_verified || false
 
+  /*
+   * その人が見てよい区分。
+   *
+   * 生年月日が未設定なら all だけ。
+   * 「たぶん大人だろう」で通すと、通した側が責を負う。
+   *
+   * 15 歳以上で r15、18 歳以上で r18 まで。
+   */
+  const viewerAge = ageFromBirthdate((profile as { birthdate?: string })?.birthdate)
+  const ratings = allowedRatings(viewerAge)
+
+  /* 運営は全部見える */
+  const isAdmin =
+    user?.email === ROOT_ADMIN_EMAIL ||
+    (profile as { role?: string })?.role === 'admin'
+
   // コンテスト絞り込み用の一覧（サイト内・公開中）
   const { data: searchContests } = await supabase
     .from('contests').select('id, title')
@@ -71,9 +89,25 @@ export default async function SearchPage({ searchParams }: Props) {
       .eq('published', true)
       .order('created_at', { ascending: false })
       .limit(200)
-    if (!user || !isAgeVerified) {
-      q2 = (q2 as any).eq('is_r18', false).neq('genre', '官能')
+    if (!isAdmin) {
+      /*
+       * 年齢で絞る。
+       *
+       * 昔からある is_r18 も一緒に見る。
+       * age_rating を入れる前の作品は、そちらにしか印が無い。
+       */
+      /*
+       * 自分の作品は、年齢に関わらず見える。
+       *
+       * 書いた本人から自作が消えると、
+       * 消されたのかと思って問い合わせが来る。
+       */
+      const mine = user ? `,author_id.eq.${user.id}` : ''
+      q2 = (q2 as any).or(
+        `age_rating.in.(${ratings.join(',')})${mine}`,
+      )
     }
+
     if (profile?.show_ai_works === false) {
       q2 = (q2 as any).neq('ai_usage', 'full')
     }
@@ -86,9 +120,13 @@ export default async function SearchPage({ searchParams }: Props) {
       .select('id, title, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
       .eq('published', true)
 
-    if (!user || !isAgeVerified) {
-      query = (query as any).eq('is_r18', false).neq('genre', '官能')
+    if (!isAdmin) {
+      const mine = user ? `,author_id.eq.${user.id}` : ''
+      query = (query as any).or(
+        `age_rating.in.(${ratings.join(',')})${mine}`,
+      )
     }
+
     if (profile?.show_ai_works === false) {
       query = (query as any).neq('ai_usage', 'full')
     }

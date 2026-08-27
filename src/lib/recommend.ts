@@ -16,6 +16,14 @@ export interface ScoredNovel {
   tags: string[] | null
   created_at: string
   ai_usage: string | null
+  /*
+   * 年齢の区分。
+   *
+   * ここでは絞らない。集計は全員で共有するので、
+   * 人ごとに変えると使い回せない。
+   * 見せる直前に、呼ぶ側で絞る。
+   */
+  age_rating: string | null
   finalScore: number
   inGuarantee: boolean
   validReaders: number
@@ -28,7 +36,7 @@ async function computeRecommendScores(): Promise<ScoredNovel[]> {
   // 候補作品（公開・全年齢・直近300件）
   const { data: novels } = await supabase
     .from('novels')
-    .select('id, title, genre, novel_type, author_id, summary, catchcopy, tags, created_at, originality_score, ai_usage, is_serial, completed_at')
+    .select('id, title, genre, novel_type, author_id, summary, catchcopy, tags, created_at, originality_score, ai_usage, is_serial, completed_at, age_rating')
     .eq('published', true).eq('is_r18', false).neq('genre', '官能')
     .order('created_at', { ascending: false }).limit(300)
   if (!novels || novels.length === 0) return []
