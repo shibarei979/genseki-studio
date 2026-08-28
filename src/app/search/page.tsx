@@ -16,7 +16,7 @@ interface Props {
   searchParams: {
     q?: string; exclude?: string; genre?: string; type?: string
     serial?: string; tag?: string; sort?: string; page?: string
-    author?: string; contest?: string
+    author?: string; contest?: string; name?: string
     charMin?: string; charMax?: string; ptMin?: string; ptMax?: string
   }
 }
@@ -41,13 +41,20 @@ export default async function SearchPage({ searchParams }: Props) {
   const offset   = (page - 1) * PAGE_SIZE
   const tags     = tagParam ? tagParam.split(',').filter(Boolean) : []
   const authorQ  = searchParams.author  || ''
+  /*
+   * 題名と作者名をまとめて探す枠。
+   *
+   * 「あの作品」か「あの人」かを分けて考えずに
+   * 打てるようにする。どちらかに当たれば出す。
+   */
+  const nameQ    = searchParams.name    || ''
   const contestId = searchParams.contest || ''
   const charMin = Number(searchParams.charMin) || 0
   const charMax = Number(searchParams.charMax) || 0
   const ptMin = Number(searchParams.ptMin) || 0
   const ptMax = Number(searchParams.ptMax) || 0
   const hasMetaFilter = !!(charMin || charMax || ptMin || ptMax)
-  const hasSearch = !!(q || exclude || genre || type || serial || tags.length > 0 || authorQ || contestId || hasMetaFilter)
+  const hasSearch = !!(q || nameQ || exclude || genre || type || serial || tags.length > 0 || authorQ || contestId || hasMetaFilter)
 
   const isAgeVerified = profile?.age_verified || false
 
@@ -132,6 +139,21 @@ export default async function SearchPage({ searchParams }: Props) {
     }
     if (q) {
       query = (query as any).or(`title.ilike.%${q}%,summary.ilike.%${q}%,catchcopy.ilike.%${q}%`)
+    }
+    /*
+     * 題名と作者名。どちらかに当たれば出す。
+     *
+     * 作者名は別の表にあるので、先に人を探して
+     * その id で作品を絞る。
+     * 誰にも当たらなければ、題名だけで探す。
+     */
+    if (nameQ) {
+      const { data: matchedByName } = await supabase
+        .from('profiles').select('user_id').ilike('display_name', `%${nameQ}%`)
+      const nameIds = (matchedByName||[]).map((a:any) => a.user_id)
+      const parts = [`title.ilike.%${nameQ}%`]
+      if (nameIds.length > 0) parts.push(`author_id.in.(${nameIds.join(',')})`)
+      query = (query as any).or(parts.join(','))
     }
     if (exclude) query = (query as any).not('title', 'ilike', `%${exclude}%`)
     if (authorQ) {
@@ -407,6 +429,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <div style={{flex:1,minWidth:0}}>
 
           <SearchForm
+            defaultName={nameQ}
             defaultQ={q} defaultExclude={exclude} defaultGenre={genre}
             defaultType={type} defaultSerial={serial} defaultTag={tagParam}
             defaultSort={sort} ageVerified={isAgeVerified}

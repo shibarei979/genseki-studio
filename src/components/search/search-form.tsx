@@ -68,7 +68,7 @@ interface Props {
   defaultSort?: string; ageVerified?: boolean; defaultDiscover?: boolean
   defaultAuthor?: string; defaultLikeMin?: string; defaultLikeMax?: string
   defaultCharMin?: string; defaultCharMax?: string; defaultPtMin?: string; defaultPtMax?: string
-  defaultContest?: string
+  defaultContest?: string; defaultName?: string
   contests?: { id: string; title: string }[]
 }
 
@@ -77,7 +77,7 @@ export default function SearchForm({
   defaultSerial='', defaultTag='', defaultSort='new', ageVerified=false, defaultDiscover=false,
   defaultAuthor='', defaultLikeMin='', defaultLikeMax='',
   defaultCharMin='', defaultCharMax='', defaultPtMin='', defaultPtMax='',
-  defaultContest='', contests=[]
+  defaultContest='', contests=[], defaultName=''
 }: Props) {
   const router = useRouter()
   /*
@@ -87,6 +87,8 @@ export default function SearchForm({
    */
   const GENRES = ageVerified ? [...GENRES_BASE, 'BL', 'GL', '官能'] : GENRES_BASE
 
+  /* 題名と作者名をまとめて探す枠。いちばん上に置く */
+  const [name,               setName]               = useState(defaultName)
   const [q,                  setQ]                  = useState(defaultQ)
   const [author,             setAuthor]             = useState(defaultAuthor)
   const [exclude,            setExclude]            = useState(defaultExclude)
@@ -142,6 +144,7 @@ export default function SearchForm({
 
   function handleSearch() {
     const params = new URLSearchParams()
+    if (name)            params.set('name',    name)
     if (q)               params.set('q',       q)
     if (author)          params.set('author',  author)
     if (exclude)         params.set('exclude', exclude)
@@ -207,6 +210,19 @@ export default function SearchForm({
     </h1>
 
     <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding: isMobile ? '16px' : '20px',marginBottom:16}}>
+
+      {/*
+        * 題名・作者名。
+        *
+        * いちばん多い探し方なので、いちばん上に置く。
+        * 下のキーワードはあらすじまで見に行くので、
+        * 題名だけを狙いたいときに邪魔になる。
+        */}
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:4}}>タイトル・作者名</div>
+        <input value={name} onChange={e=>setName(e.target.value)} onKeyDown={handleKeyDown}
+          placeholder="作品のタイトル、または作者名で検索" style={inp}/>
+      </div>
 
       {/* キーワード・除外 */}
       <div style={{display:'flex',flexDirection: isMobile ? 'column' : 'row',gap:10,marginBottom:12}}>
@@ -523,8 +539,8 @@ export default function SearchForm({
           </select>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center',justifyContent: isMobile ? 'space-between' : 'flex-end'}}>
-          {(q||exclude||genre||type||serial||tags.length>0||author) && (
-            <button onClick={()=>{setQ('');setExclude('');setGenre('');setType('');setSerial('');setTags([]);setSort('new');setDiscoverMode(false);setAuthor('');router.push('/search')}}
+          {(name||q||exclude||genre||type||serial||tags.length>0||author) && (
+            <button onClick={()=>{setName('');setQ('');setExclude('');setGenre('');setType('');setSerial('');setTags([]);setSort('new');setDiscoverMode(false);setAuthor('');router.push('/search')}}
               style={{fontSize:12,color:'var(--color-text-faint)',background:'none',border:'none',cursor:'pointer'}}>
               条件クリア ×
             </button>
