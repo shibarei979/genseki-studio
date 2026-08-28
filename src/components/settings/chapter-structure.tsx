@@ -183,7 +183,7 @@ function ChapterRow({
     busy: boolean;
     editing: boolean;
     selected: boolean;
-    onToggle: () => void;
+    onToggle: (withShift: boolean) => void;
     onStartEdit: () => void;
     onCommitName: (title: string) => void;
     onCancelEdit: () => void;
@@ -200,10 +200,15 @@ function ChapterRow({
                     : "border-line bg-canvas",
             ].join(" ")}
         >
+            {/*
+             * onChange ではなく onClick。
+             * シフトを押しているかは、押した瞬間にしか分からない。
+             */}
             <input
                 type="checkbox"
                 checked={selected}
-                onChange={onToggle}
+                onChange={() => undefined}
+                onClick={(e) => onToggle(e.shiftKey)}
                 disabled={busy}
                 aria-label="この章を選ぶ"
                 className="h-4 w-4 shrink-0"
@@ -278,6 +283,9 @@ export default function ChapterStructure({ workId }: { workId: string }) {
 
     /* 選んでいる章。まとめて移すために使う */
     const [picked, setPicked] = useState<string[]>([]);
+
+    /* 直前に選んだ章。シフトで「ここからここまで」を出すのに使う */
+    const lastPicked = useRef<string | null>(null);
 
     async function reload() {
         const repository = getRepository();
@@ -478,7 +486,46 @@ export default function ChapterStructure({ workId }: { workId: string }) {
         });
     }
 
-    function toggle(id: string) {
+    /*
+     * 画面に出ている順に並べた章の id。
+     *
+     * 部の中の章が先、どの部にも入っていない章が後。
+     * 見えている順が分からないと「ここからここまで」を選べない。
+     */
+    function shownOrder(): string[] {
+        return [
+            ...parts.flatMap((part) =>
+                childrenOf(part.id).map((c) => c.id),
+            ),
+            ...loose.map((c) => c.id),
+        ];
+    }
+
+    /**
+     * 章を選ぶ。
+     *
+     * シフトを押しながらだと、直前に選んだ章から
+     * この章までを、まとめて選ぶ。
+     * 部をまたいでも、見えているとおりに数える。
+     */
+    function toggle(id: string, withShift = false) {
+        if (withShift && lastPicked.current && lastPicked.current !== id) {
+            const order = shownOrder();
+            const from = order.indexOf(lastPicked.current);
+            const to = order.indexOf(id);
+
+            if (from >= 0 && to >= 0) {
+                const span = order.slice(
+                    Math.min(from, to),
+                    Math.max(from, to) + 1,
+                );
+                setPicked((prev) => Array.from(new Set([...prev, ...span])));
+                lastPicked.current = id;
+                return;
+            }
+        }
+
+        lastPicked.current = id;
         setPicked((prev) =>
             prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
         );
@@ -486,6 +533,8 @@ export default function ChapterStructure({ workId }: { workId: string }) {
 
     /** その束の章を、まとめて選ぶ／外す */
     function toggleAll(ids: string[]) {
+        /* 起点をそろえる。そうしないと次のシフトが遠くまで伸びる */
+        lastPicked.current = ids[ids.length - 1] ?? null;
         const allPicked = ids.every((id) => picked.includes(id));
         setPicked((prev) =>
             allPicked
@@ -501,7 +550,7 @@ export default function ChapterStructure({ workId }: { workId: string }) {
             busy,
             editing: editingId === chapter.id,
             selected: picked.includes(chapter.id),
-            onToggle: () => toggle(chapter.id),
+            onToggle: (withShift: boolean) => toggle(chapter.id, withShift),
             onStartEdit: () => setEditingId(chapter.id),
             onCommitName: (title: string) => commitName(chapter, title),
             onCancelEdit: () => setEditingId(null),

@@ -119,6 +119,54 @@ export default function EpisodeList({
     /* 直前に選んだ話。シフトで「ここからここまで」を出すのに使う */
     const lastPicked = useRef<string | null>(null);
 
+    /* 入れる窓のほうの、直前に選んだ話 */
+    const lastFillPicked = useRef<string | null>(null);
+
+    /*
+     * 入れる窓に出ている話。
+     *
+     * 探した言葉で絞ったあとの並びが、そのまま
+     * 「ここからここまで」の順になる。
+     */
+    const fillList = episodes.filter(
+        (ep) =>
+            !fillQuery.trim() ||
+            formatEpisodeLabel(ep)
+                .toLowerCase()
+                .includes(fillQuery.trim().toLowerCase()),
+    );
+
+    /**
+     * 入れる窓で話を選ぶ。
+     *
+     * シフトを押しながらだと、直前に選んだ話から
+     * この話までを、まとめて選ぶ。
+     * すでにその章に入っている話は、あいだにあっても飛ばす。
+     */
+    function toggleFillPicked(id: string, withShift = false) {
+        if (withShift && lastFillPicked.current && lastFillPicked.current !== id) {
+            const order = fillList.map((ep) => ep.id);
+            const from = order.indexOf(lastFillPicked.current);
+            const to = order.indexOf(id);
+
+            if (from >= 0 && to >= 0) {
+                const span = fillList
+                    .slice(Math.min(from, to), Math.max(from, to) + 1)
+                    .filter((ep) => ep.chapter_id !== fillingChapterId)
+                    .map((ep) => ep.id);
+
+                setFillPicked((list) => Array.from(new Set([...list, ...span])));
+                lastFillPicked.current = id;
+                return;
+            }
+        }
+
+        lastFillPicked.current = id;
+        setFillPicked((list) =>
+            list.includes(id) ? list.filter((at) => at !== id) : [...list, id],
+        );
+    }
+
     /**
      * 話を選ぶ。
      *
@@ -848,52 +896,60 @@ export default function EpisodeList({
                         </div>
 
                         <ul className="thin-scroll mt-2 min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-                            {episodes
-                                .filter(
-                                    (ep) =>
-                                        !fillQuery.trim() ||
-                                        formatEpisodeLabel(ep)
-                                            .toLowerCase()
-                                            .includes(fillQuery.trim().toLowerCase()),
-                                )
-                                .map((ep) => {
-                                    const isIn = ep.chapter_id === fillingChapterId;
-                                    const isPicked = fillPicked.includes(ep.id);
-                                    return (
-                                        <li key={ep.id}>
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setFillPicked((list) =>
-                                                        list.includes(ep.id)
-                                                            ? list.filter((at) => at !== ep.id)
-                                                            : [...list, ep.id],
-                                                    )
-                                                }
-                                                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-canvas"
+                            {fillList.map((ep) => {
+                                /*
+                                 * すでにこの章に入っている話は選べない。
+                                 *
+                                 * 押しても何も起きないのに押せてしまうと、
+                                 * 入れたつもりの数が合わなくなる。
+                                 */
+                                const isIn = ep.chapter_id === fillingChapterId;
+                                const isPicked = fillPicked.includes(ep.id);
+
+                                return (
+                                    <li key={ep.id}>
+                                        <button
+                                            type="button"
+                                            disabled={isIn}
+                                            onClick={(e) =>
+                                                toggleFillPicked(ep.id, e.shiftKey)
+                                            }
+                                            className={[
+                                                "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left",
+                                                isIn
+                                                    ? "cursor-not-allowed opacity-50"
+                                                    : "hover:bg-canvas",
+                                            ].join(" ")}
+                                        >
+                                            <span
+                                                className={[
+                                                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[9px]",
+                                                    isIn
+                                                        ? "border-line bg-canvas text-transparent"
+                                                        : isPicked
+                                                          ? "border-forest bg-forest text-white"
+                                                          : "border-line text-transparent",
+                                                ].join(" ")}
                                             >
-                                                <span
-                                                    className={[
-                                                        "flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[9px]",
-                                                        isPicked
-                                                            ? "border-forest bg-forest text-white"
-                                                            : "border-line text-transparent",
-                                                    ].join(" ")}
-                                                >
-                                                    ✓
+                                                ✓
+                                            </span>
+                                            <span
+                                                className={[
+                                                    "min-w-0 flex-1 truncate text-[13px]",
+                                                    isIn ? "text-faint" : "text-ink",
+                                                ].join(" ")}
+                                            >
+                                                {formatEpisodeLabel(ep)}
+                                            </span>
+                                            {isIn && (
+                                                <span className="shrink-0 text-[10px] text-faint">
+                                                    入っています
                                                 </span>
-                                                <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
-                                                    {formatEpisodeLabel(ep)}
-                                                </span>
-                                                {isIn && (
-                                                    <span className="shrink-0 text-[10px] text-forest">
-                                                        この章
-                                                    </span>
-                                                )}
-                                            </button>
-                                        </li>
-                                    );
-                                })}
+                                            )}
+                                        </button>
+                                    </li>
+                                );
+                            })}
                         </ul>
 
                         <div className="flex items-center gap-2 border-t border-line px-4 py-3">
