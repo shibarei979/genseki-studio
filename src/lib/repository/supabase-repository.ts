@@ -1356,6 +1356,8 @@ export const supabaseRepository: Repository = {
         if (patch.summary !== undefined) next.summary = patch.summary;
         if (patch.values !== undefined) next.values = patch.values;
         if (patch.is_major !== undefined) next.is_major = patch.is_major;
+        /* 列を足したら、ここにも足さないと書けない */
+        if (patch.graph_pos !== undefined) next.graph_pos = patch.graph_pos;
         if (patch.image_url !== undefined) next.image_url = patch.image_url;
         if (patch.page_id !== undefined) next.page_id = patch.page_id;
         if (patch.candidate_status !== undefined) {

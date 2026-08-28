@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from "react";
 import DeleteButton from "@/components/common/delete-button";
 import EntryImage from "@/components/common/entry-image";
 import CandidateStrip from "@/components/resource/candidate-strip";
+import MergePanel from "@/components/resource/merge-panel";
 import EntryStartersPanel from "@/components/resource/entry-starters-panel";
 import { useAutoMerge } from "@/components/resource/use-auto-merge";
 import EntryDetail from "@/components/resource/entry-detail";
@@ -261,6 +262,18 @@ export default function EntryView({
             )}
 
             <div className="overflow-hidden rounded-lg border border-line bg-surface">
+                {/*
+                 * 同じものかもしれない項目を、一覧の上に出す。
+                 *
+                 * これまでは、本文から拾ったその瞬間にだけ尋ねていた。
+                 * 一度「いいえ」と答えると二度と出てこないので、
+                 * あとから見直す場所がどこにも無かった。
+                 * 「統合する方法がない」と言われたのは、そのため。
+                 *
+                 * 似たものが無いときは、この帯そのものが出ない。
+                 */}
+                <MergePanel entries={confirmed} onMerge={onMerge} />
+
                 <CandidateStrip
                     candidates={pending}
                     fields={page.fields}
@@ -526,9 +539,14 @@ export default function EntryView({
                                             setIsUniting(true);
                                             setUniteQuery("");
                                         }}
-                                        className="text-[12px] text-muted hover:text-forest"
+                                        /*
+                                         * 字だけでは押せるものだと分からず、
+                                         * 「まとめる方法がない」と言われていた。
+                                         * 枠を付けて押し具に見せる。
+                                         */
+                                        className="w-full rounded-md border border-forest-line bg-surface px-3 py-2 text-[12px] font-medium text-forest hover:bg-forest-tint"
                                     >
-                                        別の呼び名を「{selected.name}」と同じ
+                                        ＋ 別の呼び名を「{selected.name}」と同じ
                                         {page.label === "人物" ? "人" : "もの"}
                                         にまとめる
                                     </button>

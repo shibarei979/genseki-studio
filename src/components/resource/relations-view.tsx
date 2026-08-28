@@ -33,6 +33,13 @@ interface Props {
     onUpdate: (relationId: string, patch: Partial<ResourceRelation>) => void;
     onDelete: (relation: ResourceRelation) => void;
     onUpdatePage: (patch: Partial<ResourcePage>) => void;
+    /*
+     * 図の中で丸を動かしたときに呼ぶ。
+     *
+     * 置いた場所を覚えないと、離した瞬間に輪へ戻る。
+     * 主人公を左、敵を右、という並べ方は作者にしか決められない。
+     */
+    onMoveNode?: (entryId: string, position: { x: number; y: number }) => void;
 }
 
 export default function RelationsView({
@@ -44,8 +51,21 @@ export default function RelationsView({
     onUpdate,
     onDelete,
     onUpdatePage,
+    onMoveNode,
 }: Props) {
     const [mode, setMode] = useState<"graph" | "list">("graph");
+
+    /* 覚えている置き場所を、図が読める形に組み直す */
+    const graphLayout = useMemo(() => {
+        const map: Record<string, { x: number; y: number }> = {};
+        for (const entry of entries) {
+            const at = entry.graph_pos;
+            if (at && typeof at.x === "number" && typeof at.y === "number") {
+                map[entry.id] = { x: at.x, y: at.y };
+            }
+        }
+        return map;
+    }, [entries]);
     const [focusId, setFocusId] = useState<string | null>(null);
     const [selectedRelationId, setSelectedRelationId] = useState<string | null>(null);
     const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -181,6 +201,12 @@ export default function RelationsView({
                                     entries={entries}
                                     relations={relations}
                                     selectedId={focusId}
+                                    /*
+                                     * 覚えている置き場所を渡す。
+                                     * 決めていないものは、これまでどおり輪に並ぶ。
+                                     */
+                                    layout={graphLayout}
+                                    onMove={onMoveNode}
                                     onSelect={(id) => {
                                         setFocusId(id);
                                         // 選んだ項目に繋がる関係を右に出す

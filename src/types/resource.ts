@@ -131,6 +131,16 @@ export interface ResourceEntry {
     values: Record<string, FieldValue>;
     is_major: boolean;
     /**
+     * 関係図の中の置き場所。
+     *
+     * 作者が指で動かした場所を覚える。
+     * 決めていなければ null で、これまでどおり輪に並ぶ。
+     *
+     * 主人公を左、敵を右、といった並べ方は
+     * 作者にしか決められない。機械が並べ替えると意図が消える。
+     */
+    graph_pos?: { x: number; y: number } | null;
+    /**
      * AI補助が拾った候補かどうか。
      * pending のあいだは一覧の本体に混ぜない。
      * 勝手に増えた項目と、自分で書いた項目が混ざると資料が信用できなくなる。

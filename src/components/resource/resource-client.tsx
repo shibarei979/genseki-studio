@@ -972,6 +972,31 @@ export default function ResourceClient({ workId }: Props) {
                                         await repository.deleteRelation(relation.id);
                                         await reload();
                                     }}
+                                    /*
+                                     * 丸を離した所を覚える。
+                                     *
+                                     * 読み直しはしない。
+                                     * 動かすたびに資料を全部読み直すと、
+                                     * 図がその場で跳ねて置きにくい。
+                                     * 手元の一覧だけ書き換える。
+                                     */
+                                    onMoveNode={async (entryId, position) => {
+                                        setEntries((list) =>
+                                            list.map((entry) =>
+                                                entry.id === entryId
+                                                    ? { ...entry, graph_pos: position }
+                                                    : entry,
+                                            ),
+                                        );
+                                        try {
+                                            await repository.updateEntry(entryId, {
+                                                graph_pos: position,
+                                            });
+                                        } catch {
+                                            /* 置き場所が残らなくても、図は動いている */
+                                            await reload();
+                                        }
+                                    }}
                                     onUpdatePage={async (patch) => {
                                         await repository.updatePage(currentPage.id, patch);
                                         await reload();

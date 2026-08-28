@@ -397,12 +397,22 @@ function EntryForm({
                     </Labeled>
                 </div>
 
-                <div className="mt-3">
+                {/*
+                 * 別名。
+                 *
+                 * ほかの欄と同じ見た目に並べていたので、
+                 * 「決めた名前の下に、引っかかる名前を登録したい」
+                 * という声が届いた。まさにこの欄のことだった。
+                 * 枠で囲って、何をする所かを先に言う。
+                 */}
+                <div className="mt-3 rounded-lg border border-forest-line bg-forest-tint/25 p-3">
                     <span className="block text-sm font-medium text-ink">
                         別名・呼び方
                     </span>
-                    <p className="mt-0.5 text-xs text-muted">
-                        ここに入れた名前は、本文から候補を拾うときに同じものとして扱われます。
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                        「タロウ」「太郎さん」のような別の書き方をここに入れておくと、
+                        本文にその名前が出てきても同じものとして数えられます。
+                        新しい項目は増えません。
                     </p>
                     <input
                         type="text"
