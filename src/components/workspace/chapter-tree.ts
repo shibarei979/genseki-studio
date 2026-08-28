@@ -250,3 +250,34 @@ function toKanji(value: number): string {
     const ones = value % 10;
     return `${tens > 1 ? digits[tens] : ""}十${digits[ones]}`;
 }
+
+/**
+ * 「第一部」だけを返す。名前は付けない。
+ *
+ * 細い一覧では、番号と名前を 1 つの文字列にすると
+ * 番号だけが見えて名前が切れる。
+ * 番号は縮まない札に、名前は残り幅に分けて出す。
+ */
+export function formatPartNumber(index: number): string {
+    return `第${toKanji(index + 1)}部`;
+}
+
+/** 「第一章」だけを返す。名前は付けない */
+export function formatChapterNumber(index: number): string {
+    return `第${toKanji(index + 1)}章`;
+}
+
+/**
+ * 一覧に出る順に、話の id を並べる。
+ *
+ * 見えている順が分からないと、
+ * 「ここからここまで」を選べない。
+ */
+export function orderedEpisodeIds(
+    chapters: Chapter[],
+    episodes: Episode[],
+): string[] {
+    return buildChapterGroups(chapters, episodes).flatMap((group) =>
+        group.items.map((episode) => episode.id),
+    );
+}

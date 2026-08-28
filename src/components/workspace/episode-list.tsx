@@ -21,13 +21,20 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
 import EpisodeStatusMark from "@/components/workspace/episode-status-mark";
 import { formatNumber } from "@/lib/utils/text";
 import type { Chapter, Episode } from "@/types";
 import { formatChapterLabel, formatEpisodeLabel } from "@/types";
+
+import {
+    buildChapterGroups,
+    formatChapterNumber,
+    formatPartNumber,
+    orderedEpisodeIds,
+} from "./chapter-tree";
 
 interface Props {
     episodes: Episode[];
@@ -109,7 +116,34 @@ export default function EpisodeList({
     const [isPicking, setIsPicking] = useState(false);
     const [picked, setPicked] = useState<string[]>([]);
 
-    function togglePicked(id: string) {
+    /* 直前に選んだ話。シフトで「ここからここまで」を出すのに使う */
+    const lastPicked = useRef<string | null>(null);
+
+    /**
+     * 話を選ぶ。
+     *
+     * シフトを押しながらだと、直前に選んだ話から
+     * この話までを、まとめて選ぶ。
+     * 100 話を選ぶのに 100 回押すことになっていた。
+     */
+    function togglePicked(id: string, withShift = false) {
+        if (withShift && lastPicked.current && lastPicked.current !== id) {
+            const order = orderedEpisodeIds(chapters, episodes);
+            const from = order.indexOf(lastPicked.current);
+            const to = order.indexOf(id);
+
+            if (from >= 0 && to >= 0) {
+                const span = order.slice(
+                    Math.min(from, to),
+                    Math.max(from, to) + 1,
+                );
+                setPicked((list) => Array.from(new Set([...list, ...span])));
+                lastPicked.current = id;
+                return;
+            }
+        }
+
+        lastPicked.current = id;
         setPicked((list) =>
             list.includes(id) ? list.filter((at) => at !== id) : [...list, id],
         );
@@ -141,22 +175,13 @@ export default function EpisodeList({
      */
     const hasChapters = chapters.length > 0;
 
-    const groups: { chapter: Chapter | null; items: Episode[] }[] = hasChapters
-        ? [
-              ...chapters.map((chapter) => ({
-                  chapter,
-                  items: episodes.filter((ep) => ep.chapter_id === chapter.id),
-              })),
-              {
-                  chapter: null,
-                  items: episodes.filter(
-                      (ep) =>
-                          !ep.chapter_id ||
-                          !chapters.some((c) => c.id === ep.chapter_id),
-                  ),
-              },
-          ]
-        : [{ chapter: null, items: episodes }];
+    /*
+     * 章を 2 段で組み立てる。
+     *
+     * 大きい章のすぐ後ろに、その子が続く。
+     * 組み立ては chapter-tree.ts にある。
+     */
+    const groups = buildChapterGroups(chapters, episodes);
 
     /*
      * 選ばれた話まで送る。
@@ -232,7 +257,7 @@ export default function EpisodeList({
                 {isPicking ? (
                     <button
                         type="button"
-                        onClick={() => togglePicked(episode.id)}
+                        onClick={(e) => togglePicked(episode.id, e.shiftKey)}
                         aria-pressed={picked.includes(episode.id)}
                         /* 四角。選ぶ印は丸より四角のほうが伝わる */
                         className={[
@@ -255,8 +280,10 @@ export default function EpisodeList({
 
                 <button
                     type="button"
-                    onClick={() =>
-                        isPicking ? togglePicked(episode.id) : onSelect(episode.id)
+                    onClick={(e) =>
+                        isPicking
+                            ? togglePicked(episode.id, e.shiftKey)
+                            : onSelect(episode.id)
                     }
                     className="min-w-0 flex-1 text-left"
                 >
@@ -499,7 +526,17 @@ export default function EpisodeList({
             )}
 
             <div className="thin-scroll flex-1 overflow-y-auto px-2 pb-2">
-                {groups.map(({ chapter, items }, groupIndex) => {
+                {groups.map((group) => {
+                    const {
+                        chapter,
+                        items,
+                        depth,
+                        isBig,
+                        parentId,
+                        labelIndex,
+                        totalCount,
+                    } = group;
+
                     /* 章が無い作品では、見出しを出さずに並べるだけ */
                     if (!hasChapters) {
                         return (
@@ -510,11 +547,25 @@ export default function EpisodeList({
                     /* 空の「章に入れていない」は出さない。見出しだけ残っても仕方ない */
                     if (!chapter && items.length === 0) return null;
 
+                    /*
+                     * 親をしまっているあいだ、小さい章は出さない。
+                     *
+                     * 中の話だけでなく、章の見出しごと隠す。
+                     * でないと「しまった」ように見えない。
+                     */
+                    if (parentId && closedChapters.includes(parentId)) {
+                        return null;
+                    }
+
                     const isOverHere =
                         overChapterId === (chapter?.id ?? "__none__");
 
                     return (
-                        <div key={chapter?.id ?? "__none__"} className="mb-1">
+                        <div
+                            key={chapter?.id ?? "__none__"}
+                            className="mb-1"
+                            style={depth > 0 ? { paddingLeft: 14 } : undefined}
+                        >
                             {/*
                              * 章の見出し。
                              *
@@ -567,12 +618,22 @@ export default function EpisodeList({
                                     setOverChapterId(null);
                                 }}
                                 className={[
-                                    "group/chapter mt-2 flex items-center gap-1.5 rounded-md px-2 py-1.5",
+                                    /*
+                                     * 2 段にする。
+                                     *
+                                     * 名前と押し具を横に並べていたので、
+                                     * 細い一覧では名前の幅が 3 分の 1 ほどしか
+                                     * 残らず、「第一部　白書の魔女」が切れた。
+                                     * 名前に 1 行ぜんぶを渡す。
+                                     */
+                                    "group/chapter mt-2 flex flex-col gap-1 rounded-md px-2 py-1.5",
                                     isOverHere
                                         ? "bg-forest-tint ring-1 ring-forest"
                                         : "bg-canvas",
                                 ].join(" ")}
                             >
+                                {/* 1 段目：つまみ・開閉・名前 */}
+                                <div className="flex w-full items-center gap-1.5">
                                 {chapter && onReorderChapters && (
                                     <span
                                         aria-hidden="true"
@@ -614,14 +675,56 @@ export default function EpisodeList({
                                     </button>
                                 )}
 
-                                <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-ink">
-                                    {chapter
-                                        ? formatChapterLabel(chapter, groupIndex)
-                                        : "章に入れていない"}
-                                    <span className="ml-1.5 font-normal text-faint">
-                                        {items.length}話
+                                {/*
+                                 * 番号は札にして、名前とは分ける。
+                                 *
+                                 * 「第一部　白書の魔女」を 1 つの文字列に
+                                 * していたので、細い一覧では番号だけが見えて
+                                 * 名前が切れていた。
+                                 * 札は縮まないので、残り全部が名前に渡る。
+                                 */}
+                                {chapter && (
+                                    <span
+                                        className={[
+                                            "shrink-0 rounded px-1 py-0.5 text-[9px] leading-none",
+                                            isBig
+                                                ? "bg-forest font-bold text-white"
+                                                : "bg-forest-tint font-medium text-forest",
+                                        ].join(" ")}
+                                    >
+                                        {isBig
+                                            ? formatPartNumber(labelIndex)
+                                            : formatChapterNumber(labelIndex)}
                                     </span>
+                                )}
+
+                                <span
+                                    className={[
+                                        "min-w-0 flex-1 truncate text-[11px] text-ink",
+                                        isBig ? "font-semibold" : "font-medium",
+                                    ].join(" ")}
+                                    title={chapter?.title || undefined}
+                                >
+                                    {chapter
+                                        ? chapter.title || (
+                                              <span className="text-faint">
+                                                  名前なし
+                                              </span>
+                                          )
+                                        : "章に入れていない"}
                                 </span>
+
+                                {/*
+                                 * 大きい章は、配下の小さい章まで合わせた数。
+                                 * 部の見出しに「0話」と出ては困る。
+                                 */}
+                                <span className="shrink-0 text-[10px] font-normal text-faint">
+                                    {totalCount}話
+                                </span>
+                                </div>
+
+                                {/* 2 段目：押し具。名前の幅を取らない */}
+                                <div className="flex w-full items-center gap-1">
 
                                 {chapter && onAssignChapter && (
                                     <button
@@ -632,7 +735,7 @@ export default function EpisodeList({
                                             setFillPicked([]);
                                         }}
                                         title="この章に話を入れる"
-                                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-faint opacity-0 hover:text-forest group-hover/chapter:opacity-100"
+                                        className="rounded border border-line px-1.5 py-0.5 text-[10px] text-faint hover:border-forest hover:text-forest"
                                     >
                                         話を入れる
                                     </button>
@@ -652,7 +755,7 @@ export default function EpisodeList({
                                                 next.trim(),
                                             );
                                         }}
-                                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-faint opacity-0 hover:text-forest group-hover/chapter:opacity-100"
+                                        className="rounded border border-line px-1.5 py-0.5 text-[10px] text-faint hover:border-forest hover:text-forest"
                                     >
                                         名前
                                     </button>
@@ -671,18 +774,23 @@ export default function EpisodeList({
                                             }
                                             onDeleteChapter(chapter.id);
                                         }}
-                                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-faint opacity-0 hover:text-[var(--color-danger)] group-hover/chapter:opacity-100"
+                                        className="rounded border border-line px-1.5 py-0.5 text-[10px] text-faint hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
                                     >
                                         消す
                                     </button>
                                 )}
+                                </div>
                             </div>
 
                             {!(chapter && closedChapters.includes(chapter.id)) && (
                                 <ul>{items.map(renderEpisode)}</ul>
                             )}
 
-                            {items.length === 0 && (
+                            {/*
+                             * 大きい章には出さない。
+                             * 話は小さい章のほうへ入れてもらう。
+                             */}
+                            {items.length === 0 && !isBig && (
                                 <p className="px-3 py-2 text-[10px] text-faint">
                                     ここへ話をドラッグすると入ります
                                 </p>
