@@ -43,8 +43,17 @@ import type { Chapter, Episode } from "@/types";
 /**
  * 名前を直す入力欄。
  *
- * 打っている文字は、この欄が自分で持つ。
- * 上から渡すと、上が描き直るたびに巻き込まれる。
+ * ★ React に文字を持たせない。
+ *
+ *   value と useState で持たせると、1 文字ごとに
+ *   React が入力欄へ文字を書き戻す。
+ *   日本語は「h」→「は」と組み立ててから確定するので、
+ *   組み立ての途中で書き戻されると崩れて「hあ」になる。
+ *   スマホの日本語入力で特に起きやすい。
+ *
+ *   defaultValue にして、React は最初の一度だけ渡す。
+ *   打っている間、React はこの欄に触らない。
+ *   決めるとき（外れる・Enter）に、欄から読み取る。
  */
 function NameField({
     initial,
@@ -59,7 +68,7 @@ function NameField({
     onCommit: (title: string) => void;
     onCancel: () => void;
 }) {
-    const [text, setText] = useState(initial);
+    const field = useRef<HTMLInputElement>(null);
 
     /*
      * 変換中かどうか。
@@ -69,23 +78,33 @@ function NameField({
      */
     const composing = useRef(false);
 
+    /* 決めるのは一度きり。Enter のあと外れると二重になる */
+    const settled = useRef(false);
+
+    function finish(commit: boolean) {
+        if (settled.current) return;
+        settled.current = true;
+        if (commit) onCommit(field.current?.value ?? initial);
+        else onCancel();
+    }
+
     return (
         <input
+            ref={field}
             autoFocus
-            value={text}
+            defaultValue={initial}
             placeholder={placeholder}
-            onChange={(e) => setText(e.target.value)}
             onCompositionStart={() => {
                 composing.current = true;
             }}
             onCompositionEnd={() => {
                 composing.current = false;
             }}
-            onBlur={() => onCommit(text)}
+            onBlur={() => finish(true)}
             onKeyDown={(e) => {
                 if (composing.current || e.nativeEvent.isComposing) return;
-                if (e.key === "Enter") onCommit(text);
-                if (e.key === "Escape") onCancel();
+                if (e.key === "Enter") finish(true);
+                if (e.key === "Escape") finish(false);
             }}
             className={[
                 "min-w-0 flex-1 rounded border border-forest bg-canvas px-2 py-1 text-ink outline-none",
