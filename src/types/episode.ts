@@ -133,6 +133,13 @@ export function nextEpisodeStatus(status: EpisodeStatus): EpisodeStatus {
 export interface Chapter {
     id: string;
     work_id: string;
+    /**
+     * 親の章。
+     *
+     * 無ければ大きい章、あれば小さい章（節）。
+     * 「第一部 → 第一章」のように 2 段で束ねられる。
+     */
+    parent_id?: string | null;
     title: string;
     sort_order: number;
     created_at: string;

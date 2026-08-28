@@ -15,6 +15,7 @@ import DisplaySettingsForm from "@/components/settings/display-settings-form";
 import AiSettingsForm from "@/components/settings/ai-settings-form";
 import WritingLogForm from "@/components/settings/writing-log-form";
 import ManuscriptManager from "@/components/settings/manuscript-manager";
+import ChapterStructure from "@/components/settings/chapter-structure";
 import PublishSettingsForm from "@/components/settings/publish-settings-form";
 import WorkInfoForm from "@/components/settings/work-info-form";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
@@ -30,12 +31,13 @@ import type {
     WritingLog,
 } from "@/types";
 
-type Section = "info" | "display" | "manuscript" | "publish" | "ai" | "log";
+type Section = "info" | "display" | "manuscript" | "publish" | "ai" | "log" | "chapters";
 
 const SECTIONS: { key: Section; label: string; isReady: boolean }[] = [
     { key: "info", label: "基本情報", isReady: true },
     { key: "publish", label: "公開・読者設定", isReady: true },
     { key: "display", label: "表示設定", isReady: true },
+    { key: "chapters", label: "章の構成", isReady: true },
     { key: "manuscript", label: "原稿・バックアップ", isReady: true },
     { key: "log", label: "執筆ログ", isReady: true },
     { key: "ai", label: "AI補助", isReady: true },
@@ -280,6 +282,16 @@ export default function SettingsClient({ workId }: Props) {
                             onChange={(patch) => void handleChangePreferences(patch)}
                         />
                     )}
+                    {/*
+                     * 章の構成。
+                     *
+                     * 執筆画面の一覧に足すと入り組んで壊れやすいので、
+                     * ここだけで完結させている。
+                     */}
+                    {section === "chapters" && (
+                        <ChapterStructure workId={workId} />
+                    )}
+
                     {section === "manuscript" && (
                         <ManuscriptManager
                             work={work}
