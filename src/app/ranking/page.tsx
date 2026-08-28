@@ -7,6 +7,7 @@ import Footer from '@/components/layout/footer'
 import AdBanner from '@/components/layout/ad-banner'
 import Link from 'next/link'
 import NovelPopup from '@/components/novel-popup'
+import SideScroller from '@/components/common/side-scroller'
 import { serverEnv } from '@/config/env.server'
 import { clientEnv } from '@/config/env.client'
 
@@ -404,15 +405,14 @@ export default async function RankingPage({ searchParams }: Props) {
             {/* 期間 */}
             <div style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,minWidth:60,flexShrink:0,paddingTop:5,lineHeight:1.3}}>期間</div>
-              <div style={{overflowX:'auto',msOverflowStyle:'none',scrollbarWidth:'none',flex:1,minWidth:0} as any}>
-                <div style={{display:'flex',gap:6,flexWrap:'nowrap'}}>
-                  {periodOptions.filter(o=>['daily','weekly','monthly','quarterly','yearly','all'].includes(o.value)).map(o => (
-                    <Link key={o.value} href={buildUrl(o.value,novelType,serial)} className={pillClass(period===o.value)} style={pill(period===o.value)}>
-                      {o.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
+              {/* 期間もはみ出すことがある。同じ送り方に揃える */}
+              <SideScroller label="期間を送る">
+                {periodOptions.filter(o=>['daily','weekly','monthly','quarterly','yearly','all'].includes(o.value)).map(o => (
+                  <Link key={o.value} href={buildUrl(o.value,novelType,serial)} className={pillClass(period===o.value)} style={pill(period===o.value)}>
+                    {o.label}
+                  </Link>
+                ))}
+              </SideScroller>
             </div>
             {/* 特集 ＋ 長さ・区分 */}
             <div style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:14,flexWrap:'wrap'}}>
@@ -439,15 +439,18 @@ export default async function RankingPage({ searchParams }: Props) {
             {/* ジャンル：気分で探す風のボタン */}
             <div style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,minWidth:60,flexShrink:0,paddingTop:8,lineHeight:1.3}}>ジャンル</div>
-              <div style={{overflowX:'auto',msOverflowStyle:'none',scrollbarWidth:'none',flex:1,minWidth:0} as any}>
-                <div style={{display:'flex',gap:6,flexWrap:'nowrap'}}>
+              {/*
+                * 札は 15 個あり、画面の幅に収まらない。
+                * 折り返すと 2 段になって一覧が押し下げられるので、
+                * 横に送って見てもらう。矢印はその目印。
+                */}
+              <SideScroller label="ジャンルを送る">
                 {genres.map(g => (
                   <Link key={g} href={buildUrl(period,novelType,serial,1,aiMode,g)} className={pillClass(genre===g)} style={pill(genre===g)}>
                     {g}
                   </Link>
                 ))}
-                </div>
-              </div>
+              </SideScroller>
             </div>
             {/* 絞り込み */}
             <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
