@@ -186,6 +186,8 @@ function toWork(row: Record<string, unknown>): Work {
         author_note: (row.author_note as string) ?? "",
         cover_url: (row.cover_url as string | null) ?? null,
         cover_tile: (row.cover_tile as Work["cover_tile"]) ?? null,
+        /* 列を足したら、ここにも足さないと読めない */
+        cover_is_ai: (row.cover_is_ai as boolean | null) ?? false,
         /*
          * 作品の形。
          * format が空でも、投稿サイト側の novel_type があれば

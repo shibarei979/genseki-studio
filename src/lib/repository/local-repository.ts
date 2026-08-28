@@ -278,6 +278,7 @@ export const localRepository: Repository = {
             age_rating: "all",
             keywords: [],
             cover_url: null,
+            cover_is_ai: false,
             deleted_at: null,
             created_at: timestamp,
             updated_at: timestamp,

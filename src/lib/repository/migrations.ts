@@ -83,6 +83,7 @@ export function normalizeWork(row: Row): Row {
         author_note: typeof row.author_note === "string" ? row.author_note : null,
         age_rating: row.age_rating ?? "all",
         cover_url: typeof row.cover_url === "string" ? row.cover_url : null,
+        cover_is_ai: row.cover_is_ai === true,
     };
 }
 

@@ -67,7 +67,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const [profileRes, novelRes] = await Promise.all([
     user ? supabase.from('profiles').select('*').eq('user_id', user.id).single() : Promise.resolve({ data: null }),
     supabase.from('novels')
-      .select('id, title, summary, genre, tags, is_serial, published, views, author_id, created_at, novel_type, official_tags, ai_usage, cover_url, visibility, deleted_at')
+      .select('id, title, summary, genre, tags, is_serial, published, views, author_id, created_at, novel_type, official_tags, ai_usage, cover_url, cover_is_ai, visibility, deleted_at')
       .eq('id', params.id).maybeSingle(),
   ])
   const profile = profileRes.data
@@ -403,7 +403,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
               {novel.novel_type && (
                 <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'2px 8px',borderRadius:4}}>{novel.novel_type}</span>
               )}
-              {novel.ai_usage === 'full' && (
+              {novel.ai_usage === 'generated' && (
                 <span style={{fontSize:10,background:'#ede9fe',color:'#6d28d9',border:'1px solid #c4b5fd',padding:'2px 8px',borderRadius:4,fontWeight:700}}>AI作品</span>
               )}
               {(novel.official_tags||[]).map((tag:string) => (
@@ -477,6 +477,49 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
                   {coverImg && (
                     /*
+                     * 表紙を枠で囲む。
+                     *
+                     * ハンコを絵の右上に重ねるには、
+                     * 絵と同じ大きさの入れ物が要る。
+                     * 絵そのものには重ねられない。
+                     */
+                    <div style={{position:'relative', flexShrink:0, alignSelf:'flex-start', lineHeight:0}}>
+                    {novel.cover_is_ai && (
+                      /*
+                       * AI のハンコ。
+                       *
+                       * 絵を見ただけでは分からないので、
+                       * 作者の申告をそのまま出す。
+                       * 絵の上に少しはみ出させて、
+                       * 表紙の一部だと思われないようにする。
+                       */
+                      <span
+                        title="この表紙はAIを使って作られています"
+                        style={{
+                          position:'absolute',
+                          top:-8,
+                          right:-8,
+                          zIndex:1,
+                          display:'flex',
+                          alignItems:'center',
+                          justifyContent:'center',
+                          width:38,
+                          height:38,
+                          borderRadius:'50%',
+                          border:'2px solid #6d28d9',
+                          background:'rgba(255,255,255,.92)',
+                          color:'#6d28d9',
+                          fontSize:11,
+                          fontWeight:800,
+                          letterSpacing:.5,
+                          lineHeight:1,
+                          transform:'rotate(-12deg)',
+                          boxShadow:'0 1px 3px rgba(0,0,0,.18)',
+                        }}>
+                        AI
+                      </span>
+                    )}
+                    {/*
                      * 表紙。
                      *
                      * 150px では、描いた絵の細部が潰れる。
@@ -484,7 +527,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                      *
                      * 縦横は切らずに全体を出す（contain）。
                      * cover で切ると、題字や人物が欠けることがある。
-                     */
+                     */}
                     <img src={coverImg} alt={`${novel.title} 表紙`}
                       style={{
                         /*
@@ -505,6 +548,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                         flexShrink:0,
                         alignSelf:'flex-start',
                       }}/>
+                    </div>
                   )}
                 </div>
               )

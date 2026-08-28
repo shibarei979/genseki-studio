@@ -50,6 +50,14 @@ export default function WorkInfoForm({ work, onSave }: Props) {
 
     /* 表紙。あらすじの横に出る */
     const [coverUrl, setCoverUrl] = useState<string | null>(work.cover_url ?? null);
+
+    /*
+     * 表紙に AI を使ったか。
+     *
+     * 絵を見ただけでは分からないので、申告してもらう。
+     * 立てると、作品ページの表紙の右上にハンコが出る。
+     */
+    const [coverIsAi, setCoverIsAi] = useState(work.cover_is_ai === true);
     const [coverBusy, setCoverBusy] = useState(false);
     const [coverError, setCoverError] = useState("");
 
@@ -158,6 +166,7 @@ export default function WorkInfoForm({ work, onSave }: Props) {
             age_rating: ageRating,
             recommended_mode: recommendedMode,
             cover_url: coverUrl,
+            cover_is_ai: coverIsAi,
         });
         setIsSaving(false);
         setSavedMessage("保存しました");
@@ -319,13 +328,48 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                                     JPEG または PNG。作品ページで、あらすじの横に出ます。
                                 </p>
 
+                                {/*
+                                 * AI を使ったかの申告。
+                                 *
+                                 * 絵を見ただけでは見分けが付かない。
+                                 * 隠して出されるより、申告して出せるほうが
+                                 * 読む人にとって確かな情報になる。
+                                 */}
+                                <label
+                                    className={[
+                                        "mt-2 flex cursor-pointer items-start gap-2.5 rounded-md border px-2.5 py-2",
+                                        coverIsAi
+                                            ? "border-forest bg-forest-tint/40"
+                                            : "border-line bg-surface",
+                                    ].join(" ")}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={coverIsAi}
+                                        onChange={(e) =>
+                                            setCoverIsAi(e.target.checked)
+                                        }
+                                        className="mt-0.5 h-4 w-4 shrink-0"
+                                    />
+                                    <span className="min-w-0">
+                                        <span className="block text-[12px] font-medium text-ink">
+                                            この表紙は AI を使って作りました
+                                        </span>
+                                        <span className="mt-0.5 block text-[11px] leading-relaxed text-muted">
+                                            立てると、作品ページの表紙の右上に
+                                            「AI」の印が出ます。
+                                        </span>
+                                    </span>
+                                </label>
+
                                 <p className="mt-1.5 rounded-md border border-amber bg-amber-tint/30 px-2.5 py-2 text-[11px] leading-relaxed text-ink">
-                                    <strong>AIで生成した画像は使えません。</strong>
+                                    <strong>ほかの人の絵を無断で使うことはできません。</strong>
                                     <br />
-                                    自分で描いた絵、または権利者から許可を得た絵だけを
-                                    置いてください。ほかの人の絵を無断で使うことも
-                                    できません。違反が見つかった場合は、
-                                    画像の削除や作品の非公開などの対応をとることがあります。
+                                    自分で描いた絵、権利者から許可を得た絵、
+                                    または自分で AI に作らせた絵だけを置いてください。
+                                    AI を使った場合は、上の印を必ず立ててください。
+                                    違反が見つかった場合は、画像の削除や作品の非公開などの
+                                    対応をとることがあります。
                                 </p>
 
                                 {coverError && (

@@ -49,6 +49,14 @@ export interface Work {
     cover_url: string | null;
     /** 表紙の絵が無いときに出す札 */
     cover_tile?: CoverTile | null;
+    /**
+     * 表紙に AI を使ったか。
+     *
+     * 本文のほうの ai_usage とは別に持つ。
+     * 本文は自分で書き、表紙だけ AI という人がいる。
+     * ひとつにまとめると、その区別が付かない。
+     */
+    cover_is_ai?: boolean | null;
     /** 作品の形 */
     format?: WorkFormat | null;
     /** AI をどう使ったか */
