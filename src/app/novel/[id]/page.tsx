@@ -304,7 +304,18 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const chapterGroups = (chapters || []).map(ch => ({
     chapter: ch,
     episodes: allEpisodes.filter(ep => ep.chapter_id === ch.id),
-  })).filter(g => g.episodes.length > 0)
+  })).filter(g =>
+    /*
+     * 話の入っている章は出す。
+     *
+     * あわせて、子を持つ章（大きい章）も残す。
+     * 大きい章そのものには話が入らないので、
+     * 数だけで切ると消えてしまい、
+     * 中の小さい章ごと見えなくなる。
+     */
+    g.episodes.length > 0 ||
+    (chapters || []).some((c: any) => c.parent_id === g.chapter.id)
+  )
 
   function EpisodeRow({ ep }: { ep: any }) {
     const isReadEp = readEpisodeIds.has(ep.id)
