@@ -300,8 +300,10 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                                             className="pointer-events-none absolute -right-1 -top-1 h-10 w-10"
                                             style={{
                                                 transform: "rotate(-8deg)",
+                                                /* 作品ページと同じ薄さ */
+                                                opacity: 0.55,
                                                 filter:
-                                                    "drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 1px 2px rgba(0,0,0,.25))",
+                                                    "drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.18))",
                                             }}
                                         />
                                     )}

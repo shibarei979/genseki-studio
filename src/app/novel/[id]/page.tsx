@@ -511,7 +511,15 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                           width:72,
                           height:72,
                           transform:'rotate(-8deg)',
-                          filter:'drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 1px 2px rgba(0,0,0,.25))',
+                          /*
+                           * 薄くする。
+                           *
+                           * 濃いままだと表紙より先に目に入り、
+                           * 作品の顔をハンコが食ってしまう。
+                           * 見えればよいものなので、後ろへ下げる。
+                           */
+                          opacity:.55,
+                          filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.18))',
                           pointerEvents:'none',
                         }}/>
                     )}
