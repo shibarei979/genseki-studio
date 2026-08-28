@@ -181,8 +181,9 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const [{ data: legacyChapters }, { data: workChapters }] = await Promise.all([
     supabase.from('novel_chapters').select('id, title, order_num')
       .eq('novel_id', params.id),
+    /* 列は novel_id。work_id ではない */
     supabase.from('chapters').select('id, title, sort_order, parent_id')
-      .eq('work_id', params.id),
+      .eq('novel_id', params.id),
   ])
 
   const chapters = [
