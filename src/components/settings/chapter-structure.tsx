@@ -12,30 +12,24 @@ import type { Chapter, Episode } from "@/types";
  *
  * 章を 2 段にする。
  *
- *   第一部          ← 大きい章
+ *   第一部          ← 部
  *     第一章  話 3
  *     第二章  話 5
  *
- * 前の作りでは、できることが少なすぎた。
+ * 部かどうかは is_part の印で決める。
  *
- *   ・すでにある部へ、あとから章を足せない
- *   ・部の中の章を、別の部へ移せない
- *   ・章 1 つでは部にできない
- *   ・部に話数も番号も出ない
- *   ・名前の入力が、画面の上に出る小さな窓
+ * 子の数で決めていたころは、中の章がすべて出ていくと
+ * 部が消えてただの章に戻った。
+ * 作者にとって部は入れ物であって、
+ * 中身が空になった瞬間に消えるものではない。
  *
- * そのうえ押し具が薄く、触れることに気づけなかった。
- * 「操作できないもの」に見えていた。
+ * この画面でできること。
  *
- * ここでは、できることを全部その場に出す。
- * 章の 1 行ごとに「移す先」を置き、
- * どこへでも動かせるようにする。
+ *   部    作る／名前を変える／消す／並べ替える／たたむ
+ *   章    作る／名前を変える／消す／並べ替える／部を移す
  *
- * 空の部は作れない。
- * 部かどうかは「子を持つか」だけで決めているので、
- * 中身の無い部は、ただの章と区別が付かない。
- * だから部を作るときは、入れる章を選んでもらう。
- * （1 つでよい）
+ * 前の作りは「部に入れる・入れない」しかできず、
+ * しかも押し具が字だけで、触れるものだと分からなかった。
  * ============================================================
  */
 
@@ -60,10 +54,8 @@ export default function ChapterStructure({ workId }: { workId: string }) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [draft, setDraft] = useState("");
 
-    /* 部を作っている最中だけ立つ */
-    const [creating, setCreating] = useState(false);
-    const [newTitle, setNewTitle] = useState("");
-    const [picked, setPicked] = useState<string[]>([]);
+    /* たたんでいる部 */
+    const [closed, setClosed] = useState<string[]>([]);
 
     async function reload() {
         const repository = getRepository();
@@ -82,21 +74,22 @@ export default function ChapterStructure({ workId }: { workId: string }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [workId]);
 
-    /** 途中で失敗しても、理由を画面に出して元の状態へ戻す */
+    /** 途中で失敗しても、理由を画面に出して読み直す */
     async function run(what: string, job: () => Promise<void>) {
         setBusy(true);
         setFailure(null);
         try {
             await job();
-            await reload();
         } catch (error) {
             setFailure(
                 `${what}に失敗しました。${
-                    error instanceof Error ? error.message : "もう一度お試しください。"
+                    error instanceof Error
+                        ? error.message
+                        : "もう一度お試しください。"
                 }`,
             );
-            await reload();
         } finally {
+            await reload();
             setBusy(false);
         }
     }
@@ -104,13 +97,17 @@ export default function ChapterStructure({ workId }: { workId: string }) {
     const childrenOf = (parentId: string) =>
         chapters.filter((c) => c.parent_id === parentId);
 
-    /* 部＝子を持つ章。子を持たない親なしの章は、ただの章 */
-    const parts = chapters.filter(
-        (c) => !c.parent_id && childrenOf(c.id).length > 0,
-    );
-    const loose = chapters.filter(
-        (c) => !c.parent_id && childrenOf(c.id).length === 0,
-    );
+    /*
+     * 部かどうかは印で決める。
+     *
+     * 印を持たない古い章のために、子がいれば部として扱う。
+     * SQL を流す前でも画面が壊れない。
+     */
+    const isPart = (chapter: Chapter) =>
+        chapter.is_part === true || childrenOf(chapter.id).length > 0;
+
+    const parts = chapters.filter((c) => !c.parent_id && isPart(c));
+    const loose = chapters.filter((c) => !c.parent_id && !isPart(c));
 
     const countOf = (chapterId: string) =>
         episodes.filter((e) => e.chapter_id === chapterId).length;
@@ -120,31 +117,40 @@ export default function ChapterStructure({ workId }: { workId: string }) {
         countOf(parent.id) +
         childrenOf(parent.id).reduce((sum, c) => sum + countOf(c.id), 0);
 
+    const chapterCount = chapters.filter((c) => !isPart(c)).length;
+
+    /* ---------------- 手を動かすところ ---------------- */
+
+    /** 新しい部を作る。中が空でも作れる */
+    function createPart() {
+        void run("部を作るの", async () => {
+            const repository = getRepository();
+            const created = await repository.createChapter(workId, "");
+            await repository.updateChapter(created.id, { is_part: true });
+            setDraft("");
+            setEditingId(created.id);
+        });
+    }
+
+    /** 新しい章を作る。parentId を渡すと、その部の中に作る */
+    function createChapter(parentId: string | null) {
+        void run("章を作るの", async () => {
+            const repository = getRepository();
+            const created = await repository.createChapter(workId, "");
+            if (parentId) {
+                await repository.updateChapter(created.id, {
+                    parent_id: parentId,
+                });
+            }
+            setDraft("");
+            setEditingId(created.id);
+        });
+    }
+
     /** 章を、別の部へ移す（NONE ならどの部にも入れない） */
     function moveTo(chapter: Chapter, targetId: string) {
         const to = targetId === NONE ? null : targetId;
         if ((chapter.parent_id ?? null) === to) return;
-
-        /*
-         * もとの部から出ると、その部の子が 0 になることがある。
-         * 子が 0 の部は、ただの章に戻る。
-         * 黙って戻ると驚くので、先に伝える。
-         */
-        const from = chapter.parent_id;
-        if (from) {
-            const rest = childrenOf(from).filter((c) => c.id !== chapter.id);
-            if (rest.length === 0) {
-                const name =
-                    chapters.find((c) => c.id === from)?.title || "もとの部";
-                if (
-                    !window.confirm(
-                        `「${name}」の中が空になります。\n空になった部は、ただの章に戻ります。\n続けますか。`,
-                    )
-                ) {
-                    return;
-                }
-            }
-        }
 
         void run("章を移すの", async () => {
             /*
@@ -164,42 +170,21 @@ export default function ChapterStructure({ workId }: { workId: string }) {
         });
     }
 
-    /** 選んだ章で、新しい部を作る */
-    function createPart() {
-        const title = newTitle.trim();
-        if (title.length === 0 || picked.length === 0) return;
-
-        void run("部を作るの", async () => {
-            const repository = getRepository();
-
-            /*
-             * 先に器を作り、それから中身を移す。
-             *
-             * 逆にすると、行き先の無い章ができる。
-             */
-            const parent = await repository.createChapter(workId, title);
-            for (const id of picked) {
-                await repository.updateChapter(id, { parent_id: parent.id });
-            }
-
-            setCreating(false);
-            setNewTitle("");
-            setPicked([]);
-        });
-    }
-
-    /** まとめを解く。中の章は残し、束ねだけ外す */
-    function ungroup(parent: Chapter) {
+    /** 部を消す。中の章は残し、どの部にも入っていない所へ戻す */
+    function removePart(parent: Chapter) {
         const children = childrenOf(parent.id);
         if (
             !window.confirm(
-                `「${parent.title || "この部"}」のまとめを解きます。\n中の${children.length}つの章と話は残ります。`,
+                `「${parent.title || "この部"}」を消します。\n` +
+                    (children.length > 0
+                        ? `中の${children.length}つの章と話は残り、どの部にも入っていない所へ戻ります。`
+                        : "中に章はありません。"),
             )
         ) {
             return;
         }
 
-        void run("まとめを解くの", async () => {
+        void run("部を消すの", async () => {
             const repository = getRepository();
 
             /* 先に子を出してから、器を消す */
@@ -210,11 +195,30 @@ export default function ChapterStructure({ workId }: { workId: string }) {
         });
     }
 
+    /** 章を消す。中の話は残す */
+    function removeChapter(chapter: Chapter) {
+        const count = countOf(chapter.id);
+        if (
+            !window.confirm(
+                `「${chapter.title || "この章"}」を消します。\n` +
+                    (count > 0
+                        ? `中の${count}話は消えません。「章に入れていない」へ戻ります。`
+                        : "中に話はありません。"),
+            )
+        ) {
+            return;
+        }
+
+        void run("章を消すの", async () => {
+            await getRepository().deleteChapter(chapter.id);
+        });
+    }
+
     /** 名前を確定する */
     function commitName(chapter: Chapter) {
         const title = draft.trim();
         setEditingId(null);
-        if (title === chapter.title) return;
+        if (title === (chapter.title ?? "")) return;
 
         void run("名前を変えるの", async () => {
             await getRepository().updateChapter(chapter.id, { title });
@@ -225,9 +229,7 @@ export default function ChapterStructure({ workId }: { workId: string }) {
     function move(chapter: Chapter, to: -1 | 1) {
         const siblings = chapter.parent_id
             ? childrenOf(chapter.parent_id)
-            : [...parts, ...loose].sort(
-                  (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-              );
+            : chapters.filter((c) => !c.parent_id);
 
         const at = siblings.findIndex((c) => c.id === chapter.id);
         const next = at + to;
@@ -244,7 +246,7 @@ export default function ChapterStructure({ workId }: { workId: string }) {
         });
     }
 
-    /* ------------------------------------------------------------ */
+    /* ---------------- 見せるところ ---------------- */
 
     if (isLoading) {
         return (
@@ -254,48 +256,45 @@ export default function ChapterStructure({ workId }: { workId: string }) {
         );
     }
 
-    if (chapters.length === 0) {
+    /** 名前を直す入力。部にも章にも使う */
+    function NameField({
+        chapter,
+        placeholder,
+        big,
+    }: {
+        chapter: Chapter;
+        placeholder: string;
+        big?: boolean;
+    }) {
         return (
-            <p className="rounded-lg border border-line bg-surface px-5 py-10 text-center text-sm text-faint">
-                まだ章がありません。
-                <br />
-                執筆画面で章を作ると、ここでまとめられます。
-            </p>
+            <input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => commitName(chapter)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") commitName(chapter);
+                    if (e.key === "Escape") setEditingId(null);
+                }}
+                placeholder={placeholder}
+                className={[
+                    "min-w-0 flex-1 rounded border border-forest bg-canvas px-2 py-1 text-ink outline-none",
+                    big ? "text-sm font-semibold" : "text-[13px]",
+                ].join(" ")}
+            />
         );
     }
 
     /** 章 1 行。部の中でも外でも同じ形で出す */
     function ChapterRow({ chapter }: { chapter: Chapter }) {
-        const isEditing = editingId === chapter.id;
+        const editing = editingId === chapter.id;
 
         return (
-            <li className="rounded-md border border-line bg-surface px-3 py-2.5">
+            <li className="rounded-lg border border-line bg-canvas px-3 py-2.5">
                 <div className="flex items-center gap-2">
-                    {isEditing ? (
-                        <input
-                            autoFocus
-                            value={draft}
-                            onChange={(e) => setDraft(e.target.value)}
-                            onBlur={() => commitName(chapter)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") commitName(chapter);
-                                if (e.key === "Escape") setEditingId(null);
-                            }}
-                            placeholder="章の名前"
-                            className="min-w-0 flex-1 rounded border border-forest bg-canvas px-2 py-1 text-[13px] text-ink outline-none"
-                        />
+                    {editing ? (
+                        <NameField chapter={chapter} placeholder="章の名前" />
                     ) : (
-                        <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
-                            {chapter.title || (
-                                <span className="text-faint">名前のない章</span>
-                            )}
-                            <span className="ml-2 text-[11px] text-faint">
-                                {countOf(chapter.id)}話
-                            </span>
-                        </span>
-                    )}
-
-                    {!isEditing && (
                         <button
                             type="button"
                             disabled={busy}
@@ -303,17 +302,38 @@ export default function ChapterStructure({ workId }: { workId: string }) {
                                 setDraft(chapter.title ?? "");
                                 setEditingId(chapter.id);
                             }}
-                            className="shrink-0 rounded border border-line px-2 py-1 text-[11px] text-muted hover:border-forest hover:text-forest disabled:opacity-40"
+                            title="押すと名前を直せます"
+                            className="min-w-0 flex-1 truncate rounded px-1 py-0.5 text-left text-[13px] text-ink hover:bg-forest-tint/40 disabled:opacity-40"
                         >
-                            名前を変える
+                            {chapter.title || (
+                                <span className="text-faint">
+                                    名前のない章（押して付ける）
+                                </span>
+                            )}
+                            <span className="ml-2 text-[11px] text-faint">
+                                {countOf(chapter.id)}話
+                            </span>
                         </button>
                     )}
 
-                    <MoveButtons
-                        onUp={() => move(chapter, -1)}
-                        onDown={() => move(chapter, 1)}
-                        busy={busy}
-                    />
+                    {!editing && (
+                        <>
+                            <MoveButtons
+                                onUp={() => move(chapter, -1)}
+                                onDown={() => move(chapter, 1)}
+                                busy={busy}
+                            />
+                            <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => removeChapter(chapter)}
+                                title="この章を消す"
+                                className="shrink-0 rounded border border-line px-2 py-1 text-[11px] text-muted hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
+                            >
+                                消す
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 {/*
@@ -330,12 +350,13 @@ export default function ChapterStructure({ workId }: { workId: string }) {
                         value={chapter.parent_id ?? NONE}
                         disabled={busy}
                         onChange={(e) => moveTo(chapter, e.target.value)}
-                        className="min-w-0 flex-1 rounded border border-line bg-canvas px-2 py-1 text-[12px] text-ink disabled:opacity-40"
+                        className="min-w-0 flex-1 rounded border border-line bg-surface px-2 py-1 text-[12px] text-ink disabled:opacity-40"
                     >
                         <option value={NONE}>どの部にも入れない</option>
                         {parts.map((part, at) => (
                             <option key={part.id} value={part.id}>
-                                {part.title || `第${at + 1}部`}
+                                第{at + 1}部
+                                {part.title ? `　${part.title}` : ""}
                             </option>
                         ))}
                     </select>
@@ -344,15 +365,34 @@ export default function ChapterStructure({ workId }: { workId: string }) {
         );
     }
 
+    /** 「章を作る」の押し具 */
+    function AddChapter({ parentId }: { parentId: string | null }) {
+        return (
+            <button
+                type="button"
+                disabled={busy}
+                onClick={() => createChapter(parentId)}
+                className="mt-2 w-full rounded-lg border border-dashed border-line py-2 text-[11px] text-muted hover:border-forest hover:text-forest disabled:opacity-40"
+            >
+                ＋ ここに章を作る
+            </button>
+        );
+    }
+
     return (
         <div className="space-y-4">
-            <div className="rounded-lg border border-line bg-surface px-4 py-3">
-                <p className="text-xs leading-relaxed text-muted">
-                    章をいくつか束ねて、「部」にまとめられます。
+            {/* いまの形を、数で一目に */}
+            <div className="rounded-xl border border-line bg-surface px-4 py-3">
+                <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                    <Stat label="部" value={parts.length} />
+                    <Stat label="章" value={chapterCount} />
+                    <Stat label="話" value={episodes.length} />
+                </div>
+                <p className="mt-2.5 text-[11px] leading-relaxed text-muted">
+                    章を束ねて「部」にまとめられます。
+                    「第一部 → 第一章」のように 2 段で分けたいときに使います。
                     <br />
-                    「第一部 → 第一章」のように、2段で分けたいときに使います。
-                    <br />
-                    各章の「入れる部」を変えると、あとからでも移せます。
+                    名前は押すとその場で直せます。各章の「入れる部」で、あとからでも移せます。
                 </p>
             </div>
 
@@ -362,53 +402,38 @@ export default function ChapterStructure({ workId }: { workId: string }) {
                 </p>
             )}
 
-            {busy && (
-                <p className="text-[11px] text-faint">保存しています…</p>
+            {chapters.length === 0 && (
+                <p className="rounded-lg border border-line bg-surface px-5 py-8 text-center text-[12px] leading-relaxed text-faint">
+                    まだ章がありません。
+                    <br />
+                    下の「新しい部を作る」か、執筆画面から章を作れます。
+                </p>
             )}
 
             {/* 部 */}
-            {parts.map((parent, at) => (
-                <div
-                    key={parent.id}
-                    className="rounded-lg border-2 border-forest-line bg-forest-tint/20 px-4 py-3"
-                >
-                    <div className="flex items-center gap-2">
-                        {editingId === parent.id ? (
-                            <input
-                                autoFocus
-                                value={draft}
-                                onChange={(e) => setDraft(e.target.value)}
-                                onBlur={() => commitName(parent)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") commitName(parent);
-                                    if (e.key === "Escape") setEditingId(null);
-                                }}
-                                placeholder="部の名前"
-                                className="min-w-0 flex-1 rounded border border-forest bg-canvas px-2 py-1 text-sm text-ink outline-none"
-                            />
-                        ) : (
-                            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
-                                {/*
-                                 * 番号を出す。
-                                 * 名前を付けていない部を、順番で見分けられる。
-                                 */}
-                                <span className="mr-2 text-[11px] font-normal text-forest">
-                                    第{at + 1}部
-                                </span>
-                                {parent.title || (
-                                    <span className="font-normal text-faint">
-                                        名前のない部
-                                    </span>
-                                )}
-                                <span className="ml-2 text-[11px] font-normal text-faint">
-                                    {childrenOf(parent.id).length}章 /{" "}
-                                    {totalOf(parent)}話
-                                </span>
-                            </span>
-                        )}
+            {parts.map((parent, at) => {
+                const editing = editingId === parent.id;
+                const children = childrenOf(parent.id);
+                const isClosed = closed.includes(parent.id);
 
-                        {editingId !== parent.id && (
-                            <>
+                return (
+                    <div
+                        key={parent.id}
+                        className="overflow-hidden rounded-xl border border-forest-line bg-surface"
+                    >
+                        {/* 部の帯。章の行と見分けが付くように色を敷く */}
+                        <div className="flex items-center gap-2 bg-forest-tint px-3 py-2.5">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-forest text-[11px] font-bold text-white">
+                                {at + 1}
+                            </span>
+
+                            {editing ? (
+                                <NameField
+                                    chapter={parent}
+                                    placeholder="部の名前（例：第一部　旅立ち）"
+                                    big
+                                />
+                            ) : (
                                 <button
                                     type="button"
                                     disabled={busy}
@@ -416,147 +441,155 @@ export default function ChapterStructure({ workId }: { workId: string }) {
                                         setDraft(parent.title ?? "");
                                         setEditingId(parent.id);
                                     }}
-                                    className="shrink-0 rounded border border-line bg-canvas px-2 py-1 text-[11px] text-muted hover:border-forest hover:text-forest disabled:opacity-40"
+                                    title="押すと名前を直せます"
+                                    className="min-w-0 flex-1 truncate rounded px-1 py-0.5 text-left text-sm font-semibold text-ink hover:bg-canvas/60 disabled:opacity-40"
                                 >
-                                    名前を変える
+                                    {parent.title || (
+                                        <span className="font-normal text-muted">
+                                            名前のない部（押して付ける）
+                                        </span>
+                                    )}
+                                    <span className="ml-2 text-[11px] font-normal text-muted">
+                                        {children.length}章 / {totalOf(parent)}話
+                                    </span>
                                 </button>
-                                <button
-                                    type="button"
-                                    disabled={busy}
-                                    onClick={() => ungroup(parent)}
-                                    className="shrink-0 rounded border border-line bg-canvas px-2 py-1 text-[11px] text-muted hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
-                                >
-                                    まとめを解く
-                                </button>
-                                <MoveButtons
-                                    onUp={() => move(parent, -1)}
-                                    onDown={() => move(parent, 1)}
-                                    busy={busy}
-                                />
-                            </>
+                            )}
+
+                            {!editing && (
+                                <>
+                                    <MoveButtons
+                                        onUp={() => move(parent, -1)}
+                                        onDown={() => move(parent, 1)}
+                                        busy={busy}
+                                    />
+                                    <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => removePart(parent)}
+                                        title="この部を消す"
+                                        className="shrink-0 rounded border border-line bg-canvas px-2 py-1 text-[11px] text-muted hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
+                                    >
+                                        消す
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setClosed((list) =>
+                                                list.includes(parent.id)
+                                                    ? list.filter(
+                                                          (x) => x !== parent.id,
+                                                      )
+                                                    : [...list, parent.id],
+                                            )
+                                        }
+                                        aria-expanded={!isClosed}
+                                        title={isClosed ? "開く" : "たたむ"}
+                                        className="shrink-0 rounded border border-line bg-canvas px-2 py-1 text-[11px] text-muted hover:border-forest hover:text-forest"
+                                    >
+                                        <span
+                                            aria-hidden="true"
+                                            className="inline-block transition-transform"
+                                            style={{
+                                                transform: isClosed
+                                                    ? "rotate(-90deg)"
+                                                    : "none",
+                                            }}
+                                        >
+                                            ▾
+                                        </span>
+                                    </button>
+                                </>
+                            )}
+                        </div>
+
+                        {!isClosed && (
+                            <div className="px-3 py-3">
+                                {children.length === 0 ? (
+                                    <p className="rounded-lg border border-dashed border-line px-3 py-4 text-center text-[11px] text-faint">
+                                        まだ章がありません。
+                                        <br />
+                                        下から作るか、他の章の「入れる部」でここを選びます。
+                                    </p>
+                                ) : (
+                                    <ul className="space-y-2">
+                                        {children.map((child) => (
+                                            <ChapterRow
+                                                key={child.id}
+                                                chapter={child}
+                                            />
+                                        ))}
+                                    </ul>
+                                )}
+                                <AddChapter parentId={parent.id} />
+                            </div>
                         )}
                     </div>
-
-                    <ul className="mt-2.5 space-y-2">
-                        {childrenOf(parent.id).map((child) => (
-                            <ChapterRow key={child.id} chapter={child} />
-                        ))}
-                    </ul>
-                </div>
-            ))}
+                );
+            })}
 
             {/* どの部にも入っていない章 */}
-            {loose.length > 0 && (
-                <div className="rounded-lg border border-line bg-surface px-4 py-3">
-                    <p className="text-[12px] font-medium text-ink">
-                        どの部にも入っていない章
-                        <span className="ml-2 text-[11px] font-normal text-faint">
+            {(loose.length > 0 || parts.length > 0) && (
+                <div className="overflow-hidden rounded-xl border border-line bg-surface">
+                    <div className="flex items-center gap-2 bg-canvas px-3 py-2.5">
+                        <span className="text-[12px] font-medium text-ink">
+                            どの部にも入っていない章
+                        </span>
+                        <span className="text-[11px] text-faint">
                             {loose.length}章
                         </span>
-                    </p>
+                    </div>
 
-                    <ul className="mt-2.5 space-y-2">
-                        {loose.map((chapter) => (
-                            <ChapterRow key={chapter.id} chapter={chapter} />
-                        ))}
-                    </ul>
-                </div>
-            )}
-
-            {/* 新しい部を作る */}
-            {!creating ? (
-                <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                        setCreating(true);
-                        setNewTitle("");
-                        setPicked([]);
-                    }}
-                    className="w-full rounded-lg border border-dashed border-forest-line py-3 text-[12px] font-medium text-forest hover:bg-forest-tint/30 disabled:opacity-40"
-                >
-                    ＋ 新しい部を作る
-                </button>
-            ) : (
-                <div className="rounded-lg border-2 border-forest bg-surface px-4 py-3">
-                    <p className="text-[12px] font-medium text-ink">
-                        新しい部を作る
-                    </p>
-
-                    <input
-                        autoFocus
-                        value={newTitle}
-                        onChange={(e) => setNewTitle(e.target.value)}
-                        placeholder="部の名前（例：第一部　旅立ち）"
-                        className="mt-2.5 w-full rounded border border-line bg-canvas px-3 py-2 text-[13px] text-ink outline-none focus:border-forest"
-                    />
-
-                    <p className="mt-3 text-[11px] text-muted">
-                        入れる章を選びます。1つでも作れます。
-                        <br />
-                        あとから足すことも、別の部へ移すこともできます。
-                    </p>
-
-                    <ul className="mt-2 space-y-1.5">
-                        {chapters
-                            .filter((c) => childrenOf(c.id).length === 0)
-                            .map((chapter) => (
-                                <li key={chapter.id}>
-                                    <label className="flex cursor-pointer items-center gap-2.5 rounded-md border border-line px-3 py-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={picked.includes(chapter.id)}
-                                            onChange={() =>
-                                                setPicked((prev) =>
-                                                    prev.includes(chapter.id)
-                                                        ? prev.filter(
-                                                              (x) => x !== chapter.id,
-                                                          )
-                                                        : [...prev, chapter.id],
-                                                )
-                                            }
-                                            className="h-3.5 w-3.5 shrink-0"
-                                        />
-                                        <span className="min-w-0 truncate text-[13px] text-ink">
-                                            {chapter.title || "名前のない章"}
-                                            <span className="ml-2 text-[11px] text-faint">
-                                                {countOf(chapter.id)}話
-                                            </span>
-                                        </span>
-                                    </label>
-                                </li>
-                            ))}
-                    </ul>
-
-                    <div className="mt-3 flex gap-2">
-                        <button
-                            type="button"
-                            disabled={
-                                busy ||
-                                newTitle.trim().length === 0 ||
-                                picked.length === 0
-                            }
-                            onClick={createPart}
-                            className="flex-1 rounded-md bg-forest py-2 text-[12px] font-medium text-white hover:opacity-90 disabled:opacity-40"
-                        >
-                            {picked.length === 0
-                                ? "入れる章を選んでください"
-                                : newTitle.trim().length === 0
-                                  ? "部の名前を入れてください"
-                                  : `選んだ${picked.length}つで部を作る`}
-                        </button>
-                        <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => setCreating(false)}
-                            className="rounded-md border border-line px-4 py-2 text-[12px] text-muted hover:text-ink disabled:opacity-40"
-                        >
-                            やめる
-                        </button>
+                    <div className="px-3 py-3">
+                        {loose.length === 0 ? (
+                            <p className="py-2 text-center text-[11px] text-faint">
+                                すべての章が、どれかの部に入っています。
+                            </p>
+                        ) : (
+                            <ul className="space-y-2">
+                                {loose.map((chapter) => (
+                                    <ChapterRow
+                                        key={chapter.id}
+                                        chapter={chapter}
+                                    />
+                                ))}
+                            </ul>
+                        )}
+                        <AddChapter parentId={null} />
                     </div>
                 </div>
             )}
+
+            {/*
+             * 新しい部。
+             *
+             * 中が空でも作れる。
+             * 先に器を並べてから章を入れていく人がいる。
+             */}
+            <button
+                type="button"
+                disabled={busy}
+                onClick={createPart}
+                className="w-full rounded-xl border border-dashed border-forest-line py-3.5 text-[12px] font-medium text-forest hover:bg-forest-tint/40 disabled:opacity-40"
+            >
+                ＋ 新しい部を作る
+            </button>
+
+            {busy && (
+                <p className="text-center text-[11px] text-faint">
+                    保存しています…
+                </p>
+            )}
         </div>
+    );
+}
+
+/** まとめの数字 */
+function Stat({ label, value }: { label: string; value: number }) {
+    return (
+        <span className="flex items-baseline gap-1">
+            <span className="text-lg font-semibold text-ink">{value}</span>
+            <span className="text-[11px] text-faint">{label}</span>
+        </span>
     );
 }
 

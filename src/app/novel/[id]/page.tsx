@@ -182,7 +182,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
     supabase.from('novel_chapters').select('id, title, order_num')
       .eq('novel_id', params.id),
     /* 列は novel_id。work_id ではない */
-    supabase.from('chapters').select('id, title, sort_order, parent_id')
+    supabase.from('chapters').select('id, title, sort_order, parent_id, is_part')
       .eq('novel_id', params.id),
   ])
 

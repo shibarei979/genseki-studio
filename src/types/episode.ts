@@ -140,6 +140,14 @@ export interface Chapter {
      * 「第一部 → 第一章」のように 2 段で束ねられる。
      */
     parent_id?: string | null;
+    /**
+     * 部かどうかの印。
+     *
+     * 子を持つかどうかで決めていたころは、
+     * 中の章が空になると部が消えた。
+     * 作者にとって部は入れ物なので、印で持つ。
+     */
+    is_part?: boolean;
     title: string;
     sort_order: number;
     created_at: string;

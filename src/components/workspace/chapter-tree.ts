@@ -125,12 +125,23 @@ export function buildChapterGroups(
         const children = childrenOf.get(top.id) ?? [];
 
         /*
-         * 子を持たない章は、これまでどおり。
+         * 部かどうかは、印で決める。
          *
-         * 大きい章を作っていない作品が、
+         * 子の数で決めていたころは、中の章が空になると
+         * 部が消えてただの章に戻っていた。
+         *
+         * 印を持たない古い章のために、子がいれば部として扱う。
+         * SQL を流す前でも見え方が壊れない。
+         */
+        const isPart = top.is_part === true || children.length > 0;
+
+        /*
+         * 部でない章は、これまでどおり。
+         *
+         * 部を作っていない作品が、
          * 見え方も番号も変わらないのは、ここのため。
          */
-        if (children.length === 0) {
+        if (!isPart) {
             const items = episodesOf(top.id);
             groups.push({
                 chapter: top,

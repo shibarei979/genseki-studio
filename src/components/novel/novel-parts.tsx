@@ -47,6 +47,8 @@ interface ChapterGroup {
     title: string
     order_num: number
     parent_id?: string | null
+    /* 部かどうかの印。中が空でも部のまま */
+    is_part?: boolean | null
   }
   episodes: Episode[]
 }
@@ -74,13 +76,20 @@ export default function NovelParts({
   const childrenOf = (id: string) =>
     chapterGroups.filter((g) => g.chapter.parent_id === id)
 
-  const parts = chapterGroups.filter(
-    (g) => !g.chapter.parent_id && childrenOf(g.chapter.id).length > 0,
-  )
+  /*
+   * 部かどうかは印で決める。
+   *
+   * 印を持たない古い章のために、子がいれば部として扱う。
+   * SQL を流す前でも見え方が壊れない。
+   */
+  const isPart = (g: ChapterGroup) =>
+    g.chapter.is_part === true || childrenOf(g.chapter.id).length > 0
+
+  const parts = chapterGroups.filter((g) => !g.chapter.parent_id && isPart(g))
 
   /* どの部にも入っていない章 */
   const looseChapters = chapterGroups.filter(
-    (g) => !g.chapter.parent_id && childrenOf(g.chapter.id).length === 0,
+    (g) => !g.chapter.parent_id && !isPart(g),
   )
 
   const hasOther = looseChapters.length > 0 || unassignedEpisodes.length > 0
