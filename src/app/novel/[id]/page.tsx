@@ -168,9 +168,38 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
     .filter(ep => ep.is_published !== true && ep.scheduled_at && new Date(ep.scheduled_at).getTime() > nowMs)
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0] || null
 
-  const { data: chapters } = await supabase
-    .from('novel_chapters').select('id, title, order_num')
-    .eq('novel_id', params.id).order('order_num', { ascending: true })
+  /*
+   * 章の表が 2 つある。
+   *
+   *   chapters        執筆画面が使う。いまの本命（441話ぶん）
+   *   novel_chapters  昔のもの（42話ぶん）
+   *
+   * ここは novel_chapters だけを見ていたので、
+   * ほとんどの作品で章が出ていなかった。
+   * 両方を読んで、ひとつに並べる。
+   */
+  const [{ data: legacyChapters }, { data: workChapters }] = await Promise.all([
+    supabase.from('novel_chapters').select('id, title, order_num')
+      .eq('novel_id', params.id),
+    supabase.from('chapters').select('id, title, sort_order, parent_id')
+      .eq('work_id', params.id),
+  ])
+
+  const chapters = [
+    ...(workChapters || []).map((c: any) => ({
+      id: c.id as string,
+      title: c.title as string,
+      order_num: (c.sort_order as number) ?? 0,
+      /* 親を持つものが小さい章。持たないものが大きい章 */
+      parent_id: (c.parent_id as string | null) ?? null,
+    })),
+    ...(legacyChapters || []).map((c: any) => ({
+      id: c.id as string,
+      title: c.title as string,
+      order_num: (c.order_num as number) ?? 0,
+      parent_id: null as string | null,
+    })),
+  ].sort((a, b) => a.order_num - b.order_num)
 
   const epIds = (episodes || []).map(e => e.id)
   let epLikeCounts: Record<string,number>    = {}
