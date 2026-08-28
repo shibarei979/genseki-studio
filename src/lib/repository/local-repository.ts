@@ -279,6 +279,7 @@ export const localRepository: Repository = {
             keywords: [],
             cover_url: null,
             cover_is_ai: false,
+            genre_changed_at: null,
             deleted_at: null,
             created_at: timestamp,
             updated_at: timestamp,

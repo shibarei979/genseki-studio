@@ -84,6 +84,8 @@ export function normalizeWork(row: Row): Row {
         age_rating: row.age_rating ?? "all",
         cover_url: typeof row.cover_url === "string" ? row.cover_url : null,
         cover_is_ai: row.cover_is_ai === true,
+        genre_changed_at:
+            typeof row.genre_changed_at === "string" ? row.genre_changed_at : null,
     };
 }
 

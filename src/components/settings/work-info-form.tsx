@@ -34,15 +34,26 @@ import type {
 import {
     AGE_RATING_DESCRIPTION,
     AGE_RATING_LABEL,
-    GENRES_SELECTABLE,
+    selectableGenres,
 } from "@/types";
 
 interface Props {
     work: Work;
+    /*
+     * 公開しているか。
+     *
+     * 公開の設定は別の表にあるので、外から渡してもらう。
+     * ここで読み直すと、開くたびに問い合わせが 1 つ増える。
+     */
+    isPublished?: boolean;
     onSave: (patch: Partial<Work>) => Promise<void>;
 }
 
-export default function WorkInfoForm({ work, onSave }: Props) {
+export default function WorkInfoForm({
+    work,
+    isPublished = false,
+    onSave,
+}: Props) {
     const [title, setTitle] = useState(work.title);
     const [catchphrase, setCatchphrase] = useState(work.catchphrase ?? "");
     const [genre, setGenre] = useState(work.genre);
@@ -101,6 +112,34 @@ export default function WorkInfoForm({ work, onSave }: Props) {
      */
     const [authorNote] = useState(work.author_note ?? "");
     const [ageRating, setAgeRating] = useState<AgeRating>(work.age_rating);
+
+    /*
+     * ジャンルを変えられるか。
+     *
+     * 公開したあとは、週に 1 回まで。
+     * ランキングの空いているジャンルへ移し、
+     * 上位に出たらまた戻す、という使い方ができてしまう。
+     * 読む人にとっては、探した棚に無い作品が増えるだけになる。
+     *
+     * 公開する前は何度でも変えられる。
+     * 決めかねている段階で縛る理由がない。
+     */
+    const lastGenreChange = work.genre_changed_at
+        ? new Date(work.genre_changed_at)
+        : null;
+
+    const nextGenreChangeAt =
+        lastGenreChange && !Number.isNaN(lastGenreChange.getTime())
+            ? new Date(lastGenreChange.getTime() + 7 * 24 * 60 * 60 * 1000)
+            : null;
+
+    const genreLocked = Boolean(
+        isPublished && nextGenreChangeAt && nextGenreChangeAt > new Date(),
+    );
+
+    const nextGenreChange = nextGenreChangeAt
+        ? `${nextGenreChangeAt.getFullYear()}年${nextGenreChangeAt.getMonth() + 1}月${nextGenreChangeAt.getDate()}日`
+        : "";
 
     /*
      * すすめる読む向き。
@@ -164,6 +203,14 @@ export default function WorkInfoForm({ work, onSave }: Props) {
             summary: summary.trim(),
             author_note: authorNote.trim() || null,
             age_rating: ageRating,
+            /*
+             * ジャンルが変わったときだけ、日を打ち直す。
+             * ほかの項目を直しただけで数え直すと、
+             * 題名を直すたびに 1 週間待たされる。
+             */
+            ...(genre !== work.genre
+                ? { genre_changed_at: new Date().toISOString() }
+                : {}),
             recommended_mode: recommendedMode,
             cover_url: coverUrl,
             cover_is_ai: coverIsAi,
@@ -231,10 +278,12 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                         <select
                             id="info-genre"
                             value={genre}
+                            disabled={genreLocked}
                             onChange={(e) => setGenre(e.target.value)}
                             className={[
                                 "w-full rounded-md border bg-surface px-3 py-2 text-sm outline-none focus:border-forest",
                                 isBlank.genre ? blankClass : "border-line",
+                                genreLocked ? "opacity-50" : "",
                             ].join(" ")}
                         >
                             {/* まだ決めていない状態を選べるようにする */}
@@ -243,13 +292,37 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                              * 昔のジャンルは出さない。
                              * 既にそれで出している作品はそのままだが、
                              * これから選ぶ人には新しい分け方で選んでもらう。
+                             *
+                             * BL・GL は R18 のときだけ出す。
+                             * いま選んでいるものは、区分を変えても消さない。
                              */}
-                            {GENRES_SELECTABLE.map((g) => (
+                            {selectableGenres(ageRating, work.genre).map((g) => (
                                 <option key={g} value={g}>
                                     {g}
                                 </option>
                             ))}
                         </select>
+
+                        {genreLocked ? (
+                            <p className="mt-1.5 rounded-md border border-line bg-canvas px-2.5 py-2 text-[11px] leading-relaxed text-muted">
+                                公開したあとのジャンルは、週に1回まで変えられます。
+                                <br />
+                                次に変えられるのは <strong>{nextGenreChange}</strong> からです。
+                            </p>
+                        ) : (
+                            isPublished && (
+                                <p className="mt-1.5 text-[11px] text-faint">
+                                    公開中の作品です。ジャンルを変えると、
+                                    次に変えられるのは1週間後になります。
+                                </p>
+                            )
+                        )}
+
+                        {ageRating !== "r18" && (
+                            <p className="mt-1.5 text-[11px] text-faint">
+                                BL・GL は、年齢の区分を R18 にすると選べます。
+                            </p>
+                        )}
                     </Field>
 
                     {/*

@@ -254,7 +254,16 @@ export default function SettingsClient({ workId }: Props) {
                 </aside>
 
                 <main className="min-w-0 flex-1">
-                    {section === "info" && <WorkInfoForm work={work} onSave={handleSaveWork} />}
+                    {section === "info" && (
+                        <WorkInfoForm
+                            work={work}
+                            /* 下書きのうちは、ジャンルを何度でも変えられる */
+                            isPublished={
+                                (publish?.visibility ?? "draft") !== "draft"
+                            }
+                            onSave={handleSaveWork}
+                        />
+                    )}
                     {section === "publish" && (
                         <PublishSettingsForm
                             work={work}

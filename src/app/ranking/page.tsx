@@ -363,7 +363,7 @@ export default async function RankingPage({ searchParams }: Props) {
     { value:'bookmark_rate',  label:'保存率' },
     { value:'newbie_focus',   label:'新人注目' },
   ]
-  const genres = ['全て','オールジャンル','異世界','ファンタジー','SF','恋愛','学園','ミステリー','ホラー','歴史・時代','日常','アクション','コメディ','その他']
+  const genres = ['全て','オールジャンル','異世界','ファンタジー','SF','恋愛','学園','ミステリー','ホラー','歴史・時代','日常','アクション','コメディ','文芸','その他']
   const typeOptions   = [{ value:'全て',label:'全て' },{ value:'長編',label:'長編' },{ value:'短編',label:'短編' }]
   const serialOptions = [{ value:'all',label:'すべて' },{ value:'serial',label:'連載中' },{ value:'complete',label:'完結' },{ value:'new',label:'新作' }]
 

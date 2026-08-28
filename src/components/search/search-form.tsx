@@ -11,7 +11,7 @@ import Link from 'next/link'
  * 昔の「ファンタジー」「異世界」で出している作品も
  * 拾えるようにしているので、ここには出さない。
  */
-const GENRES_BASE = ['オールジャンル','ハイファンタジー','異世界ファンタジー','ローファンタジー','SF','恋愛','学園','ミステリー','ホラー','歴史・時代','日常','アクション','コメディ','その他']
+const GENRES_BASE = ['オールジャンル','ハイファンタジー','異世界ファンタジー','ローファンタジー','SF','恋愛','学園','ミステリー','ホラー','歴史・時代','日常','アクション','コメディ','文芸','その他']
 
 const MOODS = [
   { emoji: '💘', label: '胸きゅんしたい',      tags: ['恋愛','ときめき','胸キュン','片思い','ラブコメ'] },
@@ -80,7 +80,12 @@ export default function SearchForm({
   defaultContest='', contests=[]
 }: Props) {
   const router = useRouter()
-  const GENRES = ageVerified ? [...GENRES_BASE, '官能'] : GENRES_BASE
+  /*
+   * BL・GL と官能は、年齢を確かめた人にだけ出す。
+   * 作品の側でも R18 のときしか選べないので、
+   * 見せても選べる作品が無い。
+   */
+  const GENRES = ageVerified ? [...GENRES_BASE, 'BL', 'GL', '官能'] : GENRES_BASE
 
   const [q,                  setQ]                  = useState(defaultQ)
   const [author,             setAuthor]             = useState(defaultAuthor)

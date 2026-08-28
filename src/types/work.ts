@@ -62,6 +62,14 @@ export interface Work {
     /** AI をどう使ったか */
     ai_usage?: AiUsage | null;
     /**
+     * ジャンルを最後に変えた日時。
+     *
+     * 公開したあとのジャンルは、週に 1 回までしか変えられない。
+     * 上位に出るジャンルへ移し替える使い方を防ぐため。
+     * 一度も変えていなければ null。
+     */
+    genre_changed_at?: string | null;
+    /**
      * ゴミ箱に入った日時。null なら生きている。
      * 消す操作をすぐ本当の削除にしない。
      * 書いたものを取り違えて消したときに戻せないのは致命的なので。
@@ -209,6 +217,18 @@ export const GENRES = [
     "日常",
     "アクション",
     "コメディ",
+    "文芸",
+
+    /*
+     * BL・GL は R18 の作品でだけ選べる。
+     *
+     * 全年齢の棚にこの 2 つを並べると、
+     * 探している人にも探していない人にも
+     * 意図と違う出方をする。
+     */
+    "BL",
+    "GL",
+
     "その他",
 
     /*
@@ -223,7 +243,30 @@ export const GENRES = [
 ] as const;
 
 /** 新しく選べるジャンル。昔のものは出さない */
-export const GENRES_SELECTABLE = GENRES.slice(0, 13);
+export const GENRES_SELECTABLE = GENRES.slice(0, 16);
+
+/**
+ * R18 の作品でだけ選べるジャンル。
+ *
+ * 年齢の区分を変えたときに、
+ * 選べないジャンルが残ることがある。
+ * そのときも消さずに出す。
+ * 勝手に別のジャンルへ移すほうが、作者を驚かせる。
+ */
+export const GENRES_R18_ONLY: string[] = ["BL", "GL"];
+
+/** その年齢区分で選べるジャンル */
+export function selectableGenres(
+    ageRating: AgeRating,
+    current?: string,
+): string[] {
+    return GENRES_SELECTABLE.filter(
+        (genre) =>
+            !GENRES_R18_ONLY.includes(genre) ||
+            ageRating === "r18" ||
+            genre === current,
+    );
+}
 
 /**
  * 昔のジャンルと、新しいジャンルの対応。
@@ -274,6 +317,10 @@ export const GENRE_COLOR: Record<string, string> = {
     日常: "#efc23f",
     アクション: "#d9432f",
     コメディ: "#f5d040",
+    /* 文芸は落ち着いた藍鼠。派手な色だと棚の中で浮く */
+    文芸: "#5a6b7d",
+    BL: "#4a90d9",
+    GL: "#e07aa8",
     その他: "#8a8f93",
 
     /*

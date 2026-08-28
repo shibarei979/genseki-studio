@@ -26,6 +26,8 @@ export {
     formatWorkState,
     GENRES,
     GENRES_SELECTABLE,
+    GENRES_R18_ONLY,
+    selectableGenres,
     GENRE_LEGACY_MATCH,
     GENRE_COLOR,
     genreColor,
