@@ -618,7 +618,12 @@ export default async function ReaderHome() {
    * 絵のあるものだけを、中央へ回す。
    */
   const boardNotices = (annRows || [])
-    .filter((a: any) => a.image_url)
+    /*
+     * 絵で絞らない。
+     *
+     * 絞ると、絵を付けていない日は欄ごと消える。
+     * 絵が無いものは、題名だけの札で出す。
+     */
     .slice(0, 3)
     .map((a: any) => ({
       id: String(a.id),

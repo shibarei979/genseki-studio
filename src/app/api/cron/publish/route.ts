@@ -107,6 +107,22 @@ export async function GET(request: Request) {
          */
         const novelIds = Array.from(new Set(due.map((row) => row.novel_id)));
         if (novelIds.length > 0) {
+            /*
+             * 公開の印は 2 つある。
+             *
+             *   published   古い印
+             *   visibility  いまの本命（draft / limited / public）
+             *
+             * published だけ立てても、visibility が draft のままだと
+             * 作品ページが読めない。両方そろえる。
+             */
+            await admin
+                .from("novels")
+                .update({ published: true, visibility: "public" })
+                .in("id", novelIds)
+                .eq("visibility", "draft");
+
+            /* 古い印だけ落ちているものも拾う */
             await admin
                 .from("novels")
                 .update({ published: true })
