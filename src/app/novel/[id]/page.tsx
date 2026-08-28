@@ -565,7 +565,6 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                */
               <NovelParts
                 novelId={params.id}
-                novelTitle={novel.title}
                 chapterGroups={chapterGroups}
                 unassignedEpisodes={unassignedEpisodes}
                 readEpisodeIds={Array.from(readEpisodeIds)}
