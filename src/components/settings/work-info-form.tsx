@@ -294,7 +294,7 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                                     {coverIsAi && (
                                         <span
                                             title="この表紙はAIを使って作られています"
-                                            className="absolute -right-2 -top-2 flex h-7 w-7 -rotate-12 items-center justify-center rounded-full border-2 text-[9px] font-extrabold leading-none shadow-sm"
+                                            className="absolute right-1.5 top-1.5 flex h-7 w-7 -rotate-12 items-center justify-center rounded-full border-2 text-[9px] font-extrabold leading-none shadow"
                                             style={{
                                                 borderColor: "#6d28d9",
                                                 background: "rgba(255,255,255,.92)",

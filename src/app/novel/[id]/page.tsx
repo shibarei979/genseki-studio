@@ -490,15 +490,17 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                        *
                        * 絵を見ただけでは分からないので、
                        * 作者の申告をそのまま出す。
-                       * 絵の上に少しはみ出させて、
-                       * 表紙の一部だと思われないようにする。
+                       *
+                       * 絵の外へ出すと、余白のある表紙では
+                       * どこに付いているのか分かりにくい。
+                       * 絵の右上に被せて、表紙と一緒に見えるようにする。
                        */
                       <span
                         title="この表紙はAIを使って作られています"
                         style={{
                           position:'absolute',
-                          top:-8,
-                          right:-8,
+                          top:8,
+                          right:8,
                           zIndex:1,
                           display:'flex',
                           alignItems:'center',
@@ -514,7 +516,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                           letterSpacing:.5,
                           lineHeight:1,
                           transform:'rotate(-12deg)',
-                          boxShadow:'0 1px 3px rgba(0,0,0,.18)',
+                          boxShadow:'0 1px 4px rgba(0,0,0,.28)',
                         }}>
                         AI
                       </span>
