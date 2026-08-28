@@ -8,7 +8,7 @@ import WorkPopupFlag from '@/components/home/work-popup-flag'
 import ShelfCardPopup from '@/components/home/shelf-card-popup'
 import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
-import ReaderNoticeBoard from '@/components/home/reader-notice-board'
+import HomeBannerCarousel from '@/components/home/home-banner-carousel'
 import ReaderHero from '@/components/home/reader-hero'
 import ShelfNav from '@/components/home/shelf-nav'
 import BirthdateNotice from '@/components/birthdate-notice'
@@ -788,6 +788,19 @@ export default async function ReaderHome() {
             />
 
             {/*
+             * 流れる帯。
+             *
+             * コンテストと運営のお知らせの絵をここで流す。
+             * 執筆向けのホームと同じ仕組みをそのまま使う。
+             *
+             * 作品を見終えた先に置く。
+             * 上に置くと、本を探しに来た人の邪魔になる。
+             */}
+            <div className="rh_banner">
+              <HomeBannerCarousel contests={sidebarContests} />
+            </div>
+
+            {/*
              * 完結した作品。
              *
              * 数が揃うまでは出さない。
@@ -801,16 +814,6 @@ export default async function ReaderHome() {
                 moreHref="/search?serial=completed"
               />
             )}
-            {/*
-             * コンテストとお知らせ。
-             *
-             * 作品の一覧を見終えた先に置く。
-             * 上に置くと、本を探しに来た人の邪魔になる。
-             */}
-            <ReaderNoticeBoard
-              contests={sidebarContests}
-              notices={boardNotices}
-            />
             </div>
 
             <HomeEffects pools={{ pickupPool, newReleasePool }} />

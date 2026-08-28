@@ -936,3 +936,9 @@
         color-mix(in srgb, var(--main-color-3) 4%, transparent)
     );
 }
+
+/* 流れる帯。一覧と同じ幅にそろえる */
+.reader-home .rh_banner {
+    width: min(1100px, 92%);
+    margin: 22px auto 0;
+}
