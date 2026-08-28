@@ -57,7 +57,7 @@ import ObiBelt from '@/components/novel/obi-belt'
 import ExportButton from '@/components/novel/export-button'
 import { calcQualityScore } from '@/lib/quality-score'
 import FollowButton from '@/components/follow-button'
-import ChapterAccordion from '@/components/novel/chapter-accordion'
+import NovelParts from '@/components/novel/novel-parts'
 
 export default async function NovelPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -558,8 +558,14 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                 allEpisodes.map((ep) => <EpisodeRow key={ep.id} ep={ep} />)
               )
             ) : (
-              <ChapterAccordion
+              /*
+               * 部があれば、部ごとに切り替える目次を出す。
+               * 部を作っていない作品は、この中で
+               * これまでどおりの目次に素通りする。
+               */
+              <NovelParts
                 novelId={params.id}
+                novelTitle={novel.title}
                 chapterGroups={chapterGroups}
                 unassignedEpisodes={unassignedEpisodes}
                 readEpisodeIds={Array.from(readEpisodeIds)}
