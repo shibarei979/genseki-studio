@@ -277,12 +277,35 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                     <Field label="表紙" htmlFor="info-cover">
                         <div className="flex items-start gap-3">
                             {coverUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                    src={coverUrl}
-                                    alt="表紙"
-                                    className="w-24 shrink-0 rounded-md border border-line object-contain"
-                                />
+                                /*
+                                 * 表紙の見本。
+                                 *
+                                 * 印を立てたとき、実際にどう出るかを
+                                 * ここで見せる。作品ページを開き直して
+                                 * 確かめるのでは、立てるのをためらう。
+                                 */
+                                <div className="relative w-24 shrink-0">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={coverUrl}
+                                        alt="表紙"
+                                        className="w-full rounded-md border border-line object-contain"
+                                    />
+                                    {coverIsAi && (
+                                        <span
+                                            title="この表紙はAIを使って作られています"
+                                            className="absolute -right-2 -top-2 flex h-7 w-7 -rotate-12 items-center justify-center rounded-full border-2 text-[9px] font-extrabold leading-none shadow-sm"
+                                            style={{
+                                                borderColor: "#6d28d9",
+                                                background: "rgba(255,255,255,.92)",
+                                                color: "#6d28d9",
+                                                letterSpacing: ".5px",
+                                            }}
+                                        >
+                                            AI
+                                        </span>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="flex h-32 w-24 shrink-0 items-center justify-center rounded-md border border-dashed border-line text-[10px] text-faint">
                                     まだ無し
@@ -358,6 +381,8 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                                         <span className="mt-0.5 block text-[11px] leading-relaxed text-muted">
                                             立てると、作品ページの表紙の右上に
                                             「AI」の印が出ます。
+                                            {!coverUrl &&
+                                                "（表紙を入れると、左に見本が出ます）"}
                                         </span>
                                     </span>
                                 </label>
@@ -367,7 +392,6 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                                     <br />
                                     自分で描いた絵、権利者から許可を得た絵、
                                     または自分で AI に作らせた絵だけを置いてください。
-                                    AI を使った場合は、上の印を必ず立ててください。
                                     違反が見つかった場合は、画像の削除や作品の非公開などの
                                     対応をとることがあります。
                                 </p>
