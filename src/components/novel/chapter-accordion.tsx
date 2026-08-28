@@ -13,7 +13,13 @@ interface Episode {
 }
 
 interface ChapterGroup {
-  chapter: { id: string; title: string; order_num: number }
+  chapter: {
+    id: string
+    title: string
+    order_num: number
+    /* 親を持たない章が大きい章。持つものが小さい章 */
+    parent_id?: string | null
+  }
   episodes: Episode[]
 }
 
@@ -47,6 +53,17 @@ export default function ChapterAccordion({
   )
   const readSet = new Set(readEpisodeIds)
 
+  /*
+   * 章を 2 段に束ねる。
+   *
+   * 親を持たない章が大きい章。
+   * 大きい章を作っていない作品では、
+   * すべてが親なしなので、これまでと同じ見え方になる。
+   */
+  const bigGroups = chapterGroups.filter((g) => !g.chapter.parent_id)
+  const childrenOf = (id: string) =>
+    chapterGroups.filter((g) => g.chapter.parent_id === id)
+
   function toggle(id: string) {
     setOpenIds(prev => {
       const next = new Set(Array.from(prev))
@@ -78,9 +95,13 @@ export default function ChapterAccordion({
     )
   }
 
-  return (
-    <>
-      {chapterGroups.map(({ chapter, episodes: chEps }) => {
+  /**
+   * 小さい章 1 つぶんを描く。
+   *
+   * これまでの見た目そのまま。
+   * 大きい章の中でも、外でも同じ形で出す。
+   */
+  function renderChapter({ chapter, episodes: chEps }: ChapterGroup) {
         const isOpen = openIds.has(chapter.id)
         const readInChapter = chEps.filter(ep => readSet.has(ep.id)).length
         return (
@@ -114,6 +135,54 @@ export default function ChapterAccordion({
                 chEps.map((ep) => <EpisodeRow key={ep.id} ep={ep} />)
               )
             )}
+          </div>
+        )
+  }
+
+  return (
+    <>
+      {bigGroups.map((group) => {
+        const children = childrenOf(group.chapter.id)
+
+        /*
+         * 子を持たない章は、いままでどおり。
+         *
+         * 大きい章を作っていない作品では、
+         * すべてがこちらを通る。見え方は変わらない。
+         */
+        if (children.length === 0) return renderChapter(group)
+
+        const isOpen = openIds.has(group.chapter.id)
+        const total = children.reduce((sum, c) => sum + c.episodes.length, 0)
+
+        return (
+          <div key={group.chapter.id} style={{
+            border:'2px solid var(--color-brand)',
+            borderRadius:10,
+            overflow:'hidden',
+            marginBottom:10,
+          }}>
+            <button
+              onClick={() => toggle(group.chapter.id)}
+              style={{
+                width:'100%', padding:'11px 14px',
+                background:'var(--color-brand)', border:'none', cursor:'pointer',
+                display:'flex', alignItems:'center', gap:8, textAlign:'left',
+              }}>
+              <span style={{fontSize:14,fontWeight:700,color:'var(--color-text-inverse, #fff)'}}>
+                {group.chapter.title || '大きい章'}
+              </span>
+              <span style={{fontSize:11,color:'rgba(255,255,255,.8)'}}>
+                （{children.length}章 / {total}話）
+              </span>
+              <div style={{flex:1}}/>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform .2s', flexShrink:0}}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+
+            {isOpen && children.map((child) => renderChapter(child))}
           </div>
         )
       })}
