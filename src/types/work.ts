@@ -248,23 +248,20 @@ export const GENRES_SELECTABLE = GENRES.slice(0, 16);
 /**
  * R18 の作品でだけ選べるジャンル。
  *
- * 年齢の区分を変えたときに、
- * 選べないジャンルが残ることがある。
- * そのときも消さずに出す。
- * 勝手に別のジャンルへ移すほうが、作者を驚かせる。
+ * 年齢の区分を R18 から下げたときは、
+ * このジャンルを外して選び直してもらう。
+ * 残したままだと、全年齢の棚に BL・GL が並ぶ。
+ *
+ * こちらで別のジャンルへ移し替えることはしない。
+ * どこへ入れるかは作者が決めるものなので、
+ * 空にして選び直してもらう。
  */
 export const GENRES_R18_ONLY: string[] = ["BL", "GL"];
 
 /** その年齢区分で選べるジャンル */
-export function selectableGenres(
-    ageRating: AgeRating,
-    current?: string,
-): string[] {
+export function selectableGenres(ageRating: AgeRating): string[] {
     return GENRES_SELECTABLE.filter(
-        (genre) =>
-            !GENRES_R18_ONLY.includes(genre) ||
-            ageRating === "r18" ||
-            genre === current,
+        (genre) => !GENRES_R18_ONLY.includes(genre) || ageRating === "r18",
     );
 }
 

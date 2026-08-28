@@ -34,6 +34,7 @@ import type {
 import {
     AGE_RATING_DESCRIPTION,
     AGE_RATING_LABEL,
+    GENRES_R18_ONLY,
     selectableGenres,
 } from "@/types";
 
@@ -133,8 +134,21 @@ export default function WorkInfoForm({
             ? new Date(lastGenreChange.getTime() + 7 * 24 * 60 * 60 * 1000)
             : null;
 
+    /*
+     * 年齢の区分を下げたせいで、ジャンルを選び直してもらう状態。
+     *
+     * こちらの都合で外させたので、
+     * 週 1 回の縛りには数えない。
+     * 数えると、選び直せないまま空になって公開が続く。
+     */
+    const mustReselectGenre =
+        GENRES_R18_ONLY.includes(work.genre) && ageRating !== "r18";
+
     const genreLocked = Boolean(
-        isPublished && nextGenreChangeAt && nextGenreChangeAt > new Date(),
+        isPublished &&
+            !mustReselectGenre &&
+            nextGenreChangeAt &&
+            nextGenreChangeAt > new Date(),
     );
 
     const nextGenreChange = nextGenreChangeAt
@@ -208,7 +222,7 @@ export default function WorkInfoForm({
              * ほかの項目を直しただけで数え直すと、
              * 題名を直すたびに 1 週間待たされる。
              */
-            ...(genre !== work.genre
+            ...(genre !== work.genre && !mustReselectGenre
                 ? { genre_changed_at: new Date().toISOString() }
                 : {}),
             recommended_mode: recommendedMode,
@@ -296,7 +310,7 @@ export default function WorkInfoForm({
                              * BL・GL は R18 のときだけ出す。
                              * いま選んでいるものは、区分を変えても消さない。
                              */}
-                            {selectableGenres(ageRating, work.genre).map((g) => (
+                            {selectableGenres(ageRating).map((g) => (
                                 <option key={g} value={g}>
                                     {g}
                                 </option>
@@ -318,10 +332,21 @@ export default function WorkInfoForm({
                             )
                         )}
 
-                        {ageRating !== "r18" && (
-                            <p className="mt-1.5 text-[11px] text-faint">
-                                BL・GL は、年齢の区分を R18 にすると選べます。
+                        {mustReselectGenre ? (
+                            <p className="mt-1.5 rounded-md border border-amber bg-amber-tint/30 px-2.5 py-2 text-[11px] leading-relaxed text-ink">
+                                <strong>ジャンルを選び直してください。</strong>
+                                <br />
+                                「{work.genre}」は R18 の作品だけのジャンルです。
+                                年齢の区分を下げたので、選べなくなりました。
+                                <br />
+                                この選び直しは、週1回の数には入りません。
                             </p>
+                        ) : (
+                            ageRating !== "r18" && (
+                                <p className="mt-1.5 text-[11px] text-faint">
+                                    BL・GL は、年齢の区分を R18 にすると選べます。
+                                </p>
+                            )
                         )}
                     </Field>
 
@@ -551,7 +576,23 @@ export default function WorkInfoForm({
                                 <button
                                     key={key}
                                     type="button"
-                                    onClick={() => setAgeRating(key)}
+                                    onClick={() => {
+                                        setAgeRating(key);
+                                        /*
+                                         * R18 を外したら、BL・GL も外す。
+                                         *
+                                         * この 2 つは R18 の作品だけのもの。
+                                         * 残したまま全年齢の棚に並ぶと、
+                                         * 探している人にも探していない人にも
+                                         * 意図と違う出方をする。
+                                         */
+                                        if (
+                                            key !== "r18" &&
+                                            GENRES_R18_ONLY.includes(genre)
+                                        ) {
+                                            setGenre("");
+                                        }
+                                    }}
                                     className={[
                                         "rounded-md border px-3 py-2 text-sm",
                                         ageRating === key
