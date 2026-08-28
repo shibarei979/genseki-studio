@@ -292,18 +292,18 @@ export default function WorkInfoForm({ work, onSave }: Props) {
                                         className="w-full rounded-md border border-line object-contain"
                                     />
                                     {coverIsAi && (
-                                        <span
-                                            title="この表紙はAIを使って作られています"
-                                            className="absolute right-1.5 top-1.5 flex h-7 w-7 -rotate-12 items-center justify-center rounded-full border-2 text-[9px] font-extrabold leading-none shadow"
+                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                        <img
+                                            src="/images/ai-cover-stamp.png"
+                                            alt="この表紙はAI画像を使っています"
+                                            /* 作品ページと同じ見え方。大きさだけ表紙に合わせる */
+                                            className="pointer-events-none absolute -right-1 -top-1 h-10 w-10"
                                             style={{
-                                                borderColor: "#6d28d9",
-                                                background: "rgba(255,255,255,.92)",
-                                                color: "#6d28d9",
-                                                letterSpacing: ".5px",
+                                                transform: "rotate(-8deg)",
+                                                filter:
+                                                    "drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 1px 2px rgba(0,0,0,.25))",
                                             }}
-                                        >
-                                            AI
-                                        </span>
+                                        />
                                     )}
                                 </div>
                             ) : (

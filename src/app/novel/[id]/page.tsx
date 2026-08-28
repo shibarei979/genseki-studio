@@ -491,35 +491,29 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                        * 絵を見ただけでは分からないので、
                        * 作者の申告をそのまま出す。
                        *
-                       * 絵の外へ出すと、余白のある表紙では
-                       * どこに付いているのか分かりにくい。
-                       * 絵の右上に被せて、表紙と一緒に見えるようにする。
+                       * 右上の角に、少しだけはみ出して重ねる。
+                       * 中へ入れきると表紙の絵を隠しすぎ、
+                       * 外へ出しきると表紙と関わりが無く見える。
+                       *
+                       * 暗い表紙では赤が沈むので、
+                       * 白いふちを回して読めるようにする。
                        */
-                      <span
-                        title="この表紙はAIを使って作られています"
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src="/images/ai-cover-stamp.png"
+                        alt="この表紙はAI画像を使っています"
+                        title="この表紙はAI画像を使っています"
                         style={{
                           position:'absolute',
-                          top:8,
-                          right:8,
+                          top:-6,
+                          right:-6,
                           zIndex:1,
-                          display:'flex',
-                          alignItems:'center',
-                          justifyContent:'center',
-                          width:38,
-                          height:38,
-                          borderRadius:'50%',
-                          border:'2px solid #6d28d9',
-                          background:'rgba(255,255,255,.92)',
-                          color:'#6d28d9',
-                          fontSize:11,
-                          fontWeight:800,
-                          letterSpacing:.5,
-                          lineHeight:1,
-                          transform:'rotate(-12deg)',
-                          boxShadow:'0 1px 4px rgba(0,0,0,.28)',
-                        }}>
-                        AI
-                      </span>
+                          width:72,
+                          height:72,
+                          transform:'rotate(-8deg)',
+                          filter:'drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 1px 2px rgba(0,0,0,.25))',
+                          pointerEvents:'none',
+                        }}/>
                     )}
                     {/*
                      * 表紙。
