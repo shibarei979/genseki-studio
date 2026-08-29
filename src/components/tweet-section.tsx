@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { hasSupabase } from '@/config/env.client'
 import { createClient } from '@/lib/supabase/client'
 import { useLoginRequired } from '@/hooks/use-login-required'
+import { loadBlockedIds, loadMutedIds } from '@/lib/social/blocks'
 
 interface Tweet {
   id: string
@@ -310,6 +311,28 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
 
       const retry = await plain
       tweetsData = (retry.data ?? []).map((row: any) => ({ ...row, topic: null }))
+    }
+
+    /*
+     * ミュートとブロックした相手のつぶやきを落とす。
+     *
+     * 読み終えてから落とす。
+     * 問い合わせの側で外そうとすると、相手が多いときに
+     * URL が長くなりすぎて通らないことがある。
+     *
+     * 落とすだけで、「隠しました」とは出さない。
+     * 出すと、そこに誰かが居たことが分かってしまう。
+     */
+    if (currentUserId && tweetsData) {
+      const [muted, blocked] = await Promise.all([
+        loadMutedIds(supabase, currentUserId),
+        loadBlockedIds(supabase, currentUserId),
+      ])
+      if (muted.size > 0 || blocked.size > 0) {
+        tweetsData = tweetsData.filter(
+          (row: any) => !muted.has(row.user_id) && !blocked.has(row.user_id),
+        )
+      }
     }
 
     if (!tweetsData || tweetsData.length === 0) { setTweets([]); setLoading(false); return }

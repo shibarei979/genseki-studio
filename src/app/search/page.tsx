@@ -9,6 +9,7 @@ import AdBanner from '@/components/layout/ad-banner'
 import Link from 'next/link'
 import NovelPopup from '@/components/novel-popup'
 import SearchForm from '@/components/search/search-form'
+import { loadBlockedIds } from '@/lib/social/blocks'
 
 const PAGE_SIZE = 50
 
@@ -48,6 +49,13 @@ export default async function SearchPage({ searchParams }: Props) {
    * 打てるようにする。どちらかに当たれば出す。
    */
   const nameQ    = searchParams.name    || ''
+  /*
+   * ブロックした作者の作品は、一覧に出さない。
+   *
+   * 読み終えてから落とす。問い合わせの側で外そうとすると、
+   * 相手が多いときに URL が長くなりすぎて通らない。
+   */
+  const blockedAuthors = await loadBlockedIds(supabase, user?.id)
   const contestId = searchParams.contest || ''
   const charMin = Number(searchParams.charMin) || 0
   const charMax = Number(searchParams.charMax) || 0
@@ -213,6 +221,11 @@ export default async function SearchPage({ searchParams }: Props) {
     const { data, count: c2 } = await (query as any)
     results = data || []
     count = c2 || 0
+  }
+
+  /* ブロックした作者の作品を落とす */
+  if (blockedAuthors.size > 0) {
+    results = results.filter((n: any) => !blockedAuthors.has(n.author_id))
   }
 
   let novelIds = results.map((n: any) => n.id)

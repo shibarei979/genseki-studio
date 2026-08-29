@@ -17,6 +17,7 @@ import HomeEffects from '@/components/home/home-effects'
 import Footer from '@/components/layout/footer'
 import Header from '@/components/layout/header'
 import type { HomeBook, HomeNotice } from '@/types/home'
+import { loadBlockedIds } from '@/lib/social/blocks'
 
 /*
  * revalidate はページ側で持つ。
@@ -193,7 +194,16 @@ export default async function ReaderHome() {
         ),
     getCachedRecommendScores(),
   ])
-  const newest: NovelRow[] = newestRaw || []
+  /*
+   * ブロックした作者の作品を、本棚から落とす。
+   *
+   * 読み終えてから落とす。問い合わせの側で外そうとすると、
+   * 相手が多いときに URL が長くなりすぎて通らない。
+   */
+  const blockedAuthors = await loadBlockedIds(supabase, user?.id)
+  const newest: NovelRow[] = (newestRaw || []).filter(
+    (n: NovelRow) => !blockedAuthors.has((n as { author_id?: string }).author_id ?? ''),
+  )
   const novelById: Record<string, NovelRow> = {}
   newest.forEach((n) => { novelById[n.id] = n })
 

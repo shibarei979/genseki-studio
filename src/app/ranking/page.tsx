@@ -8,6 +8,7 @@ import AdBanner from '@/components/layout/ad-banner'
 import Link from 'next/link'
 import NovelPopup from '@/components/novel-popup'
 import SideScroller from '@/components/common/side-scroller'
+import { loadBlockedIds } from '@/lib/social/blocks'
 import { serverEnv } from '@/config/env.server'
 import { clientEnv } from '@/config/env.client'
 
@@ -321,7 +322,18 @@ export default async function RankingPage({ searchParams }: Props) {
   const offset    = (page - 1) * PAGE_SIZE
 
 
-  const { items: ranking, total } = await getCachedRanking(period, novelType, serial, genre, aiMode, offset, displaySize, showMore, ratings)
+  const { items: rankingAll, total } = await getCachedRanking(period, novelType, serial, genre, aiMode, offset, displaySize, showMore, ratings)
+
+  /*
+   * ブロックした作者の作品を落とす。
+   *
+   * 順位そのものは動かさない。3位が消えても 4位は 4位のまま。
+   * 詰めると、消えた場所に誰かが居たことが分かってしまう。
+   */
+  const blockedAuthors = await loadBlockedIds(supabase, user?.id)
+  const ranking = blockedAuthors.size > 0
+    ? rankingAll.filter((n: any) => !blockedAuthors.has(n.author_id))
+    : rankingAll
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   function fmtDate(s: string) {
