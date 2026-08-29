@@ -33,6 +33,7 @@ import { backgroundFor, clampToFloor } from "@/lib/room/room-backgrounds";
 import type { Presence, RoomState } from "@/lib/room/presence";
 import type { Profile, RoomMember, WritingRoom } from "@/types";
 import { ROOM_VISIBILITY_LABEL } from "@/types";
+import LoginRequired from "@/components/room/login-required";
 
 /**
  * 表示する版。
@@ -233,6 +234,16 @@ export default function RoomClient({ roomId }: Props) {
          */
         if (isAuthLoading) return;
 
+        /*
+         * ログインしていない人は部屋に入れない。
+         *
+         * 端末ごとの目印で入れていたので、
+         * 誰が誰かを DB 側で確かめる手立てが無かった。
+         * その結果、他人を追い出すことも、
+         * 他人の名を騙って書き込むことも止められなかった。
+         */
+        if (!user) return;
+
         const presence = createPresence(room.id);
         presenceRef.current = presence;
         setIsNetworked(presence.isNetworked);
@@ -310,7 +321,7 @@ export default function RoomClient({ roomId }: Props) {
          * 入り直すと声の繋ぎも切れ、戻らなくなる。
          */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [room?.id, identity.id, identity.name, isAuthLoading]);
+    }, [room?.id, identity.id, identity.name, isAuthLoading, user]);
 
     /*
      * 主がここにいる、と知らせ続ける。
@@ -625,6 +636,23 @@ export default function RoomClient({ roomId }: Props) {
             <div className="min-h-screen bg-page">
                 <Header />
                 <p className="py-24 text-center text-sm text-faint">読み込んでいます</p>
+            </div>
+        );
+    }
+
+    /*
+     * ログインしていない人には、部屋の中身を出さない。
+     *
+     * 中を見せてから断ると、書けないことに気づくのが
+     * 書き終えたあとになる。
+     */
+    if (!isAuthLoading && !user) {
+        return (
+            <div className="min-h-screen bg-page">
+                <Header breadcrumbs={[{ label: "執筆室", href: "/rooms" }]} />
+                <div className="mx-auto max-w-2xl px-4 py-20">
+                    <LoginRequired action="執筆室に入る" />
+                </div>
             </div>
         );
     }

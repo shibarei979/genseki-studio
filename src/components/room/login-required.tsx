@@ -34,10 +34,18 @@ export default function LoginRequired({ action }: Props) {
                 そのため、誰が誰かが分かっている必要があります。
             </p>
 
-            <p className="mt-4 inline-block rounded-md bg-canvas px-4 py-2 text-[11px] text-faint">
-                ログインの仕組みは準備中です。
-                いまは自分の端末の中だけで部屋を作れます。
-            </p>
+            {/*
+              * 以前は「ログインの仕組みは準備中です」と出していた。
+              * その頃は端末ごとの目印で部屋に入れていたが、
+              * 誰が誰かを確かめられず、
+              * 他人を追い出すことも名を騙ることもできてしまった。
+              */}
+            <a
+                href="/login"
+                className="mt-4 inline-block rounded-md bg-forest px-5 py-2 text-[12px] font-medium text-white hover:opacity-90"
+            >
+                ログインする
+            </a>
         </div>
     );
 }

@@ -29,9 +29,9 @@ import { useState } from "react";
 
 import { getRepository } from "@/lib/repository";
 import { useAuth } from "@/hooks/use-auth";
-import { loadIdentity } from "@/lib/room/presence";
 import { backgroundFor } from "@/lib/room/room-backgrounds";
 import type { RoomVisibility } from "@/types";
+import LoginRequired from "@/components/room/login-required";
 import {
     ROOM_VISIBILITY_DESCRIPTION,
     ROOM_VISIBILITY_LABEL,
@@ -75,6 +75,11 @@ export default function RoomCreateClient() {
 
     async function handleCreate() {
         if (isSaving) return;
+        /* 画面でも止めているが、ここでも確かめる */
+        if (!user) {
+            setError("執筆室を作るにはログインが必要です。");
+            return;
+        }
         setIsSaving(true);
         setError("");
 
@@ -88,8 +93,14 @@ export default function RoomCreateClient() {
                  * 一覧のアイコンにも使うので、部屋の大きさをそのまま入れる。
                  */
                 theme: "library",
-                /* ログインしていれば、その id を部屋主にする */
-                host_id: user?.id ?? loadIdentity().id,
+                /*
+                 * 部屋主は必ずログインしている人。
+                 *
+                 * 端末ごとの目印を部屋主にしていたので、
+                 * DB の側で「本当にこの人が主か」を確かめられず、
+                 * 誰でも部屋の設定を触れる状態になっていた。
+                 */
+                host_id: user.id,
                 capacity,
                 allow_chat: allowChat,
                 allow_host_voice: allowVoice,
@@ -108,6 +119,21 @@ export default function RoomCreateClient() {
         } finally {
             setIsSaving(false);
         }
+    }
+
+    /*
+     * ログインしていない人には作らせない。
+     * 部屋主が誰かを DB の側で確かめられないと、
+     * 誰でも部屋の設定を触れてしまう。
+     */
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-page px-4 py-20">
+                <div className="mx-auto max-w-2xl">
+                    <LoginRequired action="執筆室を作る" />
+                </div>
+            </div>
+        );
     }
 
     return (
