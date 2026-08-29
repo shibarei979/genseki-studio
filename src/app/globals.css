@@ -1242,3 +1242,22 @@ body {
 .scroll-row > * {
     flex-shrink: 0;
 }
+
+/*
+ * 縦書きの中の英数字。
+ *
+ * 半角の英数字は、縦書きだと既定で 90 度倒れる。
+ * 短いものは 1 文字ぶんの枡にまとめて立てる（縦中横）。
+ *
+ * Safari の古い版は text-combine-upright を知らないので、
+ * -webkit-text-combine も並べて書く。
+ */
+.tcy {
+    -webkit-text-combine: horizontal;
+    text-combine-upright: all;
+}
+
+/* 桁の多い数字。1 字ずつ立てて縦に積む */
+.tcy-upright {
+    text-orientation: upright;
+}

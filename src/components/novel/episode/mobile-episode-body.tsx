@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby } from '@/lib/utils/ruby'
+import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 
 interface Props {
   title: string
@@ -171,7 +172,11 @@ function VerticalText({ text }: { text: string }) {
      */
     return text.split('\n').map((line, i, all) => (
       <span key={`${keyPrefix}-${i}`}>
-        {line}
+        {/*
+          * 英数字は縦中横で立てる。
+          * そのままだと「35歳」の 35 も (Pr. I) も寝たまま出る。
+          */}
+        {withTateChuYoko(line, `${keyPrefix}-${i}`)}
         {i < all.length - 1 ? <br/> : null}
       </span>
     ))
@@ -316,7 +321,8 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
           >
             <div style={{display:'inline-block', marginRight:'2em', verticalAlign:'top', writingMode:'vertical-rl'}}>
               <div style={{fontSize: settings.fontSize + 4, fontWeight:700, color:'var(--color-text)', fontFamily, lineHeight:1.8}}>
-                {title}
+                {/* 題名にも英数字が入る。「(Pr. I)」など */}
+                {withTateChuYoko(title, 'v-title')}
               </div>
             </div>
             <div style={{display:'inline-block', fontSize: settings.fontSize, lineHeight: settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', verticalAlign:'top', writingMode:'vertical-rl'}}>
