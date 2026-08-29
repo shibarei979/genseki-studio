@@ -14,14 +14,24 @@
  */
 
 import type { Episode, Work } from "@/types";
+import { splitRuby } from "@/lib/utils/ruby";
 
 /** 記法を外して、そのまま読める形にする */
 function plain(body: string): string {
-    return body
-        // ルビ： ｜親文字《よみ》 → 親文字（よみ）
-        .replace(/[|｜]([^《]+)《([^》]+)》/g, "$1（$2）")
-        // 傍点は落とす。文字だけ残す
-        .replace(/《《([^》]+)》》/g, "$1");
+    /*
+     * ふりがなは 親文字（よみ）の形にする。
+     * 傍点は落として、文字だけ残す。
+     *
+     * 決まりは ruby.ts にまとめてある。
+     * ここに書き写すと、書き方が増えたときに
+     * この画面だけ取り残される。
+     */
+    return splitRuby(body)
+        .map((part) => {
+            if (part.type === "ruby") return `${part.body}（${part.ruby}）`;
+            return part.body;
+        })
+        .join("");
 }
 
 function escapeHtml(text: string): string {

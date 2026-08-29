@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
+import { splitRuby } from '@/lib/utils/ruby'
 
 interface Props {
   title: string
@@ -63,13 +64,15 @@ function normalizeForHorizontalReading(text: string): string {
 
 function renderBody(text: string): string {
   /* 整えるのはルビを取り出したあと。先だと ｜《》 が壊れる */
-  let result = text.replace(/[|｜]([^《]+)《([^》]+)》/g,
-    (_m, base: string, ruby: string) =>
-      `<ruby>${normalizeForHorizontalReading(base)}<rt>${normalizeForHorizontalReading(ruby)}</rt></ruby>`)
-
-  result = result.replace(/《《([^》]+)》》/g,
-    (_m, body: string) =>
-      `<em style="font-style:normal;font-weight:700;border-bottom:2px solid var(--color-brand)">${normalizeForHorizontalReading(body)}</em>`)
+  let result = splitRuby(text).map((part) => {
+    if (part.type === 'ruby') {
+      return `<ruby>${normalizeForHorizontalReading(part.body)}<rt>${normalizeForHorizontalReading(part.ruby)}</rt></ruby>`
+    }
+    if (part.type === 'dot') {
+      return `<em style="font-style:normal;font-weight:700;border-bottom:2px solid var(--color-brand)">${normalizeForHorizontalReading(part.body)}</em>`
+    }
+    return part.body
+  }).join('')
 
   result = result
     .split(/(<[^>]+>)/)
@@ -158,18 +161,7 @@ function VerticalText({ text }: { text: string }) {
    * そのまま分けると ｜漢字《かんじ》 の記号が
    * 素の文字として並んでしまう。
    */
-  const parts: { type: 'text' | 'ruby' | 'dot'; body: string; ruby?: string }[] = []
-  const pattern = /[|｜]([^《]+)《([^》]+)》|《《([^》]+)》》/g
-  let last = 0
-  let m: RegExpExecArray | null
-
-  while ((m = pattern.exec(processed)) !== null) {
-    if (m.index > last) parts.push({ type: 'text', body: processed.slice(last, m.index) })
-    if (m[1]) parts.push({ type: 'ruby', body: m[1], ruby: m[2] })
-    else if (m[3]) parts.push({ type: 'dot', body: m[3] })
-    last = m.index + m[0].length
-  }
-  if (last < processed.length) parts.push({ type: 'text', body: processed.slice(last) })
+  const parts = splitRuby(processed)
 
   function renderChars(text: string, keyPrefix: string) {
     /*

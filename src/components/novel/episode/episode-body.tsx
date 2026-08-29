@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
+import { splitRuby, stripRuby } from '@/lib/utils/ruby'
 import MobileEpisodeBody from '@/components/novel/episode/mobile-episode-body'
 import { useQuote } from '@/components/novel/episode/quote-context'
 
@@ -72,12 +73,15 @@ function renderBodyH(text: string): string {
    * 先にかけると ｜ や 《》 が半角になり、
    * ルビの印として読めなくなる。
    */
-  let r = text.replace(/[|｜]([^《]+)《([^》]+)》/g,
-    (_m, base: string, ruby: string) =>
-      `<ruby>${normalizeForHorizontalReading(base)}<rt>${normalizeForHorizontalReading(ruby)}</rt></ruby>`)
-  r = r.replace(/《《([^》]+)》》/g,
-    (_m, body: string) =>
-      `<em style="font-style:normal;font-weight:700;border-bottom:2px solid var(--color-brand)">${normalizeForHorizontalReading(body)}</em>`)
+  let r = splitRuby(text).map((part) => {
+    if (part.type === 'ruby') {
+      return `<ruby>${normalizeForHorizontalReading(part.body)}<rt>${normalizeForHorizontalReading(part.ruby)}</rt></ruby>`
+    }
+    if (part.type === 'dot') {
+      return `<em style="font-style:normal;font-weight:700;border-bottom:2px solid var(--color-brand)">${normalizeForHorizontalReading(part.body)}</em>`
+    }
+    return part.body
+  }).join('')
 
   /*
    * 残った本文を整える。
@@ -180,22 +184,7 @@ function VerticalText({ text }: { text: string }) {
    * 別々の文字になり、ルビが素の記号のまま並んでしまう。
    * 先に切り出しておき、ルビの部分だけは <ruby> で組む。
    */
-  const parts: { type: 'text' | 'ruby' | 'dot'; body: string; ruby?: string }[] = []
-  const pattern = /[|｜]([^《]+)《([^》]+)》|《《([^》]+)》》/g
-  let last = 0
-  let m: RegExpExecArray | null
-
-  while ((m = pattern.exec(processed)) !== null) {
-    if (m.index > last) {
-      parts.push({ type: 'text', body: processed.slice(last, m.index) })
-    }
-    if (m[1]) parts.push({ type: 'ruby', body: m[1], ruby: m[2] })
-    else if (m[3]) parts.push({ type: 'dot', body: m[3] })
-    last = m.index + m[0].length
-  }
-  if (last < processed.length) {
-    parts.push({ type: 'text', body: processed.slice(last) })
-  }
+  const parts = splitRuby(processed)
 
   /** ふつうの文字は、そのまま置く */
   function renderChars(text: string, keyPrefix: string) {
@@ -257,9 +246,8 @@ function VerticalText({ text }: { text: string }) {
 
 // テキストのクリーニング
 function cleanForSpeech(text: string): string {
-  let t = text
-    .replace(/[|｜]([^《]+)《[^》]+》/g, '$1')
-    .replace(/《《([^》]+)》》/g, '$1')
+  /* 読み上げでは、ふりがなの印を外して素の文にする */
+  let t = stripRuby(text)
     .replace(/<[^>]+>/g, '')
     .replace(/[#*`]/g, '')
     .replace(/　/g, '')
@@ -515,9 +503,8 @@ function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecti
 
   function handleClick(raw: string, idx: number) {
     if (!selecting) return
-    const clean = raw
-      .replace(/[|｜]([^《]+)《[^》]+》/g, '$1')
-      .replace(/《《([^》]+)》》/g, '$1')
+    /* 引用するのは素の文。ふりがなの印は持ち出さない */
+    const clean = stripRuby(raw)
       .replace(/\n/g, '')
       .trim()
     if (!clean) return
@@ -698,9 +685,8 @@ function VerticalBody({ title, body, preface, afterword, authorName, fontSize, f
 
   function handleClick(raw: string) {
     if (!selecting) return
-    const clean = raw
-      .replace(/[|｜]([^《]+)《[^》]+》/g, '$1')
-      .replace(/《《([^》]+)》》/g, '$1')
+    /* 引用するのは素の文。ふりがなの印は持ち出さない */
+    const clean = stripRuby(raw)
       .replace(/\n/g, '')
       .trim()
     if (!clean) return

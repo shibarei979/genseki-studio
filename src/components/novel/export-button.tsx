@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
+import { stripRuby } from '@/lib/utils/ruby'
 
 interface Episode {
   id: string
@@ -18,9 +19,7 @@ interface Props {
 
 // ルビ・強調記法を除去してプレーンテキスト化
 function toPlainText(text: string): string {
-  return (text || '')
-    .replace(/[|｜]([^《]+)《[^》]+》/g, '$1')
-    .replace(/《《([^》]+)》》/g, '$1')
+  return stripRuby(text || '')
 }
 
 export default function ExportButton({ novelId, novelTitle, authorName }: Props) {
