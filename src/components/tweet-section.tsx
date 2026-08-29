@@ -13,6 +13,8 @@ interface Tweet {
   body: string
   image_url: string | null
   created_at: string
+  /** 直したときに入る。入っていれば「修正済み」と出す */
+  edited_at?: string | null
   display_name: string
   icon_url: string | null
   like_count: number
@@ -168,6 +170,11 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [posting, setPosting] = useState(false)
+
+  /* いま直しているつぶやき。開いている間だけ id が入る */
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editBody, setEditBody] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
   const [commentBody, setCommentBody] = useState<Record<string, string>>({})
   const [commentPosting, setCommentPosting] = useState<Record<string, boolean>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -249,7 +256,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
      */
     let query = supabase
       .from('tweets')
-      .select('id, user_id, body, image_url, created_at, topic')
+      .select('id, user_id, body, image_url, created_at, edited_at, topic')
       .order('created_at', { ascending: false })
       .limit(authorId ? 20 : 50)
 
@@ -310,7 +317,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
       if (authorId) plain = plain.eq('user_id', authorId)
 
       const retry = await plain
-      tweetsData = (retry.data ?? []).map((row: any) => ({ ...row, topic: null }))
+      tweetsData = (retry.data ?? []).map((row: any) => ({ ...row, topic: null, edited_at: null }))
     }
 
     /*
@@ -513,7 +520,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     let { data, error } = await supabase
       .from('tweets')
       .insert({ user_id: currentUserId, body: body.trim(), image_url: imageUrl, topic: chosen })
-      .select('id, user_id, body, image_url, created_at, topic')
+      .select('id, user_id, body, image_url, created_at, edited_at, topic')
       .single()
 
     if (error) {
@@ -808,6 +815,49 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     setTweets(prev => prev.filter(t => t.id !== tweetId))
   }
 
+  /**
+   * つぶやきを直す。
+   *
+   * 直せるのは書いた本人だけ。表の決まりでも縛ってある。
+   *
+   * 直した事実は edited_at に残す。
+   * 中身は変えてよいが、変えたことは隠さない。
+   * 返信やいいねが付いたあとに黙って書き換えられると、
+   * 読んだ人の記憶と食い違う。
+   */
+  async function handleEditSave(tweetId: string) {
+    const next = editBody.trim()
+    if (!next || savingEdit) return
+
+    const target = tweets.find(t => t.id === tweetId)
+    if (!target || target.body === next) { setEditingId(null); return }
+
+    setSavingEdit(true)
+    const now = new Date().toISOString()
+
+    const { error } = await createClient()
+      .from('tweets')
+      .update({ body: next, edited_at: now })
+      .eq('id', tweetId)
+      .eq('user_id', currentUserId)
+
+    setSavingEdit(false)
+
+    /*
+     * 直せなかったら、直ったことにしない。
+     * 画面だけ変えると、開き直したときに戻って驚く。
+     */
+    if (error) {
+      window.alert(`修正できませんでした：${error.message}`)
+      return
+    }
+
+    setTweets(prev => prev.map(t =>
+      t.id === tweetId ? { ...t, body: next, edited_at: now } : t
+    ))
+    setEditingId(null)
+  }
+
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -1044,16 +1094,62 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                * その投稿の user_id と突き合わせる。
                */}
               {currentUserId && tweet.user_id === currentUserId && (
-                <button onClick={()=>handleDelete(tweet.id)}
-                  style={{fontSize:12,color:'var(--color-text-faint)',background:'none',border:'none',cursor:'pointer',padding:'4px 8px'}}>
-                  削除
-                </button>
+                <>
+                  <button onClick={()=>{ setEditingId(tweet.id); setEditBody(tweet.body) }}
+                    style={{fontSize:12,color:'var(--color-text-faint)',background:'none',border:'none',cursor:'pointer',padding:'4px 8px'}}>
+                    修正
+                  </button>
+                  <button onClick={()=>handleDelete(tweet.id)}
+                    style={{fontSize:12,color:'var(--color-text-faint)',background:'none',border:'none',cursor:'pointer',padding:'4px 8px'}}>
+                    削除
+                  </button>
+                </>
               )}
             </div>
 
+            {editingId === tweet.id ? (
+              <div style={{marginBottom:14}}>
+                <textarea
+                  autoFocus
+                  value={editBody}
+                  onChange={e=>setEditBody(e.target.value)}
+                  rows={4}
+                  style={{width:'100%',padding:'10px 12px',fontSize:14.5,lineHeight:1.85,color:'var(--color-text)',background:'var(--color-bg)',border:'1px solid var(--color-brand)',borderRadius:8,resize:'vertical',fontFamily:'inherit'}}
+                />
+                <div style={{display:'flex',gap:8,marginTop:8}}>
+                  <button
+                    onClick={()=>handleEditSave(tweet.id)}
+                    disabled={savingEdit || !editBody.trim()}
+                    style={{padding:'6px 16px',fontSize:13,color:'#fff',background:'var(--color-brand)',border:'none',borderRadius:6,cursor:'pointer',opacity:(savingEdit||!editBody.trim())?.4:1}}>
+                    {savingEdit ? '保存しています…' : '保存する'}
+                  </button>
+                  <button
+                    onClick={()=>setEditingId(null)}
+                    style={{padding:'6px 16px',fontSize:13,color:'var(--color-text-muted)',background:'none',border:'1px solid var(--color-brand-border)',borderRadius:6,cursor:'pointer'}}>
+                    やめる
+                  </button>
+                </div>
+                <p style={{fontSize:11,color:'var(--color-text-faint)',marginTop:8}}>
+                  保存すると「修正済み」と表示されます。
+                </p>
+              </div>
+            ) : (
             <div style={{fontSize:14.5,color:'var(--color-text)',lineHeight:1.85,whiteSpace:'pre-wrap',marginBottom:tweet.image_url?12:14}}>
               {tweet.body}
+              {/*
+                * 直した印。
+                *
+                * 本文のすぐ後ろに、小さく添える。
+                * 名前の隣に置くと、読む前に目に入って
+                * 中身より先に「直された」が伝わってしまう。
+                */}
+              {tweet.edited_at && (
+                <span style={{marginLeft:8,fontSize:11,color:'var(--color-text-faint)'}}>
+                  （修正済み）
+                </span>
+              )}
             </div>
+            )}
 
             {tweet.image_url && (
               <img src={tweet.image_url} style={{maxWidth:'100%',maxHeight:280,objectFit:'contain',borderRadius:10,display:'block',marginBottom:14}} alt=""/>
