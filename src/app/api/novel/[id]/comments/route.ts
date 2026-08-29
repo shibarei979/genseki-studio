@@ -15,6 +15,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { loadBlockedIds, withoutBlocked } from "@/lib/social/blocks";
 
 export async function GET(
     request: Request,
@@ -22,12 +23,27 @@ export async function GET(
 ) {
     const supabase = await createClient();
 
-    const { data: rawComments } = await supabase
+    /*
+     * ブロックした相手のコメントを落とす。
+     *
+     * 落とすだけで、「隠しました」とは出さない。
+     * 出すと、そこに誰かが居たことが分かってしまう。
+     */
+    const { data: auth } = await supabase.auth.getUser();
+    const blocked = await loadBlockedIds(supabase, auth.user?.id);
+
+    const { data: fetched } = await supabase
         .from("comments")
         .select("id, body, created_at, user_id, is_pinned, rating, quoted_text, parent_id")
         .eq("novel_id", params.id)
         .order("created_at", { ascending: false })
         .limit(50);
+
+    const rawComments = withoutBlocked(
+        fetched ?? [],
+        blocked,
+        (row: any) => row.user_id,
+    );
 
     const commentIds = (rawComments ?? []).map((c: any) => c.id);
     const commentUserIds = Array.from(

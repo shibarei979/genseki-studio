@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { hasSupabase } from "@/config/env.client";
 import { createClient } from "@/lib/supabase/client";
+import { loadBlockedIds } from "@/lib/social/blocks";
 
 /**
  * ============================================================
@@ -190,8 +191,26 @@ export function DirectPanel({ userId }: { userId: string | null }) {
             return;
         }
 
+        /*
+         * ブロックした相手との会話は、一覧に出さない。
+         *
+         * 会話そのものは消さない。
+         * ブロックを外したときに、やりとりが戻るようにする。
+         */
+        const blocked = await loadBlockedIds(supabase, userId);
+
+        const visible = convs.filter((c: { user_a: string; user_b: string }) => {
+            const other = c.user_a === userId ? c.user_b : c.user_a;
+            return !blocked.has(other);
+        });
+
+        if (visible.length === 0) {
+            setRows([]);
+            return;
+        }
+
         /* 相手の名前と絵をまとめて引く */
-        const otherIds = convs.map((c: { user_a: string; user_b: string }) =>
+        const otherIds = visible.map((c: { user_a: string; user_b: string }) =>
             c.user_a === userId ? c.user_b : c.user_a,
         );
 
@@ -210,7 +229,7 @@ export function DirectPanel({ userId }: { userId: string | null }) {
             .select("conversation_id, sender_id, is_read")
             .in(
                 "conversation_id",
-                convs.map((c: { id: string }) => c.id),
+                visible.map((c: { id: string }) => c.id),
             )
             .eq("is_read", false);
 
@@ -221,7 +240,7 @@ export function DirectPanel({ userId }: { userId: string | null }) {
         }
 
         setRows(
-            convs.map(
+            visible.map(
                 (c: { id: string; user_a: string; user_b: string; last_at: string }) => {
                     const otherId = c.user_a === userId ? c.user_b : c.user_a;
                     const person = byId.get(otherId) as
