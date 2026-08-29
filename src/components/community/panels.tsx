@@ -196,7 +196,7 @@ export function DirectPanel({ userId }: { userId: string | null }) {
         );
 
         const { data: people } = await supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("user_id, display_name, icon_url")
             .in("user_id", otherIds);
 

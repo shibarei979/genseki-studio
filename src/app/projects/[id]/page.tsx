@@ -54,7 +54,7 @@ export default async function ProjectPage({
 
     /* 立てた人 */
     const { data: owner } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("user_id, display_name")
         .eq("user_id", project.owner_id)
         .maybeSingle();
@@ -92,7 +92,7 @@ export default async function ProjectPage({
     );
     const { data: authors } = authorIds.length
         ? await supabase
-              .from("profiles")
+              .from("public_profiles")
               .select("user_id, display_name")
               .in("user_id", authorIds)
         : { data: [] };

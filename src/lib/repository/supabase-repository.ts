@@ -2916,7 +2916,7 @@ export const supabaseRepository: Repository = {
 
     async getAuthorName(authorId: string): Promise<string> {
         const { data } = await db()
-            .from("profiles")
+            .from("public_profiles")
             .select("display_name")
             .eq("user_id", authorId)
             .maybeSingle();

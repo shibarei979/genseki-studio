@@ -60,7 +60,7 @@ export default async function AnalyticsPage() {
     const commentUserIds = Array.from(new Set((comments || []).map((c: any) => c.user_id).filter(Boolean)))
     const commentUserMap: Record<string, string> = {}
     if (commentUserIds.length > 0) {
-      const { data: cu } = await supabase.from('profiles').select('user_id, display_name').in('user_id', commentUserIds as string[])
+      const { data: cu } = await supabase.from('public_profiles').select('user_id, display_name').in('user_id', commentUserIds as string[])
       cu?.forEach((p: any) => { commentUserMap[p.user_id] = p.display_name || '名無し' })
     }
     // 話タイトルマップ

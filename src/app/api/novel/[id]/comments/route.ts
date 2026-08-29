@@ -40,7 +40,7 @@ export async function GET(
             ? supabase.from("comment_likes").select("comment_id").in("comment_id", commentIds)
             : Promise.resolve({ data: [] } as any),
         commentUserIds.length > 0
-            ? supabase.from("profiles").select("user_id, display_name, icon_url").in("user_id", commentUserIds as string[])
+            ? supabase.from("public_profiles").select("user_id, display_name, icon_url").in("user_id", commentUserIds as string[])
             : Promise.resolve({ data: [] } as any),
     ]);
 

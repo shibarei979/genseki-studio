@@ -69,7 +69,7 @@ export default async function ProjectsPage() {
     const ownerIds = Array.from(new Set(projects.map((p) => p.owner_id)));
     const { data: owners } = ownerIds.length
         ? await supabase
-              .from("profiles")
+              .from("public_profiles")
               .select("user_id, display_name")
               .in("user_id", ownerIds)
         : { data: [] };

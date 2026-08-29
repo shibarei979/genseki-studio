@@ -146,7 +146,7 @@ export async function GET() {
         const authorMap: Record<string, string> = {};
         if (authorIds.length > 0) {
             const { data: authors } = await supabase
-                .from("profiles")
+                .from("public_profiles")
                 .select("user_id, display_name")
                 .in("user_id", authorIds as string[]);
 
@@ -215,7 +215,7 @@ export async function GET() {
     const bmAuthorMap: Record<string, string> = {};
     if (bmAuthorIds.length > 0) {
         const { data: authors } = await supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("user_id, display_name")
             .in("user_id", bmAuthorIds as string[]);
 

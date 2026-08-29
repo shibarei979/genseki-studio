@@ -95,7 +95,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
     const authorIds = Array.from(new Set(paged.map((n:any) => n.author_id)))
     const authorMap: Record<string,string> = {}
     if (authorIds.length > 0) {
-      const { data: authors } = await supabase.from('profiles').select('user_id, display_name').in('user_id', authorIds as string[])
+      const { data: authors } = await supabase.from('public_profiles').select('user_id, display_name').in('user_id', authorIds as string[])
       authors?.forEach((a:any) => { authorMap[a.user_id] = a.display_name })
     }
     return {
@@ -122,7 +122,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
     const authorIds2 = Array.from(new Set(risingItems.map((n:any) => n.author_id)))
     const authorMap2: Record<string,string> = {}
     if (authorIds2.length > 0) {
-      const { data: authors2 } = await supabase.from('profiles').select('user_id, display_name').in('user_id', authorIds2 as string[])
+      const { data: authors2 } = await supabase.from('public_profiles').select('user_id, display_name').in('user_id', authorIds2 as string[])
       authors2?.forEach((a:any) => { authorMap2[a.user_id] = a.display_name })
     }
     return { items: risingItems.map((n:any) => ({...n, display_name: authorMap2[n.author_id]||''})), total: risingItems.length }
@@ -236,7 +236,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
   const authorIds = Array.from(new Set(paged.map((n: any) => n.author_id)))
   const authorMap: Record<string,string> = {}
   if (authorIds.length > 0) {
-    const { data: authors } = await supabase.from('profiles').select('user_id, display_name').in('user_id', authorIds as string[])
+    const { data: authors } = await supabase.from('public_profiles').select('user_id, display_name').in('user_id', authorIds as string[])
     authors?.forEach((a: any) => { authorMap[a.user_id] = a.display_name })
   }
   const novelIds = paged.map((n: any) => n.id)

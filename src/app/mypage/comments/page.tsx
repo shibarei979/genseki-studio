@@ -45,7 +45,7 @@ export default async function MyCommentsPage({ searchParams }: { searchParams: {
     const cmUserIds = Array.from(new Set((cmRes.data || []).map((c: any) => c.user_id).filter(Boolean)))
     const nameMap: Record<string, string> = {}
     if (cmUserIds.length > 0) {
-      const { data: profs } = await supabase.from('profiles').select('user_id, display_name').in('user_id', cmUserIds)
+      const { data: profs } = await supabase.from('public_profiles').select('user_id, display_name').in('user_id', cmUserIds)
       profs?.forEach((p: any) => { nameMap[p.user_id] = p.display_name })
     }
     const comments = (cmRes.data || []).map((c: any) => ({

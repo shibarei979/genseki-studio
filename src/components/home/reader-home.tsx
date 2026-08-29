@@ -350,7 +350,7 @@ export default async function ReaderHome() {
   const allAuthorIds = Array.from(new Set(Object.values(novelById).map((n) => n.author_id)))
 
   const [{ data: authors }, { data: likeRows }, { data: firstEps }, { data: discoverRows }] = await Promise.all([
-    supabase.from('profiles').select('user_id, display_name').in('user_id', allAuthorIds),
+    supabase.from('public_profiles').select('user_id, display_name').in('user_id', allAuthorIds),
     supabase.from('likes').select('novel_id').in('novel_id', allIds),
     supabase.from('episodes').select('novel_id, body').eq('ep_number', 1).in('novel_id', allIds),
     supabase.from('discovers').select('novel_id, comment')

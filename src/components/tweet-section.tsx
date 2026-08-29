@@ -320,7 +320,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
      */
     const authorIds = Array.from(new Set(tweetsData.map((t: any) => t.user_id)))
     const { data: authorProfiles } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('user_id, display_name, icon_url')
       .in('user_id', authorIds)
 
@@ -400,7 +400,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     const commentProfileMap: Record<string, any> = {}
     if (commentUserIds.length > 0) {
       const { data: cProfiles } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('user_id, display_name, icon_url')
         .in('user_id', commentUserIds)
       cProfiles?.forEach(p => { commentProfileMap[p.user_id] = p })

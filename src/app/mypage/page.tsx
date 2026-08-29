@@ -91,7 +91,7 @@ export default async function MypagePage() {
   let folkMap: Record<string, any> = {}
   if (folkIds.length > 0) {
     const { data: folks } = await supabase
-      .from('profiles')
+      .from('public_profiles')
       .select('user_id, display_name, icon_url')
       .in('user_id', folkIds)
     for (const row of folks || []) folkMap[row.user_id] = row

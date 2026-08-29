@@ -195,7 +195,7 @@ export async function GET(
   const recAuthorIds = Array.from(new Set(recommendedNovels.map((n: any) => n.author_id)))
   const recAuthorMap: Record<string,string> = {}
   if (recAuthorIds.length > 0) {
-    const { data: recAuthors } = await supabase.from('profiles').select('user_id, display_name').in('user_id', recAuthorIds as string[])
+    const { data: recAuthors } = await supabase.from('public_profiles').select('user_id, display_name').in('user_id', recAuthorIds as string[])
     recAuthors?.forEach((a: any) => { recAuthorMap[a.user_id] = a.display_name })
   }
 

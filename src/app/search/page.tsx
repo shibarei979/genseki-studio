@@ -149,7 +149,7 @@ export default async function SearchPage({ searchParams }: Props) {
      */
     if (nameQ) {
       const { data: matchedByName } = await supabase
-        .from('profiles').select('user_id').ilike('display_name', `%${nameQ}%`)
+        .from('public_profiles').select('user_id').ilike('display_name', `%${nameQ}%`)
       const nameIds = (matchedByName||[]).map((a:any) => a.user_id)
       const parts = [`title.ilike.%${nameQ}%`]
       if (nameIds.length > 0) parts.push(`author_id.in.(${nameIds.join(',')})`)
@@ -158,7 +158,7 @@ export default async function SearchPage({ searchParams }: Props) {
     if (exclude) query = (query as any).not('title', 'ilike', `%${exclude}%`)
     if (authorQ) {
       const { data: matchedAuthors } = await supabase
-        .from('profiles').select('user_id').ilike('display_name', `%${authorQ}%`)
+        .from('public_profiles').select('user_id').ilike('display_name', `%${authorQ}%`)
       const authorIds2 = (matchedAuthors||[]).map((a:any) => a.user_id)
       if (authorIds2.length > 0) {
         query = (query as any).in('author_id', authorIds2)
@@ -329,7 +329,7 @@ export default async function SearchPage({ searchParams }: Props) {
   const authorIds = Array.from(new Set(results.map((n: any) => n.author_id)))
   const authorMap: Record<string, string> = {}
   if (authorIds.length > 0) {
-    const { data: authors } = await supabase.from('profiles').select('user_id, display_name').in('user_id', authorIds as string[])
+    const { data: authors } = await supabase.from('public_profiles').select('user_id, display_name').in('user_id', authorIds as string[])
     authors?.forEach((a: any) => { authorMap[a.user_id] = a.display_name })
   }
 

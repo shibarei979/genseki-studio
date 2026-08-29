@@ -132,7 +132,7 @@ export default async function RecommendPage() {
     const authorIds = Array.from(new Set(scored.map((n) => n.author_id)));
     const { data: authors } = authorIds.length
         ? await supabase
-              .from("profiles")
+              .from("public_profiles")
               .select("user_id, display_name")
               .in("user_id", authorIds)
         : { data: [] };

@@ -97,7 +97,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
   // author・シリーズ情報・話一覧は互いに独立なので並列取得
   const [authorRes, seriesNovelRes, episodesRes] = await Promise.all([
-    supabase.from('profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
+    supabase.from('public_profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('series_novels').select('series_id').eq('novel_id', params.id).maybeSingle(),
     supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, illust_url, chapter_id, published, is_published, scheduled_at')
       /* 上限を上げる。既定 1,000 件だと目次の後ろが消える */

@@ -73,7 +73,7 @@ export default async function EpisodePage({ params }: Props) {
 
   // author・全話・コメント・話いいね数は互いに独立なので並列取得
   const [authorRes, allEpsRes, epLikeCountRes] = await Promise.all([
-    supabase.from('profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
+    supabase.from('public_profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('episodes').select('id, ep_number, title, published, is_published, scheduled_at').eq('novel_id', params.id).order('ep_number', { ascending: true }),
     supabase.from('episode_likes').select('*', { count: 'exact', head: true }).eq('episode_id', params.epId),
   ])
