@@ -281,3 +281,20 @@ export function orderedEpisodeIds(
         group.items.map((episode) => episode.id),
     );
 }
+
+/**
+ * 名前に番号が入っているか。
+ *
+ * 「第二章」「第3部」「2章」のように、作者が自分で
+ * 番号を書いていることがある。
+ * そこへこちらが番号の札を足すと、二重に出る。
+ *
+ * 先頭にあるものだけを見る。
+ * 「英雄第一号の話」のような題名まで拾ってしまうため。
+ */
+export function hasOwnNumber(title: string | null | undefined): boolean {
+    if (!title) return false;
+    return /^\s*第?\s*[0-9０-９一二三四五六七八九十百]+\s*[章部話節幕]/.test(
+        title.trim(),
+    );
+}

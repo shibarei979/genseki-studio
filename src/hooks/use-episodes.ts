@@ -62,9 +62,25 @@ export function useEpisodes(workId: string) {
                     })
                     .filter((ep): ep is Episode => ep !== null);
             });
-            await getRepository().reorderEpisodes(workId, orderedIds);
+            /*
+             * 保存に失敗したら、画面を元に戻す。
+             *
+             * 先に並べ替えて手応えを出しているので、
+             * 黙って失敗すると「並べ替えた」と思ったまま
+             * 読み直したときに戻る。原因が分からない。
+             */
+            try {
+                await getRepository().reorderEpisodes(workId, orderedIds);
+            } catch (error) {
+                window.alert(
+                    `並べ替えを保存できませんでした。\n${
+                        error instanceof Error ? error.message : ""
+                    }`,
+                );
+                await reload();
+            }
         },
-        [workId],
+        [workId, reload],
     );
 
     return {

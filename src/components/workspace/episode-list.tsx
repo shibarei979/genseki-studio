@@ -33,6 +33,7 @@ import {
     buildChapterGroups,
     formatChapterNumber,
     formatPartNumber,
+    hasOwnNumber,
     orderedEpisodeIds,
 } from "./chapter-tree";
 
@@ -204,9 +205,23 @@ export default function EpisodeList({
             return;
         }
 
-        const ids = episodes.map((ep) => ep.id);
+        /*
+         * 並べ替えは、画面に見えている順で数える。
+         *
+         * 前は episodes の配列の順（ep_number 順）で数えていた。
+         * 章を作ると、見えている順は章ごとに束ねた順になり、
+         * 配列の順とずれる。
+         * ずれたまま「3 番目に落とした」と数えるので、
+         * まったく違う場所に入っていた。
+         */
+        const ids = orderedEpisodeIds(chapters, episodes);
         const from = ids.indexOf(draggingId);
         const to = ids.indexOf(targetId);
+        if (from < 0 || to < 0) {
+            setDraggingId(null);
+            setOverId(null);
+            return;
+        }
         ids.splice(from, 1);
         ids.splice(to, 0, draggingId);
 
@@ -731,7 +746,14 @@ export default function EpisodeList({
                                  * 名前が切れていた。
                                  * 札は縮まないので、残り全部が名前に渡る。
                                  */}
-                                {chapter && (
+                                {/*
+                                 * 番号の札。
+                                 *
+                                 * 作者が名前に番号を入れているときは出さない。
+                                 * 「第二章」という名前に「第一章」の札が付き、
+                                 * 二重に見えていた。
+                                 */}
+                                {chapter && !hasOwnNumber(chapter.title) && (
                                     <span
                                         className={[
                                             "shrink-0 rounded px-1 py-0.5 text-[9px] leading-none",

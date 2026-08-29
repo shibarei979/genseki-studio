@@ -854,16 +854,66 @@ export const supabaseRepository: Repository = {
     },
 
     async reorderEpisodes(workId: string, orderedIds: string[]): Promise<void> {
+        if (orderedIds.length === 0) return;
+
         /*
-         * 1 件ずつ更新する。
-         * まとめて送る方法もあるが、話数はせいぜい数十なので
-         * 分かりやすさを取る。
+         * 2 回に分けて番号を振り直す。
+         *
+         * いきなり 1 から振ると、途中で番号がぶつかる。
+         * 5 話と 6 話を入れ替えるとき、5 を 6 にした瞬間、
+         * まだ 6 のままの話と同じ番号になる。
+         * 同じ番号を許さない決まりが表にあると、そこで弾かれる。
+         *
+         * 弾かれても Supabase は例外を投げないので、
+         * 前は黙って一部だけ保存されていた。
+         * 読み直すと並びが崩れて見えるのは、そのため。
+         *
+         * まず全部を、いまの最大より大きい番号へ逃がす。
+         * そのうえで 1 から振り直す。ぶつかりようがない。
          */
-        await Promise.all(
+        const { data: current } = await db()
+            .from("episodes")
+            .select("ep_number")
+            .eq("novel_id", workId)
+            .order("ep_number", { ascending: false })
+            .limit(1);
+
+        const offset =
+            Math.max(
+                (current?.[0]?.ep_number as number | undefined) ?? 0,
+                orderedIds.length,
+            ) + 1000;
+
+        /* 1 回目：ぶつからない場所へ逃がす */
+        const parked = await Promise.all(
             orderedIds.map((id, index) =>
-                db().from("episodes").update({ ep_number: index + 1 }).eq("id", id),
+                db()
+                    .from("episodes")
+                    .update({ ep_number: offset + index })
+                    .eq("id", id),
             ),
         );
+
+        /* 2 回目：1 から振り直す */
+        const settled = await Promise.all(
+            orderedIds.map((id, index) =>
+                db()
+                    .from("episodes")
+                    .update({ ep_number: index + 1 })
+                    .eq("id", id),
+            ),
+        );
+
+        /*
+         * 失敗を黙って飲まない。
+         *
+         * 黙ると、画面だけ並び替わって保存されていない状態になる。
+         * 読み直したときに元へ戻り、原因が分からない。
+         */
+        const failed = [...parked, ...settled].find((row) => row.error);
+        if (failed?.error) {
+            throw new Error(describeError(failed.error.message));
+        }
     },
 
     async createEpisodes(
