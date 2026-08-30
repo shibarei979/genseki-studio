@@ -58,9 +58,15 @@ export function UserDonut({
             {total === 0 ? (
                 <p style={{fontSize:12,color:'var(--admin-text-faint)'}}>まだ利用者がいません</p>
             ) : (
-                <div style={{display:'flex',alignItems:'center',gap:18,flexWrap:'wrap'}}>
-                    <div style={{position:'relative',width:138,height:138,flexShrink:0}}>
-                        <svg width="138" height="138" viewBox="0 0 138 138">
+                /*
+                 * 輪を左、凡例を右に置く。
+                 *
+                 * 前は凡例を下に敷いていたので、
+                 * 横に間延びして下に空白ができていた。
+                 */
+                <div style={{display:'flex',alignItems:'center',gap:16}}>
+                    <div style={{position:'relative',width:126,height:126,flexShrink:0}}>
+                        <svg width="126" height="126" viewBox="0 0 138 138">
                             {parts.map((part, i) => {
                                 const ratio = part.value / total
                                 const dash = circumference * ratio
@@ -92,19 +98,19 @@ export function UserDonut({
                         </div>
                     </div>
 
-                    <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:0}}>
+                    <div style={{display:'flex',flexDirection:'column',gap:10,minWidth:0,flex:1}}>
                         {parts.map((part, i) => (
                             <div key={part.label} style={{display:'flex',alignItems:'center',gap:8}}>
                                 <span style={{width:10,height:10,borderRadius:3,background:DONUT_COLORS[i],flexShrink:0}} />
                                 {/* 名前の幅をそろえる。数字の桁が縦に並ぶ */}
-                                <span style={{fontSize:12,color:'var(--admin-text-muted)',width:56,flexShrink:0}}>
+                                <span style={{fontSize:12,color:'var(--admin-text-muted)',flex:1,minWidth:0}}>
                                     {part.label}
                                 </span>
-                                <span style={{fontSize:13,fontWeight:700,color:'var(--admin-text)',minWidth:52,textAlign:'right'}}>
-                                    {part.value.toLocaleString()}人
-                                </span>
-                                <span style={{fontSize:11.5,color:'var(--admin-text-faint)',minWidth:34,textAlign:'right'}}>
+                                <span style={{fontSize:12.5,fontWeight:700,color:'var(--admin-text)',flexShrink:0}}>
                                     {Math.round((part.value / total) * 100)}%
+                                </span>
+                                <span style={{fontSize:11.5,color:'var(--admin-text-faint)',flexShrink:0}}>
+                                    （{part.value.toLocaleString()}人）
                                 </span>
                             </div>
                         ))}

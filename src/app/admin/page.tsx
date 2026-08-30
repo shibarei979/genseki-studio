@@ -10,49 +10,60 @@ import { UserDonut, GenreRanking } from '@/components/admin/admin-side-cards'
 export const dynamic = 'force-dynamic'
 
 
+/** 札の右下に置く内訳。区切り線の下に2列で並べる */
+interface Breakdown {
+  label: string
+  value: string
+}
+
 /** 札に出す1つの数字 */
 interface Stat {
   label: string
   value: number
   /** 前の期間ぶん。あれば増減を出す */
   prev?: number
-  /** 比べた相手の名前。「前期間比」「昨日比」など */
-  prevLabel?: string
   /** 数字の後ろに付ける単位 */
   unit?: string
-  /** 下に添える補助の文 */
+  /** 区切り線の下に出す内訳。2つまで */
+  breakdown?: Breakdown[]
+  /** 内訳の代わりに置く一行 */
   note?: string
-  /** 右上に薄く置く絵 */
-  icon?: 'user' | 'active' | 'login' | 'book' | 'page' | 'comment' | 'eye' | 'mobile'
+  icon?: 'user' | 'book' | 'eye' | 'comment' | 'flag'
 }
 
-/**
- * 札の右上に置く絵。
+/*
+ * 札ごとの色。
  *
- * 何の数字かを、読む前に見分けるための目印。
- * 薄い色で置く。数字より目立つと本末転倒になる。
+ * 数字そのものは濃紺で統一する。
+ * 色を持たせるのは右上の絵だけにして、
+ * 「何の数字か」を見分ける目印として使う。
  */
+const ICON_COLOR: Record<NonNullable<Stat['icon']>, { fg: string; bg: string }> = {
+  user:    { fg: '#2563eb', bg: '#eff6ff' },
+  book:    { fg: '#2563eb', bg: '#eff6ff' },
+  eye:     { fg: '#2563eb', bg: '#eff6ff' },
+  comment: { fg: '#16a34a', bg: '#f0fdf4' },
+  flag:    { fg: '#e11d48', bg: '#fff1f2' },
+}
+
 function StatIcon({ name }: { name: NonNullable<Stat['icon']> }) {
   const paths: Record<NonNullable<Stat['icon']>, React.ReactNode> = {
     user:    <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
-    active:  <><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></>,
-    login:   <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></>,
     book:    <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></>,
-    page:    <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>,
-    comment: <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>,
     eye:     <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
-    mobile:  <><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></>,
+    comment: <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>,
+    flag:    <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>,
   }
+  const color = ICON_COLOR[name]
 
   return (
     <span style={{
-      width:32,height:32,borderRadius:9,flexShrink:0,
+      width:34,height:34,borderRadius:10,flexShrink:0,
       display:'flex',alignItems:'center',justifyContent:'center',
-      background:'var(--admin-bg)',
+      background:color.bg,
     }}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-        stroke="var(--admin-stat-blue)" strokeWidth="2"
-        strokeLinecap="round" strokeLinejoin="round" opacity=".75">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+        stroke={color.fg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {paths[name]}
       </svg>
     </span>
@@ -62,22 +73,22 @@ function StatIcon({ name }: { name: NonNullable<Stat['icon']> }) {
 /**
  * 数字の札。
  *
- * ★ 4 段で必ず同じ形にする。
+ * ★ どの札も同じ形にする。
  *
- *   1 ラベル
+ *   1 ラベル ＋ 右上の絵
  *   2 数字
  *   3 増減
- *   4 補足
+ *   ── 区切り線 ──
+ *   4 内訳（2列）
  *
- *   段の数が札ごとに違うと、高さが揃わず、
- *   並べたときに落ち着かない。
- *   中身が無い段は、場所だけ空けて高さを保つ。
+ *   段の数が札ごとに違うと高さが揃わない。
+ *   中身が無い段も場所だけ空ける。
  *
- * 増減は、元の数が小さいときは割合を出さない。
- * 1 から 118 になったときの「+11,700%」は、
- * 大きく見えるだけで何も伝えない。
+ * 増減は、比べる相手が小さすぎるときは割合を出さない。
+ * サイトが始まって日が浅いうちは、
+ * 「+11,700%」のような数字にしかならない。
  */
-function StatCard({ label, value, prev, prevLabel, unit, note, icon }: Stat) {
+function StatCard({ label, value, prev, unit, breakdown, note, icon }: Stat) {
   const diff = prev === undefined ? null : value - prev
   const canRate = prev !== undefined && prev >= 10
   const rate = canRate && prev ? Math.round((diff! / prev) * 1000) / 10 : null
@@ -86,42 +97,60 @@ function StatCard({ label, value, prev, prevLabel, unit, note, icon }: Stat) {
     <div style={{
       background:'var(--admin-bg-card)',
       border:'1px solid var(--admin-border)',
-      borderRadius:12,
+      borderRadius:14,
       padding:'16px 18px',
       display:'flex',
       flexDirection:'column',
-      /* 高さを揃える。中身の量で段差ができない */
       height:'100%',
     }}>
-      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8,marginBottom:6}}>
-        <span style={{fontSize:13,color:'var(--admin-text-muted)',lineHeight:1.4}}>{label}</span>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}}>
+        <span style={{fontSize:12.5,color:'var(--admin-text-muted)',lineHeight:1.4,paddingTop:4}}>
+          {label}
+        </span>
         {icon && <StatIcon name={icon} />}
       </div>
 
-      <div style={{fontSize:32,fontWeight:800,color:'var(--admin-text)',lineHeight:1.05,letterSpacing:'-.01em'}}>
+      <div style={{fontSize:30,fontWeight:800,color:'var(--admin-text)',lineHeight:1.1,marginTop:6,letterSpacing:'-.01em'}}>
         {value.toLocaleString()}<span style={{fontSize:18}}>{unit ?? ''}</span>
       </div>
 
-      {/* 増減の段。無い札でも高さを空ける */}
-      <div style={{minHeight:18,marginTop:6}}>
+      <div style={{minHeight:17,marginTop:5}}>
         {diff !== null && diff !== 0 && (
           <span style={{fontSize:12,fontWeight:700,
             color: diff > 0 ? 'var(--admin-stat-green)' : 'var(--admin-stat-rose)'}}>
             {diff > 0 ? '+' : ''}{diff.toLocaleString()}
-            {rate !== null && `（${rate > 0 ? '+' : ''}${rate}%）`}
-            <span style={{fontWeight:500,color:'var(--admin-text-faint)',marginLeft:5}}>
-              {prevLabel ?? '前期間比'}
-            </span>
+            {rate !== null && `（前期間比 ${rate > 0 ? '+' : ''}${rate}%）`}
           </span>
         )}
       </div>
 
-      {/* 補足の段。同じく高さを空ける */}
-      <div style={{minHeight:16,marginTop:'auto',paddingTop:8}}>
-        {note && (
-          <span style={{fontSize:11.5,color:'var(--admin-text-faint)',lineHeight:1.6}}>{note}</span>
-        )}
-      </div>
+      {/*
+        * 内訳。
+        *
+        * 区切り線を引いて 2 列に分ける。
+        * 1 行に並べて書くと、どこまでが 1 つの数字か
+        * 目で追わないと分からない。
+        */}
+      {breakdown && breakdown.length > 0 && (
+        <div style={{
+          marginTop:'auto',paddingTop:12,
+          borderTop:'1px solid var(--admin-border)',
+          display:'grid',gridTemplateColumns:`repeat(${breakdown.length}, minmax(0, 1fr))`,gap:10,
+        }}>
+          {breakdown.map(item => (
+            <div key={item.label}>
+              <div style={{fontSize:11,color:'var(--admin-text-faint)',marginBottom:2}}>{item.label}</div>
+              <div style={{fontSize:13.5,fontWeight:700,color:'var(--admin-text)'}}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!breakdown && (
+        <div style={{marginTop:'auto',paddingTop:12,minHeight:16}}>
+          {note && <span style={{fontSize:11.5,color:'var(--admin-text-faint)'}}>{note}</span>}
+        </div>
+      )}
     </div>
   )
 }
@@ -311,49 +340,52 @@ export default async function AdminPage() {
    *
    * ユーザー / 作品 / 交流 / アクセス で分ける。
    */
-  const groups: { title: string; items: Stat[]; columns: number }[] = [
+  /*
+   * 上に並べる 5 枚。
+   *
+   * 前はまとまりごとに 3 段に分けて積んでいた。
+   * 種類は分かれるが、縦に長くなって
+   * ひと目では見渡せなくなっていた。
+   *
+   * いちばん見たい 5 つを 1 列にして、
+   * それぞれの内訳を札の下に畳む。
+   */
+  const kpis: Stat[] = [
     {
-      title: 'ユーザー',
-      columns: 4,
-      items: [
-        {
-          label: '登録ユーザー', icon: 'user',
-          value: userCount ?? 0, prev: prevUserRes.count ?? 0,
-          note: `執筆向け ${authorCount.toLocaleString()}人 ・ 読者向け ${readerCount.toLocaleString()}人`,
-        },
-        { label: '月間ユーザー', icon: 'active', value: loginMonth, prev: loginPrevMonth, note: '30日以内に来た人' },
-        { label: '本日ログイン', icon: 'login', value: loginToday, note: '今日ログインした人' },
-        { label: '7日ログイン',  icon: 'login', value: loginWeek,  note: '直近7日に来た人' },
+      label: '総登録ユーザー数', icon: 'user',
+      value: userCount ?? 0, prev: prevUserRes.count ?? 0,
+      breakdown: [
+        { label: '執筆向け', value: `${authorCount.toLocaleString()} 人` },
+        { label: '読者向け', value: `${readerCount.toLocaleString()} 人` },
       ],
     },
     {
-      title: '作品',
-      columns: 3,
-      items: [
-        { label: '公開作品', icon: 'book', value: novelCount ?? 0, prev: prevNovelRes.count ?? 0, note: '読者が読める作品' },
-        { label: '公開話数', icon: 'page', value: publishedEpisodeCount ?? 0, note: '読者が読める話' },
-        { label: '制作話数', icon: 'page', value: episodeCount ?? 0, note: '下書き・予約を含む' },
+      label: '総作品数', icon: 'book',
+      value: novelCount ?? 0, prev: prevNovelRes.count ?? 0,
+      breakdown: [
+        { label: '公開話数', value: `${(publishedEpisodeCount ?? 0).toLocaleString()} 話` },
+        { label: '制作話数', value: `${(episodeCount ?? 0).toLocaleString()} 話` },
       ],
     },
     {
-      /*
-       * 交流とアクセスをひとまとめに。
-       *
-       * 前は「交流」がコメント 1 枚だけで、
-       * 画面いっぱいに横長の札が伸びていた。
-       * 1 枚だけの列は、並べると不自然になる。
-       */
-      title: '交流とアクセス',
-      columns: 4,
-      items: [
-        { label: 'コメント', icon: 'comment', value: commentCount ?? 0, prev: prevCommentRes.count ?? 0, note: '作品に届いた感想' },
-        { label: 'PV（30日）', icon: 'eye', value: pv30, prev: pvPrev30, note: '直近30日の閲覧' },
-        {
-          label: 'モバイル比率', icon: 'mobile',
-          value: mobilePct, unit: '%',
-          note: deviceTotal > 0 ? '直近7日のPVでの割合' : 'データなし',
-        },
-        { label: '未対応の通報', icon: 'comment', value: openReportRes.count ?? 0, note: 'まだ見ていない通報' },
+      label: '総閲覧数', icon: 'eye',
+      value: pv30, prev: pvPrev30,
+      breakdown: [
+        { label: '直近30日', value: pv30.toLocaleString() },
+        { label: 'モバイル比率', value: deviceTotal > 0 ? `${mobilePct} %` : '—' },
+      ],
+    },
+    {
+      label: '総コメント数', icon: 'comment',
+      value: commentCount ?? 0, prev: prevCommentRes.count ?? 0,
+      note: '作品に届いた感想',
+    },
+    {
+      label: 'ログインと通報', icon: 'flag',
+      value: loginMonth, prev: loginPrevMonth,
+      breakdown: [
+        { label: '本日 / 7日', value: `${loginToday} / ${loginWeek}` },
+        { label: '未対応の通報', value: `${(openReportRes.count ?? 0).toLocaleString()} 件` },
       ],
     },
   ]
@@ -390,32 +422,18 @@ export default async function AdminPage() {
           </Link>
         </div>
 
-        {/* 統計カード */}
         {/*
-          * 数字の札。
-          *
-          * 種類ごとに固めて並べる。
-          * 幅に合わせて列の数が変わる。
+          * 上の 5 枚。1 列で並べる。
+          * 狭い画面では列を減らす（globals.css の .admin-cards）。
           */}
-        {groups.map(group => (
-          <div key={group.title} style={{marginBottom:24}}>
-            <div style={{fontSize:14,fontWeight:600,color:'var(--admin-text-muted)',marginBottom:12}}>
-              {group.title}
-            </div>
-            {/*
-              * 列の数はまとまりごとに決める。
-              * auto-fit に任せると、枚数によって幅が変わり、
-              * まとまりごとに札の大きさが違って見える。
-              */}
-            <div style={{
-              display:'grid',
-              gridTemplateColumns:`repeat(${group.columns}, minmax(0, 1fr))`,
-              gap:16,
-            }} className="admin-cards">
-              {group.items.map(item => <StatCard key={item.label} {...item} />)}
-            </div>
-          </div>
-        ))}
+        <div className="admin-cards" style={{
+          display:'grid',
+          gridTemplateColumns:'repeat(5, minmax(0, 1fr))',
+          gap:16,
+          marginBottom:24,
+        }}>
+          {kpis.map(item => <StatCard key={item.label} {...item} />)}
+        </div>
 
         {/*
           * 図と、その横に2枚。
@@ -440,6 +458,50 @@ export default async function AdminPage() {
           <div style={{gridColumn:'span 3',minWidth:0}}>
             <GenreRanking items={topGenres} />
           </div>
+        </div>
+
+        {/*
+          * 収益サマリー。
+          *
+          * ★ まだ課金の仕組みがありません。
+          *   数字を入れる所だけ先に置いておきます。
+          *   作り物の数字は出しません。見て判断できないためです。
+          *
+          *   決済に何を使うかが決まってから、表の形を決めます。
+          */}
+        <div style={{
+          background:'var(--admin-bg-card)',
+          border:'1px solid var(--admin-border)',
+          borderRadius:14,
+          padding:'20px 22px',
+          marginBottom:24,
+        }}>
+          <div style={{fontSize:15,fontWeight:700,color:'var(--admin-text)',marginBottom:14}}>
+            収益サマリー
+          </div>
+
+          <div className="admin-cards" style={{
+            display:'grid',
+            gridTemplateColumns:'repeat(4, minmax(0, 1fr))',
+            gap:14,
+          }}>
+            {['今月の売上','今月の決済件数','平均単価','未払い金額'].map(label => (
+              <div key={label} style={{
+                border:'1px dashed var(--admin-border)',
+                borderRadius:12,
+                padding:'16px 18px',
+                background:'var(--admin-bg)',
+              }}>
+                <div style={{fontSize:12,color:'var(--admin-text-muted)',marginBottom:8}}>{label}</div>
+                <div style={{fontSize:15,color:'var(--admin-text-faint)'}}>まだありません</div>
+              </div>
+            ))}
+          </div>
+
+          <p style={{fontSize:11.5,color:'var(--admin-text-faint)',marginTop:14,lineHeight:1.8}}>
+            課金の仕組みを入れると、ここに数字が入ります。
+            決済に何を使うかが決まってから、置き場の形を決めます。
+          </p>
         </div>
 
         {/*
