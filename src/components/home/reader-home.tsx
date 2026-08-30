@@ -664,35 +664,16 @@ export default async function ReaderHome() {
      * 頁の下（フッターの手前）まで伸ばす。
      * 貼りつくのは中の箱だけ。
      */}
-    <div className="flex">
-      <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
-        {/*
-         * 柱。
-         *
-         * 高さを画面で切らない。
-         *
-         * 切ると、中身が入りきらないとき柱の中だけを送ることになり、
-         * ページを送っても下の札が出てこない。
-         * 自然な高さにしておけば、短いときは貼り付いたまま、
-         * 長いときはページと一緒に流れて最後まで見える。
-         */}
-        <div className="sticky top-14 px-5 py-5">
-          <ReaderSidebar
-            reading={sidebarReading}
-            notices={sidebarNotices}
-            contests={sidebarContests}
-          />
-        </div>
-      </aside>
-
-      {/* 右 */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <main className="min-w-0 flex-1 space-y-3.5 px-5 py-4 sm:px-6">
-          {/*
-           * 見出し。
-           * 執筆向けの HomeHero と同じ置き方。
-           */}
-          {/* 生年月日が未設定なら促す */}
+    {/*
+     * 柱を外して、上を全幅にする。
+     *
+     * 前は左に 300px の柱があり、見出しも本棚もその右に押し込まれていた。
+     * 本棚は横に並べて見せるものなので、幅が要る。
+     *
+     * 柱の中身（読みかけ・執筆室・お知らせ・コンテスト）は
+     * 本棚の下へ移し、作品の並びと左右に置く。
+     */}
+    <main className="mx-auto w-full max-w-[1400px] space-y-3.5 px-5 py-4 sm:px-6">
           <BirthdateNotice />
 
           <ReaderHero />
@@ -723,6 +704,29 @@ export default async function ReaderHome() {
               {/* 手で前後に送る */}
               <ShelfNav />
             </div>
+
+            {/*
+              * ここから下を左右に分ける。
+              *
+              * 左   柱にあった中身（読みかけ・執筆室・お知らせ・コンテスト）
+              * 右   作品の並び
+              *
+              * スマホでは左を出さない。
+              * 4 つとも、ヘッダーか下の並びから行けるので、
+              * 消しても行き止まりにならない。
+              */}
+            <div className="rh_lower">
+              <aside className="rh_side">
+                <div className="rh_side-inner">
+                  <ReaderSidebar
+                    reading={sidebarReading}
+                    notices={sidebarNotices}
+                    contests={sidebarContests}
+                  />
+                </div>
+              </aside>
+
+              <div className="rh_lists">
 
             {/*
              * 作品を探す。
@@ -826,11 +830,12 @@ export default async function ReaderHome() {
             )}
             </div>
 
+              </div>
+            </div>
+
             <HomeEffects pools={{ pickupPool, newReleasePool }} />
           </div>
         </main>
-      </div>
-    </div>
 
     <Footer />
     </div>
