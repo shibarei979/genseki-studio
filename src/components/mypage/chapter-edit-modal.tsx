@@ -29,10 +29,25 @@ export default function ChapterEditModal({ novelId, novelTitle, onClose }: Props
   async function loadData() {
     setLoading(true)
     const [{ data: chData }, { data: epData }] = await Promise.all([
-      supabase.from('novel_chapters').select('*').eq('novel_id', novelId).order('order_num', { ascending: true }),
+      /*
+       * 章は chapters（箱A）から読む。
+       *
+       * 前は novel_chapters（箱B）を読んでいた。
+       * 執筆画面は箱Aを使うので、そちらで作った章が
+       * この画面に出ず、「章がありません」と出ていた。
+       *
+       * 並びの列名も違う。箱Bは order_num、箱Aは sort_order。
+       */
+      supabase.from('chapters').select('id, novel_id, title, sort_order, parent_id, is_part')
+        .eq('novel_id', novelId).order('sort_order', { ascending: true }),
       supabase.from('episodes').select('id,title,ep_number,chapter_id').eq('novel_id', novelId).order('ep_number', { ascending: true }),
     ])
-    setChapters(chData || [])
+    /*
+     * この画面は order_num という名前で並びを持っている。
+     * 箱Aは sort_order なので、読んだところで詰め替える。
+     * 画面の側を全部書き換えるより、入口でそろえるほうが安全。
+     */
+    setChapters((chData || []).map((c: any) => ({ ...c, order_num: c.sort_order })))
     setEpisodes(epData || [])
     setLoading(false)
   }
@@ -46,14 +61,14 @@ export default function ChapterEditModal({ novelId, novelTitle, onClose }: Props
     if (!newChapterTitle.trim()) return
     setAdding(true)
     const maxOrder = chapters.length > 0 ? Math.max(...chapters.map(c => c.order_num)) : 0
-    const { data, error } = await supabase.from('novel_chapters').insert({
+    const { data, error } = await supabase.from('chapters').insert({
       novel_id: novelId,
       title: newChapterTitle.trim(),
-      order_num: maxOrder + 1,
+      sort_order: maxOrder + 1,
     }).select().single()
     setAdding(false)
     if (!error && data) {
-      setChapters(prev => [...prev, data])
+      setChapters(prev => [...prev, { ...data, order_num: data.sort_order }])
       setNewChapterTitle('')
       showToast('章を追加しました')
     }
@@ -62,7 +77,7 @@ export default function ChapterEditModal({ novelId, novelTitle, onClose }: Props
   async function handleDeleteChapter(chapterId: string) {
     if (!confirm('この章を削除しますか？所属する話は「未分類」に戻ります。')) return
     await supabase.from('episodes').update({ chapter_id: null }).eq('chapter_id', chapterId)
-    await supabase.from('novel_chapters').delete().eq('id', chapterId)
+    await supabase.from('chapters').delete().eq('id', chapterId)
     setChapters(prev => prev.filter(c => c.id !== chapterId))
     setEpisodes(prev => prev.map(e => e.chapter_id === chapterId ? { ...e, chapter_id: null } : e))
     showToast('章を削除しました')
@@ -70,7 +85,7 @@ export default function ChapterEditModal({ novelId, novelTitle, onClose }: Props
 
   async function handleRenameChapter(chapterId: string) {
     if (!editingTitle.trim()) { setEditingChapterId(null); return }
-    await supabase.from('novel_chapters').update({ title: editingTitle.trim() }).eq('id', chapterId)
+    await supabase.from('chapters').update({ title: editingTitle.trim() }).eq('id', chapterId)
     setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, title: editingTitle.trim() } : c))
     setEditingChapterId(null)
     showToast('章名を変更しました')
@@ -88,8 +103,8 @@ export default function ChapterEditModal({ novelId, novelTitle, onClose }: Props
     if (targetIdx < 0 || targetIdx >= chapters.length) return
     const a = chapters[idx], b = chapters[targetIdx]
     await Promise.all([
-      supabase.from('novel_chapters').update({ order_num: b.order_num }).eq('id', a.id),
-      supabase.from('novel_chapters').update({ order_num: a.order_num }).eq('id', b.id),
+      supabase.from('chapters').update({ sort_order: b.order_num }).eq('id', a.id),
+      supabase.from('chapters').update({ sort_order: a.order_num }).eq('id', b.id),
     ])
     const next = [...chapters]
     next[idx] = { ...a, order_num: b.order_num }

@@ -191,38 +191,27 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0] || null
 
   /*
-   * 章の表が 2 つある。
+   * 章は chapters（箱A）だけを読む。
    *
-   *   chapters        執筆画面が使う。いまの本命（441話ぶん）
-   *   novel_chapters  昔のもの（42話ぶん）
+   * 前は novel_chapters（箱B）も一緒に読んで混ぜていた。
+   * 章の入れ物が 2 つあり、画面ごとに別の箱を見ていたため、
+   * 執筆画面で作った章がマイページに出ない、という食い違いが
+   * 起きていた。
    *
-   * ここは novel_chapters だけを見ていたので、
-   * ほとんどの作品で章が出ていなかった。
-   * 両方を読んで、ひとつに並べる。
+   * 箱Bの中身は箱Aへ写したので、ここは箱Aだけでよい。
+   * 箱Bはしばらく残してあるが、もう読まない。
    */
-  const [{ data: legacyChapters }, { data: workChapters }] = await Promise.all([
-    supabase.from('novel_chapters').select('id, title, order_num')
-      .eq('novel_id', params.id),
-    /* 列は novel_id。work_id ではない */
-    supabase.from('chapters').select('id, title, sort_order, parent_id, is_part')
-      .eq('novel_id', params.id),
-  ])
+  const { data: workChapters } = await supabase
+    .from('chapters').select('id, title, sort_order, parent_id, is_part')
+    .eq('novel_id', params.id)
 
-  const chapters = [
-    ...(workChapters || []).map((c: any) => ({
-      id: c.id as string,
-      title: c.title as string,
-      order_num: (c.sort_order as number) ?? 0,
-      /* 親を持つものが小さい章。持たないものが大きい章 */
-      parent_id: (c.parent_id as string | null) ?? null,
-    })),
-    ...(legacyChapters || []).map((c: any) => ({
-      id: c.id as string,
-      title: c.title as string,
-      order_num: (c.order_num as number) ?? 0,
-      parent_id: null as string | null,
-    })),
-  ].sort((a, b) => a.order_num - b.order_num)
+  const chapters = (workChapters || []).map((c: any) => ({
+    id: c.id as string,
+    title: c.title as string,
+    order_num: (c.sort_order as number) ?? 0,
+    /* 部の 2 段を保つ */
+    parent_id: (c.parent_id as string | null) ?? null,
+  })).sort((a, b) => a.order_num - b.order_num)
 
   const epIds = (episodes || []).map(e => e.id)
   let epLikeCounts: Record<string,number>    = {}
