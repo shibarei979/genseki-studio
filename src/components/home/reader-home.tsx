@@ -721,16 +721,26 @@ export default async function ReaderHome() {
     </div>
 
     <div className="flex">
-      <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
-        {/*
-         * 柱。
-         *
-         * 高さを画面で切らない。
-         *
-         * 切ると、中身が入りきらないとき柱の中だけを送ることになり、
-         * ページを送っても下の札が出てこない。
-         */}
-        <div className="sticky top-14 px-5 py-5">
+      {/*
+       * 柱。
+       *
+       * ★ 白い地と縦の線をやめた。
+       *
+       *   前は aside に bg-surface と border-r があり、
+       *   さらに after で頁の下まで白い面を伸ばしていた。
+       *   中身が短くても、白い柱だけが下まで続いていた。
+       *
+       *   札は自分で白を持っているので、地は要らない。
+       *   高さも、中身のぶんだけで終わる。
+       *
+       * ★ 中身は右へ寄せる。
+       *   左に余白を多めに取り、札の左端を内側へ入れる。
+       *
+       * ★ 上の位置は「作品を探す」にそろえる。
+       *   右の main が py-4（16px）なので、こちらも同じにする。
+       */}
+      <aside className="hidden w-[300px] shrink-0 xl:block">
+        <div className="sticky top-14 py-4 pl-8 pr-3">
           <ReaderSidebar
             reading={sidebarReading}
             notices={sidebarNotices}
