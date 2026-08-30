@@ -957,7 +957,14 @@
 .reader-home .rh_lower {
     display: grid;
     /* 左が細い欄、右が作品。入れ替えるならこの1行 */
-    grid-template-columns: 300px minmax(0, 1fr);
+    /*
+     * 細い欄の幅。
+     *
+     * 300px に 20px の余白だと、中身が 260px しか残らない。
+     * 札が詰まって、執筆向けの柱と見え方が変わってしまう。
+     * 中身に 300px を確保する。
+     */
+    grid-template-columns: 340px minmax(0, 1fr);
     gap: 20px;
     align-items: start;
     margin-top: 14px;
@@ -1032,18 +1039,15 @@
  * 本棚だけがその内側に収まって両端が空いていた。
  * 棚は端まで伸ばす。
  */
-.reader-home .rh_shelf {
-    /*
-     * main の左右の余白（px-5 = 20px、sm 以上は px-6 = 24px）を
-     * 打ち消して、棚だけ端まで伸ばす。
-     */
-    margin-left: -20px;
-    margin-right: -20px;
-}
-
-@media (min-width: 640px) {
-    .reader-home .rh_shelf {
-        margin-left: -24px;
-        margin-right: -24px;
-    }
-}
+/*
+ * 本棚は、はみ出させない。
+ *
+ * 左右へ広げたら、右端が途中で切れて灰色が出た。
+ *
+ * 引き継ぎの地雷リストにあるとおり、
+ * 本棚は幅から並べる冊数を計算している（home.js）。
+ * CSS だけで幅を変えると、その計算と食い違う。
+ *
+ * 端まで伸ばしたいなら home.js まで手を入れる必要がある。
+ * ここでは触らない。
+ */
