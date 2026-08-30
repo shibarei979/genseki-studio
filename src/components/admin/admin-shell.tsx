@@ -12,10 +12,13 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import Header from "@/components/layout/header";
+import { createClient } from "@/lib/supabase/client";
 
 interface NavItem {
     href: string;
@@ -23,6 +26,14 @@ interface NavItem {
     note: string;
     /** ログインが要るので、まだ作っていないもの */
     isPending?: boolean;
+    /**
+     * 未対応の数を出す先。
+     *
+     * 「問い合わせが来ても気づけない」という声があった。
+     * 管理画面を開いても、どこに新しいものがあるか分からない。
+     * 並びの横に赤い丸で数を出す。
+     */
+    badge?: "contacts" | "reports" | "obi";
 }
 
 const NAV: { group: string; items: NavItem[] }[] = [
@@ -58,8 +69,8 @@ const NAV: { group: string; items: NavItem[] }[] = [
     {
         group: "受け取る",
         items: [
-            { href: "/admin/reports", label: "通報", note: "見かけた振る舞い" },
-            { href: "/admin/contacts", label: "問い合わせ", note: "受け取りと返信" },
+            { href: "/admin/reports", badge: "reports", label: "通報", note: "見かけた振る舞い" },
+            { href: "/admin/contacts", badge: "contacts", label: "問い合わせ", note: "受け取りと返信" },
             { href: "/admin/novels", label: "作品の確認", note: "公開されたもの" },
             { href: "/admin/discovers", label: "発掘", note: "読者が見つけたもの" },
         ],
@@ -80,8 +91,53 @@ interface Props {
     children: React.ReactNode;
 }
 
+/** 未対応の数。開いたときに数え、1分ごとに数え直す */
+function usePendingCounts() {
+    const [counts, setCounts] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+        const supabase = createClient();
+
+        async function count() {
+            /*
+             * head: true で数だけ頼む。
+             * 行を運ばないので、何万件あっても軽い。
+             */
+            const [contacts, reports, obi] = await Promise.all([
+                supabase.from("contact_messages")
+                    .select("*", { count: "exact", head: true })
+                    .eq("is_read", false),
+                supabase.from("reports")
+                    .select("*", { count: "exact", head: true })
+                    .eq("status", "open"),
+                supabase.from("obi_dots")
+                    .select("*", { count: "exact", head: true })
+                    .eq("approved", false),
+            ]);
+
+            setCounts({
+                contacts: contacts.count ?? 0,
+                reports: reports.count ?? 0,
+                obi: obi.count ?? 0,
+            });
+        }
+
+        void count();
+
+        /*
+         * 開いたままにする人がいる。
+         * 1 分ごとに数え直さないと、その間に来たものに気づけない。
+         */
+        const timer = window.setInterval(() => void count(), 60_000);
+        return () => window.clearInterval(timer);
+    }, []);
+
+    return counts;
+}
+
 export default function AdminShell({ title, description, action, children }: Props) {
     const pathname = usePathname();
+    const counts = usePendingCounts();
 
     return (
         <div className="min-h-screen bg-canvas">
@@ -139,13 +195,27 @@ export default function AdminShell({ title, description, action, children }: Pro
                                                 >
                                                     <span
                                                         className={[
-                                                            "block text-[13px]",
+                                                            "flex items-center gap-2 text-[13px]",
                                                             isCurrent
                                                                 ? "font-medium text-forest"
                                                                 : "text-ink",
                                                         ].join(" ")}
                                                     >
                                                         {item.label}
+                                                        {/*
+                                                          * 未対応の数。
+                                                          *
+                                                          * 0 のときは何も出さない。
+                                                          * いつも出ていると、目が慣れて気づかなくなる。
+                                                          */}
+                                                        {item.badge && (counts[item.badge] ?? 0) > 0 && (
+                                                            <span
+                                                                aria-label={`未対応 ${counts[item.badge]} 件`}
+                                                                className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-[var(--color-danger)] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+                                                            >
+                                                                {counts[item.badge] > 99 ? "99+" : counts[item.badge]}
+                                                            </span>
+                                                        )}
                                                     </span>
                                                     <span className="block text-[10px] text-faint">
                                                         {item.note}
