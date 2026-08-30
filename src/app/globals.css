@@ -1261,3 +1261,34 @@ body {
 .tcy-upright {
     text-orientation: upright;
 }
+
+/*
+ * ============================================================
+ * 管理画面の色
+ *
+ * ★ ここが無いまま使われていました。
+ *
+ *   --admin-bg-card などが管理画面のコードに書かれているのに、
+ *   どこにも定義がありませんでした。
+ *   枠も背景も色も効かず、素っ気ない見た目になっていました。
+ *
+ * 読者側の色とは分けています。
+ * 管理画面は長く数字を見る場所なので、
+ * 目が疲れにくい寒色寄りにしています。
+ * ============================================================
+ */
+:root {
+    --admin-bg:          #f6f8fb;
+    --admin-bg-card:     #ffffff;
+    --admin-border:      #e2e8f0;
+    --admin-text:        #1e293b;
+    --admin-text-muted:  #64748b;
+    --admin-text-faint:  #94a3b8;
+
+    /* 数字の色。並べたときに見分けが付く範囲で選ぶ */
+    --admin-stat-blue:   #2563eb;
+    --admin-stat-green:  #16a34a;
+    --admin-stat-amber:  #d97706;
+    --admin-stat-purple: #7c3aed;
+    --admin-stat-rose:   #e11d48;
+}

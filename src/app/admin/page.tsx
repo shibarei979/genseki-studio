@@ -159,18 +159,36 @@ export default async function AdminPage() {
         </div>
 
         {/* 統計カード */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:20}}>
+        {/*
+          * 数字の札。
+          *
+          * 4 列で固定していたので、狭い画面では
+          * 数字が折り返して読めなくなっていた。
+          * 幅に合わせて列の数が変わるようにする。
+          *
+          * 数字を上、名前を下に置く。
+          * 名前を先に読ませると、数字にたどり着くのが遅い。
+          */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',gap:14,marginBottom:22}}>
           {stats.map(s => (
-            <div key={s.label} style={{background:'var(--admin-bg-card)',border:'1px solid var(--admin-border)',borderRadius:12,padding:'18px 20px'}}>
-              <div style={{fontSize:26,fontWeight:800,color:s.color,marginBottom:2}}>{s.value}</div>
-              <div style={{fontSize:12,color:'var(--admin-text-muted)'}}>{s.label}</div>
+            <div key={s.label} style={{
+              background:'var(--admin-bg-card)',
+              border:'1px solid var(--admin-border)',
+              borderRadius:12,
+              padding:'16px 18px',
+              /* 影は薄く。並べたときに主張しすぎない */
+              boxShadow:'0 1px 2px rgba(15,23,42,.04)',
+            }}>
+              <div style={{fontSize:12,color:'var(--admin-text-muted)',marginBottom:6}}>{s.label}</div>
+              <div style={{fontSize:26,fontWeight:800,color:s.color,lineHeight:1.15}}>{s.value}</div>
             </div>
           ))}
         </div>
 
         <AdminChart data30={chartData30} data180={chartData180} data365={chartData365} data1825={chartData1825} />
 
-        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:20}}>
+        {/* 狭い画面では1列に落とす。2列で固定すると潰れる */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',gap:20}}>
           <div>
             <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)',marginBottom:12}}>管理メニュー</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>

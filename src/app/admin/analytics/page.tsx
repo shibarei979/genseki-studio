@@ -10,10 +10,17 @@ export const dynamic = 'force-dynamic'
 /** 大きな数字の札。数は3桁ごとに区切って読みやすくする */
 function Card({ label, value, note }: { label: string; value: number; note?: string }) {
   return (
-    <div style={{flex:'1 1 180px',border:'1px solid #e2e8f0',borderRadius:10,padding:'14px 16px',background:'#fff'}}>
-      <div style={{fontSize:12,color:'#64748b',marginBottom:4}}>{label}</div>
-      <div style={{fontSize:24,fontWeight:800,color:'#1e293b'}}>{value.toLocaleString()}</div>
-      {note && <div style={{fontSize:10,color:'#94a3b8',marginTop:4}}>{note}</div>}
+    <div style={{
+      flex:'1 1 180px',
+      border:'1px solid var(--admin-border)',
+      borderRadius:12,
+      padding:'16px 18px',
+      background:'var(--admin-bg-card)',
+      boxShadow:'0 1px 2px rgba(15,23,42,.04)',
+    }}>
+      <div style={{fontSize:12,color:'var(--admin-text-muted)',marginBottom:6}}>{label}</div>
+      <div style={{fontSize:26,fontWeight:800,color:'var(--admin-text)',lineHeight:1.15}}>{value.toLocaleString()}</div>
+      {note && <div style={{fontSize:10,color:'var(--admin-text-faint)',marginTop:6,lineHeight:1.6}}>{note}</div>}
     </div>
   )
 }
@@ -255,17 +262,17 @@ export default async function AdminAnalyticsPage() {
           *   数字を入れる所だけ先に置いておきます。
           *   作り物の数字は出しません。見て判断できないためです。
           */}
-        <div style={{border:'1px solid #e2e8f0',borderRadius:10,padding:'16px',background:'#fff',marginBottom:24}}>
-          <div style={{fontSize:13,fontWeight:700,color:'#1e293b',marginBottom:10}}>収益</div>
+        <div style={{border:'1px solid var(--admin-border)',borderRadius:12,padding:'18px',background:'var(--admin-bg-card)',marginBottom:24}}>
+          <div style={{fontSize:13,fontWeight:700,color:'var(--admin-text)',marginBottom:12}}>収益</div>
           <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
             {['今月の売上','今月の決済件数','平均単価','未払い金額'].map((label) => (
-              <div key={label} style={{flex:'1 1 180px',border:'1px dashed #cbd5e1',borderRadius:10,padding:'14px 16px',background:'#f8fafc'}}>
-                <div style={{fontSize:12,color:'#64748b',marginBottom:4}}>{label}</div>
-                <div style={{fontSize:14,color:'#94a3b8'}}>まだありません</div>
+              <div key={label} style={{flex:'1 1 180px',border:'1px dashed var(--admin-border)',borderRadius:12,padding:'16px 18px',background:'var(--admin-bg)'}}>
+                <div style={{fontSize:12,color:'var(--admin-text-muted)',marginBottom:6}}>{label}</div>
+                <div style={{fontSize:14,color:'var(--admin-text-faint)'}}>まだありません</div>
               </div>
             ))}
           </div>
-          <p style={{fontSize:11,color:'#94a3b8',marginTop:10,lineHeight:1.7}}>
+          <p style={{fontSize:11,color:'var(--admin-text-faint)',marginTop:12,lineHeight:1.7}}>
             課金の仕組みを入れると、ここに数字が入ります。
             決済に何を使うかが決まってから、表の形を決めます。
           </p>
