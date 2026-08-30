@@ -245,7 +245,10 @@ export default async function SearchPage({ searchParams }: Props) {
 
     const hasLive = new Set((liveEps || []).map((e: any) => e.novel_id))
     const before = results.length
-    results = results.filter((n: any) => hasLive.has(n.id))
+    /* 題名の無いものも外す。並べても何の話か分からない */
+    results = results.filter(
+      (n: any) => hasLive.has(n.id) && (n.title ?? '').trim() !== '',
+    )
     count = Math.max(0, count - (before - results.length))
     novelIds = results.map((n: any) => n.id)
   }

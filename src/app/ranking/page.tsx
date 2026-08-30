@@ -41,6 +41,24 @@ async function computeRanking(period: string, novelType: string, serial: string,
     if (!poolNovels || poolNovels.length === 0) return { items: [], total: 0 }
     const poolIds = poolNovels.map((n:any) => n.id)
 
+    /*
+     * 読めない作品を外す。
+     *
+     * ★ 話が 1 つも無い作品が並んでいた。
+     *   押すと「このページはありません」になる。
+     *   作品ページは、話が 0 件なら読者に見せない作りだから。
+     *
+     * 題名の無いものも外す。並べても何の話か分からない。
+     *
+     * 読者ホーム・おすすめ・作品を探す でも同じことをしている。
+     * 作品を並べる所では、毎回これが要る。
+     */
+    const { data: liveEps } = await supabase
+      .from('episodes').select('novel_id')
+      .in('novel_id', poolIds).eq('is_published', true).limit(20000)
+
+    const hasLive = new Set((liveEps || []).map((e:any) => e.novel_id))
+
     const [{ data: viewsData }, { data: discoversData }, { data: likesData }, { data: bookmarksData }, { data: readData }] = await Promise.all([
       supabase.from('novel_views').select('novel_id, view_count').in('novel_id', poolIds),
       supabase.from('discovers').select('novel_id').in('novel_id', poolIds).eq('is_pending', false),
@@ -69,7 +87,9 @@ async function computeRanking(period: string, novelType: string, serial: string,
       newbieAuthorSet = new Set(Object.entries(authorCount).filter(([,c])=>c<=4).map(([id])=>id))
     }
 
-    let candidates = poolNovels.filter((n:any) => (viewMap[n.id]||0) >= MIN_VIEWS)
+    let candidates = poolNovels
+      .filter((n:any) => hasLive.has(n.id) && (n.title ?? '').trim() !== '')
+      .filter((n:any) => (viewMap[n.id]||0) >= MIN_VIEWS)
     if (period === 'newbie_focus') {
       candidates = candidates.filter((n:any) => newbieAuthorSet.has(n.author_id))
     }
