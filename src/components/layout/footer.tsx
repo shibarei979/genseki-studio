@@ -20,6 +20,8 @@ const SECTIONS = [
         title: "はじめての方へ",
         links: [
             { href: "/about", label: "原石航路とは" },
+            /* 誰が運営しているかと、作った理由 */
+            { href: "/operator", label: "運営について" },
             { href: "/guide", label: "投稿ガイド" },
             { href: "/faq", label: "よくある質問" },
         ],
