@@ -1292,3 +1292,25 @@ body {
     --admin-stat-purple: #7c3aed;
     --admin-stat-rose:   #e11d48;
 }
+
+/*
+ * 管理画面の札の並び。
+ *
+ * 画面が狭くなったら列を減らす。
+ * 列の数はまとまりごとに決めているので、
+ * ここで幅ごとに上書きする。
+ */
+@media (max-width: 1200px) {
+    .admin-cards { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 900px) {
+    .admin-cards { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 560px) {
+    .admin-cards { grid-template-columns: 1fr !important; }
+}
+
+/* 下段の3枚。狭くなったら縦に落とす */
+@media (max-width: 1100px) {
+    .admin-lower > div { grid-column: span 12 !important; }
+}

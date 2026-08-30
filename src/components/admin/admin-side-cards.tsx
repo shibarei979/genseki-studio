@@ -38,7 +38,7 @@ export function UserDonut({
      * stroke-dasharray に「出す長さ, 隠す長さ」を渡すと、
      * その割合だけ線が出る。
      */
-    const radius = 42
+    const radius = 50
     const circumference = 2 * Math.PI * radius
 
     let offset = 0
@@ -49,7 +49,7 @@ export function UserDonut({
             border:'1px solid var(--admin-border)',
             borderRadius:12,
             padding:'18px 20px',
-            boxShadow:'0 1px 2px rgba(15,23,42,.04)',
+            height:'100%',
         }}>
             <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)',marginBottom:14}}>
                 ユーザー属性
@@ -59,22 +59,22 @@ export function UserDonut({
                 <p style={{fontSize:12,color:'var(--admin-text-faint)'}}>まだ利用者がいません</p>
             ) : (
                 <div style={{display:'flex',alignItems:'center',gap:18,flexWrap:'wrap'}}>
-                    <div style={{position:'relative',width:118,height:118,flexShrink:0}}>
-                        <svg width="118" height="118" viewBox="0 0 118 118">
+                    <div style={{position:'relative',width:138,height:138,flexShrink:0}}>
+                        <svg width="138" height="138" viewBox="0 0 138 138">
                             {parts.map((part, i) => {
                                 const ratio = part.value / total
                                 const dash = circumference * ratio
                                 const el = (
                                     <circle
                                         key={part.label}
-                                        cx="59" cy="59" r={radius}
+                                        cx="69" cy="69" r={radius}
                                         fill="none"
                                         stroke={DONUT_COLORS[i]}
-                                        strokeWidth="15"
+                                        strokeWidth="17"
                                         strokeDasharray={`${dash} ${circumference - dash}`}
                                         strokeDashoffset={-offset}
                                         /* 12時の位置から時計回りに始める */
-                                        transform="rotate(-90 59 59)"
+                                        transform="rotate(-90 69 69)"
                                     />
                                 )
                                 offset += dash
@@ -85,8 +85,8 @@ export function UserDonut({
                         {/* 真ん中に総数。輪だけでは実数が分からない */}
                         <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',
                             alignItems:'center',justifyContent:'center'}}>
-                            <div style={{fontSize:10,color:'var(--admin-text-faint)'}}>総ユーザー</div>
-                            <div style={{fontSize:18,fontWeight:800,color:'var(--admin-text)'}}>
+                            <div style={{fontSize:10.5,color:'var(--admin-text-faint)'}}>総ユーザー</div>
+                            <div style={{fontSize:22,fontWeight:800,color:'var(--admin-text)'}}>
                                 {total.toLocaleString()}
                             </div>
                         </div>
@@ -96,11 +96,14 @@ export function UserDonut({
                         {parts.map((part, i) => (
                             <div key={part.label} style={{display:'flex',alignItems:'center',gap:8}}>
                                 <span style={{width:10,height:10,borderRadius:3,background:DONUT_COLORS[i],flexShrink:0}} />
-                                <span style={{fontSize:12,color:'var(--admin-text-muted)'}}>{part.label}</span>
-                                <span style={{fontSize:12.5,fontWeight:700,color:'var(--admin-text)'}}>
+                                {/* 名前の幅をそろえる。数字の桁が縦に並ぶ */}
+                                <span style={{fontSize:12,color:'var(--admin-text-muted)',width:56,flexShrink:0}}>
+                                    {part.label}
+                                </span>
+                                <span style={{fontSize:13,fontWeight:700,color:'var(--admin-text)',minWidth:52,textAlign:'right'}}>
                                     {part.value.toLocaleString()}人
                                 </span>
-                                <span style={{fontSize:11,color:'var(--admin-text-faint)'}}>
+                                <span style={{fontSize:11.5,color:'var(--admin-text-faint)',minWidth:34,textAlign:'right'}}>
                                     {Math.round((part.value / total) * 100)}%
                                 </span>
                             </div>
@@ -123,7 +126,7 @@ export function GenreRanking({
             border:'1px solid var(--admin-border)',
             borderRadius:12,
             padding:'18px 20px',
-            boxShadow:'0 1px 2px rgba(15,23,42,.04)',
+            height:'100%',
         }}>
             <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)',marginBottom:14}}>
                 人気ジャンル TOP5
@@ -132,7 +135,7 @@ export function GenreRanking({
             {items.length === 0 ? (
                 <p style={{fontSize:12,color:'var(--admin-text-faint)'}}>まだ作品がありません</p>
             ) : (
-                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                <div style={{display:'flex',flexDirection:'column',gap:11}}>
                     {items.map((item, i) => (
                         <div key={item.genre} style={{display:'flex',alignItems:'center',gap:10}}>
                             {/*
@@ -140,7 +143,7 @@ export function GenreRanking({
                               * 全部同じ濃さだと、順位が目に入らない。
                               */}
                             <span style={{
-                                width:20,height:20,borderRadius:'50%',flexShrink:0,
+                                width:22,height:22,borderRadius:'50%',flexShrink:0,
                                 display:'flex',alignItems:'center',justifyContent:'center',
                                 fontSize:11,fontWeight:700,
                                 background: i === 0 ? 'var(--admin-stat-blue)' : 'var(--admin-bg)',

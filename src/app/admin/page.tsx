@@ -14,22 +14,70 @@ export const dynamic = 'force-dynamic'
 interface Stat {
   label: string
   value: number
-  /** 前の30日ぶん。あれば増減を出す */
+  /** 前の期間ぶん。あれば増減を出す */
   prev?: number
+  /** 比べた相手の名前。「前期間比」「昨日比」など */
+  prevLabel?: string
   /** 数字の後ろに付ける単位 */
   unit?: string
   /** 下に添える補助の文 */
   note?: string
+  /** 右上に薄く置く絵 */
+  icon?: 'user' | 'active' | 'login' | 'book' | 'page' | 'comment' | 'eye' | 'mobile'
+}
+
+/**
+ * 札の右上に置く絵。
+ *
+ * 何の数字かを、読む前に見分けるための目印。
+ * 薄い色で置く。数字より目立つと本末転倒になる。
+ */
+function StatIcon({ name }: { name: NonNullable<Stat['icon']> }) {
+  const paths: Record<NonNullable<Stat['icon']>, React.ReactNode> = {
+    user:    <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+    active:  <><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></>,
+    login:   <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></>,
+    book:    <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></>,
+    page:    <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>,
+    comment: <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>,
+    eye:     <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+    mobile:  <><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></>,
+  }
+
+  return (
+    <span style={{
+      width:32,height:32,borderRadius:9,flexShrink:0,
+      display:'flex',alignItems:'center',justifyContent:'center',
+      background:'var(--admin-bg)',
+    }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="var(--admin-stat-blue)" strokeWidth="2"
+        strokeLinecap="round" strokeLinejoin="round" opacity=".75">
+        {paths[name]}
+      </svg>
+    </span>
+  )
 }
 
 /**
  * 数字の札。
  *
+ * ★ 4 段で必ず同じ形にする。
+ *
+ *   1 ラベル
+ *   2 数字
+ *   3 増減
+ *   4 補足
+ *
+ *   段の数が札ごとに違うと、高さが揃わず、
+ *   並べたときに落ち着かない。
+ *   中身が無い段は、場所だけ空けて高さを保つ。
+ *
  * 増減は、元の数が小さいときは割合を出さない。
  * 1 から 118 になったときの「+11,700%」は、
  * 大きく見えるだけで何も伝えない。
  */
-function StatCard({ label, value, prev, unit, note }: Stat) {
+function StatCard({ label, value, prev, prevLabel, unit, note, icon }: Stat) {
   const diff = prev === undefined ? null : value - prev
   const canRate = prev !== undefined && prev >= 10
   const rate = canRate && prev ? Math.round((diff! / prev) * 1000) / 10 : null
@@ -39,39 +87,41 @@ function StatCard({ label, value, prev, unit, note }: Stat) {
       background:'var(--admin-bg-card)',
       border:'1px solid var(--admin-border)',
       borderRadius:12,
-      padding:'18px 20px',
-      boxShadow:'0 1px 2px rgba(15,23,42,.04)',
+      padding:'16px 18px',
+      display:'flex',
+      flexDirection:'column',
+      /* 高さを揃える。中身の量で段差ができない */
+      height:'100%',
     }}>
-      <div style={{fontSize:12.5,color:'var(--admin-text-muted)',marginBottom:8}}>{label}</div>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8,marginBottom:6}}>
+        <span style={{fontSize:13,color:'var(--admin-text-muted)',lineHeight:1.4}}>{label}</span>
+        {icon && <StatIcon name={icon} />}
+      </div>
 
-      <div style={{display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap'}}>
-        {/*
-          * 数字は濃紺で統一する。
-          * 色を数字ごとに変えると、色に意味があるように見えて
-          * かえって読み違える。
-          */}
-        <span style={{fontSize:28,fontWeight:800,color:'var(--admin-text)',lineHeight:1.1}}>
-          {value.toLocaleString()}{unit ?? ''}
-        </span>
+      <div style={{fontSize:32,fontWeight:800,color:'var(--admin-text)',lineHeight:1.05,letterSpacing:'-.01em'}}>
+        {value.toLocaleString()}<span style={{fontSize:18}}>{unit ?? ''}</span>
+      </div>
 
+      {/* 増減の段。無い札でも高さを空ける */}
+      <div style={{minHeight:18,marginTop:6}}>
         {diff !== null && diff !== 0 && (
-          <span style={{
-            fontSize:12,
-            fontWeight:700,
-            /* 増えたら緑、減ったら赤。ここは意味を持つ色 */
-            color: diff > 0 ? 'var(--admin-stat-green)' : 'var(--admin-stat-rose)',
-          }}>
+          <span style={{fontSize:12,fontWeight:700,
+            color: diff > 0 ? 'var(--admin-stat-green)' : 'var(--admin-stat-rose)'}}>
             {diff > 0 ? '+' : ''}{diff.toLocaleString()}
             {rate !== null && `（${rate > 0 ? '+' : ''}${rate}%）`}
+            <span style={{fontWeight:500,color:'var(--admin-text-faint)',marginLeft:5}}>
+              {prevLabel ?? '前期間比'}
+            </span>
           </span>
         )}
       </div>
 
-      {note && (
-        <div style={{fontSize:11.5,color:'var(--admin-text-faint)',marginTop:8,lineHeight:1.6}}>
-          {note}
-        </div>
-      )}
+      {/* 補足の段。同じく高さを空ける */}
+      <div style={{minHeight:16,marginTop:'auto',paddingTop:8}}>
+        {note && (
+          <span style={{fontSize:11.5,color:'var(--admin-text-faint)',lineHeight:1.6}}>{note}</span>
+        )}
+      </div>
     </div>
   )
 }
@@ -141,7 +191,7 @@ export default async function AdminPage() {
     { data: allUsers }, { data: allNovels },
     loginRes, mobileRes, desktopRes,
     prevUserRes, prevNovelRes, prevCommentRes, pv30Res, pvPrev30Res,
-    homeModeRes, genreRes,
+    homeModeRes, genreRes, openReportRes,
   ] = await Promise.all([
     supabase.from('profiles').select('created_at').gte('created_at', startDate.toISOString()),
     supabase.from('novels').select('created_at').gte('created_at', startDate.toISOString()),
@@ -185,6 +235,9 @@ export default async function AdminPage() {
 
     /* ジャンル別の作品数。公開しているものだけ数える */
     supabase.from('novels').select('genre').eq('published', true).limit(20000),
+
+    /* まだ見ていない通報。運営がいちばん先に気づくべき数字 */
+    supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'open'),
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {
@@ -231,6 +284,17 @@ export default async function AdminPage() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
 
+  /*
+   * 最終更新。
+   *
+   * この画面はサーバーで組み立てるので、
+   * いつの数字かが分からないと判断を誤る。
+   * 日本時間で出す。
+   */
+  const updatedAt = new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit',
+  }).format(new Date())
+
   const pv30 = pv30Res.count || 0
   const pvPrev30 = pvPrev30Res.count || 0
   const deviceMobile = mobileRes.count || 0
@@ -247,45 +311,49 @@ export default async function AdminPage() {
    *
    * ユーザー / 作品 / 交流 / アクセス で分ける。
    */
-  const groups: { title: string; items: Stat[] }[] = [
+  const groups: { title: string; items: Stat[]; columns: number }[] = [
     {
       title: 'ユーザー',
+      columns: 4,
       items: [
         {
-          label: '登録ユーザー',
-          value: userCount ?? 0,
-          prev: prevUserRes.count ?? 0,
+          label: '登録ユーザー', icon: 'user',
+          value: userCount ?? 0, prev: prevUserRes.count ?? 0,
           note: `執筆向け ${authorCount.toLocaleString()}人 ・ 読者向け ${readerCount.toLocaleString()}人`,
         },
-        { label: '月間ユーザー', value: loginMonth, prev: loginPrevMonth, note: '30日以内に来た人' },
-        { label: '本日ログイン', value: loginToday },
-        { label: '7日ログイン',  value: loginWeek },
+        { label: '月間ユーザー', icon: 'active', value: loginMonth, prev: loginPrevMonth, note: '30日以内に来た人' },
+        { label: '本日ログイン', icon: 'login', value: loginToday, note: '今日ログインした人' },
+        { label: '7日ログイン',  icon: 'login', value: loginWeek,  note: '直近7日に来た人' },
       ],
     },
     {
       title: '作品',
+      columns: 3,
       items: [
-        { label: '公開作品', value: novelCount ?? 0, prev: prevNovelRes.count ?? 0 },
-        { label: '公開話数', value: publishedEpisodeCount ?? 0, note: '読者が読める話' },
-        { label: '制作話数', value: episodeCount ?? 0, note: '下書き・予約を含む' },
+        { label: '公開作品', icon: 'book', value: novelCount ?? 0, prev: prevNovelRes.count ?? 0, note: '読者が読める作品' },
+        { label: '公開話数', icon: 'page', value: publishedEpisodeCount ?? 0, note: '読者が読める話' },
+        { label: '制作話数', icon: 'page', value: episodeCount ?? 0, note: '下書き・予約を含む' },
       ],
     },
     {
-      title: '交流',
+      /*
+       * 交流とアクセスをひとまとめに。
+       *
+       * 前は「交流」がコメント 1 枚だけで、
+       * 画面いっぱいに横長の札が伸びていた。
+       * 1 枚だけの列は、並べると不自然になる。
+       */
+      title: '交流とアクセス',
+      columns: 4,
       items: [
-        { label: 'コメント', value: commentCount ?? 0, prev: prevCommentRes.count ?? 0 },
-      ],
-    },
-    {
-      title: 'アクセス',
-      items: [
-        { label: 'PV（30日）', value: pv30, prev: pvPrev30 },
+        { label: 'コメント', icon: 'comment', value: commentCount ?? 0, prev: prevCommentRes.count ?? 0, note: '作品に届いた感想' },
+        { label: 'PV（30日）', icon: 'eye', value: pv30, prev: pvPrev30, note: '直近30日の閲覧' },
         {
-          label: 'モバイル比率',
-          value: mobilePct,
-          unit: '%',
-          note: deviceTotal > 0 ? '直近7日のPV' : 'データなし',
+          label: 'モバイル比率', icon: 'mobile',
+          value: mobilePct, unit: '%',
+          note: deviceTotal > 0 ? '直近7日のPVでの割合' : 'データなし',
         },
+        { label: '未対応の通報', icon: 'comment', value: openReportRes.count ?? 0, note: 'まだ見ていない通報' },
       ],
     },
   ]
@@ -295,21 +363,31 @@ export default async function AdminPage() {
       {/* 人が増えていたら花が舞う。1 人につき 50 枚 */}
       <UserJoinPetals count={userCount ?? 0} />
 
-        <div style={{marginBottom:28}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,marginBottom:4}}>
-            <div style={{display:'flex',alignItems:'center',gap:10}}>
-              {/*
-                * 見出しは AdminShell が出している。
-                * ここでも「運営管理画面 ADMIN」と出していたので、
-                * 同じ画面に見出しが 2 つ並んでいた。
-                */}
-            </div>
-            <Link href="/" style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:13,fontWeight:600,color:'var(--color-brand)',textDecoration:'none',border:'1px solid var(--admin-border)',borderRadius:10,padding:'7px 16px',background:'var(--admin-bg-card)'}}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              サイトへ戻る
-            </Link>
-          </div>
-          {/* 副題も AdminShell 側にある。ここでは出さない */}
+        {/*
+          * 上の帯。
+          *
+          * 前は見出しの下に空の枠が残り、
+          * 数字にたどり着くまでが遠かった。
+          * 縦を詰めて、右端に控えめな道具だけ並べる。
+          */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',
+          flexWrap:'wrap',gap:10,marginBottom:20}}>
+          <span style={{fontSize:11.5,color:'var(--admin-text-faint)'}}>
+            最終更新 {updatedAt}
+          </span>
+          {/*
+            * サイトへ戻る。
+            *
+            * よく押すものではないので、小さく置く。
+            * 大きいと、数字より先に目に入る。
+            */}
+          <Link href="/" style={{display:'inline-flex',alignItems:'center',gap:5,
+            fontSize:12,color:'var(--admin-text-muted)',textDecoration:'none',
+            border:'1px solid var(--admin-border)',borderRadius:8,padding:'5px 11px',
+            background:'var(--admin-bg-card)'}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            サイトへ戻る
+          </Link>
         </div>
 
         {/* 統計カード */}
@@ -320,11 +398,20 @@ export default async function AdminPage() {
           * 幅に合わせて列の数が変わる。
           */}
         {groups.map(group => (
-          <div key={group.title} style={{marginBottom:26}}>
-            <div style={{fontSize:12,fontWeight:700,color:'var(--admin-text-faint)',marginBottom:10,letterSpacing:'.04em'}}>
+          <div key={group.title} style={{marginBottom:24}}>
+            <div style={{fontSize:14,fontWeight:600,color:'var(--admin-text-muted)',marginBottom:12}}>
               {group.title}
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',gap:16}}>
+            {/*
+              * 列の数はまとまりごとに決める。
+              * auto-fit に任せると、枚数によって幅が変わり、
+              * まとまりごとに札の大きさが違って見える。
+              */}
+            <div style={{
+              display:'grid',
+              gridTemplateColumns:`repeat(${group.columns}, minmax(0, 1fr))`,
+              gap:16,
+            }} className="admin-cards">
               {group.items.map(item => <StatCard key={item.label} {...item} />)}
             </div>
           </div>
@@ -338,13 +425,21 @@ export default async function AdminPage() {
           *
           * 狭い画面では縦に落ちる。
           */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',gap:16,marginBottom:26,alignItems:'start'}}>
-          {/* 図はいちばん広く取る */}
-          <div style={{gridColumn:'span 2',minWidth:0}}>
+        {/*
+          * 12 の枡で分ける。
+          *   図 6 / ユーザー属性 3 / ジャンル 3
+          * 「なんとなく並ぶ」のではなく、比率を決めて置く。
+          */}
+        <div className="admin-lower" style={{display:'grid',gridTemplateColumns:'repeat(12, minmax(0, 1fr))',gap:16,marginBottom:24,alignItems:'stretch'}}>
+          <div style={{gridColumn:'span 6',minWidth:0}}>
             <AdminChart data30={chartData30} data180={chartData180} data365={chartData365} data1825={chartData1825} />
           </div>
-          <UserDonut authorCount={authorCount} readerCount={readerCount} />
-          <GenreRanking items={topGenres} />
+          <div style={{gridColumn:'span 3',minWidth:0}}>
+            <UserDonut authorCount={authorCount} readerCount={readerCount} />
+          </div>
+          <div style={{gridColumn:'span 3',minWidth:0}}>
+            <GenreRanking items={topGenres} />
+          </div>
         </div>
 
         {/*
