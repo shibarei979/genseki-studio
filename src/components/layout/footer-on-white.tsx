@@ -22,7 +22,17 @@ import Footer from '@/components/layout/footer'
  * ============================================================
  */
 
-export default function FooterOnWhite() {
+export default function FooterOnWhite({
+    /**
+     * 上の余白を詰める。
+     *
+     * 詰めると flow-root の囲みも要らなくなる。
+     * 白く塗る余白そのものが無くなるため。
+     */
+    tight = false,
+}: { tight?: boolean } = {}) {
+    if (tight) return <Footer tight />
+
     return (
         <div style={{ display: 'flow-root', background: '#fff' }}>
             <Footer />

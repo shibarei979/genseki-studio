@@ -146,7 +146,11 @@ export default async function MypagePage() {
       {/*
         * どのページからでも、決まりや問い合わせへ行けるようにする。
         */}
-      <FooterOnWhite />
+      {/*
+        * フッターは詰めて置く。
+        * 既定では上に 18rem（288px）の余白が入る。
+        */}
+      <FooterOnWhite tight />
     </>
   )
 }
