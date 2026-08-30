@@ -205,7 +205,7 @@ export default async function AdminPage() {
 
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:16,marginBottom:12}}>
               <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)'}}>コンテスト</div>
-              <Link href="/admin/contests" style={{fontSize:12,color:'var(--color-brand)',textDecoration:'none'}}>管理 ›</Link>
+              <Link href="/admin/contest" style={{fontSize:12,color:'var(--color-brand)',textDecoration:'none'}}>管理 ›</Link>
             </div>
             <div style={{background:'var(--admin-bg-card)',border:'1px solid var(--admin-border)',borderRadius:12,overflow:'hidden'}}>
               {(contests||[]).length === 0
