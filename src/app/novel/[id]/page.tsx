@@ -54,7 +54,6 @@ import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import NovelActions from '@/components/novel/novel-actions'
 import ObiBelt from '@/components/novel/obi-belt'
-import ExportButton from '@/components/novel/export-button'
 import { calcQualityScore } from '@/lib/quality-score'
 import FollowButton from '@/components/follow-button'
 import NovelParts from '@/components/novel/novel-parts'
@@ -99,7 +98,17 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const [authorRes, seriesNovelRes, episodesRes] = await Promise.all([
     supabase.from('public_profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('series_novels').select('series_id').eq('novel_id', params.id).maybeSingle(),
-    supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, illust_url, chapter_id, published, is_published, scheduled_at')
+    /*
+     * 目次は public_episodes から読む。
+     *
+     * episodes 本体は、未公開の話が行ごと見えない。
+     * 本文を守るためだが、そのままだと
+     * 「◯日に公開予定」の予告まで消える。
+     *
+     * この見え方には本文が入っていない。
+     * 未公開の話の題名も、作者以外には出ない。
+     */
+    supabase.from('public_episodes').select('id, title, ep_number, created_at, updated_at, illust_url, chapter_id, published, is_published, scheduled_at')
       /* 上限を上げる。既定 1,000 件だと目次の後ろが消える */
       .eq('novel_id', params.id).order('ep_number', { ascending: true }).limit(5000),
   ])
@@ -121,6 +130,14 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
   const isAuthor = user?.id === novel.author_id
 
+  /*
+   * 題名の無い話は、未公開で作者以外が見ているもの。
+   * 空欄のまま並ぶと壊れて見えるので、言葉を入れる。
+   */
+  for (const ep of rawEpisodes || []) {
+    if (!ep.title) ep.title = '公開予定'
+  }
+
   const nowMs = Date.now()
   /*
    * 時間の来た予約を公開する。
@@ -132,7 +149,19 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const toPublish = (rawEpisodes || []).filter(ep =>
     ep.is_published !== true && ep.scheduled_at && new Date(ep.scheduled_at).getTime() <= nowMs
   )
-  if (toPublish.length > 0) {
+  /*
+   * 直すのは作者が開いたときだけ。
+   *
+   * 目次を見え方から読むようになったので、読者にも
+   * 予約の行が見えるようになった。
+   * 読者の画面でここを走らせても、話を書き換える決まりが
+   * 無いので失敗する。それなのに画面の上だけ
+   * 「公開済み」に見え、開くと本文が出ない話ができる。
+   *
+   * 時間の来た予約は、1 分ごとの定期実行が公開する。
+   * ここは、その取りこぼしを作者が拾うための道。
+   */
+  if (isAuthor && toPublish.length > 0) {
     await supabase.from('episodes')
       /* 印は 2 つあるので、両方そろえて立てる */
       .update({ published: true, is_published: true, scheduled_at: null, publish_at: null })
@@ -572,9 +601,22 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
               discoverCount={discoverCount??0}
               hideStats={Date.now() - new Date(novel.created_at).getTime() < 7*24*60*60*1000 || (likeCount??0) < 50}
             />
-            <div style={{display:'flex',justifyContent:'flex-end',marginTop:10}}>
-              <ExportButton novelId={params.id} novelTitle={novel.title} authorName={author?.display_name || ''}/>
-            </div>
+            {/*
+              * 読者へのダウンロードは出さない。
+              *
+              * ログインしていない人でも作品ぜんぶを
+              * .txt・Word・PDF で落とせる状態だった。
+              *
+              * 本文はページの中に文字として入っているので、
+              * 消しても無断転載そのものは防げない。
+              * 防げるのは「原石航路が公式に配っている」という
+              * 見え方のほうで、作家が不安を持つのはそこだった。
+              *
+              * 作者本人は、設定 → 原稿管理から今までどおり
+              * 落とせる。そちらは触っていない。
+              *
+              * 求める声が出たら、作品ごとに作者が選べる形へ広げる。
+              */}
           </div>
 
           <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden'}}>
