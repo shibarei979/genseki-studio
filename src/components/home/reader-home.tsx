@@ -740,7 +740,17 @@ export default async function ReaderHome() {
        *   右の main が py-4（16px）なので、こちらも同じにする。
        */}
       <aside className="hidden w-[300px] shrink-0 xl:block">
-        <div className="sticky top-14 py-4 pl-8 pr-3">
+        {/*
+         * 左に大きく余白を取って、札を右へ寄せる。
+         *
+         * 左端に貼り付いていると、右の「作品を探す」との間が
+         * 開きすぎて、二つが離れて見える。
+         *
+         * ★ 寄せ具合はこの pl-* と pr-* の数字だけで変わる。
+         *   もっと右へ  pl-20 pr-0
+         *   もっと左へ  pl-8  pr-3
+         */}
+        <div className="sticky top-14 py-4 pl-16 pr-0">
           <ReaderSidebar
             reading={sidebarReading}
             notices={sidebarNotices}
