@@ -553,12 +553,20 @@ export default async function ReaderHome() {
   /*
    * 新着作品。
    *
-   * 点数では選ばず、新しい順にそのまま出す。
+   * 点数では選ばず、新しいものから選ぶ。
    * 「新作のおすすめ」は点数で選んでいたので、
    * 新しくても点の低い作品は出てこなかった。
-   * 新着は新着として並べる。
+   *
+   * ★ 先頭の 10 件をそのまま出さない。
+   *
+   *   新しい順に並んだ先頭を取ると、
+   *   誰かが投稿するまで中身も順番も変わらない。
+   *   毎日見に来る人には、同じ棚が並び続ける。
+   *
+   *   新しいほうから 30 件を母集団にして、その中から選ぶ。
+   *   開くたびに顔ぶれが変わる。
    */
-  const freshBooks = readable
+  const freshBooks = shuffle(readable.slice(0, WORKS_POOL_COUNT))
     .slice(0, LIST_SIZE)
     .map((n) => toBook(n, extras))
 

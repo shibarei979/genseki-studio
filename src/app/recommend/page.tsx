@@ -47,6 +47,22 @@ function truncate(text: string | null | undefined, length: number): string {
     return t.length > length ? t.slice(0, length) + "…" : t;
 }
 
+/**
+ * 並びを混ぜる。
+ *
+ * 新しい順の先頭をそのまま出すと、
+ * 誰かが投稿するまで中身が変わらない。
+ * 母集団の中から選び直すために使う。
+ */
+function shuffle<T>(list: T[]): T[] {
+    const a = [...list];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
 export default async function RecommendPage({
     searchParams,
 }: {
@@ -240,9 +256,18 @@ export default async function RecommendPage({
      * 板が続くと重く、どれを見ればよいか分からない。
      * 柱で切り替える形にして、板は 1 つにする。
      */
-    const newBooks = scored
-        .filter((n) => n.created_at >= monthAgo)
-        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    /*
+     * 新着のおすすめ。
+     *
+     * ★ 新しい順の先頭をそのまま出さない。
+     *   誰かが投稿するまで、中身も順番も変わらない。
+     *   毎日見に来る人には、同じ並びが続く。
+     *
+     *   この 30 日に出た作品を母集団にして、その中から選ぶ。
+     */
+    const newBooks = shuffle(
+        scored.filter((n) => n.created_at >= monthAgo),
+    )
         .slice(0, LIST_SIZE)
         .map(toBook);
 
