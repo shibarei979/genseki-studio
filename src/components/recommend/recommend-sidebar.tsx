@@ -14,12 +14,19 @@ import { GENRES } from '@/types'
  */
 
 /** 見せ方。押すと板の中身が入れ替わる */
+/*
+ * 見せ方。押すと板の中身が入れ替わる。
+ *
+ * ★ 名前は短く、違いが出るように。
+ *   前は「おすすめ」が 5 つ中 3 つに入っていて、
+ *   どれを押せば何が出るのか伝わらなかった。
+ */
 export const VIEWS = [
-    { key: 'foryou',  label: 'おすすめ' },
-    { key: 'hidden',  label: 'まだ知られていない作品' },
-    { key: 'rising',  label: '最近ふえている作品' },
-    { key: 'new',     label: '新着のおすすめ' },
-    { key: 'hot',     label: '急上昇のおすすめ' },
+    { key: 'foryou',  label: 'あなたに' },
+    { key: 'hidden',  label: 'まだ知られていない' },
+    { key: 'rising',  label: '伸びている' },
+    { key: 'new',     label: '新しい' },
+    { key: 'hot',     label: 'いま読まれている' },
 ] as const
 
 /** こだわり条件。押すと板の札を絞る */

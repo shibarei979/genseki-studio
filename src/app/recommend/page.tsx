@@ -223,9 +223,9 @@ export default async function RecommendPage({
     const VIEW_MAP: Record<string, { title: string; note: string; books: HomeBook[] }> = {
         foryou: { title: "あなたへのおすすめ", note: "読んだ作品から選んでいます", books: forYou },
         hidden: { title: "まだ知られていない作品", note: "人目に触れていない、けれど読まれてほしい作品", books: hidden },
-        rising: { title: "最近ふえている作品", note: "ここしばらく読まれ方が伸びている作品", books: rising },
-        new:    { title: "新着のおすすめ", note: "この30日に出た作品から", books: newBooks },
-        hot:    { title: "急上昇のおすすめ", note: "いま伸びが大きい作品", books: hotBooks },
+        rising: { title: "伸びている作品", note: "ここしばらく読まれ方が伸びています", books: rising },
+        new:    { title: "新しい作品", note: "この30日に出た作品から", books: newBooks },
+        hot:    { title: "いま読まれている作品", note: "読まれ方の勢いが大きい作品", books: hotBooks },
     };
 
     const base = VIEW_MAP[view] ?? VIEW_MAP.foryou;
@@ -282,7 +282,8 @@ export default async function RecommendPage({
                 </div>
             </div>
 
-            <Footer />
+            {/* フッターは詰めて置く。既定では上に 18rem の余白が入る */}
+            <Footer tight />
         </div>
     );
 }
