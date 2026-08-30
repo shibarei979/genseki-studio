@@ -6,7 +6,16 @@ import {
   Legend, ResponsiveContainer,
 } from 'recharts'
 
-interface DayData { date: string; users: number; novels: number }
+/*
+ * 1日ぶんの数。
+ *
+ * 前は users（登録者ぜんぶ）と novels（投稿）の2本だった。
+ * 登録した人が読み手なのか書き手なのかが分からず、
+ * 「誰が増えているのか」が読み取れなかった。
+ *
+ * マイページの設定（home_mode）で分けて数える。
+ */
+interface DayData { date: string; readers: number; authors: number; novels: number }
 interface Props {
   data30: DayData[]; data180: DayData[]
   data365: DayData[]; data1825: DayData[]
@@ -24,10 +33,10 @@ const PERIODS: { value: Period; label: string }[] = [
 ]
 
 function toCumulative(data: DayData[]): DayData[] {
-  let cu = 0, cn = 0
+  let cr = 0, ca = 0, cn = 0
   return data.map(d => {
-    cu += d.users; cn += d.novels
-    return { date: d.date, users: cu, novels: cn }
+    cr += d.readers; ca += d.authors; cn += d.novels
+    return { date: d.date, readers: cr, authors: ca, novels: cn }
   })
 }
 
@@ -38,8 +47,9 @@ function aggregate(data: DayData[], step: number): DayData[] {
     const chunk = data.slice(i, i + step)
     result.push({
       date: chunk[0].date,
-      users:  chunk.reduce((s, d) => s + d.users,  0),
-      novels: chunk.reduce((s, d) => s + d.novels, 0),
+      readers: chunk.reduce((s, d) => s + d.readers, 0),
+      authors: chunk.reduce((s, d) => s + d.authors, 0),
+      novels:  chunk.reduce((s, d) => s + d.novels,  0),
     })
   }
   return result
@@ -75,7 +85,7 @@ export default function AdminChart({ data30, data180, data365, data1825 }: Props
   const aggregated = aggregate(raw, AGG_STEPS[period])
   const data       = dataMode === 'cumulative' ? toCumulative(aggregated) : aggregated
 
-  const totalUsers  = raw.reduce((s, d) => s + d.users,  0)
+  const totalUsers  = raw.reduce((s, d) => s + d.readers + d.authors, 0)
   const totalNovels = raw.reduce((s, d) => s + d.novels, 0)
 
   const tabStyle = (active: boolean) => ({
@@ -92,14 +102,19 @@ export default function AdminChart({ data30, data180, data365, data1825 }: Props
       {/* ヘッダー */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:8}}>
         <div style={{fontSize:14,fontWeight:700,color:'#1e293b'}}>登録者数・投稿数の推移</div>
-        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+        {/*
+            * 押し具は 3 つの群に分ける。
+            * 群の間を広く、群の中を詰める。
+            * 同じ間隔で 8 個並ぶと、どこで意味が変わるか分からない。
+            */}
+          <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
           {/* 新規/累計 */}
-          <div style={{display:'flex',gap:4,background:'#f1f5f9',borderRadius:8,padding:3}}>
+          <div style={{display:'flex',gap:2,background:'var(--admin-bg)',borderRadius:9,padding:3}}>
             <button style={tabStyle(dataMode==='daily')}    onClick={()=>setDataMode('daily')}>新規</button>
             <button style={tabStyle(dataMode==='cumulative')} onClick={()=>setDataMode('cumulative')}>累計</button>
           </div>
           {/* 期間 */}
-          <div style={{display:'flex',gap:4,background:'#f1f5f9',borderRadius:8,padding:3}}>
+          <div style={{display:'flex',gap:2,background:'var(--admin-bg)',borderRadius:9,padding:3}}>
             {PERIODS.map(p => (
               <button key={p.value} style={tabStyle(period===p.value)} onClick={()=>setPeriod(p.value)}>
                 {p.label}
@@ -107,7 +122,7 @@ export default function AdminChart({ data30, data180, data365, data1825 }: Props
             ))}
           </div>
           {/* グラフ種別 */}
-          <div style={{display:'flex',gap:4,background:'#f1f5f9',borderRadius:8,padding:3}}>
+          <div style={{display:'flex',gap:2,background:'var(--admin-bg)',borderRadius:9,padding:3}}>
             <button style={tabStyle(chartType==='bar')}  onClick={()=>setChartType('bar')}>棒</button>
             <button style={tabStyle(chartType==='line')} onClick={()=>setChartType('line')}>折れ線</button>
           </div>
@@ -126,18 +141,28 @@ export default function AdminChart({ data30, data180, data365, data1825 }: Props
           <YAxis tick={{fontSize:9,fill:'#94a3b8'}} allowDecimals={false}/>
           <Tooltip content={<CustomTooltip/>}/>
           <Legend
-            formatter={(value) => value === 'users' ? '新規登録者' : '新規投稿'}
+            formatter={(value) =>
+              value === 'readers' ? '読者登録'
+              : value === 'authors' ? '作者登録'
+              : '新規投稿'}
             wrapperStyle={{fontSize:11}}
           />
           {chartType === 'bar' ? (
             <>
-              <Bar dataKey="users"  name="users"  fill="#3b82f6" radius={[2,2,0,0]}/>
-              <Bar dataKey="novels" name="novels" fill="#10b981" radius={[2,2,0,0]}/>
+              {/*
+                * 読者と作者は積み上げる。
+                * 並べると「登録がいくつあったか」を
+                * 2 本足して読むことになる。
+                */}
+              <Bar dataKey="readers" name="readers" stackId="join" fill="#3b82f6" radius={[0,0,0,0]}/>
+              <Bar dataKey="authors" name="authors" stackId="join" fill="#f59e0b" radius={[2,2,0,0]}/>
+              <Bar dataKey="novels"  name="novels"  fill="#10b981" radius={[2,2,0,0]}/>
             </>
           ) : (
             <>
-              <Line dataKey="users"  name="users"  stroke="#3b82f6" strokeWidth={2} dot={false} activeDot={{r:4}}/>
-              <Line dataKey="novels" name="novels" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{r:4}}/>
+              <Line dataKey="readers" name="readers" stroke="#3b82f6" strokeWidth={2} dot={false}/>
+              <Line dataKey="authors" name="authors" stroke="#f59e0b" strokeWidth={2} dot={false}/>
+              <Line dataKey="novels"  name="novels"  stroke="#10b981" strokeWidth={2} dot={false}/>
             </>
           )}
         </ChartComp>

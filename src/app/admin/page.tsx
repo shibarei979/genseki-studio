@@ -217,14 +217,16 @@ export default async function AdminPage() {
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const since30 = new Date(); since30.setDate(since30.getDate() - 30)
   const since60 = new Date(); since60.setDate(since60.getDate() - 60)
+  const since365 = new Date(); since365.setDate(since365.getDate() - 365)
 
   const [
     { data: allUsers }, { data: allNovels },
     loginRes, mobileRes, desktopRes,
     prevUserRes, prevNovelRes, prevCommentRes, pv30Res, pvPrev30Res,
     homeModeRes, genreRes, openReportRes, likeRes, prevLikeRes,
+    mob30Res, desk30Res, mob365Res, desk365Res, mobAllRes, deskAllRes,
   ] = await Promise.all([
-    supabase.from('profiles').select('created_at').gte('created_at', startDate.toISOString()),
+    supabase.from('profiles').select('created_at, home_mode').gte('created_at', startDate.toISOString()),
     supabase.from('novels').select('created_at').gte('created_at', startDate.toISOString()),
 
     /* 失敗しても止めない。数字が 0 になるだけ */
@@ -274,6 +276,26 @@ export default async function AdminPage() {
     supabase.from('likes').select('*', { count: 'exact', head: true }),
     supabase.from('likes').select('*', { count: 'exact', head: true })
       .lt('created_at', since30.toISOString()),
+
+    /*
+     * 端末の割合を、30日・1年・累計でも数える。
+     *
+     * 7日ぶんだけでは、たまたま一人が
+     * パソコンで大量に読んだ日に大きく振れる。
+     * 長い期間も並べて、傾向を見られるようにする。
+     */
+    supabase.from('page_views').select('*', { count: 'exact', head: true })
+      .eq('device', 'mobile').gte('viewed_at', since30.toISOString()),
+    supabase.from('page_views').select('*', { count: 'exact', head: true })
+      .eq('device', 'desktop').gte('viewed_at', since30.toISOString()),
+
+    supabase.from('page_views').select('*', { count: 'exact', head: true })
+      .eq('device', 'mobile').gte('viewed_at', since365.toISOString()),
+    supabase.from('page_views').select('*', { count: 'exact', head: true })
+      .eq('device', 'desktop').gte('viewed_at', since365.toISOString()),
+
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'mobile'),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'desktop'),
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {
@@ -282,7 +304,20 @@ export default async function AdminPage() {
       const fmt = (dt: Date) => `${dt.getMonth()+1}/${dt.getDate()}`
       return {
         date: fmt(d),
-        users:  (allUsers  || []).filter((u: any) => { const t = new Date(u.created_at); return t >= s && t <= e }).length,
+        /*
+         * 登録した人を、向きで分ける。
+         *
+         * 見本と同じく、読者登録と作者登録を積み上げる。
+         * ひとつの棒にすると、どちらが増えたか分からない。
+         */
+        readers: (allUsers || []).filter((u: any) => {
+          const t = new Date(u.created_at)
+          return t >= s && t <= e && u.home_mode === 'read'
+        }).length,
+        authors: (allUsers || []).filter((u: any) => {
+          const t = new Date(u.created_at)
+          return t >= s && t <= e && u.home_mode !== 'read'
+        }).length,
         novels: (allNovels || []).filter((n: any) => { const t = new Date(n.created_at); return t >= s && t <= e }).length,
       }
     })
@@ -339,6 +374,24 @@ export default async function AdminPage() {
   const mobilePct = deviceTotal > 0 ? Math.round((deviceMobile / deviceTotal) * 100) : 0
 
   /*
+   * 期間ごとの端末の割合。
+   *
+   * 元になる閲覧が少ないと、割合が大きく振れる。
+   * 何件を元に出した割合かも一緒に出す。
+   */
+  function ratio(mobile: number, desktop: number) {
+    const total = mobile + desktop
+    return {
+      pct: total > 0 ? Math.round((mobile / total) * 100) : 0,
+      total,
+    }
+  }
+
+  const mobile30  = ratio(mob30Res.count || 0,  desk30Res.count || 0)
+  const mobile365 = ratio(mob365Res.count || 0, desk365Res.count || 0)
+  const mobileAll = ratio(mobAllRes.count || 0, deskAllRes.count || 0)
+
+  /*
    * 数字をひとまとめに。
    *
    * 前は「登録ユーザー」「本日ログイン」「モバイル比率」が
@@ -379,7 +432,8 @@ export default async function AdminPage() {
       value: pv30, prev: pvPrev30,
       breakdown: [
         { label: '直近30日', value: pv30.toLocaleString() },
-        { label: 'モバイル比率', value: deviceTotal > 0 ? `${mobilePct} %` : '—' },
+        /* 携帯の割合は、下の「サイト利用状況」で期間ごとに出す */
+        { label: '直近7日の携帯', value: deviceTotal > 0 ? `${mobilePct} %` : '—' },
       ],
     },
     {
@@ -505,6 +559,20 @@ export default async function AdminPage() {
               { label: '本日ログイン', value: loginToday.toLocaleString(), note: '今日来た人' },
               { label: '7日ログイン',  value: loginWeek.toLocaleString(),  note: '直近7日に来た人' },
               { label: '未対応の通報', value: (openReportRes.count ?? 0).toLocaleString(), note: 'まだ見ていない通報' },
+
+              /*
+               * 携帯からの割合。
+               *
+               * 7日ぶんだけでは、たまたま一人が
+               * パソコンで大量に読んだ日に大きく振れる。
+               * 長い期間も並べて、傾向を見られるようにする。
+               */
+              { label: '携帯の割合（30日）', value: mobile30.total > 0 ? `${mobile30.pct} %` : '—',
+                note: `${mobile30.total.toLocaleString()}件のPVから` },
+              { label: '携帯の割合（1年）', value: mobile365.total > 0 ? `${mobile365.pct} %` : '—',
+                note: `${mobile365.total.toLocaleString()}件のPVから` },
+              { label: '携帯の割合（累計）', value: mobileAll.total > 0 ? `${mobileAll.pct} %` : '—',
+                note: `${mobileAll.total.toLocaleString()}件のPVから` },
             ].map(item => (
               <div key={item.label} style={{
                 border:'1px solid var(--admin-border)',
