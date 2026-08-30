@@ -134,19 +134,31 @@ const BOOK = {
  * 12 冊並んだときに画面が重くなる。
  * 棚に挿さった本は、背が明るいほうが探しやすい。
  */
+/*
+ * 表紙の色。
+ *
+ * 全体に明るくした。
+ * 前は少しくすんでいて、棚に並べると沈んで見えた。
+ *
+ * ★ 文字の色（ink）は濃いまま。
+ *   地を明るくしたぶん、文字まで薄くすると読めなくなる。
+ *
+ * ★ 2 番目の濃紺だけ、白い文字を乗せる前提。
+ *   全部を淡くすると、並んだときに変化が無くなる。
+ */
 export const COVERS = [
-    { base: "#f4f1e8", ink: "#4a4238" },
-    { base: "#2f3f5c", ink: "#f0ece2" },
-    { base: "#dfe8db", ink: "#3f5040" },
-    { base: "#e2e8ec", ink: "#5c4632" },
-    { base: "#dbe4ec", ink: "#39485a" },
-    { base: "#e8e6e0", ink: "#4a4640" },
-    { base: "#e2dced", ink: "#453c5c" },
-    { base: "#f2dcdc", ink: "#5c3a3a" },
-    { base: "#e6e0d2", ink: "#4f4632" },
-    { base: "#e9ddc8", ink: "#5a4726" },
-    { base: "#d8e5e6", ink: "#37504f" },
-    { base: "#f4efe4", ink: "#4a4238" },
+    { base: "#fffdf6", ink: "#4a4238" },
+    { base: "#506d92", ink: "#ffffff" },
+    { base: "#e9f4e4", ink: "#3a5340" },
+    { base: "#eff5f9", ink: "#5c4632" },
+    { base: "#e5f0fb", ink: "#33485e" },
+    { base: "#f4f2ec", ink: "#4a4640" },
+    { base: "#ede7f8", ink: "#443a5e" },
+    { base: "#fde9e9", ink: "#5c3a3a" },
+    { base: "#f3eddc", ink: "#4f4632" },
+    { base: "#faebd1", ink: "#5a4726" },
+    { base: "#e0f2f3", ink: "#2f5150" },
+    { base: "#fffbf1", ink: "#4a4238" },
 ];
 
 interface Props {
