@@ -37,7 +37,7 @@ class LayoutCalc {
      * 見た目の冊数を減らしたいときは、
      * 棚の幅を狭めて、端を隠すほうが安全。
      */
-    static B_SIDE_COUNT = 10;
+    static B_SIDE_COUNT = 14;
     static B_OVERFLOW_COUNT = 1.5;
 
     static SCALE = 1;

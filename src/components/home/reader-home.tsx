@@ -685,17 +685,26 @@ export default async function ReaderHome() {
      *   本棚の見た目はすべて .reader-home 配下の指定で決まっている。
      *   外に出すと、棚も板も消える。
      */}
+    {/*
+      * ★ 見出しは .reader-home の外に置くこと。
+      *
+      *   base.css に .reader-home * { margin:0; padding:0 } がある。
+      *   中に入れると、見出しの内側の余白まで消えて
+      *   文字が画面の端に張り付く。
+      *
+      *   囲みが要るのは本棚だけ。
+      */}
+    <div className="px-5 pt-4 sm:px-6">
+      <BirthdateNotice />
+      <ReaderHero />
+    </div>
+
     <div
       className="reader-home"
       data-theme="light"
       data-view="reader"
       data-auth={user ? 'login' : 'guest'}
     >
-      <div className="px-5 pt-4 sm:px-6">
-        <BirthdateNotice />
-        <ReaderHero />
-      </div>
-
       <div className="rh_main">
         {/*
          * 本棚と、その下の板。
