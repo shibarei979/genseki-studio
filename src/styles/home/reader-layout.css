@@ -1142,17 +1142,66 @@
 }
 
 /* ---- 本 ---- */
+/*
+ * 本の奥行き。
+ *
+ * 執筆向けホームの本は棚に横並びで、隣と重なって奥行きが出る。
+ * 1 冊だけ置くと平らに見える。
+ *
+ * ここでは 3 つで奥行きを作る。
+ *   1  少し回して、斜めから見た形にする
+ *   2  背表紙を左に立てる
+ *   3  天（上から見える紙の断面）を出す
+ */
 .reader-home .fs_book {
     display: block;
     height: 100%;
     text-decoration: none;
-    /* 影は輪郭に沿わせる。四角い影だと箱に見える */
-    filter: drop-shadow(3px 3px 2px rgba(40, 35, 25, .12));
-    transition: transform .2s ease;
+    filter: drop-shadow(4px 4px 3px rgba(40, 35, 25, .16));
+    transition: transform .25s ease;
+
+    transform-style: preserve-3d;
+    /* 回しすぎると題名が読めない。11 度まで */
+    transform: perspective(700px) rotateY(-11deg);
 }
 
 .reader-home .fs_book:hover {
-    transform: translateY(-4px);
+    /* 正面へ向けて、持ち上げる */
+    transform: perspective(700px) rotateY(-4deg) translateY(-5px);
+}
+
+/*
+ * 背表紙。本の左に、厚みぶんの面を立てる。
+ * これが無いと、回しても板が斜めになっただけに見える。
+ */
+.reader-home .fs_book::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    width: 14px;
+    transform: rotateY(-90deg);
+    transform-origin: left center;
+    background: linear-gradient(90deg, #5f5a51 0%, #8b857a 55%, #4d4941 100%);
+    border-radius: 2px 0 0 2px;
+}
+
+/*
+ * 天。上から見える紙の断面。
+ * これが無いと、立っているのか寝ているのか分からない。
+ */
+.reader-home .fs_book::after {
+    content: "";
+    position: absolute;
+    left: 1px;
+    right: 6px;
+    top: 0;
+    height: 14px;
+    transform: rotateX(74deg);
+    transform-origin: center top;
+    background: repeating-linear-gradient(90deg, #e7dfcd 0 1px, #f8f4ec 1px 2px);
+    border-radius: 2px 2px 0 0;
 }
 
 /* 題名は 2 行まで。あふれると表紙からはみ出す */

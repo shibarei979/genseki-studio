@@ -172,6 +172,27 @@ export function GenreRanking({
                     ))}
                 </div>
             )}
+
+            {/*
+              * 作品一覧への行き先。
+              *
+              * 柱の「作品の確認」とは役目が違う。
+              * あちらは運営の作業用、ここは
+              * 「いま見ているジャンルの作品を見に行く」ため。
+              */}
+            <a
+                href="/admin/novels"
+                style={{
+                    marginTop: 'auto',
+                    paddingTop: 14,
+                    fontSize: 12,
+                    color: 'var(--admin-stat-blue)',
+                    textDecoration: 'none',
+                    textAlign: 'center',
+                }}
+            >
+                作品一覧を見る →
+            </a>
         </div>
     )
 }
