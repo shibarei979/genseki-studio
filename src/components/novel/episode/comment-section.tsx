@@ -78,7 +78,13 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
 
     let alive = true
 
-    fetch(`/api/novel/${novelId}/comments`)
+    /*
+     * その話のコメントだけを頼む。
+     *
+     * 渡さないと作品ぜんぶが返り、
+     * 第3話の感想が第1話にも並ぶ。
+     */
+    fetch(`/api/novel/${novelId}/comments?episode=${encodeURIComponent(episodeId)}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (alive && data?.comments) setComments(buildTree(data.comments))
@@ -86,7 +92,12 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
       .catch(() => { /* 届かなくても、本文は読める */ })
 
     return () => { alive = false }
-  }, [novelId, initialComments.length])
+    /*
+     * 話が変わったら読み直す。
+     * episodeId を見ていないと、次の話へ進んだときに
+     * 前の話のコメントが残ったままになる。
+     */
+  }, [novelId, episodeId, initialComments.length])
 
   useEffect(() => {
     if (quotedText && textareaRef.current) {

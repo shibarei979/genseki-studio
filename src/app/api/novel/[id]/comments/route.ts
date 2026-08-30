@@ -32,10 +32,26 @@ export async function GET(
     const { data: auth } = await supabase.auth.getUser();
     const blocked = await loadBlockedIds(supabase, auth.user?.id);
 
-    const { data: fetched } = await supabase
+    /*
+     * 話ごとのコメントは、その話のものだけを出す。
+     *
+     * 前は作品で絞るだけだったので、どの話を開いても
+     * 作品ぜんぶのコメントが同じ顔で並んでいた。
+     * 第3話の感想が第1話にも出ている状態だった。
+     *
+     * episode を渡さない呼び方（作品ページ）は、
+     * これまでどおり作品ぜんぶを出す。
+     */
+    const episodeId = new URL(request.url).searchParams.get("episode");
+
+    let query = supabase
         .from("comments")
-        .select("id, body, created_at, user_id, is_pinned, rating, quoted_text, parent_id")
-        .eq("novel_id", params.id)
+        .select("id, body, created_at, user_id, is_pinned, rating, quoted_text, parent_id, episode_id")
+        .eq("novel_id", params.id);
+
+    if (episodeId) query = query.eq("episode_id", episodeId);
+
+    const { data: fetched } = await query
         .order("created_at", { ascending: false })
         .limit(50);
 

@@ -62,7 +62,25 @@ export default function ObiBelt({ novelId, novelTitle, userId, userName, isAutho
     return found >= 0 ? found : 1
   })
   const W = OBI_SIZES[sizeIdx].w, H = OBI_SIZES[sizeIdx].h
-  const [dots, setDots] = useState<number[]>(() => initial && initial.d.length === initial.w * initial.h ? [...initial.d] : Array(OBI_SIZES[1].w * OBI_SIZES[1].h).fill(0))
+
+  /*
+   * 絵の大きさは、選ばれている細かさに必ず合わせる。
+   *
+   * 前は、保存した絵が壊れているときだけ
+   * 別の大きさ（真ん中の細かさ）で作り直していた。
+   * 細かさのほうは保存した絵から決めていたので、
+   * 枡の数と絵の数がずれて崩れることがあった。
+   */
+  const [dots, setDots] = useState<number[]>(() => {
+    const size = OBI_SIZES[
+      initial
+        ? Math.max(0, OBI_SIZES.findIndex(s => s.w === initial.w && s.h === initial.h))
+        : 1
+    ]
+    return initial && initial.d.length === size.w * size.h
+      ? [...initial.d]
+      : Array(size.w * size.h).fill(0)
+  })
   const [color, setColor] = useState(2)
   const [showInComments, setShowInComments] = useState(myObi?.show_in_comments !== false)
   const [saving, setSaving] = useState(false)
@@ -70,6 +88,19 @@ export default function ObiBelt({ novelId, novelTitle, userId, userName, isAutho
   const [pending, setPending] = useState(pendingObis)
   const paintingRef = useRef(false)
 
+
+  /**
+   * 編集を閉じる。
+   *
+   * 描いている最中に閉じられると、押しっぱなしの印が残る。
+   * 次に開いたとき、押していないのに触れた所が塗られる。
+   * 閉じる道は必ずここを通す。
+   */
+  function closeEditor() {
+    paintingRef.current = false
+    setShowEditor(false)
+    setSavedMsg('')
+  }
 
   function paint(i: number) {
     setDots(prev => { const next = [...prev]; next[i] = color; return next })
@@ -89,7 +120,7 @@ export default function ObiBelt({ novelId, novelTitle, userId, userName, isAutho
     setSaving(false)
     if (!error) {
       setSavedMsg('保存しました！作者の承認後に表示されます')
-      setTimeout(() => { setSavedMsg(''); setShowEditor(false) }, 2000)
+      setTimeout(() => { setSavedMsg(''); closeEditor() }, 2000)
     } else {
       setSavedMsg('保存に失敗しました')
       setTimeout(() => setSavedMsg(''), 2000)
@@ -104,6 +135,22 @@ export default function ObiBelt({ novelId, novelTitle, userId, userName, isAutho
     }
     setPending(prev => prev.filter(o => o.id !== id))
   }
+
+  /*
+   * 窓の外で指を離したときも、描くのをやめる。
+   *
+   * キャンバスの中でしか見ていなかったので、
+   * 外へ出て離すと押しっぱなしのままだった。
+   */
+  useEffect(() => {
+    function stop() { paintingRef.current = false }
+    window.addEventListener('mouseup', stop)
+    window.addEventListener('touchend', stop)
+    return () => {
+      window.removeEventListener('mouseup', stop)
+      window.removeEventListener('touchend', stop)
+    }
+  }, [])
 
   // 拡散モーダルの「ドット絵の帯で推薦する」から開かれる
   useEffect(() => {
@@ -136,9 +183,33 @@ export default function ObiBelt({ novelId, novelTitle, userId, userName, isAutho
 
       {/* エディタモーダル */}
       {showEditor && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10 }} onClick={() => setShowEditor(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10 }} onClick={closeEditor}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--color-bg-card)', borderRadius: 14, padding: '18px 16px', maxWidth: 640, width: '100%', maxHeight: '92vh', overflowY: 'auto' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>推し帯をつくる</div>
+            {/*
+              * 閉じる押し具。
+              *
+              * 前は、外側の暗い所を押すしか閉じる道が無かった。
+              * 絵を描く画面なので、外を押すのは「描き損ねた」ようにも
+              * 見えて、閉じてよいのか分からない。
+              */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>推し帯をつくる</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  /* 描きかけを黙って捨てない */
+                  if (dots.some(d => d > 0) && !savedMsg
+                      && !confirm('描いた絵は保存されません。閉じますか？')) return
+                  closeEditor()
+                }}
+                aria-label="閉じる"
+                style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 6, border: '1px solid var(--color-brand-border)', background: 'var(--color-bg-card)', color: 'var(--color-text-muted)', fontSize: 14, cursor: 'pointer', lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            </div>
             <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginBottom: 10, lineHeight: 1.6 }}>「{novelTitle}」への推しをドット絵で。保存すると作者の承認後、読者の声に表示されます。</div>
 
             {/* 細かさ（3段階） */}
