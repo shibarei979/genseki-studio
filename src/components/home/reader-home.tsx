@@ -748,7 +748,7 @@ export default async function ReaderHome() {
        * 枠を 380px にして、右端が本文のすぐ横まで届くようにする。
        * そのうえで、左の余白で寄せ具合を決める。
        */}
-      <aside className="hidden w-[380px] shrink-0 xl:block">
+      <aside className="hidden w-[352px] shrink-0 xl:block">
         {/*
          * 左に大きく余白を取って、札を右へ寄せる。
          *
@@ -776,7 +776,17 @@ export default async function ReaderHome() {
          *
          * 柱は py-4（16px）しかなく、43px 上にずれていた。
          */}
-        <div className="sticky top-14 pl-20 pr-0 pt-14">
+        {/*
+         * 上の位置。
+         *
+         * 本文側は .rh_search の margin-top が 40px。
+         * 柱もそこにそろえる。
+         *
+         * ★ 数字を足し引きしない。
+         *   前は main の py-4（16px）も足して 56px にしたが、
+         *   柱には py-4 が掛かっていないので、その分だけ下がった。
+         */}
+        <div className="sticky top-14 pl-[52px] pr-0 pt-10">
           <ReaderSidebar
             reading={sidebarReading}
             notices={sidebarNotices}
