@@ -221,7 +221,25 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setContainerHeight(window.innerHeight - 200)
+    /*
+     * 縦書きの高さ。
+     *
+     * 引く数が大きいほど 1 列に入る字が減り、
+     * 横へ送る回数が増える。
+     *
+     *   前   200 + 18 + 上下の余白 48 = 266px を引いていた
+     *   後   140 + 10 + 上下の余白 32 = 182px
+     *
+     * スマホは画面が狭いぶん、ここが効く。
+     * 画面が 800px なら、534px から 618px になる。
+     *
+     * 画面の向きを変えたときも数え直す。
+     * 横にしたときに、縦のままの高さで出ていた。
+     */
+    const fit = () => setContainerHeight(window.innerHeight - 140)
+    fit()
+    window.addEventListener('resize', fit)
+    window.addEventListener('orientationchange', fit)
     try {
       const saved = localStorage.getItem('reading_settings')
       if (saved) {
@@ -230,6 +248,12 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
         setIsVertical(s.writingMode === 'vertical')
       }
     } catch {}
+
+    /* 見張りを外す。外さないと、画面を移るたびに増え続ける */
+    return () => {
+      window.removeEventListener('resize', fit)
+      window.removeEventListener('orientationchange', fit)
+    }
   }, [])
 
   useEffect(() => {
@@ -314,8 +338,9 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
               writingMode: 'vertical-rl',
               textOrientation: 'mixed',
               display: 'inline-block',
-              padding: '24px 16px 24px 32px',
-              height: 'calc(100% - 18px)',
+              /* 上下の余白を詰める。左右はそのまま */
+              padding: '16px 16px 16px 32px',
+              height: 'calc(100% - 10px)',
               boxSizing: 'border-box',
             }}
           >

@@ -722,7 +722,22 @@ function VerticalBody({ title, body, preface, afterword, authorName, fontSize, f
         .v-scroll::-webkit-scrollbar-thumb { background: var(--color-brand); border-radius: 7px; border: 2px solid var(--color-brand-light); }
         .v-scroll { scrollbar-width: thick; scrollbar-color: var(--color-brand) var(--color-brand-light); }
       `}</style>
-      <div ref={scrollRef} className="v-scroll" style={{overflowX:'scroll',overflowY:'hidden',height:'calc(100vh - 180px)',paddingBottom:4}}>
+      {/*
+        * 縦書きの高さ。
+        *
+        * 引く数が大きいほど 1 列に入る字が減り、
+        * 横へ送る回数が増える。
+        *
+        *   前   180 + 18 + 上下の余白 64 = 262px を引いていた
+        *   後   120 + 10 + 上下の余白 40 = 170px
+        *
+        * 画面が 900px なら、文字に使える高さは
+        * 638px から 730px になる。1 列あたり 3 文字ぶん増える。
+        *
+        * 180 は、上の帯と道しるべと押し具のぶん。
+        * 実測すると 120 で足りる。
+        */}
+      <div ref={scrollRef} className="v-scroll" style={{overflowX:'scroll',overflowY:'hidden',height:'calc(100vh - 120px)',paddingBottom:4}}>
         <div style={{
           writingMode:'vertical-rl',
           /*
@@ -734,8 +749,9 @@ function VerticalBody({ title, body, preface, afterword, authorName, fontSize, f
            */
           textOrientation:'mixed',
           display:'inline-block',
-          padding:'32px 24px 32px 48px',
-          height:'calc(100% - 18px)',
+          /* 上下の余白を詰める。左右はそのまま */
+          padding:'20px 24px 20px 48px',
+          height:'calc(100% - 10px)',
           boxSizing:'border-box',
         }}>
           <div style={{display:'inline-block',marginRight:'2em',verticalAlign:'top'}}>
