@@ -140,7 +140,7 @@ export default async function AdminPage() {
     { data: allUsers }, { data: allNovels },
     loginRes, mobileRes, desktopRes,
     prevUserRes, prevNovelRes, prevCommentRes, pv30Res, pvPrev30Res,
-    authorIdRes,
+    homeModeRes,
   ] = await Promise.all([
     supabase.from('profiles').select('created_at').gte('created_at', startDate.toISOString()),
     supabase.from('novels').select('created_at').gte('created_at', startDate.toISOString()),
@@ -167,8 +167,20 @@ export default async function AdminPage() {
     supabase.from('page_views').select('*', { count: 'exact', head: true })
       .gte('viewed_at', since60.toISOString()).lt('viewed_at', since30.toISOString()),
 
-    /* 作品を1つ以上出している人。読者と作者を分ける */
-    supabase.from('novels').select('author_id').limit(5000),
+    /*
+     * 読者と作者を分ける。
+     *
+     * マイページの設定にある home_mode で分かれている。
+     *   write   執筆向け（既定）
+     *   focus   執筆集中
+     *   read    読者向け
+     *
+     * 前は「作品を1つ以上出しているか」で分けていた。
+     * それだと、登録したがまだ 1 作も出していない作家が
+     * 全員「読者」に入る。プレリリースは作家向けだったので、
+     * 実際には居ないはずの読者が 37 人いることになっていた。
+     */
+    supabase.from('profiles').select('home_mode').limit(20000),
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {
@@ -197,13 +209,12 @@ export default async function AdminPage() {
   /*
    * 読者と作者を分ける。
    *
-   * 「読者」「作者」の印は持っていないので、
-   * 作品を 1 つ以上出しているかで分ける。
+   * 設定していない人は「執筆向け」の扱い。
+   * 既定がそちらなので、数え方もそろえる。
    */
-  const authorCount = new Set(
-    (authorIdRes.data || []).map((n: { author_id: string }) => n.author_id).filter(Boolean),
-  ).size
-  const readerCount = Math.max((userCount || 0) - authorCount, 0)
+  const modes = (homeModeRes.data || []) as { home_mode: string | null }[]
+  const readerCount = modes.filter((m) => m.home_mode === 'read').length
+  const authorCount = modes.length - readerCount
 
   const pv30 = pv30Res.count || 0
   const pvPrev30 = pvPrev30Res.count || 0
@@ -229,7 +240,7 @@ export default async function AdminPage() {
           label: '登録ユーザー',
           value: userCount ?? 0,
           prev: prevUserRes.count ?? 0,
-          note: `読者 ${readerCount.toLocaleString()}人 ・ 作者 ${authorCount.toLocaleString()}人`,
+          note: `執筆向け ${authorCount.toLocaleString()}人 ・ 読者向け ${readerCount.toLocaleString()}人`,
         },
         { label: '月間ユーザー', value: loginMonth, prev: loginPrevMonth, note: '30日以内に来た人' },
         { label: '本日ログイン', value: loginToday },
