@@ -6,6 +6,7 @@ import { hasSupabase } from '@/config/env.client'
 import { createClient } from '@/lib/supabase/client'
 import { useLoginRequired } from '@/hooks/use-login-required'
 import { loadBlockedIds, loadMutedIds } from '@/lib/social/blocks'
+import ReportButton from '@/components/common/report-button'
 
 interface Tweet {
   id: string
@@ -1093,6 +1094,16 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                * 押しても消えはしなかったが、消せるように見えるのがよくない。
                * その投稿の user_id と突き合わせる。
                */}
+              {/* 通報。自分のものには出ない（部品の側で判断） */}
+              <ReportButton
+                target="tweet"
+                targetId={tweet.id}
+                accusedId={tweet.user_id}
+                accusedName={tweet.display_name}
+                quotedBody={tweet.body}
+                userId={currentUserId}
+              />
+
               {currentUserId && tweet.user_id === currentUserId && (
                 <>
                   <button onClick={()=>{ setEditingId(tweet.id); setEditBody(tweet.body) }}

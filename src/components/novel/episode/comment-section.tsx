@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useLoginRequired } from '@/hooks/use-login-required'
 import Link from 'next/link'
 import { useQuote } from '@/components/novel/episode/quote-context'
+import ReportButton from '@/components/common/report-button'
 
 interface Comment {
   id: string
@@ -416,6 +417,17 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                       {c.is_pinned ? 'ピン解除' : 'ピン留め'}
                     </button>
                   )}
+                  {/* 通報。自分のものには出ない（部品の側で判断） */}
+                  <ReportButton
+                    target="comment"
+                    targetId={c.id}
+                    accusedId={c.user_id}
+                    accusedName={c.display_name}
+                    quotedBody={c.body}
+                    userId={userId}
+                    userName={userName}
+                  />
+
                   {(userId === c.user_id || userId === authorId) && (
                     <button onClick={() => handleDelete(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--color-danger)', padding: 0 }}>
                       削除

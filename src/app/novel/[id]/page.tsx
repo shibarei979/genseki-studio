@@ -53,6 +53,7 @@ import Link from 'next/link'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import NovelActions from '@/components/novel/novel-actions'
+import ReportButton from '@/components/common/report-button'
 import ObiBelt from '@/components/novel/obi-belt'
 import { calcQualityScore } from '@/lib/quality-score'
 import FollowButton from '@/components/follow-button'
@@ -584,6 +585,23 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
               discoverCount={discoverCount??0}
               hideStats={Date.now() - new Date(novel.created_at).getTime() < 7*24*60*60*1000 || (likeCount??0) < 50}
             />
+            {/*
+              * 通報。作品ページの押し具の下に、控えめに置く。
+              *
+              * いいねや保存と同じ大きさで並べると、
+              * 押し間違いが起きる。
+              */}
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:8}}>
+              <ReportButton
+                target="novel"
+                targetId={params.id}
+                accusedId={novel.author_id}
+                accusedName={author?.display_name || ''}
+                quotedBody={novel.title}
+                userId={user?.id || null}
+                userName={profile?.display_name || ''}
+              />
+            </div>
             {/*
               * 読者へのダウンロードは出さない。
               *

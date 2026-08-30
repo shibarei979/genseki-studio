@@ -20,11 +20,25 @@
  */
 
 /** 何について出したか */
-export type ReportTarget = "message" | "member";
+export type ReportTarget =
+    /* 執筆室。前からある分 */
+    | "message"
+    | "member"
+    /* 作品まわり。あとから足した分 */
+    | "novel"
+    | "episode"
+    | "comment"
+    | "tweet"
+    | "user";
 
 export const REPORT_TARGET_LABEL: Record<ReportTarget, string> = {
-    message: "発言",
-    member: "人",
+    message: "部屋の書き込み",
+    member: "部屋の参加者",
+    novel: "作品",
+    episode: "話",
+    comment: "感想",
+    tweet: "つぶやき",
+    user: "利用者",
 };
 
 /** 通報の理由 */
@@ -34,14 +48,19 @@ export type ReportReason =
     | "spam"
     | "sexual"
     | "danger"
+    /* 作品まわりで足した分 */
+    | "copyright"
+    | "rating"
     | "other";
 
 export const REPORT_REASON_LABEL: Record<ReportReason, string> = {
     abuse: "誹謗中傷",
-    harassment: "しつこい絡み",
-    spam: "宣伝・勧誘",
+    harassment: "嫌がらせ",
+    spam: "宣伝・迷惑",
     sexual: "性的な内容",
-    danger: "自分や誰かを傷つける話",
+    danger: "危険な内容",
+    copyright: "無断転載",
+    rating: "年齢区分が合っていない",
     other: "その他",
 };
 
@@ -55,9 +74,9 @@ export const REPORT_REASON_LABEL: Record<ReportReason, string> = {
 export type ReportStatus = "open" | "checking" | "done" | "dismissed";
 
 export const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
-    open: "未対応",
-    checking: "確認中",
-    done: "対応済み",
+    open: "受け取ったまま",
+    checking: "見ている",
+    done: "対応した",
     dismissed: "問題なし",
 };
 
@@ -69,6 +88,9 @@ export interface Report {
     note: string;
 
     /** どの部屋で起きたか */
+    /** 通報されたものの id。利用者への通報では空 */
+    target_id: string | null;
+
     room_id: string;
     room_name: string;
 
@@ -98,8 +120,11 @@ export interface ReportCreateInput {
     target: ReportTarget;
     reason: ReportReason;
     note?: string;
-    room_id: string;
-    room_name: string;
+    /** 通報されたものの id */
+    target_id?: string | null;
+    /** 執筆室からの通報のときだけ */
+    room_id?: string | null;
+    room_name?: string;
     accused_id: string;
     accused_name: string;
     quoted_body?: string;
