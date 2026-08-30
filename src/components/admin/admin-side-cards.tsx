@@ -50,6 +50,8 @@ export function UserDonut({
             borderRadius:12,
             padding:'18px 20px',
             height:'100%',
+            display:'flex',
+            flexDirection:'column',
         }}>
             <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)',marginBottom:14}}>
                 ユーザー属性
@@ -64,7 +66,7 @@ export function UserDonut({
                  * 前は凡例を下に敷いていたので、
                  * 横に間延びして下に空白ができていた。
                  */
-                <div style={{display:'flex',alignItems:'center',gap:16}}>
+                <div style={{display:'flex',alignItems:'center',gap:16,flex:1}}>
                     <div style={{position:'relative',width:126,height:126,flexShrink:0}}>
                         <svg width="126" height="126" viewBox="0 0 138 138">
                             {parts.map((part, i) => {
@@ -133,6 +135,8 @@ export function GenreRanking({
             borderRadius:12,
             padding:'18px 20px',
             height:'100%',
+            display:'flex',
+            flexDirection:'column',
         }}>
             <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)',marginBottom:14}}>
                 人気ジャンル TOP5
@@ -141,7 +145,7 @@ export function GenreRanking({
             {items.length === 0 ? (
                 <p style={{fontSize:12,color:'var(--admin-text-faint)'}}>まだ作品がありません</p>
             ) : (
-                <div style={{display:'flex',flexDirection:'column',gap:11}}>
+                <div style={{display:'flex',flexDirection:'column',gap:11,flex:1,justifyContent:'space-around'}}>
                     {items.map((item, i) => (
                         <div key={item.genre} style={{display:'flex',alignItems:'center',gap:10}}>
                             {/*

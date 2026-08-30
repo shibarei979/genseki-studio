@@ -28,7 +28,7 @@ interface Stat {
   breakdown?: Breakdown[]
   /** 内訳の代わりに置く一行 */
   note?: string
-  icon?: 'user' | 'book' | 'eye' | 'comment' | 'flag'
+  icon?: 'user' | 'book' | 'eye' | 'comment' | 'heart'
 }
 
 /*
@@ -43,7 +43,7 @@ const ICON_COLOR: Record<NonNullable<Stat['icon']>, { fg: string; bg: string }> 
   book:    { fg: '#2563eb', bg: '#eff6ff' },
   eye:     { fg: '#2563eb', bg: '#eff6ff' },
   comment: { fg: '#16a34a', bg: '#f0fdf4' },
-  flag:    { fg: '#e11d48', bg: '#fff1f2' },
+  heart:   { fg: '#e11d48', bg: '#fff1f2' },
 }
 
 function StatIcon({ name }: { name: NonNullable<Stat['icon']> }) {
@@ -52,7 +52,7 @@ function StatIcon({ name }: { name: NonNullable<Stat['icon']> }) {
     book:    <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></>,
     eye:     <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
     comment: <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>,
-    flag:    <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>,
+    heart:   <><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></>,
   }
   const color = ICON_COLOR[name]
 
@@ -119,7 +119,9 @@ function StatCard({ label, value, prev, unit, breakdown, note, icon }: Stat) {
           <span style={{fontSize:12,fontWeight:700,
             color: diff > 0 ? 'var(--admin-stat-green)' : 'var(--admin-stat-rose)'}}>
             {diff > 0 ? '+' : ''}{diff.toLocaleString()}
-            {rate !== null && `（前期間比 ${rate > 0 ? '+' : ''}${rate}%）`}
+            <span style={{fontWeight:500,color:'var(--admin-text-faint)',marginLeft:5}}>
+              {rate !== null ? `前期間比 ${rate > 0 ? '+' : ''}${rate}%` : '前期間比'}
+            </span>
           </span>
         )}
       </div>
@@ -220,7 +222,7 @@ export default async function AdminPage() {
     { data: allUsers }, { data: allNovels },
     loginRes, mobileRes, desktopRes,
     prevUserRes, prevNovelRes, prevCommentRes, pv30Res, pvPrev30Res,
-    homeModeRes, genreRes, openReportRes,
+    homeModeRes, genreRes, openReportRes, likeRes, prevLikeRes,
   ] = await Promise.all([
     supabase.from('profiles').select('created_at').gte('created_at', startDate.toISOString()),
     supabase.from('novels').select('created_at').gte('created_at', startDate.toISOString()),
@@ -267,6 +269,11 @@ export default async function AdminPage() {
 
     /* まだ見ていない通報。運営がいちばん先に気づくべき数字 */
     supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+
+    /* いいね。見本の5枚目にあたる */
+    supabase.from('likes').select('*', { count: 'exact', head: true }),
+    supabase.from('likes').select('*', { count: 'exact', head: true })
+      .lt('created_at', since30.toISOString()),
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {
@@ -378,14 +385,17 @@ export default async function AdminPage() {
     {
       label: '総コメント数', icon: 'comment',
       value: commentCount ?? 0, prev: prevCommentRes.count ?? 0,
-      note: '作品に届いた感想',
+      breakdown: [
+        { label: '作品への感想', value: `${(commentCount ?? 0).toLocaleString()} 件` },
+        { label: '未対応の通報', value: `${(openReportRes.count ?? 0).toLocaleString()} 件` },
+      ],
     },
     {
-      label: 'ログインと通報', icon: 'flag',
-      value: loginMonth, prev: loginPrevMonth,
+      label: 'いいね数', icon: 'heart',
+      value: likeRes.count ?? 0, prev: prevLikeRes.count ?? 0,
       breakdown: [
-        { label: '本日 / 7日', value: `${loginToday} / ${loginWeek}` },
-        { label: '未対応の通報', value: `${(openReportRes.count ?? 0).toLocaleString()} 件` },
+        { label: '作品への いいね', value: `${(likeRes.count ?? 0).toLocaleString()} 件` },
+        { label: '1作品あたり', value: novelCount ? `${Math.round(((likeRes.count ?? 0) / novelCount) * 10) / 10}` : '—' },
       ],
     },
   ]
@@ -461,13 +471,15 @@ export default async function AdminPage() {
         </div>
 
         {/*
-          * 収益サマリー。
+          * サイト利用状況。
           *
-          * ★ まだ課金の仕組みがありません。
-          *   数字を入れる所だけ先に置いておきます。
-          *   作り物の数字は出しません。見て判断できないためです。
+          * 見本ではここが「収益サマリー」だった。
+          * 課金の仕組みがまだ無いので、
+          * 数字を入れれば必ず作り物になる。
           *
-          *   決済に何を使うかが決まってから、表の形を決めます。
+          * 代わりに、上の 5 枚に入りきらなかった
+          * 使われ方の数字をここへ置く。
+          * 画面の下半分が空白のままにならない。
           */}
         <div style={{
           background:'var(--admin-bg-card)',
@@ -476,8 +488,11 @@ export default async function AdminPage() {
           padding:'20px 22px',
           marginBottom:24,
         }}>
-          <div style={{fontSize:15,fontWeight:700,color:'var(--admin-text)',marginBottom:14}}>
-            収益サマリー
+          <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',flexWrap:'wrap',gap:8,marginBottom:14}}>
+            <span style={{fontSize:15,fontWeight:700,color:'var(--admin-text)'}}>サイト利用状況</span>
+            <span style={{fontSize:11.5,color:'var(--admin-text-faint)'}}>
+              課金の仕組みを入れると、ここに収益の数字が並びます
+            </span>
           </div>
 
           <div className="admin-cards" style={{
@@ -485,23 +500,24 @@ export default async function AdminPage() {
             gridTemplateColumns:'repeat(4, minmax(0, 1fr))',
             gap:14,
           }}>
-            {['今月の売上','今月の決済件数','平均単価','未払い金額'].map(label => (
-              <div key={label} style={{
-                border:'1px dashed var(--admin-border)',
+            {[
+              { label: '月間ユーザー', value: loginMonth.toLocaleString(), note: '30日以内に来た人' },
+              { label: '本日ログイン', value: loginToday.toLocaleString(), note: '今日来た人' },
+              { label: '7日ログイン',  value: loginWeek.toLocaleString(),  note: '直近7日に来た人' },
+              { label: '未対応の通報', value: (openReportRes.count ?? 0).toLocaleString(), note: 'まだ見ていない通報' },
+            ].map(item => (
+              <div key={item.label} style={{
+                border:'1px solid var(--admin-border)',
                 borderRadius:12,
-                padding:'16px 18px',
+                padding:'14px 16px',
                 background:'var(--admin-bg)',
               }}>
-                <div style={{fontSize:12,color:'var(--admin-text-muted)',marginBottom:8}}>{label}</div>
-                <div style={{fontSize:15,color:'var(--admin-text-faint)'}}>まだありません</div>
+                <div style={{fontSize:12,color:'var(--admin-text-muted)',marginBottom:6}}>{item.label}</div>
+                <div style={{fontSize:24,fontWeight:800,color:'var(--admin-text)',lineHeight:1.1}}>{item.value}</div>
+                <div style={{fontSize:11,color:'var(--admin-text-faint)',marginTop:6}}>{item.note}</div>
               </div>
             ))}
           </div>
-
-          <p style={{fontSize:11.5,color:'var(--admin-text-faint)',marginTop:14,lineHeight:1.8}}>
-            課金の仕組みを入れると、ここに数字が入ります。
-            決済に何を使うかが決まってから、置き場の形を決めます。
-          </p>
         </div>
 
         {/*
