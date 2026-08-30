@@ -19,13 +19,27 @@ function Card({ label, value, note }: { label: string; value: number; note?: str
 }
 
 export default async function AdminAnalyticsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const session = await createClient()
+  const { data: { user } } = await session.auth.getUser()
   if (!user) redirect('/login')
 
   const adminSupabase = createAdminClient()
   const { data: profile } = await adminSupabase.from('profiles').select('*').eq('user_id', user.id).single()
   if (!profile?.is_admin) redirect('/')
+
+  /*
+   * ★ ここから先の数え上げは、運営用の鍵で行う。
+   *
+   *   前はログインしている人として数えていた。
+   *   page_views の決まりは「自分の記録か、自分の作品への記録」しか
+   *   読めないので、運営自身のぶんしか数えられていなかった。
+   *
+   *   PV が 95、読んだ人が 1 人と出ていたのは、そのため。
+   *   実際の数ではなく、運営 1 人の数だった。
+   *
+   *   運営かどうかは、この 1 行上で確かめている。
+   */
+  const supabase = adminSupabase
 
   /*
    * すべて一度に頼む。

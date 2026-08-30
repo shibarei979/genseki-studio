@@ -9,13 +9,24 @@ import AdminChart from '@/components/admin/admin-chart'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const session = await createClient()
+  const { data: { user } } = await session.auth.getUser()
   if (!user) redirect('/login')
 
   const adminSupabase = createAdminClient()
   const { data: profile } = await adminSupabase.from('profiles').select('*').eq('user_id', user.id).single()
   if (!profile?.is_admin) redirect('/')
+
+  /*
+   * ★ ここから先の数え上げは、運営用の鍵で行う。
+   *
+   *   ログインしている人として数えると、表の決まりに阻まれる。
+   *   話は公開済みだけ、閲覧記録は自分のぶんだけになり、
+   *   運営 1 人の数が「サイト全体の数」として出てしまう。
+   *
+   *   運営かどうかは、この 1 行上で確かめている。
+   */
+  const supabase = adminSupabase
 
   const [
     { count: userCount },
