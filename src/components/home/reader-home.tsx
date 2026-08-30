@@ -760,10 +760,10 @@ export default async function ReaderHome() {
      * 片方だけ動かすと、そろえた上端や間が崩れる。
      *
      * ★ 寄せ具合はこの pl-* だけで変わる。
-     *   もっと右へ  pl-16（64px）
-     *   もっと左へ  pl-4 （16px）
+     *   もっと右へ  pl-32（128px）
+     *   もっと左へ  pl-16（64px）
      */}
-    <div className="flex pl-8">
+    <div className="flex pl-24">
       {/*
        * 柱。
        *
