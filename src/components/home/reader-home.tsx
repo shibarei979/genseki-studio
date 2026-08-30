@@ -1020,18 +1020,14 @@ export default async function ReaderHome() {
             />
 
             {/*
-              * 受賞作品。
+              * 受賞作品の見せ場。
               *
-              * 受賞が 1 つも無いときは「運営のおすすめ」に変わる。
-              * 選ばれた作品が 1 つも無ければ、枠ごと出ない。
+              * ★ rwl の枠に入れない。
+              *   見せ場が自分で枠と見出しを持っているので、
+              *   入れると枠が二重になる。
               */}
             {featuredItems.length > 0 && (
-              <section className="rwl">
-                <div className="rwl_head">
-                  <h2 className="rwl_title">{featuredTitle}</h2>
-                </div>
-                <FeaturedShowcase items={featuredItems} />
-              </section>
+              <FeaturedShowcase title={featuredTitle} items={featuredItems} />
             )}
 
             <div className="rh_banner">
