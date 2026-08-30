@@ -98,17 +98,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const [authorRes, seriesNovelRes, episodesRes] = await Promise.all([
     supabase.from('public_profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('series_novels').select('series_id').eq('novel_id', params.id).maybeSingle(),
-    /*
-     * 目次は public_episodes から読む。
-     *
-     * episodes 本体は、未公開の話が行ごと見えない。
-     * 本文を守るためだが、そのままだと
-     * 「◯日に公開予定」の予告まで消える。
-     *
-     * この見え方には本文が入っていない。
-     * 未公開の話の題名も、作者以外には出ない。
-     */
-    supabase.from('public_episodes').select('id, title, ep_number, created_at, updated_at, illust_url, chapter_id, published, is_published, scheduled_at')
+    supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, illust_url, chapter_id, published, is_published, scheduled_at')
       /* 上限を上げる。既定 1,000 件だと目次の後ろが消える */
       .eq('novel_id', params.id).order('ep_number', { ascending: true }).limit(5000),
   ])
@@ -130,13 +120,6 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
   const isAuthor = user?.id === novel.author_id
 
-  /*
-   * 題名の無い話は、未公開で作者以外が見ているもの。
-   * 空欄のまま並ぶと壊れて見えるので、言葉を入れる。
-   */
-  for (const ep of rawEpisodes || []) {
-    if (!ep.title) ep.title = '公開予定'
-  }
 
   const nowMs = Date.now()
   /*
