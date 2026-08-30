@@ -205,9 +205,19 @@
      * どちらが見出しか分からなかった。
      * 大きさと字間ではっきり差を付ける。
      */
-    font-size: 17px;
+    /*
+     * まとまりの見出し。
+     *
+     * 作品名と 0.5px しか違わず、どちらが見出しか分からなかった。
+     * 大きさ・字体・字間の 3 つで差を付ける。
+     *
+     * 明朝にするのは、作品名（ゴシック）と別のものに見せるため。
+     * 大きさだけ変えても、同じ並びの続きに見える。
+     */
+    font-size: 20px;
     font-weight: 700;
-    letter-spacing: .04em;
+    font-family: garamond, "Hiragino Mincho ProN", "Yu Mincho", serif;
+    letter-spacing: .06em;
     color: var(--text-color);
 }
 
@@ -1222,8 +1232,21 @@
 .reader-home .rwl_item-bar {
     flex-shrink: 0;
     width: 3px;
-    /* 題名と作者名の 2 行ぶんに合わせる */
+    /*
+     * 題名から作者名まで、1 本でつながるようにする。
+     *
+     * align-self: stretch だけだと、行の高さに合わせて伸びる。
+     * 上下の余白ぶんだけ縮めて、文字の高さにそろえる。
+     */
     align-self: stretch;
-    min-height: 30px;
+    margin: 1px 0;
     border-radius: 2px;
+}
+
+/*
+ * 行の上下の余白が、縦線の長さを決める。
+ * 中身を上に寄せていると、線だけ余って見える。
+ */
+.reader-home .rwl_item {
+    align-items: stretch;
 }
