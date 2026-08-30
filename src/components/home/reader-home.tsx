@@ -827,8 +827,9 @@ export default async function ReaderHome() {
       *
       *   囲みが要るのは本棚だけ。
       */}
-    <div className="px-5 pt-4 sm:px-6">
+    <div className="px-5 pb-5 pt-4 sm:px-6">
       <BirthdateNotice />
+      {/* 下に余白。本棚とくっついていると、棚が見出しの一部に見える */}
       <ReaderHero />
     </div>
 
