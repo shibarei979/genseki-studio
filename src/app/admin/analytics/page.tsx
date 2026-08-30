@@ -235,8 +235,8 @@ export default async function AdminAnalyticsPage() {
         <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:16}}>
           <Card label="読んだ人（30日）"  value={activeReaders}
                 note="一度でも読んだ、ログイン済みの人" />
-          <Card label="書かれた作品（30日）" value={activeWorks}
-                note="一度でも話が投稿された作品" />
+          <Card label="投稿があった作品（30日）" value={activeWorks}
+                note="この30日に話が投稿された作品" />
           <Card label="話ページの PV（累計）" value={episodePvRes.count || 0} />
         </div>
 
