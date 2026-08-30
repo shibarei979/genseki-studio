@@ -82,12 +82,8 @@ export function buildChapterGroups(
         ];
     }
 
-    /*
-     * 親ごとの子を先に集める。
-     *
-     * chapters は sort_order で並んでいるので、
-     * 拾った順がそのまま子の並びになる。
-     */
+    const byId = new Map(chapters.map((chapter) => [chapter.id, chapter]));
+
     const childrenOf = new Map<string, Chapter[]>();
     for (const chapter of chapters) {
         if (!chapter.parent_id) continue;
@@ -96,131 +92,134 @@ export function buildChapterGroups(
         else childrenOf.set(chapter.parent_id, [chapter]);
     }
 
-    const episodesOf = (chapterId: string) =>
-        episodes.filter((episode) => episode.chapter_id === chapterId);
-
-    const groups: ChapterGroup[] = [];
+    const isPart = (chapter: Chapter) =>
+        chapter.is_part === true || (childrenOf.get(chapter.id)?.length ?? 0) > 0;
 
     /*
-     * 番号の数え方。
+     * 番号は、章そのものの並び順で決める。
      *
-     * 部は、作品ぜんぶで通して数える。
-     *
-     * 章は、部の中では第一章から数え直す。
-     * 紙の本で部を立てるとき、部が変わると
-     * 章の番号が戻るのに合わせている。
-     *
-     * 部に入っていない章は、これまでどおり
-     * 作品ぜんぶで通して数える。
-     * 大きい章を作っていない作品の番号が
-     * 変わらないのは、ここのため。
+     * 話の置き方で番号が動くと、
+     * 話を 1 つ動かしただけで章の番号が入れ替わる。
+     * 番号は章の持ち物なので、章の並びから決める。
      */
-    let bigIndex = 0;
-    let looseIndex = 0;
+    const partNumber = new Map<string, number>();
+    const chapterNumber = new Map<string, number>();
+    let bigAt = 0;
+    let smallAt = 0;
+    const innerAt = new Map<string, number>();
 
-    for (const top of chapters) {
-        /* 子は親のところで出す。ここでは飛ばす */
-        if (top.parent_id) continue;
-
-        const children = childrenOf.get(top.id) ?? [];
-
-        /*
-         * 部かどうかは、印で決める。
-         *
-         * 子の数で決めていたころは、中の章が空になると
-         * 部が消えてただの章に戻っていた。
-         *
-         * 印を持たない古い章のために、子がいれば部として扱う。
-         * SQL を流す前でも見え方が壊れない。
-         */
-        const isPart = top.is_part === true || children.length > 0;
-
-        /*
-         * 部でない章は、これまでどおり。
-         *
-         * 部を作っていない作品が、
-         * 見え方も番号も変わらないのは、ここのため。
-         */
-        if (!isPart) {
-            const items = episodesOf(top.id);
-            groups.push({
-                chapter: top,
-                items,
-                depth: 0,
-                isBig: false,
-                parentId: null,
-                labelIndex: looseIndex,
-                totalCount: items.length,
-            });
-            looseIndex += 1;
-            continue;
+    for (const chapter of chapters) {
+        if (chapter.parent_id) {
+            const at = innerAt.get(chapter.parent_id) ?? 0;
+            chapterNumber.set(chapter.id, at);
+            innerAt.set(chapter.parent_id, at + 1);
+        } else if (isPart(chapter)) {
+            partNumber.set(chapter.id, bigAt);
+            bigAt += 1;
+        } else {
+            chapterNumber.set(chapter.id, smallAt);
+            smallAt += 1;
         }
-
-        /*
-         * 大きい章。
-         *
-         * 束ねた後に直接ぶら下がったままの話も、
-         * 落とさずに親の下へ出す。
-         * （まとめる操作の途中で、こうなることがある）
-         */
-        const own = episodesOf(top.id);
-
-        const childGroups: ChapterGroup[] = [];
-        let total = own.length;
-
-        /* 部の中は、毎回 第一章 から数え直す */
-        let innerIndex = 0;
-
-        for (const child of children) {
-            const items = episodesOf(child.id);
-            total += items.length;
-
-            childGroups.push({
-                chapter: child,
-                items,
-                depth: 1,
-                isBig: false,
-                parentId: top.id,
-                labelIndex: innerIndex,
-                totalCount: items.length,
-            });
-            innerIndex += 1;
-        }
-
-        groups.push({
-            chapter: top,
-            items: own,
-            depth: 0,
-            isBig: true,
-            parentId: null,
-            labelIndex: bigIndex,
-            totalCount: total,
-        });
-        bigIndex += 1;
-
-        groups.push(...childGroups);
     }
 
     /*
-     * どの章にも入っていない話。
+     * ★ 並びは話が主。章は、その並びの中に挟まる見出し。
      *
-     * 消えた章の id が残っている話も、ここへ拾う。
-     * どこにも出ないと、書いた本人が見失う。
+     * 前は章が主だった。第一章の話、第二章の話…と並べ、
+     * 章に入っていない話を必ず最後に置いていた。
+     * だから、章の前に置いたはずのプロローグが
+     * 章の後ろへ回っていた。
+     *
+     * いまは話の並び（ep_number）をそのまま追い、
+     * 章が変わったところで見出しを差し込む。
+     * どこへ動かしても、置いた場所に出る。
+     *
+     * 同じ章の話を離して置くと、その章の見出しは 2 回出る。
+     * 離して置いたのは作者なので、そのとおりに出すのが正しい。
+     * 詰めて置けば 1 回に戻る。
      */
-    const known = new Set(chapters.map((chapter) => chapter.id));
-    const loose = episodes.filter(
-        (episode) => !episode.chapter_id || !known.has(episode.chapter_id),
-    );
+    const groups: ChapterGroup[] = [];
+    let currentKey: string | null = "__start__";
 
-    groups.push({
-        chapter: null,
-        items: loose,
-        depth: 0,
-        isBig: false,
-        parentId: null,
-        labelIndex: 0,
-        totalCount: loose.length,
-    });
+    const push = (chapter: Chapter | null, episode: Episode) => {
+        const last = groups[groups.length - 1];
+        if (last && last.chapter?.id === chapter?.id && currentKey === (chapter?.id ?? null)) {
+            last.items.push(episode);
+            last.totalCount = last.items.length;
+            return;
+        }
+
+        /* 部の見出しは、その中の章が始まるときに立てる */
+        if (chapter?.parent_id) {
+            const parent = byId.get(chapter.parent_id);
+            const previous = groups[groups.length - 1];
+            const partShown =
+                previous &&
+                (previous.chapter?.id === parent?.id ||
+                    previous.parentId === parent?.id);
+
+            if (parent && !partShown) {
+                groups.push({
+                    chapter: parent,
+                    items: [],
+                    depth: 0,
+                    isBig: true,
+                    parentId: null,
+                    labelIndex: partNumber.get(parent.id) ?? 0,
+                    totalCount: 0,
+                });
+            }
+        }
+
+        groups.push({
+            chapter,
+            items: [episode],
+            depth: chapter?.parent_id ? 1 : 0,
+            isBig: false,
+            parentId: chapter?.parent_id ?? null,
+            labelIndex: chapter ? (chapterNumber.get(chapter.id) ?? 0) : 0,
+            totalCount: 1,
+        });
+        currentKey = chapter?.id ?? null;
+    };
+
+    for (const episode of episodes) {
+        const chapter = episode.chapter_id ? byId.get(episode.chapter_id) : undefined;
+        push(chapter ?? null, episode);
+    }
+
+    /*
+     * 話の入っていない章も見出しだけ出す。
+     *
+     * 出さないと、作った章が消えたように見える。
+     * 章そのものの並び順のところへ差し込む。
+     */
+    const shown = new Set(groups.map((g) => g.chapter?.id).filter(Boolean) as string[]);
+    for (const chapter of chapters) {
+        if (shown.has(chapter.id)) continue;
+        if (isPart(chapter) && (childrenOf.get(chapter.id)?.length ?? 0) > 0) continue;
+
+        groups.push({
+            chapter,
+            items: [],
+            depth: chapter.parent_id ? 1 : 0,
+            isBig: isPart(chapter),
+            parentId: chapter.parent_id ?? null,
+            labelIndex: isPart(chapter)
+                ? (partNumber.get(chapter.id) ?? 0)
+                : (chapterNumber.get(chapter.id) ?? 0),
+            totalCount: 0,
+        });
+    }
+
+    /* 部の話数は、その部にぶら下がる章の合計にそろえる */
+    for (const group of groups) {
+        if (!group.isBig || !group.chapter) continue;
+        const partId = group.chapter.id;
+        group.totalCount = groups
+            .filter((g) => g.parentId === partId)
+            .reduce((sum, g) => sum + g.items.length, 0);
+    }
 
     return groups;
 }

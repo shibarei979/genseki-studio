@@ -589,7 +589,7 @@ export default function EpisodeList({
             )}
 
             <div className="thin-scroll flex-1 overflow-y-auto px-2 pb-2">
-                {groups.map((group) => {
+                {groups.map((group, groupAt) => {
                     const {
                         chapter,
                         items,
@@ -625,7 +625,13 @@ export default function EpisodeList({
 
                     return (
                         <div
-                            key={chapter?.id ?? "__none__"}
+                            /*
+                             * 同じ章が並びの中に何度も出ることがある。
+                             * 章の id だけを目印にすると重なって、
+                             * 描き直しのときに行が入れ替わる。
+                             * 並びの位置を混ぜて、必ず別物にする。
+                             */
+                            key={`${chapter?.id ?? "__none__"}-${groupAt}`}
                             className="mb-1"
                             style={depth > 0 ? { paddingLeft: 14 } : undefined}
                         >
