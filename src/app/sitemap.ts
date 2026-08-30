@@ -29,6 +29,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         { path: "/contest", changeFrequency: "weekly", priority: 0.8 },
         { path: "/notices", changeFrequency: "weekly", priority: 0.5 },
         { path: "/about", changeFrequency: "monthly", priority: 0.5 },
+        /*
+         * 検索から来た人が最初に見る所。
+         * 探す・ランキング・おすすめは、そこから作品へ入る入口になる。
+         */
+        { path: "/search", changeFrequency: "daily", priority: 0.9 },
+        { path: "/ranking", changeFrequency: "daily", priority: 0.9 },
+        { path: "/recommend", changeFrequency: "daily", priority: 0.8 },
+        { path: "/works", changeFrequency: "daily", priority: 0.7 },
+        { path: "/operator", changeFrequency: "monthly", priority: 0.4 },
         { path: "/guide", changeFrequency: "monthly", priority: 0.5 },
         { path: "/faq", changeFrequency: "monthly", priority: 0.4 },
         { path: "/help", changeFrequency: "monthly", priority: 0.4 },

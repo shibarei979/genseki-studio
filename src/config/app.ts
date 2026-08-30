@@ -8,9 +8,18 @@
 export const appConfig = {
     name: "原石航路",
 
-    title: "原石航路 - 作品制作ワークスペース",
+    /*
+     * 検索結果に出る題名。
+     *
+     * ★ 「小説投稿サイト」を入れる。その言葉で探されるから。
+     *   前は「作品制作ワークスペース」で、書き手にしか届かなかった。
+     *   読者が来ないと、作者も増えない。
+     */
+    title: "原石航路 - まだ知られていない物語に出会う小説投稿サイト",
 
-    description: "物語を書き、育て、まとめるための執筆ワークスペース。",
+    /* 検索結果で題名の下に出る文 */
+    description:
+        "埋もれた物語が見つかる場所。ジャンルごとのランキングと、まだ読まれていない作品を見つけよう。",
 
     defaultLocale: "ja",
 
@@ -34,5 +43,5 @@ export const appConfig = {
      */
     siteUrl:
         process.env.NEXT_PUBLIC_SITE_URL ??
-        "https://genseki-studio-bay.vercel.app",
+        "https://gensekikoro.com",
 } as const;
