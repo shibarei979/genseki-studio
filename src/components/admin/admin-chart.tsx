@@ -19,6 +19,8 @@ interface DayData { date: string; readers: number; authors: number; novels: numb
 interface Props {
   data30: DayData[]; data180: DayData[]
   data365: DayData[]; data1825: DayData[]
+  /** 上の期間の選び方に合わせて、最初に開く範囲を決める */
+  initialPeriod?: Period
 }
 
 type Period    = '30' | '180' | '365' | '1825'
@@ -75,8 +77,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   )
 }
 
-export default function AdminChart({ data30, data180, data365, data1825 }: Props) {
-  const [period,    setPeriod]    = useState<Period>('30')
+export default function AdminChart({ data30, data180, data365, data1825, initialPeriod }: Props) {
+  const [period,    setPeriod]    = useState<Period>(initialPeriod ?? '30')
   const [chartType, setChartType] = useState<ChartType>('bar')
   const [dataMode,  setDataMode]  = useState<DataMode>('daily')
 

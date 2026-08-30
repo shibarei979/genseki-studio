@@ -157,7 +157,34 @@ function StatCard({ label, value, prev, unit, breakdown, note, icon }: Stat) {
   )
 }
 
-export default async function AdminPage() {
+/*
+ * 選べる期間。
+ *
+ * 日付を自分で入れる形ではなく、決まった範囲から選ぶ。
+ * 運営が毎日見る画面なので、押すだけのほうが速い。
+ * 細かい範囲が要るようになったら、あとから広げられる。
+ */
+const RANGES = [
+  { key: '7',   label: '7日',  days: 7 },
+  { key: '30',  label: '30日', days: 30 },
+  { key: '90',  label: '90日', days: 90 },
+  { key: '365', label: '1年',  days: 365 },
+] as const
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: { range?: string }
+}) {
+  /*
+   * 選ばれている期間。
+   *
+   * 見つからないときは 30日。
+   * いちばんよく見る長さで、月の感覚に近い。
+   */
+  const range = RANGES.find(r => r.key === searchParams.range) ?? RANGES[1]
+  const rangeDays = range.days
+
   const session = await createClient()
   const { data: { user } } = await session.auth.getUser()
   if (!user) redirect('/login')
@@ -214,9 +241,19 @@ export default async function AdminPage() {
    * どれも互いに関わらないのに、3 回に分けて待っていた。
    * 失敗しても止めないものは、後で拾う。
    */
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  const since30 = new Date(); since30.setDate(since30.getDate() - 30)
-  const since60 = new Date(); since60.setDate(since60.getDate() - 60)
+  const weekAgo = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000).toISOString()
+  /*
+   * 選ばれた期間と、その1つ前。
+   *
+   *   since30  → 選んだ期間の始まり
+   *   since60  → その1つ前の期間の始まり
+   *
+   * 名前は since30 のままにしてある。
+   * 呼んでいる所が多く、まとめて変えると読み違えやすい。
+   * 中身は「選ばれた期間」に変わっている。
+   */
+  const since30 = new Date(); since30.setDate(since30.getDate() - rangeDays)
+  const since60 = new Date(); since60.setDate(since60.getDate() - rangeDays * 2)
   const since365 = new Date(); since365.setDate(since365.getDate() - 365)
 
   const [
@@ -428,12 +465,12 @@ export default async function AdminPage() {
       ],
     },
     {
-      label: '総閲覧数', icon: 'eye',
+      label: `総閲覧数（${range.label}）`, icon: 'eye',
       value: pv30, prev: pvPrev30,
       breakdown: [
-        { label: '直近30日', value: pv30.toLocaleString() },
+        { label: `直近${range.label}`, value: pv30.toLocaleString() },
         /* 携帯の割合は、下の「サイト利用状況」で期間ごとに出す */
-        { label: '直近7日の携帯', value: deviceTotal > 0 ? `${mobilePct} %` : '—' },
+        { label: `直近${range.label}の携帯`, value: deviceTotal > 0 ? `${mobilePct} %` : '—' },
       ],
     },
     {
@@ -468,6 +505,32 @@ export default async function AdminPage() {
           */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',
           flexWrap:'wrap',gap:10,marginBottom:20}}>
+          {/*
+            * 期間を選ぶ。
+            *
+            * 押すと住所に ?range=90 が付いて、画面が作り直される。
+            * 画面の中で切り替えないのは、数え上げが
+            * サーバー側で行われているため。
+            * 住所に残るので、その期間のまま人に渡せる。
+            */}
+          <div style={{display:'flex',gap:2,background:'var(--admin-bg)',borderRadius:9,padding:3}}>
+            {RANGES.map(r => (
+              <Link
+                key={r.key}
+                href={`/admin?range=${r.key}`}
+                style={{
+                  fontSize:12,padding:'5px 12px',borderRadius:7,textDecoration:'none',
+                  fontWeight: r.key === range.key ? 700 : 500,
+                  background: r.key === range.key ? 'var(--admin-bg-card)' : 'transparent',
+                  color: r.key === range.key ? 'var(--admin-stat-blue)' : 'var(--admin-text-muted)',
+                  boxShadow: r.key === range.key ? '0 1px 2px rgba(15,23,42,.08)' : 'none',
+                }}
+              >
+                {r.label}
+              </Link>
+            ))}
+          </div>
+
           <span style={{fontSize:11.5,color:'var(--admin-text-faint)'}}>
             最終更新 {updatedAt}
           </span>
@@ -514,7 +577,13 @@ export default async function AdminPage() {
           */}
         <div className="admin-lower" style={{display:'grid',gridTemplateColumns:'repeat(12, minmax(0, 1fr))',gap:16,marginBottom:24,alignItems:'stretch'}}>
           <div style={{gridColumn:'span 6',minWidth:0}}>
-            <AdminChart data30={chartData30} data180={chartData180} data365={chartData365} data1825={chartData1825} />
+            {/*
+              * 図も、選ばれた期間で開く。
+              * 上の札が 90日なのに、図だけ 1ヶ月では見比べられない。
+              */}
+            <AdminChart
+              initialPeriod={rangeDays <= 30 ? '30' : rangeDays <= 90 ? '180' : '365'}
+              data30={chartData30} data180={chartData180} data365={chartData365} data1825={chartData1825} />
           </div>
           <div style={{gridColumn:'span 3',minWidth:0}}>
             <UserDonut authorCount={authorCount} readerCount={readerCount} />
@@ -555,9 +624,9 @@ export default async function AdminPage() {
             gap:14,
           }}>
             {[
-              { label: '月間ユーザー', value: loginMonth.toLocaleString(), note: '30日以内に来た人' },
+              { label: '月間ユーザー', value: loginMonth.toLocaleString(), note: '30日以内に来た人（期間の指定は効きません）' },
               { label: '本日ログイン', value: loginToday.toLocaleString(), note: '今日来た人' },
-              { label: '7日ログイン',  value: loginWeek.toLocaleString(),  note: '直近7日に来た人' },
+              { label: '7日ログイン',  value: loginWeek.toLocaleString(),  note: '直近7日に来た人（期間の指定は効きません）' },
               { label: '未対応の通報', value: (openReportRes.count ?? 0).toLocaleString(), note: 'まだ見ていない通報' },
 
               /*
@@ -567,7 +636,7 @@ export default async function AdminPage() {
                * パソコンで大量に読んだ日に大きく振れる。
                * 長い期間も並べて、傾向を見られるようにする。
                */
-              { label: '携帯の割合（30日）', value: mobile30.total > 0 ? `${mobile30.pct} %` : '—',
+              { label: `携帯の割合（${range.label}）`, value: mobile30.total > 0 ? `${mobile30.pct} %` : '—',
                 note: `${mobile30.total.toLocaleString()}件のPVから` },
               { label: '携帯の割合（1年）', value: mobile365.total > 0 ? `${mobile365.pct} %` : '—',
                 note: `${mobile365.total.toLocaleString()}件のPVから` },
