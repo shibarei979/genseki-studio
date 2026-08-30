@@ -1019,33 +1019,6 @@ export default async function ReaderHome() {
               moreHref="/search?sort=updated"
             />
 
-
-
-            {/*
-              * ここから下は、その人だけのもの。
-              * 読みかけや追っている作者は、
-              * 探しに来た人には関係がない。
-              */}
-            <ReaderWorkList
-              title="続きから読む"
-              books={continueBooks}
-              /* 履歴のページはまだ無い。作品を探すへ送る */
-              moreHref="/search"
-            />
-
-            <ReaderWorkList
-              title="フォロー中の作家の新着"
-              books={followedBooks}
-              moreHref="/search?sort=new"
-            />
-
-            {/* ひと息で読み切れる */}
-            <ReaderWorkList
-              title="短編"
-              books={shortBooks}
-              moreHref="/search?type=短編"
-            />
-
             {/*
               * 受賞作品の見せ場。
               *
@@ -1056,6 +1029,35 @@ export default async function ReaderHome() {
             {featuredItems.length > 0 && (
               <FeaturedShowcase title={featuredTitle} items={featuredItems} />
             )}
+
+
+
+            {/*
+              * ここから下は、その人だけのもの。
+              * 読みかけや追っている作者は、
+              * 探しに来た人には関係がない。
+              */}
+            <ReaderWorkList
+              title="短編"
+              books={shortBooks}
+              moreHref="/search?type=短編"
+            />
+
+            <ReaderWorkList
+              title="フォロー中の作家の新着"
+              books={followedBooks}
+              moreHref="/search?sort=new"
+            />
+
+            {/* ひと息で読み切れる */}
+            <ReaderWorkList
+              title="続きから読む"
+              books={continueBooks}
+              /* 履歴のページはまだ無い。作品を探すへ送る */
+              moreHref="/search"
+            />
+
+
 
             <div className="rh_banner">
               <HomeBannerCarousel contests={sidebarContests} />
