@@ -375,6 +375,27 @@ export default function EpisodeList({
                     </button>
                 )}
 
+                {/*
+                  * 章から出す。
+                  *
+                  * つまんで落とす道も作ったが、
+                  * スマホや、つまむのが不得手な人には届かない。
+                  * 章に入っている話にだけ出す。
+                  */}
+                {episode.chapter_id && onAssignChapter && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onAssignChapter(episode.id, null);
+                        }}
+                        title="この話を章から出す"
+                        className="shrink-0 rounded border border-line px-1.5 py-0.5 text-[10px] text-faint hover:border-forest hover:text-forest"
+                    >
+                        章から出す
+                    </button>
+                )}
+
                 <EpisodeStatusMark
                     status={episode.status}
                     onToggle={() => onToggleStatus(episode)}
@@ -874,6 +895,46 @@ export default function EpisodeList({
                         </div>
                     );
                 })}
+
+                {/*
+                  * 章から出す先。
+                  *
+                  * 出す仕組みは前からあったが、口が2つとも
+                  * 見つけにくい所にあった。
+                  *
+                  *   「話を選ぶ」で選んでから押す
+                  *   「章に入れていない」の見出しへ落とす
+                  *
+                  * 後者は、章に入っていない話が1つも無いと
+                  * 見出しごと出ない。全部を章に入れた瞬間、
+                  * 出す先が画面から消えていた。
+                  * 「章を消して組み直すしかない」と言われたのは、そのため。
+                  *
+                  * つまんでいる間だけ、必ずここに出す。
+                  */}
+                {draggingId && onAssignChapter && (
+                    <div
+                        onDragOver={(e) => {
+                            e.preventDefault();
+                            setOverId("__unassign__");
+                        }}
+                        onDragLeave={() => setOverId(null)}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            if (draggingId) onAssignChapter(draggingId, null);
+                            setDraggingId(null);
+                            setOverId(null);
+                        }}
+                        className={[
+                            "mt-2 rounded-md border border-dashed px-3 py-3 text-center text-[11px]",
+                            overId === "__unassign__"
+                                ? "border-forest bg-forest-tint text-forest"
+                                : "border-line text-faint",
+                        ].join(" ")}
+                    >
+                        ここへ落とすと、章から出ます
+                    </div>
+                )}
             </div>
 
             {episodes.length === 0 && (
