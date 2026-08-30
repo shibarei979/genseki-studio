@@ -673,7 +673,14 @@ export default async function ReaderHome() {
      * 柱の中身（読みかけ・執筆室・お知らせ・コンテスト）は
      * 本棚の下へ移し、作品の並びと左右に置く。
      */}
-    <main className="mx-auto w-full max-w-[1400px] space-y-3.5 px-5 py-4 sm:px-6">
+    {/*
+      * 幅は縛らない。
+      *
+      * max-width を付けると、広い画面で左右に余白ができる。
+      * 前は柱と本体で画面いっぱいに広がっていたので、
+      * 同じように端まで使う。
+      */}
+    <main className="w-full min-w-0 space-y-3.5 px-5 py-4 sm:px-6">
           <BirthdateNotice />
 
           <ReaderHero />
