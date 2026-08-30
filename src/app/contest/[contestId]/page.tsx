@@ -6,7 +6,7 @@
  */
 
 import ContestDetailClient from "@/components/home/contest-detail-client";
-import Footer from "@/components/layout/footer";
+import FooterOnWhite from "@/components/layout/footer-on-white";
 
 export default function ContestDetailPage({
     params,
@@ -20,7 +20,7 @@ export default function ContestDetailPage({
               * 下まで読んだ人が、そこで行き止まりにならない。
               */}
             <ContestDetailClient contestId={params.contestId} />
-            <Footer />
+            <FooterOnWhite />
         </>
     );
 }

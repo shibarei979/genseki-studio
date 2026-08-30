@@ -20,7 +20,7 @@ import { redirect } from 'next/navigation'
 
 import MypageClient from '@/components/mypage/mypage-client'
 import { createClient } from '@/lib/supabase/server'
-import Footer from '@/components/layout/footer'
+import FooterOnWhite from '@/components/layout/footer-on-white'
 
 export default async function MypagePage() {
   const supabase = await createClient()
@@ -146,7 +146,7 @@ export default async function MypagePage() {
       {/*
         * どのページからでも、決まりや問い合わせへ行けるようにする。
         */}
-      <Footer />
+      <FooterOnWhite />
     </>
   )
 }

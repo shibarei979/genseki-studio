@@ -17,7 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import Footer from "@/components/layout/footer";
+import FooterOnWhite from "@/components/layout/footer-on-white";
 import Header from "@/components/layout/header";
 import { getRepository } from "@/lib/repository";
 import { formatNumber } from "@/lib/utils/text";
@@ -95,7 +95,7 @@ export default function ContestEntryClient({
                 <p className="py-24 text-center text-sm text-faint">
                     このコンテストは見つかりませんでした。
                 </p>
-                <Footer />
+                <FooterOnWhite />
             </div>
         );
     }
@@ -594,7 +594,7 @@ export default function ContestEntryClient({
                 </div>
             )}
 
-            <Footer />
+            <FooterOnWhite />
         </div>
     );
 }
