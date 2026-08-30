@@ -720,7 +720,17 @@ export default async function ReaderHome() {
       </div>
     </div>
 
-    <div className="flex">
+    {/*
+     * 全体を少し右へ寄せる。
+     *
+     * 柱と本文の関係は変えず、両方まとめて動かす。
+     * 片方だけ動かすと、そろえた上端や間が崩れる。
+     *
+     * ★ 寄せ具合はこの pl-* だけで変わる。
+     *   もっと右へ  pl-16（64px）
+     *   もっと左へ  pl-4 （16px）
+     */}
+    <div className="flex pl-8">
       {/*
        * 柱。
        *
