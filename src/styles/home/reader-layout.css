@@ -201,23 +201,19 @@
     /*
      * まとまりの見出し。
      *
-     * 作品名（13.5px）と 0.5px しか違わず、
-     * どちらが見出しか分からなかった。
-     * 大きさと字間ではっきり差を付ける。
-     */
-    /*
-     * まとまりの見出し。
-     *
      * 作品名と 0.5px しか違わず、どちらが見出しか分からなかった。
      * 大きさ・字体・字間の 3 つで差を付ける。
      *
      * 明朝にするのは、作品名（ゴシック）と別のものに見せるため。
      * 大きさだけ変えても、同じ並びの続きに見える。
+     *
+     * 横の縦線は消した。ここまで大きければ線は要らない。
      */
-    font-size: 32px;
+    font-size: 45px;
     font-weight: 700;
     font-family: garamond, "Hiragino Mincho ProN", "Yu Mincho", serif;
     letter-spacing: .06em;
+    line-height: 1.35;
     color: var(--text-color);
 }
 
@@ -999,17 +995,13 @@
     color: var(--text-color);
 }
 
-.reader-home .rwl_title::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 16px;
-    border-radius: 2px;
-    background: var(--main-color-3);
-}
+/*
+ * 見出しの横の縦線は消した。
+ *
+ * 見出しを大きくして字体も変えたので、
+ * 線が無くても見出しだと分かる。
+ * 線が残ると、作品名の横の色の線と紛れる。
+ */
 
 /*
  * 絵の無いお知らせ。

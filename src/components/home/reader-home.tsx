@@ -1015,7 +1015,7 @@ export default async function ReaderHome() {
             />
 
             <ReaderWorkList
-              title="最新話が届いた作品"
+              title="最新話更新"
               books={updatedBooks}
               moreHref="/search?sort=updated"
             />
