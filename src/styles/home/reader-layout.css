@@ -90,7 +90,7 @@
      *
      * 柱との間が画面幅で 8 倍も変わり、合わせようがなかった。
      */
-    width: min(1800px, 100%);
+    width: 100%;
     /*
      * 本棚との間を空ける。
      *
@@ -148,8 +148,18 @@
 ==================================================*/
 
 .reader-home .rwl {
-    width: min(1100px, 92%);
-    margin: 20px auto 0;
+    /*
+     * 「続きから読む」以降の並び。
+     *
+     * ★ この画面が使っているのは .rwl。
+     *   works.css の section.works ではない。
+     *   そちらを直しても、ここには効かない。
+     *
+     * 92% を auto で中央に置いていたので、
+     * 画面が広いほど左に余白ができ、柱との間が開いていた。
+     */
+    width: 100%;
+    margin: 20px 0 0;
     background: #ffffff;
     border: 1px solid color-mix(in srgb, var(--main-color-3) 14%, transparent);
     border-radius: 12px;
@@ -819,8 +829,9 @@
 .reader-home .rnb {
     display: grid;
     gap: 26px;
-    width: min(1100px, 92%);
-    margin: 22px auto 0;
+    /* ほかの並びと同じく、左に寄せる */
+    width: 100%;
+    margin: 22px 0 0;
 }
 
 @media (min-width: 900px) {
@@ -961,6 +972,7 @@
 
 /* 流れる帯。一覧と同じ幅にそろえる */
 .reader-home .rh_banner {
-    width: min(1100px, 92%);
-    margin: 22px auto 0;
+    /* ほかの並びと同じく、左に寄せる */
+    width: 100%;
+    margin: 22px 0 0;
 }
