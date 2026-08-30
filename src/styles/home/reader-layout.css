@@ -1068,12 +1068,30 @@
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    padding: 0 56px;
+    /*
+     * ★ .reader-home * { padding: 0 } に消されるので、
+     *   .book-shelf-area の余白をここで戻す。
+     *   これが無いと、本が板に埋まる。
+     */
+    padding: 0 56px 18px;
+}
+
+/*
+ * 板の左右のはみ出しを、この枠の中に収める。
+ * globals.css では -14px 外へ出しているが、
+ * ここでは端まで届けば足りる。
+ */
+.reader-home .fs_stage .book-shelf-board {
+    left: 0;
+    right: 0;
 }
 
 .reader-home .fs_center {
     display: flex;
     align-items: flex-end;
+    /* 板の上面（16px）より上に本を出す */
+    position: relative;
+    z-index: 2;
 }
 
 /* ---- 本 ---- */
@@ -1102,38 +1120,12 @@
     letter-spacing: .04em;
 }
 
-/* ---- 本の横 ---- */
-.reader-home .fs_side {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin: 0 0 14px 20px;
-    max-width: 260px;
-}
-
-.reader-home .fs_meta {
-    display: block;
-    text-decoration: none;
-}
-
-.reader-home .fs_meta-title {
-    display: block;
-    font-size: 13.5px;
-    font-weight: 700;
-    line-height: 1.6;
-}
-
-.reader-home .fs_meta-author {
-    display: block;
-    margin-top: 3px;
-    font-size: 11.5px;
-    opacity: .7;
-}
-
 /* ---- 吹き出し ---- */
 .reader-home .fs_bubble {
     position: relative;
-    align-self: flex-start;
+    /* 本の真ん中あたりの高さに合わせる */
+    align-self: center;
+    margin: 0 0 34px 20px;
     padding: 9px 13px;
     border-radius: 10px;
     background: var(--color-brand, #1f4e6b);
@@ -1174,14 +1166,6 @@
 
 .reader-home .fs_arrow-prev { left: 8px; }
 .reader-home .fs_arrow-next { right: 8px; }
-
-/* ---- 板 ---- */
-.reader-home .fs_board {
-    height: 16px;
-    border-radius: 0 0 4px 4px;
-    background: linear-gradient(180deg, #d8a86a 0%, #b9843f 55%, #8f6229 100%);
-    box-shadow: 0 3px 7px -4px rgba(60, 40, 15, .6);
-}
 
 /* ---- 何冊目か ---- */
 .reader-home .fs_dots {

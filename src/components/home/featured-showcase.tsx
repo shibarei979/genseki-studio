@@ -66,7 +66,7 @@ export default function FeaturedShowcase({
         <div className="fs">
             <div className="fs_title">{title}</div>
 
-            <div className="fs_stage">
+            <div className="fs_stage book-shelf-area">
                 {items.length > 1 && (
                     <button type="button" onClick={() => go(-1)}
                         className="fs_arrow fs_arrow-prev" aria-label="前の作品">
@@ -141,13 +141,18 @@ export default function FeaturedShowcase({
                       * 吹き出しと、その下に題名。
                       * 本の横にまとめて置く。
                       */}
-                    <div className="fs_side">
-                        {item.label && <span className="fs_bubble">{item.label}</span>}
-                        <Link href={item.href} className="fs_meta">
-                            <span className="fs_meta-title">{item.title}</span>
-                            <span className="fs_meta-author">著：{item.author}</span>
-                        </Link>
-                    </div>
+                    {/*
+                      * 吹き出し。
+                      *
+                      * 題名と作者名は表紙に乗っているので、横には出さない。
+                      * 同じ文字を 2 度出しても場所を取るだけ。
+                      *
+                      * 賞の名前が無いときは「今週のおすすめ作品」と出す。
+                      * 空の吹き出しは、置いてあるだけで意味がない。
+                      */}
+                    <span className="fs_bubble">
+                        {item.label || '今週のおすすめ作品'}
+                    </span>
                 </div>
 
                 {items.length > 1 && (
@@ -156,10 +161,20 @@ export default function FeaturedShowcase({
                         ›
                     </button>
                 )}
+
+                {/*
+                  * 板。
+                  *
+                  * ★ globals.css の .book-shelf-board をそのまま使う。
+                  *   執筆向けホームと同じもの。
+                  *   本体・上面・影の 3 層でできていて、
+                  *   上面が台形に切られているから奥行きが出る。
+                  *
+                  *   自分で帯を書くと、ただの色の変化になって平らに見える。
+                  */}
+                <div className="book-shelf-board" aria-hidden="true" />
             </div>
 
-            {/* 板 */}
-            <div className="fs_board" aria-hidden="true" />
 
             {items.length > 1 && (
                 <div className="fs_dots">
