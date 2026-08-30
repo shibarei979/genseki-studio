@@ -196,26 +196,10 @@
     border-bottom: 1px solid color-mix(in srgb, var(--main-color-3) 10%, transparent);
 }
 
-.reader-home .rwl_title {
-    margin: 0;
-    /*
-     * まとまりの見出し。
-     *
-     * 作品名と 0.5px しか違わず、どちらが見出しか分からなかった。
-     * 大きさ・字体・字間の 3 つで差を付ける。
-     *
-     * 明朝にするのは、作品名（ゴシック）と別のものに見せるため。
-     * 大きさだけ変えても、同じ並びの続きに見える。
-     *
-     * 横の縦線は消した。ここまで大きければ線は要らない。
-     */
-    font-size: 45px;
-    font-weight: 700;
-    font-family: garamond, "Hiragino Mincho ProN", "Yu Mincho", serif;
-    letter-spacing: .06em;
-    line-height: 1.35;
-    color: var(--text-color);
-}
+/*
+ * 見出しの指定は、下の 1 か所にまとめた。
+ * ここにも書くと、後ろのほうだけが効いて混乱する。
+ */
 
 .reader-home .rwl_more {
     flex: 0 0 auto;
@@ -988,11 +972,48 @@
 
 .reader-home .rwl_title {
     position: relative;
-    padding-left: 12px;
-    font-size: 16px;
+
+    /*
+     * まとまりの見出し。
+     *
+     * ★ 縦線を消したぶん、ほかで目立たせる。
+     *
+     *   大きさ    作品名の 2 倍以上
+     *   字体      明朝。作品名（ゴシック）と別のものに見せる
+     *   字間      広く取って、ゆったり見せる
+     *   下に線     見出しの幅だけの短い線を引く
+     *
+     *   大きさだけ変えても、同じ並びの続きに見える。
+     */
+    display: inline-block;
+    padding: 0 0 8px;
+    font-size: 28px;
     font-weight: 700;
-    letter-spacing: .02em;
+    font-family: garamond, "Hiragino Mincho ProN", "Yu Mincho", serif;
+    letter-spacing: .1em;
+    line-height: 1.4;
     color: var(--text-color);
+}
+
+/*
+ * 見出しの下の線。
+ *
+ * 横の縦線とは別のもの。
+ * 文字の幅ぶんだけ引くので、見出しの長さがそのまま出る。
+ */
+.reader-home .rwl_title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(
+        90deg,
+        var(--main-color-3) 0%,
+        color-mix(in srgb, var(--main-color-3) 20%, transparent) 100%
+    );
 }
 
 /*
