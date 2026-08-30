@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import AdminChart from '@/components/admin/admin-chart'
+import { UserDonut, GenreRanking } from '@/components/admin/admin-side-cards'
 
 export const dynamic = 'force-dynamic'
 
@@ -140,7 +141,7 @@ export default async function AdminPage() {
     { data: allUsers }, { data: allNovels },
     loginRes, mobileRes, desktopRes,
     prevUserRes, prevNovelRes, prevCommentRes, pv30Res, pvPrev30Res,
-    homeModeRes,
+    homeModeRes, genreRes,
   ] = await Promise.all([
     supabase.from('profiles').select('created_at').gte('created_at', startDate.toISOString()),
     supabase.from('novels').select('created_at').gte('created_at', startDate.toISOString()),
@@ -181,6 +182,9 @@ export default async function AdminPage() {
      * 実際には居ないはずの読者が 37 人いることになっていた。
      */
     supabase.from('profiles').select('home_mode').limit(20000),
+
+    /* ジャンル別の作品数。公開しているものだけ数える */
+    supabase.from('novels').select('genre').eq('published', true).limit(20000),
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {
@@ -215,6 +219,17 @@ export default async function AdminPage() {
   const modes = (homeModeRes.data || []) as { home_mode: string | null }[]
   const readerCount = modes.filter((m) => m.home_mode === 'read').length
   const authorCount = modes.length - readerCount
+
+  /* 作品数の多い順に5つ。ジャンルの無いものは数えない */
+  const genreCount: Record<string, number> = {}
+  for (const row of (genreRes.data || []) as { genre: string | null }[]) {
+    if (!row.genre) continue
+    genreCount[row.genre] = (genreCount[row.genre] ?? 0) + 1
+  }
+  const topGenres = Object.entries(genreCount)
+    .map(([genre, count]) => ({ genre, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
 
   const pv30 = pv30Res.count || 0
   const pvPrev30 = pvPrev30Res.count || 0
@@ -315,7 +330,22 @@ export default async function AdminPage() {
           </div>
         ))}
 
-        <AdminChart data30={chartData30} data180={chartData180} data365={chartData365} data1825={chartData1825} />
+        {/*
+          * 図と、その横に2枚。
+          *
+          * 数字だけでは、全体の中でどれくらいの割合なのかが
+          * 分からない。図の隣に置いて、一度に見られるようにする。
+          *
+          * 狭い画面では縦に落ちる。
+          */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',gap:16,marginBottom:26,alignItems:'start'}}>
+          {/* 図はいちばん広く取る */}
+          <div style={{gridColumn:'span 2',minWidth:0}}>
+            <AdminChart data30={chartData30} data180={chartData180} data365={chartData365} data1825={chartData1825} />
+          </div>
+          <UserDonut authorCount={authorCount} readerCount={readerCount} />
+          <GenreRanking items={topGenres} />
+        </div>
 
         {/*
           * 「管理メニュー」「最近のお知らせ」「コンテスト」を外した。
