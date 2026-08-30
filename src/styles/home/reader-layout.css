@@ -78,14 +78,26 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    width: min(1100px, 92%);
+    /*
+     * 幅を下の並び（works）にそろえ、左に寄せる。
+     *
+     * 前は min(1100px, 92%) を auto で中央に置いていた。
+     * 本文が広がっても枠は 1100px で頭打ちなので、
+     * 画面が広いほど左右の余白が増えていた。
+     *
+     *   1600px → 左に  67px
+     *   2560px → 左に 540px
+     *
+     * 柱との間が画面幅で 8 倍も変わり、合わせようがなかった。
+     */
+    width: min(1800px, 100%);
     /*
      * 本棚との間を空ける。
      *
      * 8px では棚板とくっついて、
      * 棚の一部のように見えていた。
      */
-    margin: 40px auto 0;
+    margin: 40px 0 0;
     padding: 16px 20px;
     background: #ffffff;
     border: 1px solid color-mix(in srgb, var(--main-color-3) 14%, transparent);

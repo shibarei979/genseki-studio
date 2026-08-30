@@ -9,7 +9,14 @@
 ========================================================== */
 
 section.works {
-    width: min(1800px, 90%);
+    /*
+     * 左に寄せる。
+     *
+     * 90% を auto で中央に置いていたので、
+     * 画面が広いほど左に余白ができ、
+     * 柱との間が開いていた。
+     */
+    width: min(1800px, 100%);
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
