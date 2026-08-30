@@ -70,16 +70,12 @@
 }
 
 /* ---- 板 ---- */
-.rb + .rb {
-    margin-top: 28px;
-}
-
 .rb_head {
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .rb_title {
@@ -123,10 +119,26 @@
         0 4px 12px -6px rgba(70, 45, 20, .4);
 }
 
+/*
+ * 札の並び。
+ *
+ * 4 列。最初の 4 枚だけ背を高くして、目を留めさせる。
+ * 全部同じ大きさだと、どれから読めばよいか分からない。
+ */
 .rb_grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 22px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px;
+}
+
+@media (max-width: 1200px) {
+    .rb_grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+    .rb_grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+    .rb_grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .rb_empty {
@@ -148,7 +160,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    min-height: 176px;
+    min-height: 172px;
     padding: 18px 16px 14px;
     text-decoration: none;
     color: #33302a;
@@ -161,6 +173,16 @@
         0 1px 2px rgba(60, 45, 25, .18),
         0 6px 14px -8px rgba(60, 45, 25, .45);
     transition: transform .18s ease, box-shadow .18s ease;
+}
+
+/* 最初の 4 枚。題名を大きく、背を高く */
+.rb_card.is-big {
+    min-height: 216px;
+    padding: 22px 18px 16px;
+}
+
+.rb_card.is-big .rb_card-title {
+    font-size: 19px;
 }
 
 .rb_card:hover {
@@ -198,7 +220,8 @@
 .rb_card-head {
     font-size: 11.5px;
     line-height: 1.9;
-    opacity: .78;
+    /* 題名との差を付ける。同じ濃さだと、どちらも読み流される */
+    opacity: .68;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;

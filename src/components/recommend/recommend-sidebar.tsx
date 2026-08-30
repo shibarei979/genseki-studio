@@ -5,49 +5,72 @@ import { GENRES } from '@/types'
 /**
  * ============================================================
  * 原石航路 Studio
- * RecommendSidebar — 探すための柱
+ * RecommendSidebar — このページの中を切り替える柱
  *
- * ここでは絞り込みをしない。
- * どれを押しても「作品を探す」へ、条件を付けて送るだけ。
- *
- * ★ 同じ絞り込みを 2 か所で作らない。
- *   探す条件は /search が持っている。
- *   ここにも作ると、片方だけ直して食い違う。
+ * ★ 外のページへは飛ばない。
+ *   住所に ?view= や ?genre= を付けて、このページを作り直す。
+ *   外へ飛ぶと戻ってこられず、選び直すのに手間がかかる。
  * ============================================================
  */
 
-/** 上の 3 つ。いま見ているものを濃くする */
-const VIEWS = [
-    { key: 'recommend', label: 'おすすめ', href: '/recommend' },
-    { key: 'new', label: '新着作品', href: '/search?sort=new' },
-    { key: 'rising', label: '急上昇作品', href: '/ranking' },
-]
+/** 見せ方。押すと板の中身が入れ替わる */
+export const VIEWS = [
+    { key: 'foryou',  label: 'おすすめ' },
+    { key: 'hidden',  label: 'まだ知られていない作品' },
+    { key: 'rising',  label: '最近ふえている作品' },
+    { key: 'new',     label: '新着のおすすめ' },
+    { key: 'hot',     label: '急上昇のおすすめ' },
+] as const
 
-/** こだわり条件。/search の受け口に合わせる */
-const FILTERS = [
-    { label: '完結済み', href: '/search?serial=completed' },
-    { label: '長編作品', href: '/search?type=長編' },
-    { label: '短編作品', href: '/search?type=短編' },
-    { label: '連載中', href: '/search?serial=serial' },
-]
+/** こだわり条件。押すと板の札を絞る */
+/*
+ * こだわり条件。
+ *
+ * ★ 完結・連載は入れていない。
+ *   おすすめの点数付けが is_serial を持っておらず、
+ *   絞れないため。押しても何も起きない押し具は置かない。
+ */
+export const FILTERS = [
+    { key: 'long',  label: '長編作品' },
+    { key: 'short', label: '短編作品' },
+] as const
+
+/** いまの住所に、変えたいものだけ差し替えた住所を作る */
+function hrefWith(
+    now: { view: string; genre?: string; filter?: string },
+    change: Partial<{ view: string; genre: string; filter: string }>,
+) {
+    const next = { ...now, ...change }
+    const parts: string[] = []
+    if (next.view && next.view !== 'foryou') parts.push(`view=${next.view}`)
+    if (next.genre) parts.push(`genre=${encodeURIComponent(next.genre)}`)
+    if (next.filter) parts.push(`filter=${next.filter}`)
+    return parts.length ? `/recommend?${parts.join('&')}` : '/recommend'
+}
 
 export default function RecommendSidebar({
-    current = 'recommend',
+    view,
+    genre,
+    filter,
 }: {
-    current?: string
+    view: string
+    genre?: string
+    filter?: string
 }) {
+    const now = { view, genre, filter }
+
     return (
         <aside className="rs">
             <div className="rs_group">
                 <p className="rs_label">探す</p>
                 <ul>
-                    {VIEWS.map((view) => (
-                        <li key={view.key}>
+                    {VIEWS.map((one) => (
+                        <li key={one.key}>
                             <Link
-                                href={view.href}
-                                className={`rs_item${view.key === current ? ' is-on' : ''}`}
+                                href={hrefWith(now, { view: one.key })}
+                                className={`rs_item${one.key === view ? ' is-on' : ''}`}
                             >
-                                {view.label}
+                                {one.label}
                             </Link>
                         </li>
                     ))}
@@ -57,13 +80,17 @@ export default function RecommendSidebar({
             <div className="rs_group">
                 <p className="rs_label">ジャンルから探す</p>
                 <ul>
-                    {GENRES.map((genre) => (
-                        <li key={genre}>
+                    {/*
+                      * 選んでいるものをもう一度押すと、絞りが外れる。
+                      * 外し方が分からないと、行き止まりになる。
+                      */}
+                    {GENRES.map((one) => (
+                        <li key={one}>
                             <Link
-                                href={`/search?genre=${encodeURIComponent(genre)}`}
-                                className="rs_item"
+                                href={hrefWith(now, { genre: one === genre ? '' : one })}
+                                className={`rs_item${one === genre ? ' is-on' : ''}`}
                             >
-                                {genre}
+                                {one}
                             </Link>
                         </li>
                     ))}
@@ -73,10 +100,13 @@ export default function RecommendSidebar({
             <div className="rs_group">
                 <p className="rs_label">こだわり条件</p>
                 <ul>
-                    {FILTERS.map((filter) => (
-                        <li key={filter.label}>
-                            <Link href={filter.href} className="rs_item">
-                                {filter.label}
+                    {FILTERS.map((one) => (
+                        <li key={one.key}>
+                            <Link
+                                href={hrefWith(now, { filter: one.key === filter ? '' : one.key })}
+                                className={`rs_item${one.key === filter ? ' is-on' : ''}`}
+                            >
+                                {one.label}
                             </Link>
                         </li>
                     ))}

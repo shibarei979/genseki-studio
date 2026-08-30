@@ -47,7 +47,19 @@ function truncate(text: string | null | undefined, length: number): string {
     return t.length > length ? t.slice(0, length) + "…" : t;
 }
 
-export default async function RecommendPage() {
+export default async function RecommendPage({
+    searchParams,
+}: {
+    searchParams: { view?: string; genre?: string; filter?: string };
+}) {
+    /*
+     * 選ばれている見せ方と絞り込み。
+     * どれも住所から読む。柱を押すと住所が変わり、ここが変わる。
+     */
+    const view = searchParams.view ?? "foryou";
+    const genre = searchParams.genre;
+    const filter = searchParams.filter;
+
     const supabase = await createClient();
 
     const {
@@ -189,6 +201,63 @@ export default async function RecommendPage() {
         .slice(0, LIST_SIZE)
         .map(toBook);
 
+    /*
+     * 板に出すものを 1 つに決める。
+     *
+     * 前は 3 つの板を縦に並べていた。
+     * 板が続くと重く、どれを見ればよいか分からない。
+     * 柱で切り替える形にして、板は 1 つにする。
+     */
+    const newBooks = scored
+        .filter((n) => n.created_at >= monthAgo)
+        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+        .slice(0, LIST_SIZE)
+        .map(toBook);
+
+    const hotBooks = scored
+        .slice()
+        .sort((a, b) => b.finalScore - a.finalScore)
+        .slice(0, LIST_SIZE)
+        .map(toBook);
+
+    const VIEW_MAP: Record<string, { title: string; note: string; books: HomeBook[] }> = {
+        foryou: { title: "あなたへのおすすめ", note: "読んだ作品から選んでいます", books: forYou },
+        hidden: { title: "まだ知られていない作品", note: "人目に触れていない、けれど読まれてほしい作品", books: hidden },
+        rising: { title: "最近ふえている作品", note: "ここしばらく読まれ方が伸びている作品", books: rising },
+        new:    { title: "新着のおすすめ", note: "この30日に出た作品から", books: newBooks },
+        hot:    { title: "急上昇のおすすめ", note: "いま伸びが大きい作品", books: hotBooks },
+    };
+
+    const base = VIEW_MAP[view] ?? VIEW_MAP.foryou;
+
+    /*
+     * ジャンルと条件で絞る。
+     *
+     * 絞ったあとに残らないことがあるが、
+     * そのときは板の側が「条件を外して見る」を出す。
+     */
+    const allowed = new Set(
+        scored
+            .filter((n) => {
+                if (genre && n.genre !== genre) return false;
+                /*
+                 * ★ 完結・連載では絞れない。
+                 *   点数付けの一覧（ScoredNovel）が is_serial を持っていない。
+                 *   効かない押し具を柱に置くのは嘘になるので、
+                 *   柱の側からも外してある。
+                 */
+                if (filter === "long" && n.novel_type !== "長編") return false;
+                if (filter === "short" && n.novel_type !== "短編") return false;
+                return true;
+            })
+            .map((n) => n.id),
+    );
+
+    const shown = {
+        ...base,
+        books: base.books.filter((book) => allowed.has(book.id)),
+    };
+
     return (
         /*
          * 骨組みはランキング・検索と同じ。
@@ -201,80 +270,15 @@ export default async function RecommendPage() {
             <Header />
 
             <div className="rec-page">
-                <RecommendSidebar current="recommend" />
+                <RecommendSidebar view={view} genre={genre} filter={filter} />
 
                 <div style={{ minWidth: 0 }}>
-
-                    {forYou.length > 0 && (
-                        <RecommendBoard
-                            title="あなたへのおすすめ"
-                            note="読んだ作品から選んでいます"
-                            books={forYou}
-                            moreHref="/search"
-                        />
-                    )}
-
-                    <RecommendBoard
-                        title="まだ知られていない作品"
-                        note="人目に触れていない、けれど読まれてほしい作品"
-                        books={hidden}
-                        moreHref="/search?sort=new"
-                    />
-
-                    <RecommendBoard
-                        title="最近ふえている作品"
-                        note="ここしばらく読まれ方が伸びている作品"
-                        books={rising}
-                        moreHref="/ranking"
-                    />
-
-                    {/*
-                     * ジャンルから探す。
-                     *
-                     * 上の一覧で見つからなかった人の受け皿。
-                     * 検索の絞り込みと同じ見た目にする。
-                     */}
-                    <div
-                        style={{
-                            background: "var(--color-bg-card)",
-                            border: "1px solid var(--color-brand-border)",
-                            borderRadius: 12,
-                            padding: "16px 20px",
-                            marginTop: 16,
-                        }}
-                    >
-                        <div
-                            style={{
-                                fontSize: 13,
-                                fontWeight: 700,
-                                color: "var(--color-text)",
-                                marginBottom: 12,
-                            }}
-                        >
-                            ジャンルから探す
-                        </div>
-
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            {GENRES_SELECTABLE.map((genre) => (
-                                <Link
-                                    key={genre}
-                                    href={`/search?genre=${encodeURIComponent(genre)}`}
-                                    style={{
-                                        padding: "6px 14px",
-                                        borderRadius: 16,
-                                        border: "1px solid var(--color-brand-border)",
-                                        background: "var(--color-bg)",
-                                        fontSize: 12,
-                                        color: "var(--color-text)",
-                                        textDecoration: "none",
-                                        whiteSpace: "nowrap",
-                                    }}
-                                >
-                                    {genre}
-                                </Link>
-                            ))}
-                        </div>
+                    <div className="rb_head">
+                        <h1 className="rb_title">{shown.title}</h1>
+                        <p className="rb_note">{shown.note}</p>
                     </div>
+
+                    <RecommendBoard books={shown.books} />
                 </div>
             </div>
 
