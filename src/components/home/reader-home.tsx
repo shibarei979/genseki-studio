@@ -207,6 +207,39 @@ export default async function ReaderHome() {
   const novelById: Record<string, NovelRow> = {}
   newest.forEach((n) => { novelById[n.id] = n })
 
+  /*
+   * 読めない作品を、棚から外す。
+   *
+   * ★ 話が 1 つも無い作品が並んでいた。
+   *   題名も空のまま、作者名だけの本になっていた。
+   *
+   *   しかも押すと「このページはありません」になる。
+   *   作品ページは、話が 0 件なら読者に見せない作りだから。
+   *
+   * 題名の無いものも外す。棚に置いても何の本か分からない。
+   */
+  const readableIds = new Set<string>()
+  {
+    const ids = newest.map((n) => n.id)
+    if (ids.length > 0) {
+      const { data: liveEpisodes } = await supabase
+        .from('episodes')
+        .select('novel_id')
+        .in('novel_id', ids)
+        .eq('is_published', true)
+        .limit(20000)
+
+      for (const row of (liveEpisodes || []) as { novel_id: string }[]) {
+        readableIds.add(row.novel_id)
+      }
+    }
+  }
+
+  const readable = newest.filter(
+    (n) => readableIds.has(n.id) && (n.title ?? '').trim() !== '',
+  )
+
+
   // ----- ユーザーがよく読むジャンル（旧トップページと同じロジック） -----
   let favoriteGenres: string[] = []
   if (user) {
@@ -240,10 +273,10 @@ export default async function ReaderHome() {
         id: s.id, title: s.title, summary: s.summary, catchcopy: s.catchcopy,
         genre: s.genre, tags: s.tags, author_id: s.author_id, created_at: s.created_at,
       }))
-    : shuffle(newest).slice(0, WORKS_POOL_COUNT)
+    : shuffle(readable).slice(0, WORKS_POOL_COUNT)
   pickupNovels.forEach((n) => { if (!novelById[n.id]) novelById[n.id] = n })
 
-  const newReleaseNovels = newest.slice(0, WORKS_POOL_COUNT)
+  const newReleaseNovels = readable.slice(0, WORKS_POOL_COUNT)
   /*
    * 本棚に並べる作品。
    *
@@ -272,8 +305,8 @@ export default async function ReaderHome() {
     if (String(r.comment ?? '').trim()) withObi.add(r.novel_id as string)
   })
 
-  const shelfWithObi = shuffle(newest.filter((n) => withObi.has(n.id)))
-  const shelfWithout = shuffle(newest.filter((n) => !withObi.has(n.id)))
+  const shelfWithObi = shuffle(readable.filter((n) => withObi.has(n.id)))
+  const shelfWithout = shuffle(readable.filter((n) => !withObi.has(n.id)))
 
   const shelfNovels = [...shelfWithObi, ...shelfWithout].slice(0, SHELF_COUNT)
 
@@ -429,7 +462,7 @@ export default async function ReaderHome() {
    * 続きが出たものを並べる。
    * 追っている人にとっては、こちらのほうが用がある。
    */
-  const updatedBooks = [...newest]
+  const updatedBooks = [...readable]
     .filter((n) => n.updated_at && n.updated_at !== n.created_at)
     .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))
     .slice(0, LIST_SIZE)
@@ -449,7 +482,7 @@ export default async function ReaderHome() {
     .map((n) => toBook(n as unknown as NovelRow, extras))
 
   /* 短編。ひと息で読み切れるもの */
-  const shortBooks = newest
+  const shortBooks = readable
     .filter((n) => n.novel_type === '短編')
     .slice(0, LIST_SIZE)
     .map((n) => toBook(n, extras))
