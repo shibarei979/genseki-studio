@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import AdminRangePicker from '@/components/admin/admin-range-picker'
 import AdminChart from '@/components/admin/admin-chart'
 import { UserDonut, GenreRanking } from '@/components/admin/admin-side-cards'
 
@@ -171,19 +172,54 @@ const RANGES = [
   { key: '365', label: '1年',  days: 365 },
 ] as const
 
+/**
+ * 入れられた日付を、日数に直す。
+ *
+ * ★ おかしな値は受け取らない。
+ *   日付として読めない、順序が逆、1年より長い。
+ *   そのときは null を返して、決まった範囲のほうを使う。
+ *
+ * 住所に手で書き込まれることがあるので、ここで止める。
+ */
+function parseRange(from?: string, to?: string) {
+  if (!from || !to) return null
+
+  const start = new Date(from)
+  const end = new Date(to)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null
+  if (start > end) return null
+
+  const days = Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1
+  if (days < 1 || days > 365) return null
+
+  return {
+    days,
+    label: `${from} 〜 ${to}`,
+    from,
+    to,
+  }
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: { range?: string }
+  searchParams: { range?: string; from?: string; to?: string }
 }) {
   /*
-   * 選ばれている期間。
+   * 期間の決め方。
    *
-   * 見つからないときは 30日。
-   * いちばんよく見る長さで、月の感覚に近い。
+   *   1  日付を自分で入れた（from と to）  → それを使う
+   *   2  決まった範囲を選んだ（range）     → その日数
+   *   3  どちらも無い                    → 30日
+   *
+   * 日付を入れた場合も、中では「何日ぶんか」に直して使う。
+   * 数え上げの側は日数しか受け取れないので、そこへ寄せる。
    */
+  const custom = parseRange(searchParams.from, searchParams.to)
+
   const range = RANGES.find(r => r.key === searchParams.range) ?? RANGES[1]
-  const rangeDays = range.days
+  const rangeDays = custom ? custom.days : range.days
+  const rangeLabel = custom ? custom.label : range.label
 
   const session = await createClient()
   const { data: { user } } = await session.auth.getUser()
@@ -267,7 +303,13 @@ export default async function AdminPage({
     supabase.from('novels').select('created_at').gte('created_at', startDate.toISOString()),
 
     /* 失敗しても止めない。数字が 0 になるだけ */
-    Promise.resolve(adminSupabase.rpc('get_login_stats')).catch(() => ({ data: null } as any)),
+    /*
+     * 選ばれた期間を渡す。
+     *
+     * 前は日数を渡していなかったので、
+     * 期間を変えても「月間ユーザー」が動かなかった。
+     */
+    Promise.resolve(adminSupabase.rpc('get_login_stats', { days: rangeDays })).catch(() => ({ data: null } as any)),
     Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'mobile').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
     Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'desktop').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
 
@@ -465,12 +507,12 @@ export default async function AdminPage({
       ],
     },
     {
-      label: `総閲覧数（${range.label}）`, icon: 'eye',
+      label: `総閲覧数（${rangeLabel}）`, icon: 'eye',
       value: pv30, prev: pvPrev30,
       breakdown: [
-        { label: `直近${range.label}`, value: pv30.toLocaleString() },
+        { label: `直近${rangeLabel}`, value: pv30.toLocaleString() },
         /* 携帯の割合は、下の「サイト利用状況」で期間ごとに出す */
-        { label: `直近${range.label}の携帯`, value: deviceTotal > 0 ? `${mobilePct} %` : '—' },
+        { label: `直近${rangeLabel}の携帯`, value: deviceTotal > 0 ? `${mobilePct} %` : '—' },
       ],
     },
     {
@@ -520,16 +562,26 @@ export default async function AdminPage({
                 href={`/admin?range=${r.key}`}
                 style={{
                   fontSize:12,padding:'5px 12px',borderRadius:7,textDecoration:'none',
-                  fontWeight: r.key === range.key ? 700 : 500,
-                  background: r.key === range.key ? 'var(--admin-bg-card)' : 'transparent',
-                  color: r.key === range.key ? 'var(--admin-stat-blue)' : 'var(--admin-text-muted)',
-                  boxShadow: r.key === range.key ? '0 1px 2px rgba(15,23,42,.08)' : 'none',
+                  fontWeight: (!custom && r.key === range.key) ? 700 : 500,
+                  background: (!custom && r.key === range.key) ? 'var(--admin-bg-card)' : 'transparent',
+                  color: (!custom && r.key === range.key) ? 'var(--admin-stat-blue)' : 'var(--admin-text-muted)',
+                  boxShadow: (!custom && r.key === range.key) ? '0 1px 2px rgba(15,23,42,.08)' : 'none',
                 }}
               >
                 {r.label}
               </Link>
             ))}
           </div>
+
+          {/*
+            * 日付で選ぶ。
+            * 決まった範囲で足りないときに使う。
+            */}
+          <AdminRangePicker
+            from={custom?.from}
+            to={custom?.to}
+            label={custom ? custom.label : '日付で選ぶ'}
+          />
 
           <span style={{fontSize:11.5,color:'var(--admin-text-faint)'}}>
             最終更新 {updatedAt}
@@ -624,9 +676,9 @@ export default async function AdminPage({
             gap:14,
           }}>
             {[
-              { label: '月間ユーザー', value: loginMonth.toLocaleString(), note: '30日以内に来た人（期間の指定は効きません）' },
+              { label: `${rangeLabel}ユーザー`, value: loginMonth.toLocaleString(), note: `${rangeLabel}以内に来た人` },
               { label: '本日ログイン', value: loginToday.toLocaleString(), note: '今日来た人' },
-              { label: '7日ログイン',  value: loginWeek.toLocaleString(),  note: '直近7日に来た人（期間の指定は効きません）' },
+              { label: '7日ログイン',  value: loginWeek.toLocaleString(),  note: '直近7日に来た人' },
               { label: '未対応の通報', value: (openReportRes.count ?? 0).toLocaleString(), note: 'まだ見ていない通報' },
 
               /*
@@ -636,7 +688,7 @@ export default async function AdminPage({
                * パソコンで大量に読んだ日に大きく振れる。
                * 長い期間も並べて、傾向を見られるようにする。
                */
-              { label: `携帯の割合（${range.label}）`, value: mobile30.total > 0 ? `${mobile30.pct} %` : '—',
+              { label: `携帯の割合（${rangeLabel}）`, value: mobile30.total > 0 ? `${mobile30.pct} %` : '—',
                 note: `${mobile30.total.toLocaleString()}件のPVから` },
               { label: '携帯の割合（1年）', value: mobile365.total > 0 ? `${mobile365.pct} %` : '—',
                 note: `${mobile365.total.toLocaleString()}件のPVから` },
