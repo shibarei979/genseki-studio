@@ -20,11 +20,18 @@ export default async function AuthorPage({ params }: Props) {
     profile = data
   }
 
+  /*
+   * 他人の作者ページなので、公開用の見え方から読む。
+   *
+   * profiles 本体は本人と運営だけに閉じてある。
+   * そのまま読むと何も返らず、notFound になる。
+   * 「このページはありません」と出ていたのは、これが原因。
+   */
   const { data: author } = await supabase
-    .from('profiles')
+    .from('public_profiles')
     .select('user_id, display_name, icon_url, bio, user_number, created_at, x_account')
     .eq('user_id', params.id)
-    .single()
+    .maybeSingle()
 
   if (!author) notFound()
 

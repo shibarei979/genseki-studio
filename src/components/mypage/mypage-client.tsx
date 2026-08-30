@@ -1389,12 +1389,32 @@ export default function MypageClient({
   const BlockMuteTab = () => {
     useEffect(() => {
       if (blockMuteLoaded) return
+      /*
+       * 名前と絵は、公開用の見え方から別に引く。
+       *
+       * profiles と繋いで一度に読む書き方は通らない。
+       * profiles 本体は本人と運営だけに閉じてあるので、
+       * 繋いでも相手の名前が空で返る。
+       */
       Promise.all([
-        supabase.from('user_blocks').select('blocked_id, profiles!user_blocks_blocked_id_fkey(display_name, icon_url)').eq('blocker_id', profile.user_id),
-        supabase.from('user_mutes').select('muted_id, profiles!user_mutes_muted_id_fkey(display_name, icon_url)').eq('muter_id', profile.user_id),
-      ]).then(([blocks, mutes]) => {
-        setBlockList((blocks.data||[]).map((b:any) => ({ id: b.blocked_id, ...b.profiles })))
-        setMuteList((mutes.data||[]).map((m:any) => ({ id: m.muted_id, ...m.profiles })))
+        supabase.from('user_blocks').select('blocked_id').eq('blocker_id', profile.user_id),
+        supabase.from('user_mutes').select('muted_id').eq('muter_id', profile.user_id),
+      ]).then(async ([blocks, mutes]) => {
+        const blockIds = (blocks.data||[]).map((b:any) => b.blocked_id)
+        const muteIds  = (mutes.data||[]).map((m:any) => m.muted_id)
+        const allIds = Array.from(new Set([...blockIds, ...muteIds]))
+
+        const byId = new Map<string, any>()
+        if (allIds.length > 0) {
+          const { data: people } = await supabase
+            .from('public_profiles')
+            .select('user_id, display_name, icon_url')
+            .in('user_id', allIds)
+          for (const person of people || []) byId.set(person.user_id, person)
+        }
+
+        setBlockList(blockIds.map((id:string) => ({ id, ...(byId.get(id) || {}) })))
+        setMuteList(muteIds.map((id:string) => ({ id, ...(byId.get(id) || {}) })))
         setBlockMuteLoaded(true)
       })
     }, [])
