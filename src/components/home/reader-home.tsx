@@ -1019,20 +1019,7 @@ export default async function ReaderHome() {
               moreHref="/search?sort=updated"
             />
 
-            {/*
-              * 受賞作品の見せ場。
-              *
-              * ★ rwl の枠に入れない。
-              *   見せ場が自分で枠と見出しを持っているので、
-              *   入れると枠が二重になる。
-              */}
-            {featuredItems.length > 0 && (
-              <FeaturedShowcase title={featuredTitle} items={featuredItems} />
-            )}
 
-            <div className="rh_banner">
-              <HomeBannerCarousel contests={sidebarContests} />
-            </div>
 
             {/*
               * ここから下は、その人だけのもの。
@@ -1060,6 +1047,21 @@ export default async function ReaderHome() {
             />
 
             {/*
+              * 受賞作品の見せ場。
+              *
+              * ★ rwl の枠に入れない。
+              *   見せ場が自分で枠と見出しを持っているので、
+              *   入れると枠が二重になる。
+              */}
+            {featuredItems.length > 0 && (
+              <FeaturedShowcase title={featuredTitle} items={featuredItems} />
+            )}
+
+            <div className="rh_banner">
+              <HomeBannerCarousel contests={sidebarContests} />
+            </div>
+
+            {/*
              * 完結した作品。
              *
              * 数が揃うまでは出さない。
@@ -1081,7 +1083,14 @@ export default async function ReaderHome() {
       </div>
     </div>
 
-    <Footer />
+    {/*
+      * フッターは詰めて置く。
+      *
+      * 既定では上に 18rem（288px）の余白が入る。
+      * 下まで読み切った人にだけ見せるための隙間だが、
+      * 読者ホームは並びが長く、下まで来たら次はフッターでよい。
+      */}
+    <Footer tight />
     </div>
   )
 }
