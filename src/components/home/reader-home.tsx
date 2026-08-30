@@ -235,6 +235,32 @@ export default async function ReaderHome() {
     }
   }
 
+  /*
+   * 運営が選んだ作品。
+   *
+   * 受賞が 1 つでもあれば、受賞だけを出す。
+   * 受賞とただの推薦が混ざると、
+   * どれが賞を取ったのか分からなくなる。
+   */
+  const { data: featuredRows } = await supabase
+    .from('featured_novels')
+    .select('novel_id, kind, label, sort_order')
+    .eq('is_visible', true)
+    .order('sort_order', { ascending: true })
+    .limit(50)
+
+  const featured = (featuredRows || []) as {
+    novel_id: string; kind: string; label: string; sort_order: number
+  }[]
+  const awards = featured.filter((f) => f.kind === 'award')
+  const picked = awards.length > 0 ? awards : featured.filter((f) => f.kind === 'pick')
+
+  const featuredTitle = awards.length > 0 ? '受賞作品' : '運営のおすすめ'
+  const featuredLabels: Record<string, string> = {}
+  for (const f of picked) {
+    if (f.label.trim()) featuredLabels[f.novel_id] = f.label.trim()
+  }
+
   const readable = newest.filter(
     (n) => readableIds.has(n.id) && (n.title ?? '').trim() !== '',
   )
@@ -475,11 +501,27 @@ export default async function ReaderHome() {
    * ただ新しいだけでは、読む手がかりにならない。
    */
   const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const freshPickBooks = scoredForViewer
-    .filter((n) => n.created_at >= monthAgo)
-    .sort((a, b) => b.finalScore - a.finalScore)
+  /*
+   * 新着作品。
+   *
+   * 点数では選ばず、新しい順にそのまま出す。
+   * 「新作のおすすめ」は点数で選んでいたので、
+   * 新しくても点の低い作品は出てこなかった。
+   * 新着は新着として並べる。
+   */
+  const freshBooks = readable
     .slice(0, LIST_SIZE)
-    .map((n) => toBook(n as unknown as NovelRow, extras))
+    .map((n) => toBook(n, extras))
+
+  /*
+   * 運営が選んだ作品。
+   * 読める作品の中から、選ばれた順に並べる。
+   */
+  const featuredBooks = picked
+    .map((f) => readable.find((n) => n.id === f.novel_id))
+    .filter((n): n is NovelRow => !!n)
+    .slice(0, LIST_SIZE)
+    .map((n) => toBook(n, extras))
 
   /* 短編。ひと息で読み切れるもの */
   const shortBooks = readable
@@ -890,6 +932,57 @@ export default async function ReaderHome() {
              * フォローしていない人には、追っている作者の枠を出さない。
              * 空の枠だけ並んでいても、することが無い。
              */}
+            {/*
+              * 並びの順。
+              *
+              * 上から「まだ知らない作品」、下へ「自分に近いもの」。
+              * 来た人がまず出会うのは、知らない一冊であってほしい。
+              *
+              *   おすすめ → 新着 → 最新話 → 受賞 → バナー
+              *   → 続きから読む → フォロー中 → 短編
+              */}
+
+            <ReaderWorkList
+              title="おすすめの作品"
+              books={recommendBooks}
+              moreHref="/search"
+            />
+
+            {/* その時の新着。点数では選ばず、新しい順に出す */}
+            <ReaderWorkList
+              title="新着作品"
+              books={freshBooks}
+              moreHref="/search?sort=new"
+            />
+
+            <ReaderWorkList
+              title="最新話が届いた作品"
+              books={updatedBooks}
+              moreHref="/search?sort=updated"
+            />
+
+            {/*
+              * 受賞作品。
+              *
+              * 受賞が 1 つも無いときは「運営のおすすめ」に変わる。
+              * 選ばれた作品が 1 つも無ければ、枠ごと出ない。
+              */}
+            <ReaderWorkList
+              title={featuredTitle}
+              books={featuredBooks}
+              labels={featuredLabels}
+              moreHref="/search"
+            />
+
+            <div className="rh_banner">
+              <HomeBannerCarousel contests={sidebarContests} />
+            </div>
+
+            {/*
+              * ここから下は、その人だけのもの。
+              * 読みかけや追っている作者は、
+              * 探しに来た人には関係がない。
+              */}
             <ReaderWorkList
               title="続きから読む"
               books={continueBooks}
@@ -903,48 +996,12 @@ export default async function ReaderHome() {
               moreHref="/search?sort=new"
             />
 
-            <ReaderWorkList
-              title="おすすめの作品"
-              books={recommendBooks}
-              moreHref="/search"
-            />
-
-            {/*
-             * 最新話更新。
-             * 追っている人には、新作より続きのほうが用がある。
-             */}
-            <ReaderWorkList
-              title="最新話が届いた作品"
-              books={updatedBooks}
-              moreHref="/search?sort=updated"
-            />
-
-            {/* 新作のうち、点数の高いもの */}
-            <ReaderWorkList
-              title="新作のおすすめ"
-              books={freshPickBooks}
-              moreHref="/search?sort=new"
-            />
-
             {/* ひと息で読み切れる */}
             <ReaderWorkList
               title="短編"
               books={shortBooks}
               moreHref="/search?type=短編"
             />
-
-            {/*
-             * 流れる帯。
-             *
-             * コンテストと運営のお知らせの絵をここで流す。
-             * 執筆向けのホームと同じ仕組みをそのまま使う。
-             *
-             * 作品を見終えた先に置く。
-             * 上に置くと、本を探しに来た人の邪魔になる。
-             */}
-            <div className="rh_banner">
-              <HomeBannerCarousel contests={sidebarContests} />
-            </div>
 
             {/*
              * 完結した作品。

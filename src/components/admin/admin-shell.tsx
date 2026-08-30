@@ -73,6 +73,11 @@ const NAV: { group: string; items: NavItem[] }[] = [
             { href: "/admin/contacts", badge: "contacts", label: "問い合わせ", note: "受け取りと返信" },
             { href: "/admin/novels", label: "作品の確認", note: "公開されたもの" },
             { href: "/admin/discovers", label: "発掘", note: "読者が見つけたもの" },
+            {
+                href: "/admin/featured",
+                label: "受賞・おすすめ",
+                note: "ホームに出す作品を選ぶ",
+            },
         ],
     },
     {

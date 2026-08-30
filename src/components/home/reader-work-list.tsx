@@ -22,10 +22,18 @@ export default function ReaderWorkList({
   title,
   books,
   moreHref,
+  labels,
 }: {
   title: string
   books: HomeBook[]
   moreHref: string
+  /**
+   * 作品ごとに添える言葉。作品の id で引く。
+   *
+   * 受賞作品の賞の名前に使う。
+   * 出さないと、ただの推薦と見分けが付かない。
+   */
+  labels?: Record<string, string>
 }) {
   if (books.length === 0) return null
 
@@ -46,6 +54,13 @@ export default function ReaderWorkList({
             className={`rwl_item${book.href === '#' ? ' is-empty' : ''}`}
           >
             <span className="rwl_item-text">
+              {/*
+                * 賞の名前。題名の上に小さく出す。
+                * 下に置くと作者名と紛れる。
+                */}
+              {labels?.[book.id] && (
+                <span className="rwl_item-label">{labels[book.id]}</span>
+              )}
               <span className="rwl_item-title">{book.title}</span>
               <span className="rwl_item-author">著：{book.author}</span>
             </span>
