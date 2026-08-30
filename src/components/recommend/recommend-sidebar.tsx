@@ -22,11 +22,11 @@ import { GENRES } from '@/types'
  *   どれを押せば何が出るのか伝わらなかった。
  */
 export const VIEWS = [
-    { key: 'foryou',  label: 'あなたに' },
-    { key: 'hidden',  label: 'まだ知られていない' },
-    { key: 'rising',  label: '伸びている' },
-    { key: 'new',     label: '新しい' },
-    { key: 'hot',     label: 'いま読まれている' },
+    { key: 'foryou',  label: 'おすすめ' },
+    { key: 'hidden',  label: 'ここからの作品' },
+    { key: 'rising',  label: '伸びている作品' },
+    { key: 'new',     label: '新着のおすすめ' },
+    { key: 'hot',     label: '急上昇のおすすめ' },
 ] as const
 
 /** こだわり条件。押すと板の札を絞る */

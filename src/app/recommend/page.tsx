@@ -222,10 +222,10 @@ export default async function RecommendPage({
 
     const VIEW_MAP: Record<string, { title: string; note: string; books: HomeBook[] }> = {
         foryou: { title: "あなたへのおすすめ", note: "読んだ作品から選んでいます", books: forYou },
-        hidden: { title: "まだ知られていない作品", note: "人目に触れていない、けれど読まれてほしい作品", books: hidden },
+        hidden: { title: "ここからの作品", note: "まだ人目に触れていない、けれど読まれてほしい作品", books: hidden },
         rising: { title: "伸びている作品", note: "ここしばらく読まれ方が伸びています", books: rising },
-        new:    { title: "新しい作品", note: "この30日に出た作品から", books: newBooks },
-        hot:    { title: "いま読まれている作品", note: "読まれ方の勢いが大きい作品", books: hotBooks },
+        new:    { title: "新着のおすすめ", note: "この30日に出た作品から", books: newBooks },
+        hot:    { title: "急上昇のおすすめ", note: "読まれ方の勢いが大きい作品", books: hotBooks },
     };
 
     const base = VIEW_MAP[view] ?? VIEW_MAP.foryou;
