@@ -234,15 +234,47 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
 
   async function handleDelete(commentId: string) {
     if (!confirm('このコメントを削除しますか？')) return
-    await supabase.from('comments').delete().eq('id', commentId)
+
+    /*
+     * 消えたことを確かめてから、画面からも消す。
+     *
+     * 前は確かめずに画面から先に消していた。
+     * 表の側で弾かれても消えたように見え、
+     * 開き直すと戻ってくる。
+     * 嫌がらせのコメントを消したつもりで、消せていなかった。
+     */
+    const { error, count } = await supabase
+      .from('comments')
+      .delete({ count: 'exact' })
+      .eq('id', commentId)
+
+    if (error) {
+      window.alert(`削除できませんでした：${error.message}`)
+      return
+    }
+    if (!count) {
+      window.alert('削除できませんでした。権限がないか、すでに消えています。')
+      return
+    }
+
     setComments(prev => prev
-      .filter(c => c.id !== commentId)  // 親コメント削除
-      .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.id !== commentId) }))  // 返信削除
+      .filter(c => c.id !== commentId)
+      .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.id !== commentId) }))
     )
   }
 
   async function togglePin(commentId: string, current: boolean) {
-    await supabase.from('comments').update({ is_pinned: !current }).eq('id', commentId)
+    /* 固定も同じ。効かなかったことを黙って飲まない */
+    const { error } = await supabase
+      .from('comments')
+      .update({ is_pinned: !current })
+      .eq('id', commentId)
+
+    if (error) {
+      window.alert(`固定を変えられませんでした：${error.message}`)
+      return
+    }
+
     setComments(prev => prev.map(c => c.id === commentId ? { ...c, is_pinned: !current } : c))
   }
 
