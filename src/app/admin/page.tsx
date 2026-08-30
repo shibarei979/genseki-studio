@@ -32,6 +32,7 @@ export default async function AdminPage() {
     { count: userCount },
     { count: novelCount },
     { count: episodeCount },
+    { count: publishedEpisodeCount },
     { count: commentCount },
     { data: announcements },
     { data: contests },
@@ -40,6 +41,17 @@ export default async function AdminPage() {
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('novels').select('*', { count: 'exact', head: true }).eq('published', true),
     supabase.from('episodes').select('*', { count: 'exact', head: true }),
+    /*
+     * 公開されている話。
+     *
+     * 「話数」ひとつでは、書かれた量なのか
+     * 読める量なのかが分からない。
+     * 下書きと予約を含む数と、読める数を分けて出す。
+     *
+     * 公開の印は is_published。published は既定が true なので
+     * 印にならない（引き継ぎの地雷リストのとおり）。
+     */
+    supabase.from('episodes').select('*', { count: 'exact', head: true }).eq('is_published', true),
     supabase.from('comments').select('*', { count: 'exact', head: true }),
     supabase.from('announcements').select('id, title, type, is_published, created_at').order('created_at', { ascending: false }).limit(5),
     supabase.from('contests').select('id, title, deadline, is_published').order('created_at', { ascending: false }).limit(3),
@@ -102,7 +114,8 @@ export default async function AdminPage() {
   const stats = [
     { label: '登録ユーザー', value: userCount?.toLocaleString() ?? '0', color: 'var(--admin-stat-blue)' },
     { label: '公開作品',     value: novelCount?.toLocaleString() ?? '0', color: 'var(--admin-stat-green)' },
-    { label: '話数',         value: episodeCount?.toLocaleString() ?? '0', color: 'var(--admin-stat-amber)' },
+    { label: '公開話数',     value: publishedEpisodeCount?.toLocaleString() ?? '0', color: 'var(--admin-stat-amber)' },
+    { label: '制作話数',     value: episodeCount?.toLocaleString() ?? '0', color: 'var(--admin-stat-amber)' },
     { label: 'コメント',     value: commentCount?.toLocaleString() ?? '0', color: 'var(--admin-stat-purple)' },
     { label: '本日ログイン', value: loginToday.toLocaleString(), color: 'var(--admin-stat-blue)' },
     { label: '7日ログイン',  value: loginWeek.toLocaleString(), color: 'var(--admin-stat-blue)' },

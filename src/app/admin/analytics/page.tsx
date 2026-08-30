@@ -56,6 +56,7 @@ export default async function AdminAnalyticsPage() {
     contestRes, entryRes, missionRes, userCountRes, speechRes,
     totalPvRes, pv30Res, episodePvRes, otherPvRes,
     pv1Res, pv7Res, activeReadersRes, activeWorksRes,
+    allEpisodeRes, publishedEpisodeRes,
   ] = await Promise.all([
     supabase.from('novels').select('id, genre').eq('published', true),
     supabase.from('likes').select('novel_id'),
@@ -110,6 +111,15 @@ export default async function AdminAnalyticsPage() {
     /* 月に一度でも書いた人 */
     supabase.from('episodes').select('novel_id')
       .gte('created_at', since30.toISOString()).limit(50000),
+
+    /*
+     * 話の数。書かれた量と、読める量を分ける。
+     *
+     * 公開の印は is_published。
+     * published は既定が true なので印にならない。
+     */
+    supabase.from('episodes').select('*', { count: 'exact', head: true }),
+    supabase.from('episodes').select('*', { count: 'exact', head: true }).eq('is_published', true),
   ])
 
   // ジャンル別統計
@@ -228,6 +238,14 @@ export default async function AdminAnalyticsPage() {
           <Card label="書かれた作品（30日）" value={activeWorks}
                 note="一度でも話が投稿された作品" />
           <Card label="話ページの PV（累計）" value={episodePvRes.count || 0} />
+        </div>
+
+        {/* 話の数。書かれた量と、読める量を分けて出す */}
+        <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:16}}>
+          <Card label="公開話数" value={publishedEpisodeRes.count || 0}
+                note="読者が読める話" />
+          <Card label="制作話数" value={allEpisodeRes.count || 0}
+                note="下書き・予約を含む、書かれた話ぜんぶ" />
         </div>
 
         {/*
