@@ -101,8 +101,40 @@ export default async function RecommendPage({
         ageFromBirthdate((viewer as { birthdate?: string } | null)?.birthdate),
     );
 
-    const scored = all.filter((n) =>
+    const rated = all.filter((n) =>
         ratings.includes((n.age_rating as "all" | "r15" | "r18") ?? "all"),
+    );
+
+    /*
+     * 読めない作品を外す。
+     *
+     * ★ 話が 1 つも無い作品が板に貼られていた。
+     *   題名も空のまま、作者名だけの札になっていた。
+     *
+     *   しかも押すと「このページはありません」になる。
+     *   作品ページは、話が 0 件なら読者に見せない作りだから。
+     *
+     * 題名の無いものも外す。板に貼っても何の話か分からない。
+     *
+     * 読者ホームでも同じことをしている。
+     * 作品を並べる所では、毎回これが要る。
+     */
+    const liveIds = new Set<string>();
+    if (rated.length > 0) {
+        const { data: liveEpisodes } = await supabase
+            .from("episodes")
+            .select("novel_id")
+            .in("novel_id", rated.map((n) => n.id))
+            .eq("is_published", true)
+            .limit(20000);
+
+        for (const row of (liveEpisodes || []) as { novel_id: string }[]) {
+            liveIds.add(row.novel_id);
+        }
+    }
+
+    const scored = rated.filter(
+        (n) => liveIds.has(n.id) && (n.title ?? "").trim() !== "",
     );
 
     /*
