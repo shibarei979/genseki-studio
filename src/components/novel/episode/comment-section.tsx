@@ -29,6 +29,14 @@ interface Props {
   userName: string | null
   userIconUrl: string | null
   authorId: string
+  /**
+   * 見ている人が運営か。
+   *
+   * 決まりの側では運営も消せるようにしてあるのに、
+   * 画面が運営かどうかを知らないので、
+   * 押し具が出ていなかった。
+   */
+  isAdmin?: boolean
   comments: Comment[]
 }
 
@@ -43,7 +51,7 @@ function StarDisplay({ rating }: { rating?: number | null }) {
   )
 }
 
-export default function CommentSection({ novelId, episodeId, userId, userName, userIconUrl, authorId, comments: initialComments }: Props) {
+export default function CommentSection({ novelId, episodeId, userId, userName, userIconUrl, authorId, isAdmin = false, comments: initialComments }: Props) {
   /* 読むのは誰でも。書くときにログインを求める */
   const { guard, prompt } = useLoginRequired(userId)
 
@@ -234,7 +242,19 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
   }
 
   async function handleDelete(commentId: string) {
-    if (!confirm('このコメントを削除しますか？')) return
+    /*
+     * 運営が消すときは、そう分かる文にする。
+     * 自分のものを消すのと、他人のものを消すのとでは重みが違う。
+     */
+    const isMine = comments.some(c =>
+      (c.id === commentId && c.user_id === userId)
+      /* 返信は入れ子になっているので、そちらも見る */
+      || (c.replies || []).some(r => r.id === commentId && r.user_id === userId)
+    )
+    const message = isMine
+      ? 'このコメントを削除しますか？'
+      : '他の人のコメントを削除します。よろしいですか？'
+    if (!confirm(message)) return
 
     /*
      * 消えたことを確かめてから、画面からも消す。
@@ -428,7 +448,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                     userName={userName}
                   />
 
-                  {(userId === c.user_id || userId === authorId) && (
+                  {(userId === c.user_id || userId === authorId || isAdmin) && (
                     <button onClick={() => handleDelete(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--color-danger)', padding: 0 }}>
                       削除
                     </button>
@@ -470,7 +490,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                             <span style={{ fontSize: 10, color: 'var(--color-text-faint)', marginLeft: 'auto' }}>{fmtDate(r.created_at)}</span>
                           </div>
                           <div style={{ fontSize: 13, color: 'var(--color-text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{r.body}</div>
-                          {(userId === r.user_id || userId === authorId) && (
+                          {(userId === r.user_id || userId === authorId || isAdmin) && (
                             <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--color-danger)', padding: 0, marginTop: 4 }}>削除</button>
                           )}
                         </div>

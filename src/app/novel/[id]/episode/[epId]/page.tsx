@@ -295,7 +295,7 @@ export default async function EpisodePage({ params }: Props) {
             </Link>
           </div>
           <FirstCommentPrompt/>
-          <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} comments={comments}/>
+          <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments}/>
         </div>
       </div>
 
@@ -375,7 +375,7 @@ export default async function EpisodePage({ params }: Props) {
         </div>
 
         <FirstCommentPrompt/>
-        <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} comments={comments}/>
+        <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments}/>
 
         <div style={{height:80}}/>
       </div>
