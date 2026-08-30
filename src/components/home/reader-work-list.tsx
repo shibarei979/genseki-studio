@@ -2,6 +2,7 @@ import Link from 'next/link'
 import BookmarkMark from '@/components/home/bookmark-mark'
 
 import type { HomeBook } from '@/types/home'
+import { genreColor } from '@/types'
 
 /**
  * ============================================================
@@ -53,6 +54,18 @@ export default function ReaderWorkList({
             href={book.href}
             className={`rwl_item${book.href === '#' ? ' is-empty' : ''}`}
           >
+            {/*
+              * ジャンルの色の縦線。
+              *
+              * 題名だけが並ぶと、どれも同じ話に見える。
+              * 色で種類が分かると、目が拾いやすくなる。
+              */}
+            <span
+              className="rwl_item-bar"
+              style={{ background: book.tags?.[0] ? genreColor(book.tags[0]) : 'transparent' }}
+              aria-hidden="true"
+            />
+
             <span className="rwl_item-text">
               {/*
                 * 賞の名前。題名の上に小さく出す。

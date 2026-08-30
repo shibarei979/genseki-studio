@@ -30,7 +30,13 @@ class LayoutCalc {
      * 棚の幅を狭めて、端を隠すほうが安全。
      */
     static B_SIDE_COUNT = 14;
-    static B_OVERFLOW_COUNT = 1.5;
+    /*
+     * 画面の外へどれだけはみ出させるか（本の厚み何冊ぶん）。
+     *
+     * 1.5 だと、輪がつながる継ぎ目が端に見えることがあった。
+     * 3 にして、継ぎ目を画面の外へ追い出す。
+     */
+    static B_OVERFLOW_COUNT = 3;
 
     static SCALE = 1;
     static CENTER_MIN_SCALE = 1;

@@ -198,8 +198,16 @@
 
 .reader-home .rwl_title {
     margin: 0;
-    font-size: 14px;
+    /*
+     * まとまりの見出し。
+     *
+     * 作品名（13.5px）と 0.5px しか違わず、
+     * どちらが見出しか分からなかった。
+     * 大きさと字間ではっきり差を付ける。
+     */
+    font-size: 17px;
     font-weight: 700;
+    letter-spacing: .04em;
     color: var(--text-color);
 }
 
@@ -265,8 +273,8 @@
      * 薄いと読みづらい。ここは一覧の主役なので、
      * 濃さと太さをはっきり付ける。
      */
-    font-size: 13.5px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--text-color);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -499,6 +507,13 @@
 
 .reader-home .rh_shelf {
     position: relative;
+    /*
+     * 端を切る。
+     *
+     * 中の帯（bsl_track）は画面より広い。
+     * 切らないと、輪がつながる継ぎ目が端に見えてしまう。
+     */
+    overflow: hidden;
     width: 100%;
 
     /*
@@ -1195,4 +1210,20 @@
 
 .reader-home .fs_dot.is-on {
     background: var(--color-brand, #1f4e6b);
+}
+
+
+/*
+ * ジャンルの色の縦線。
+ *
+ * 題名だけが並ぶと、どれも同じ話に見える。
+ * 色で種類が分かると、目が拾いやすくなる。
+ */
+.reader-home .rwl_item-bar {
+    flex-shrink: 0;
+    width: 3px;
+    /* 題名と作者名の 2 行ぶんに合わせる */
+    align-self: stretch;
+    min-height: 30px;
+    border-radius: 2px;
 }
