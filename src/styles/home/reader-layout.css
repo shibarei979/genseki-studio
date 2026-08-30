@@ -1074,81 +1074,103 @@
  * ============================================================
  * 受賞作品・運営のおすすめの見せ場
  *
+ * 板の上に本を 3 冊、横に並べる。
+ * 吹き出しは全体に 1 つだけ、見出しの横に出す。
+ *
  * ★ 枠で囲まない。
  *   本を飾っている所なので、白い箱に入れると
  *   ほかの並びと同じ「表」に見えてしまう。
- *   板と本だけを、地の上に置く。
  * ============================================================
  */
 .reader-home .fs {
     /*
      * 下にも余白を取る。
-     *
-     * 板の下には影が 12px 落ちる（.book-shelf-board::after）。
-     * 下が 0 だと、次の並びが板にくっついて見える。
-     *
-     * 短編や続きから読むが空のときは、
-     * すぐ下がバナーになるので、なおさら要る。
+     * 板の下には影が 12px 落ちる。
+     * 0 だと、次の並びが板にくっついて見える。
      */
     margin: 24px 0 40px;
 }
 
-.reader-home .fs_title {
+/* 見出しと吹き出しを横に並べる */
+.reader-home .fs_head {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 15px;
-    font-weight: 700;
-    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
-.reader-home .fs_title::before {
-    content: "";
-    width: 3px;
-    height: 15px;
-    border-radius: 2px;
+.reader-home .fs_title {
+    font-size: 21px;
+    font-weight: 700;
+    font-family: garamond, "Hiragino Mincho ProN", "Yu Mincho", serif;
+    letter-spacing: .1em;
+}
+
+/*
+ * 吹き出し。
+ *
+ * 3 冊それぞれに付けると、同じ札が 3 つ並んで煩い。
+ * 見出しの横に 1 つだけ置く。
+ */
+.reader-home .fs_bubble {
+    position: relative;
+    margin: 0;
+    padding: 8px 13px;
+    border-radius: 10px;
     background: var(--color-brand, #1f4e6b);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+/* 見出しの側へ向く三角 */
+.reader-home .fs_bubble::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -5px;
+    width: 10px;
+    height: 10px;
+    transform: translateY(-50%) rotate(45deg);
+    background: inherit;
 }
 
 .reader-home .fs_stage {
     position: relative;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
     /*
      * ★ .reader-home * { padding: 0 } に消されるので、
      *   .book-shelf-area の余白をここで戻す。
      *   これが無いと、本が板に埋まる。
      */
-    padding: 0 56px 18px;
+    padding: 0 0 18px;
 }
 
-/*
- * 板の左右のはみ出しを、この枠の中に収める。
- * globals.css では -14px 外へ出しているが、
- * ここでは端まで届けば足りる。
- */
+/* 板の左右のはみ出しを、この枠の中に収める */
 .reader-home .fs_stage .book-shelf-board {
     left: 0;
     right: 0;
 }
 
-.reader-home .fs_center {
-    display: flex;
-    align-items: flex-end;
-    /* 板の上面（16px）より上に本を出す */
+/* 3 冊を横に並べる。狭い画面では折り返す */
+.reader-home .fs_row {
     position: relative;
+    /* 板の上面（16px）より上に本を出す */
     z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 34px;
 }
 
-/* ---- 本 ---- */
 /*
  * 本の奥行き。
  *
  * 執筆向けホームの本は棚に横並びで、隣と重なって奥行きが出る。
- * 1 冊だけ置くと平らに見える。
+ * ここでも 3 冊並ぶが、間が空くので自分で奥行きを作る。
  *
- * ここでは 3 つで奥行きを作る。
  *   1  少し回して、斜めから見た形にする
  *   2  背表紙を左に立てる
  *   3  天（上から見える紙の断面）を出す
@@ -1214,101 +1236,4 @@
     font-family: garamond, "Hiragino Mincho ProN", serif;
     line-height: 1.5;
     letter-spacing: .04em;
-}
-
-/* ---- 吹き出し ---- */
-.reader-home .fs_bubble {
-    position: relative;
-    /* 本の真ん中あたりの高さに合わせる */
-    align-self: center;
-    margin: 0 0 34px 20px;
-    padding: 9px 13px;
-    border-radius: 10px;
-    background: var(--color-brand, #1f4e6b);
-    color: #fff;
-    font-size: 11.5px;
-    font-weight: 700;
-    line-height: 1.6;
-}
-
-/* 本の側へ向く三角 */
-.reader-home .fs_bubble::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: -6px;
-    width: 12px;
-    height: 12px;
-    transform: translateY(-50%) rotate(45deg);
-    background: inherit;
-}
-
-/* ---- 矢印 ---- */
-.reader-home .fs_arrow {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: 1px solid color-mix(in srgb, var(--main-color-3) 16%, transparent);
-    background: #ffffff;
-    color: var(--color-brand, #1f4e6b);
-    font-size: 17px;
-    line-height: 1;
-    cursor: pointer;
-    box-shadow: 0 2px 6px -3px rgba(0, 0, 0, .3);
-}
-
-.reader-home .fs_arrow-prev { left: 8px; }
-.reader-home .fs_arrow-next { right: 8px; }
-
-/* ---- 何冊目か ---- */
-.reader-home .fs_dots {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    padding: 12px 0 0;
-}
-
-.reader-home .fs_dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    background: color-mix(in srgb, var(--main-color-3) 22%, transparent);
-}
-
-.reader-home .fs_dot.is-on {
-    background: var(--color-brand, #1f4e6b);
-}
-
-
-/*
- * ジャンルの色の縦線。
- *
- * 題名だけが並ぶと、どれも同じ話に見える。
- * 色で種類が分かると、目が拾いやすくなる。
- */
-.reader-home .rwl_item-bar {
-    flex-shrink: 0;
-    width: 3px;
-    /*
-     * 題名から作者名まで、1 本でつながるようにする。
-     *
-     * align-self: stretch だけだと、行の高さに合わせて伸びる。
-     * 上下の余白ぶんだけ縮めて、文字の高さにそろえる。
-     */
-    align-self: stretch;
-    margin: 1px 0;
-    border-radius: 2px;
-}
-
-/*
- * 行の上下の余白が、縦線の長さを決める。
- * 中身を上に寄せていると、線だけ余って見える。
- */
-.reader-home .rwl_item {
-    align-items: stretch;
 }
