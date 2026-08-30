@@ -16,6 +16,7 @@ import { redirect } from 'next/navigation'
 import Header from '@/components/layout/header'
 import MessagesClient from '@/components/messages/messages-client'
 import { createClient } from '@/lib/supabase/server'
+import Footer from '@/components/layout/footer'
 
 export default async function MessagesPage({
   searchParams,
@@ -42,6 +43,10 @@ export default async function MessagesPage({
         openId={searchParams.open ?? null}
         userId={user.id}
       />
+      {/*
+        * どのページからでも、決まりや問い合わせへ行けるようにする。
+        */}
+      <Footer />
     </div>
   )
 }

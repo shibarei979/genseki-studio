@@ -20,6 +20,7 @@ import { redirect } from 'next/navigation'
 
 import MypageClient from '@/components/mypage/mypage-client'
 import { createClient } from '@/lib/supabase/server'
+import Footer from '@/components/layout/footer'
 
 export default async function MypagePage() {
   const supabase = await createClient()
@@ -128,6 +129,7 @@ export default async function MypagePage() {
     .from('user_missions').select('mission_id').eq('user_id', user.id)
 
   return (
+    <>
     <MypageClient
       profile={profile}
       novels={novels || []}
@@ -141,5 +143,10 @@ export default async function MypagePage() {
       novelViewMap={novelViewMap}
       novelEpCountMap={novelEpCountMap}
     />
+      {/*
+        * どのページからでも、決まりや問い合わせへ行けるようにする。
+        */}
+      <Footer />
+    </>
   )
 }
