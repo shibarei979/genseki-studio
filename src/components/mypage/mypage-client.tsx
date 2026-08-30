@@ -24,6 +24,7 @@ const MissionClient    = dynamic(() => import('@/components/mypage/mission-clien
 const ChapterEditModal = dynamic(() => import('@/components/mypage/chapter-edit-modal'))
 
 import type { Profile, Novel } from '@/types'
+import BookmarkMark from '@/components/home/bookmark-mark'
 
 interface Contest { id: string; title: string; deadline: string | null; is_site_contest: boolean }
 interface Entry { contest_id: string; novel_id: string }
@@ -1290,6 +1291,18 @@ export default function MypageClient({
       {historyItemsNow.length === 0 ? (
         <div style={{textAlign:'center',padding:'72px 24px',color:'var(--color-text-faint)',fontSize:14,background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:20}}>
           まだ閲覧履歴がありません
+          <div style={{fontSize:12,marginTop:8,lineHeight:1.8}}>
+            {/*
+              * 空の理由を書く。
+              *
+              * 読んだ覚えがあるのに空だと、壊れていると思われる。
+              * 履歴は読み終えた話から作られるので、
+              * 途中で閉じた話は残らない。
+              */}
+            話を開いて読み進めると、ここに残ります。
+            <br />
+            読み込みの途中で閉じた話は残りません。
+          </div>
         </div>
       ) : (
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
@@ -1345,23 +1358,27 @@ export default function MypageClient({
                     最初から
                   </Link>
                 )}
-                <Link href={`/novel/${item.novelId}/episode/${item.epId}`}
+                {/*
+                  * 読んだ話が分からないときは、作品ページへ回す。
+                  *
+                  * 前は id が空でも /episode/undefined へ飛ばしていた。
+                  * 「このページはありません」が出る。
+                  */}
+                <Link href={item.epId ? `/novel/${item.novelId}/episode/${item.epId}` : `/novel/${item.novelId}`}
                   style={{height:36,display:'inline-flex',alignItems:'center',padding:'0 16px',background:'var(--color-brand)',color:'var(--color-text-inverse)',
                     borderRadius:8,fontSize:13,fontWeight:600,textDecoration:'none',whiteSpace:'nowrap'}}>
-                  続きを読む
+                  {item.epId ? '続きを読む' : '目次を見る'}
                 </Link>
-                {/* しおり（保存） */}
-                <Link href={`/novel/${item.novelId}`}
-                  title={bookmarkedIds.has(item.novelId)?'保存済み':'作品ページで保存する'}
-                  style={{width:36,height:36,display:'inline-flex',alignItems:'center',justifyContent:'center',
-                    border:'1px solid #dcdfda',borderRadius:8,background:'var(--color-bg-card)',cursor:'pointer',flexShrink:0}}>
-                  <svg width="17" height="17" viewBox="0 0 24 24"
-                    fill={bookmarkedIds.has(item.novelId)?'var(--color-brand)':'none'}
-                    stroke={bookmarkedIds.has(item.novelId)?'var(--color-brand)':'var(--color-text-faint)'}
-                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                  </svg>
-                </Link>
+                {/*
+                  * しおり。
+                  *
+                  * 前はここに、保存の絵をした「目次へのリンク」を
+                  * 置いていた。保存済みの色まで付くのに、
+                  * 押すと目次へ飛ぶ。見た目と動きが食い違っていた。
+                  *
+                  * 本物の押し具に差し替える。押せば保存される。
+                  */}
+                <BookmarkMark novelId={item.novelId} />
               </div>
               {totalEps > 0 && (
                 <div style={{fontSize:11.5,color:'var(--color-text-faint)'}}>全{totalEps}話</div>
