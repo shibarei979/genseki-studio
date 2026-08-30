@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 import { getRepository } from '@/lib/repository'
+import { createClient } from '@/lib/supabase/client'
 
 /**
  * ============================================================
@@ -26,78 +27,79 @@ export default function BirthdateNotice() {
     useEffect(() => {
         void (async () => {
             try {
-                const profile = await getRepository().getProfile()
-
                 /*
-                 * ログインしていない人には出さない。
-                 * 入れる場所がないので、言われても困る。
+                 * ログインしている人にだけ出す。
+                 *
+                 * 前は getProfile() だけを見ていた。
+                 * ログインしていない人にも空でない何かが返ることがあり、
+                 * 入っていない人の画面にも帯が出ていた。
+                 * 入っていない人に「生年月日を設定してください」と言っても、
+                 * 設定する場所そのものが無い。
                  */
+                const { data } = await createClient().auth.getUser()
+                if (!data.user) return
+
+                const profile = await getRepository().getProfile()
                 if (!profile) return
 
                 setNeeds(!profile.birthdate)
             } catch {
-                /* 読めないときは出さない。誤って責めない */
+                /* 出せなくても、読むことはできる */
             }
         })()
     }, [])
 
     if (!needs) return null
 
+    /*
+     * 一行に収める。
+     *
+     * 前は 3 段あった。見出し・説明 2 行・押し具。
+     * ホームのいちばん上を占めていて、
+     * 作品を見に来た人の邪魔になっていた。
+     *
+     * 伝えたいのは「設定しないと R15・R18 が出ない」の一点。
+     * それだけ書いて、行き先を文の中に置く。
+     */
     return (
         <div
             style={{
                 display: 'flex',
-                alignItems: 'flex-start',
-                gap: 10,
-                padding: '12px 16px',
-                borderRadius: 10,
-                border: '1px solid var(--color-danger)',
-                background: 'color-mix(in srgb, var(--color-danger) 7%, transparent)',
-                marginBottom: 14,
+                alignItems: 'center',
+                gap: 8,
+                padding: '9px 14px',
+                borderRadius: 8,
+                /* 赤を薄く。注意であって、警告ではない */
+                border: '1px solid color-mix(in srgb, var(--color-danger) 25%, transparent)',
+                background: 'color-mix(in srgb, var(--color-danger) 4%, transparent)',
+                marginBottom: 12,
+                fontSize: 12.5,
+                lineHeight: 1.6,
+                color: 'var(--color-text)',
             }}
         >
-            <span style={{ color: 'var(--color-danger)', fontSize: 15, lineHeight: 1.4 }}>
+            <span style={{
+                color: 'color-mix(in srgb, var(--color-danger) 70%, transparent)',
+                fontSize: 11,
+                flexShrink: 0,
+            }}>
                 ●
             </span>
 
-            <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: 'var(--color-danger)',
-                    margin: 0,
-                }}>
-                    生年月日が未設定です
-                </p>
-
-                <p style={{
-                    fontSize: 12,
-                    lineHeight: 1.8,
-                    color: 'var(--color-text)',
-                    marginTop: 4,
-                }}>
-                    設定するまで、R15・R18 の作品は表示されません。
-                    <br />
-                    生年月日は年齢の確認にだけ使い、ほかの人には見えません。
-                </p>
-
+            <span style={{ minWidth: 0 }}>
+                生年月日を設定すると、R15・R18 の作品も表示されます。
+                {' '}
                 <Link
                     href="/mypage?tab=settings"
                     style={{
-                        display: 'inline-block',
-                        marginTop: 8,
-                        padding: '7px 16px',
-                        borderRadius: 8,
-                        background: 'var(--color-danger)',
-                        color: '#fff',
-                        fontSize: 12,
+                        color: 'var(--color-danger)',
                         fontWeight: 600,
-                        textDecoration: 'none',
+                        textDecoration: 'underline',
                     }}
                 >
-                    生年月日を設定する
+                    設定する
                 </Link>
-            </div>
+            </span>
         </div>
     )
 }

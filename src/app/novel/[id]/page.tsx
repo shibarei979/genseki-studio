@@ -54,6 +54,7 @@ import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import NovelActions from '@/components/novel/novel-actions'
 import ReportButton from '@/components/common/report-button'
+import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import ObiBelt from '@/components/novel/obi-belt'
 import { calcQualityScore } from '@/lib/quality-score'
 import FollowButton from '@/components/follow-button'
@@ -67,7 +68,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const [profileRes, novelRes] = await Promise.all([
     user ? supabase.from('profiles').select('*').eq('user_id', user.id).single() : Promise.resolve({ data: null }),
     supabase.from('novels')
-      .select('id, title, summary, genre, tags, is_serial, published, views, author_id, created_at, novel_type, official_tags, ai_usage, cover_url, cover_is_ai, visibility, deleted_at')
+      .select('id, title, summary, genre, tags, is_serial, published, views, author_id, created_at, novel_type, official_tags, ai_usage, cover_url, cover_is_ai, age_rating, visibility, deleted_at')
       .eq('id', params.id).maybeSingle(),
   ])
   const profile = profileRes.data
@@ -86,6 +87,47 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const isOpen = novel.visibility === 'public' && !novel.deleted_at
 
   if (!isOpen && !isOwner) notFound()
+
+  /*
+   * 年齢の確認。
+   *
+   * 一覧では allowedRatings で隠していたが、
+   * ページそのものには確認が無かった。
+   * 住所を直接叩けば、誰でも R18 を開けていた。
+   * R18 の作品ほど URL で人に渡されるので、ここが抜けていると意味がない。
+   *
+   * 作者は自分の作品なので、いつでも開ける。
+   */
+  const viewerRatings = allowedRatings(ageFromBirthdate(profile?.birthdate))
+  const rating = (novel.age_rating as 'all' | 'r15' | 'r18' | null) ?? 'all'
+
+  if (!isOwner && !viewerRatings.includes(rating)) {
+    const label = rating === 'r18' ? 'R18' : 'R15'
+    return (
+      <div className="min-h-screen bg-page">
+        <Header breadcrumbs={[{ label: '作品' }]} />
+        <div style={{maxWidth:520,margin:'0 auto',padding:'80px 24px',textAlign:'center'}}>
+          <p style={{fontSize:15,fontWeight:700,color:'var(--color-text)',marginBottom:10}}>
+            {label} の作品です
+          </p>
+          <p style={{fontSize:13,lineHeight:1.9,color:'var(--color-text-muted)',marginBottom:24}}>
+            {!user
+              ? 'ログインして、生年月日を設定すると読めます。'
+              : !profile?.birthdate
+                ? '生年月日を設定すると読めます。年齢の確認にだけ使い、ほかの人には見えません。'
+                : `${label} の作品は、対象の年齢の方だけが読めます。`}
+          </p>
+          <Link href={!user ? '/login' : '/mypage?tab=settings'}
+            style={{display:'inline-block',padding:'9px 22px',borderRadius:8,
+              background:'var(--color-brand)',color:'#fff',fontSize:13,
+              fontWeight:600,textDecoration:'none'}}>
+            {!user ? 'ログインする' : '生年月日を設定する'}
+          </Link>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   /*
    * 1 話も投稿していない作品は、読者には出さない。

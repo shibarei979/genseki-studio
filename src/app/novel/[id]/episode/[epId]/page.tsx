@@ -31,6 +31,7 @@ import TypoReportButton from '@/components/novel/episode/typo-report-button'
 import ValidReadTracker from '@/components/novel/episode/valid-read-tracker'
 import { QuoteProvider } from '@/components/novel/episode/quote-context'
 import { appConfig } from '@/config'
+import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 
 interface Props { params: { id: string; epId: string } }
 
@@ -42,7 +43,7 @@ export default async function EpisodePage({ params }: Props) {
   const [profileRes, episodeRes, novelRes] = await Promise.all([
     user ? supabase.from('profiles').select('*').eq('user_id', user.id).single() : Promise.resolve({ data: null }),
     supabase.from('episodes').select('*').eq('id', params.epId).maybeSingle(),
-    supabase.from('novels').select('id, title, genre, is_serial, author_id, views, recommended_mode').eq('id', params.id).maybeSingle(),
+    supabase.from('novels').select('id, title, genre, is_serial, author_id, views, recommended_mode, age_rating').eq('id', params.id).maybeSingle(),
   ])
   const profile = profileRes.data
   const episode = episodeRes.data
@@ -52,6 +53,44 @@ export default async function EpisodePage({ params }: Props) {
 
   // ===== 予約投稿の自動公開判定 =====
   const isOwner = user?.id === novel.author_id
+
+  /*
+   * 年齢の確認。
+   *
+   * 作品ページと同じ。話の住所を直接叩けば、
+   * 作品ページを通らずに本文へ入れてしまう。
+   * 人に渡されるのは、たいてい話の住所のほう。
+   */
+  const viewerRatings = allowedRatings(ageFromBirthdate(profile?.birthdate))
+  const rating = (novel.age_rating as 'all' | 'r15' | 'r18' | null) ?? 'all'
+
+  if (!isOwner && !viewerRatings.includes(rating)) {
+    const label = rating === 'r18' ? 'R18' : 'R15'
+    return (
+      <div className="min-h-screen bg-page">
+        <Header breadcrumbs={[{ label: '作品' }]} />
+        <div style={{maxWidth:520,margin:'0 auto',padding:'80px 24px',textAlign:'center'}}>
+          <p style={{fontSize:15,fontWeight:700,color:'var(--color-text)',marginBottom:10}}>
+            {label} の作品です
+          </p>
+          <p style={{fontSize:13,lineHeight:1.9,color:'var(--color-text-muted)',marginBottom:24}}>
+            {!user
+              ? 'ログインして、生年月日を設定すると読めます。'
+              : !profile?.birthdate
+                ? '生年月日を設定すると読めます。年齢の確認にだけ使い、ほかの人には見えません。'
+                : `${label} の作品は、対象の年齢の方だけが読めます。`}
+          </p>
+          <Link href={!user ? '/login' : '/mypage?tab=settings'}
+            style={{display:'inline-block',padding:'9px 22px',borderRadius:8,
+              background:'var(--color-brand)',color:'#fff',fontSize:13,
+              fontWeight:600,textDecoration:'none'}}>
+            {!user ? 'ログインする' : '生年月日を設定する'}
+          </Link>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
   /* 見るのは is_published。published は既定 true で当てにならない */
   if (episode.is_published !== true && episode.scheduled_at) {
     const scheduledTime = new Date(episode.scheduled_at).getTime()
