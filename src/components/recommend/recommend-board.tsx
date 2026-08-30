@@ -90,7 +90,7 @@ export default function RecommendBoard({
                               */}
                             {pin === 'clip' && (
                                 <span className="rb_clip" aria-hidden="true"
-                                    style={{ borderColor: color, borderBottomColor: 'transparent' }} />
+                                    style={{ borderColor: color, color }} />
                             )}
                             {pin === 'tape' && (
                                 <span className="rb_tape" aria-hidden="true"

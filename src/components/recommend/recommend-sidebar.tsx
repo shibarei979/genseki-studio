@@ -43,11 +43,26 @@ export const FILTERS = [
 ] as const
 
 /** いまの住所に、変えたいものだけ差し替えた住所を作る */
+/*
+ * いまの住所に、変えたいものだけ差し替えた住所を作る。
+ *
+ * ★ 「探す」とジャンルは同時に選べない。
+ *
+ *   探す   … おすすめの中から、決まった物差しで選ぶ
+ *   ジャンル … そのジャンルの中から、おすすめを選ぶ
+ *
+ *   どちらも「選び方」なので、重ねると意味が食い違う。
+ *   片方を押したら、もう片方は外す。
+ */
 function hrefWith(
     now: { view: string; genre?: string; filter?: string },
     change: Partial<{ view: string; genre: string; filter: string }>,
 ) {
     const next = { ...now, ...change }
+
+    /* 探すを押したらジャンルを外し、ジャンルを押したら探すを戻す */
+    if (change.view !== undefined) next.genre = ''
+    if (change.genre) next.view = 'foryou'
     const parts: string[] = []
     if (next.view && next.view !== 'foryou') parts.push(`view=${next.view}`)
     if (next.genre) parts.push(`genre=${encodeURIComponent(next.genre)}`)
@@ -75,7 +90,7 @@ export default function RecommendSidebar({
                         <li key={one.key}>
                             <Link
                                 href={hrefWith(now, { view: one.key })}
-                                className={`rs_item${one.key === view ? ' is-on' : ''}`}
+                                className={`rs_item${!genre && one.key === view ? ' is-on' : ''}`}
                             >
                                 {one.label}
                             </Link>

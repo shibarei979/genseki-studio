@@ -105,18 +105,41 @@
  * 一色だと、ただの茶色い箱に見える。
  */
 .rb_board {
-    border: 10px solid #b98a52;
+    position: relative;
+    /*
+     * 木の枠。
+     *
+     * 一色だと板ではなく箱に見える。
+     * 縦の縞を薄く重ねて、木目に見せる。
+     */
+    border: 12px solid #b98a52;
+    border-image: repeating-linear-gradient(
+        90deg,
+        #b98a52 0 6px,
+        #ad7f49 6px 9px,
+        #c2925a 9px 15px
+    ) 12;
     border-radius: 8px;
-    padding: 26px 22px;
-    background-color: #e6d5b8;
+    padding: 30px 26px;
+
+    /*
+     * コルクの地。
+     *
+     * 粒を大きさ違いで 4 種類散らす。
+     * 同じ点を等間隔に置くと、方眼紙のように見える。
+     */
+    background-color: #e4d3b5;
     background-image:
-        radial-gradient(circle at 20% 30%, rgba(150, 110, 60, .16) 0 1.5px, transparent 1.6px),
-        radial-gradient(circle at 70% 65%, rgba(150, 110, 60, .13) 0 1.5px, transparent 1.6px),
-        radial-gradient(circle at 45% 85%, rgba(150, 110, 60, .10) 0 1.5px, transparent 1.6px);
-    background-size: 22px 22px, 31px 31px, 17px 17px;
+        radial-gradient(circle at 17% 23%, rgba(140, 100, 52, .20) 0 2px, transparent 2.4px),
+        radial-gradient(circle at 68% 61%, rgba(140, 100, 52, .15) 0 1.4px, transparent 1.8px),
+        radial-gradient(circle at 41% 84%, rgba(160, 120, 70, .13) 0 2.4px, transparent 2.8px),
+        radial-gradient(circle at 88% 12%, rgba(120, 85, 40, .10) 0 1px, transparent 1.4px);
+    background-size: 29px 29px, 19px 19px, 43px 43px, 13px 13px;
+
     box-shadow:
-        inset 0 0 26px rgba(120, 85, 40, .22),
-        0 4px 12px -6px rgba(70, 45, 20, .4);
+        inset 0 0 34px rgba(120, 85, 40, .26),
+        inset 0 2px 0 rgba(255, 255, 255, .18),
+        0 6px 16px -8px rgba(70, 45, 20, .45);
 }
 
 /*
@@ -164,15 +187,34 @@
     padding: 18px 16px 14px;
     text-decoration: none;
     color: #33302a;
-    /*
-     * 紙の縁を少しゆがませる。
-     * 四隅がぴったり直角だと、板のように見える。
-     */
+
+    /* 紙の縁。四隅が直角だと板のように見える */
     border-radius: 2px 3px 2px 3px;
+
+    /*
+     * 紙の質感。
+     *
+     * ごく薄い横縞を重ねる。
+     * 無地だと、色の付いた四角にしか見えない。
+     */
+    background-image: repeating-linear-gradient(
+        0deg,
+        rgba(120, 105, 80, .028) 0 1px,
+        transparent 1px 4px
+    );
+
+    /*
+     * 影を 3 段に。
+     *   すぐ下   紙の厚み
+     *   少し下   板に落ちる影
+     *   広く     浮いている感じ
+     */
     box-shadow:
-        0 1px 2px rgba(60, 45, 25, .18),
-        0 6px 14px -8px rgba(60, 45, 25, .45);
-    transition: transform .18s ease, box-shadow .18s ease;
+        0 1px 1px rgba(60, 45, 25, .16),
+        0 4px 6px -3px rgba(60, 45, 25, .3),
+        0 10px 20px -10px rgba(60, 45, 25, .45);
+
+    transition: transform .2s ease, box-shadow .2s ease;
 }
 
 /* 最初の 4 枚。題名を大きく、背を高く */
@@ -186,22 +228,32 @@
 }
 
 .rb_card:hover {
-    transform: rotate(0deg) translateY(-3px) !important;
+    /* まっすぐに直して、はっきり持ち上げる */
+    transform: rotate(0deg) translateY(-6px) scale(1.015) !important;
+    z-index: 2;
     box-shadow:
-        0 2px 4px rgba(60, 45, 25, .2),
-        0 12px 22px -10px rgba(60, 45, 25, .5);
+        0 2px 2px rgba(60, 45, 25, .18),
+        0 10px 14px -6px rgba(60, 45, 25, .34),
+        0 22px 34px -16px rgba(60, 45, 25, .5);
 }
 
 /* ジャンルの札 */
 .rb_genre {
     align-self: flex-start;
-    padding: 3px 9px;
+    padding: 4px 10px;
     border-radius: 3px;
-    background: #3f5a74;
     color: #fff;
     font-size: 10.5px;
     font-weight: 700;
     letter-spacing: .04em;
+    /*
+     * 少し立体に。
+     * 上に光、下に影を入れると、貼った札に見える。
+     */
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .34),
+        inset 0 -1px 0 rgba(0, 0, 0, .16),
+        0 1px 2px rgba(0, 0, 0, .18);
 }
 
 .rb_card-title {
@@ -215,6 +267,16 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+/* 題名と本文のあいだに細い線。段が分かれて読みやすい */
+.rb_card-title::after {
+    content: "";
+    display: block;
+    width: 34px;
+    height: 1px;
+    margin: 9px 0 0;
+    background: rgba(90, 75, 50, .22);
 }
 
 .rb_card-head {
@@ -232,7 +294,15 @@
     margin-top: auto;
     padding-top: 10px;
     font-size: 11px;
-    opacity: .6;
+    opacity: .62;
+}
+
+/* 作者名の前に、小さな印を置く。ただの文字列に見せない */
+.rb_card-author::before {
+    content: "✎";
+    margin-right: 5px;
+    font-size: 10px;
+    opacity: .7;
 }
 
 /* ---- 留め具 ---- */
@@ -240,24 +310,53 @@
 /* クリップ。右上に引っかける */
 .rb_clip {
     position: absolute;
-    top: -9px;
-    right: 16px;
-    width: 13px;
-    height: 34px;
-    border: 2px solid #7f95ad;
-    border-radius: 7px;
+    top: -11px;
+    right: 18px;
+    width: 14px;
+    height: 38px;
+    border-style: solid;
+    border-width: 2.5px;
+    border-radius: 8px;
     /* 下側だけ紙の裏へ回す。挟んでいるように見せる */
-    border-bottom-color: transparent;
+    border-bottom-color: transparent !important;
+    /* 金属の光。左が明るく、右が暗い */
+    box-shadow:
+        inset 1px 0 0 rgba(255, 255, 255, .55),
+        1px 1px 2px rgba(0, 0, 0, .22);
+}
+
+/* クリップの内側の線。針金が 2 本に見える */
+.rb_clip::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 3px;
+    right: 3px;
+    bottom: -2px;
+    border: 1.5px solid currentColor;
+    border-bottom: none;
+    border-radius: 5px;
+    opacity: .55;
 }
 
 /* テープ。上辺に斜めに貼る */
 .rb_tape {
     position: absolute;
-    top: -9px;
+    top: -10px;
     left: 50%;
-    width: 56px;
-    height: 19px;
+    width: 62px;
+    height: 21px;
     transform: translateX(-50%) rotate(-3deg);
-    background: rgba(190, 205, 180, .62);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+    /*
+     * 端をギザギザに切る。
+     * まっすぐ切れたテープは、貼ったものに見えない。
+     */
+    clip-path: polygon(
+        0 12%, 6% 0, 13% 14%, 20% 2%, 27% 15%, 34% 3%, 41% 14%,
+        48% 2%, 55% 15%, 62% 3%, 69% 14%, 76% 2%, 83% 15%, 90% 3%, 100% 12%,
+        100% 88%, 92% 100%, 85% 86%, 78% 98%, 71% 85%, 64% 97%, 57% 86%,
+        50% 98%, 43% 85%, 36% 97%, 29% 86%, 22% 98%, 15% 85%, 8% 97%, 0 88%
+    );
+    /* 上に光。粘着テープの艶 */
+    box-shadow: inset 0 2px 3px rgba(255, 255, 255, .5);
 }
