@@ -766,7 +766,17 @@ export default async function ReaderHome() {
          *   もっと右へ  pl-20（80px）
          *   もっと左へ  pl-8 （32px）
          */}
-        <div className="sticky top-14 py-4 pl-20 pr-0">
+        {/*
+         * 上の位置を「作品を探す」にそろえる。
+         *
+         *   main の py-4        16px
+         *   .rh_search の上余白 40px
+         *   ──────────────────────
+         *   合わせて            56px
+         *
+         * 柱は py-4（16px）しかなく、43px 上にずれていた。
+         */}
+        <div className="sticky top-14 pl-20 pr-0 pt-14">
           <ReaderSidebar
             reading={sidebarReading}
             notices={sidebarNotices}
