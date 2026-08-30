@@ -122,23 +122,6 @@ export default async function AdminPage() {
     { label: 'モバイル比率(7日PV)', value: deviceTotal > 0 ? `${mobilePct}%` : 'データなし', color: 'var(--admin-stat-green)' },
   ]
 
-  const menus = [
-    { href: '/admin/announcements', label: 'お知らせ（サイト）', desc: 'ホームに並ぶもの' },
-    { href: '/admin/notices',       label: 'お知らせ（ベル）', desc: '利用者に届く通知' },
-    { href: '/admin/contest',       label: 'コンテスト',      desc: '立てて、選ぶ' },
-    { href: '/admin/users',         label: '利用者',          desc: '権限・停止' },
-    { href: '/admin/novels',        label: '作品の確認',      desc: '公開されたもの' },
-    { href: '/admin/banners',       label: 'バナー',          desc: 'ホームに出す帯' },
-    { href: '/admin/contacts',      label: '問い合わせ',      desc: '受け取りと返信' },
-    { href: '/admin/ng-words',      label: '使わない言葉',    desc: '推敲で知らせる' },
-    { href: '/admin/messages',      label: '個別のお知らせ',  desc: '特定の人へ送る' },
-    { href: '/admin/discovers',     label: '発掘',            desc: '読者が見つけたもの' },
-    { href: '/admin/reports',       label: '通報',            desc: '見かけた振る舞い' },
-    { href: '/admin/rooms',         label: '公式の部屋',      desc: '誰でも入れる執筆室' },
-    { href: '/admin/analytics',     label: '分析',            desc: '読まれ方の推移' },
-    { href: '/admin/features',      label: '機能の入切',      desc: '出す・隠す' },
-  ]
-
   return (
     <AdminShell title="ダッシュボード" description="今どうなっているか">
       {/* 人が増えていたら花が舞う。1 人につき 50 枚 */}
@@ -187,27 +170,16 @@ export default async function AdminPage() {
 
         <AdminChart data30={chartData30} data180={chartData180} data365={chartData365} data1825={chartData1825} />
 
-        {/* 狭い画面では1列に落とす。2列で固定すると潰れる */}
+        {/*
+          * 管理メニューを外した。
+          *
+          * 左の柱とまったく同じ並びを、下でもう一度出していた。
+          * しかも柱のほうには未対応の赤い丸が付くので、
+          * 同じものが 2 つあって片方だけ古い状態だった。
+          *
+          * 行き先は柱にある。ここは「いまどうなっているか」に絞る。
+          */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',gap:20}}>
-          <div>
-            <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)',marginBottom:12}}>管理メニュー</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              {menus.map(m => (
-                <Link key={m.href} href={m.href} style={{textDecoration:'none'}}>
-                  <div style={{background:'var(--admin-bg-card)',border:'1px solid var(--admin-border)',borderRadius:12,padding:'18px 20px',cursor:'pointer',position:'relative'}}>
-                    {'badge' in m && (m as any).badge > 0 && (
-                      <span style={{position:'absolute',top:12,right:12,fontSize:10,background:'var(--admin-stat-red)',color:'var(--color-text-inverse)',padding:'1px 7px',borderRadius:10,fontWeight:700}}>
-                        {(m as any).badge}件
-                      </span>
-                    )}
-                    <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)',marginBottom:3}}>{m.label}</div>
-                    <div style={{fontSize:12,color:'var(--admin-text-muted)'}}>{m.desc}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-
           <div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)'}}>最近のお知らせ</div>
