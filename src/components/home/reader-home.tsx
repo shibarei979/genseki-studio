@@ -671,6 +671,46 @@ export default async function ReaderHome() {
      * 頁の下（フッターの手前）まで伸ばす。
      * 貼りつくのは中の箱だけ。
      */}
+    {/*
+     * 見出しと本棚は、柱より上に出して全幅にする。
+     *
+     * 本棚は横に並べて見せるものなので、幅が要る。
+     * 柱の右に置くと、300px ぶん狭い所へ押し込まれる。
+     *
+     * ★ 本棚は home.js が root.clientWidth を読んで
+     *   並べる冊数を決める。幅が変われば計算し直される。
+     *   window.resize でも追随する。
+     *
+     * ★ .reader-home で囲うのを忘れないこと。
+     *   本棚の見た目はすべて .reader-home 配下の指定で決まっている。
+     *   外に出すと、棚も板も消える。
+     */}
+    <div
+      className="reader-home"
+      data-theme="light"
+      data-view="reader"
+      data-auth={user ? 'login' : 'guest'}
+    >
+      <div className="px-5 pt-4 sm:px-6">
+        <BirthdateNotice />
+        <ReaderHero />
+      </div>
+
+      <div className="rh_main">
+        {/*
+         * 本棚と、その下の板。
+         * 板が無いと本が宙に浮いて見える。
+         */}
+        <div className="rh_shelf">
+          <BookshelfSection books={shelfBooks} />
+          <div className="rh_shelf-board" aria-hidden="true" />
+
+          {/* 手で前後に送る */}
+          <ShelfNav />
+        </div>
+      </div>
+    </div>
+
     <div className="flex">
       <aside className="relative hidden w-[300px] shrink-0 border-r border-line bg-surface after:absolute after:-right-px after:top-full after:h-72 after:w-[calc(100%+1px)] after:border-r after:border-line after:bg-surface xl:block">
         {/*
@@ -693,10 +733,6 @@ export default async function ReaderHome() {
       {/* 右 */}
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="min-w-0 flex-1 space-y-3.5 px-5 py-4 sm:px-6">
-          <BirthdateNotice />
-
-          <ReaderHero />
-
           {/* 本棚から下は、参照元の見た目で囲う */}
           <div
             id="home-page"
@@ -711,18 +747,6 @@ export default async function ReaderHome() {
             {/* 札の設定のとき、本棚の本を押したら札を出す */}
             <ShelfCardPopup />
             <div className="rh_main">
-            {/*
-             * 本棚と、その下の板。
-             *
-             * 板が無いと本が宙に浮いて見える。
-             */}
-            <div className="rh_shelf">
-              <BookshelfSection books={shelfBooks} />
-              <div className="rh_shelf-board" aria-hidden="true" />
-
-              {/* 手で前後に送る */}
-              <ShelfNav />
-            </div>
 
             {/*
              * 作品を探す。
