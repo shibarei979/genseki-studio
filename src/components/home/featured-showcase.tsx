@@ -33,8 +33,10 @@ export interface FeaturedItem {
 }
 
 export default function FeaturedShowcase({
+    title,
     items,
 }: {
+    title: string
     items: FeaturedItem[]
 }) {
     const [at, setAt] = useState(0)
@@ -50,6 +52,10 @@ export default function FeaturedShowcase({
 
     return (
         <div className="fs">
+            <div className="fs_head">
+                <h2 className="fs_title">{title}</h2>
+            </div>
+
             <div className="fs_stage">
                 {items.length > 1 && (
                     <button
@@ -64,23 +70,35 @@ export default function FeaturedShowcase({
 
                 <div className="fs_center">
                     {/* 本。正面から見た姿 */}
-                    <Link href={item.href} className="fs_book" style={{ background: cover.base }}>
-                        {/*
-                          * 背の側の影。
-                          * これが無いと、ただの四角に見えて本にならない。
-                          */}
-                        <span className="fs_book-spine" />
-                        {/* 上からの光 */}
-                        <span className="fs_book-light" />
-
-                        <span className="fs_book-text" style={{ color: cover.ink }}>
-                            <span className="fs_book-title">{item.title}</span>
-                            <span className="fs_book-author">著：{item.author}</span>
+                    {/*
+                      * 本。
+                      *
+                      * ★ 表紙に文字は載せない。
+                      *   執筆向けホームの本も、絵だけで題名は外に置いている。
+                      *   表紙に載せると、長い題名で埋まって別物になる。
+                      */}
+                    {/*
+                      * 本。
+                      *
+                      * ★ 執筆向けホームの作品一覧と同じ作り。
+                      *   紙の端が右、その上に表紙が乗る。
+                      *   寸法は 34×48px を 3 倍にした 102×144px。
+                      *   比率を変えると、別の本に見える。
+                      *
+                      * ★ 表紙に文字は載せない。
+                      *   執筆向けも絵だけで、題名は外に置いている。
+                      */}
+                    <Link href={item.href} className="fs_book" aria-label={item.title}>
+                        {/* 紙の端。表紙の右からのぞく */}
+                        <span className="fs_pages" aria-hidden="true" />
+                        {/* 表紙 */}
+                        <span className="fs_cover" style={{ background: cover.base }}>
+                            {/* 背の側の影 */}
+                            <span className="fs_cover-spine" />
+                            {/* 上からの光 */}
+                            <span className="fs_cover-light" />
                         </span>
                     </Link>
-
-                    {/* 紙の端。本の右側にはみ出す */}
-                    <span className="fs_pages" aria-hidden="true" />
 
                     {/*
                       * 吹き出し。
@@ -88,23 +106,22 @@ export default function FeaturedShowcase({
                       * 賞の名前が無いときは出さない。
                       * 空の吹き出しは、置いてあるだけで意味がない。
                       */}
-                    {item.label && (
-                        <span className="fs_bubble">
-                            {item.label}
+                    {/*
+                      * 吹き出しと、その下に題名。
+                      *
+                      * 本の横にまとめて置く。
+                      * 板の下に離すより、どの本の話か分かりやすい。
+                      */}
+                    <span className="fs_side">
+                        {item.label && (
+                            <span className="fs_bubble">{item.label}</span>
+                        )}
+                        <span className="fs_meta">
+                            <span className="fs_meta-title">{item.title}</span>
+                            <span className="fs_meta-author">著：{item.author}</span>
                         </span>
-                    )}
+                    </span>
                 </div>
-
-                {items.length > 1 && (
-                    <button
-                        type="button"
-                        onClick={() => go(1)}
-                        className="fs_arrow fs_arrow-next"
-                        aria-label="次の作品"
-                    >
-                        ›
-                    </button>
-                )}
             </div>
 
             {/* 板。本が宙に浮いて見えないように敷く */}
