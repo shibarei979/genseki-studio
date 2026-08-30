@@ -1,0 +1,240 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * おすすめのページ
+ *
+ * 木の枠のコルク板に、作品を書いた紙を留めた見た目。
+ *
+ * ★ .reader-home の外で使う。
+ *   base.css の * { margin:0; padding:0 } に消されるため。
+ * ============================================================
+ */
+
+/* ---- 全体の骨組み ---- */
+.rec-page {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+}
+
+@media (max-width: 900px) {
+    .rec-page {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    /* 狭い画面では柱を出さない。条件は探すページにある */
+    .rec-page > .rs {
+        display: none;
+    }
+}
+
+/* ---- 柱 ---- */
+.rs {
+    position: sticky;
+    top: 64px;
+}
+
+.rs_group + .rs_group {
+    margin-top: 22px;
+}
+
+.rs_label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+    padding-left: 10px;
+}
+
+.rs_item {
+    display: block;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+.rs_item:hover {
+    background: var(--color-brand-light);
+}
+
+/* いま見ているもの */
+.rs_item.is-on {
+    background: var(--color-brand-light);
+    color: var(--color-brand);
+    font-weight: 700;
+}
+
+/* ---- 板 ---- */
+.rb + .rb {
+    margin-top: 28px;
+}
+
+.rb_head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.rb_title {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: garamond, "Hiragino Mincho ProN", "Yu Mincho", serif;
+    letter-spacing: .04em;
+}
+
+.rb_note {
+    font-size: 12.5px;
+    color: var(--color-text-muted);
+}
+
+.rb_more {
+    margin-left: auto;
+    font-size: 12.5px;
+    color: var(--color-brand);
+    text-decoration: none;
+}
+
+/*
+ * コルク板。
+ *
+ * 木の枠を border で作り、中の地は
+ * 細かい点を重ねてざらつきを出す。
+ * 一色だと、ただの茶色い箱に見える。
+ */
+.rb_board {
+    border: 10px solid #b98a52;
+    border-radius: 8px;
+    padding: 26px 22px;
+    background-color: #e6d5b8;
+    background-image:
+        radial-gradient(circle at 20% 30%, rgba(150, 110, 60, .16) 0 1.5px, transparent 1.6px),
+        radial-gradient(circle at 70% 65%, rgba(150, 110, 60, .13) 0 1.5px, transparent 1.6px),
+        radial-gradient(circle at 45% 85%, rgba(150, 110, 60, .10) 0 1.5px, transparent 1.6px);
+    background-size: 22px 22px, 31px 31px, 17px 17px;
+    box-shadow:
+        inset 0 0 26px rgba(120, 85, 40, .22),
+        0 4px 12px -6px rgba(70, 45, 20, .4);
+}
+
+.rb_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 22px;
+}
+
+.rb_empty {
+    padding: 34px 0;
+    text-align: center;
+    font-size: 13px;
+    line-height: 2;
+    color: #6b5637;
+}
+
+.rb_empty a {
+    color: #4a3a20;
+    text-decoration: underline;
+}
+
+/* ---- 紙の札 ---- */
+.rb_card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 176px;
+    padding: 18px 16px 14px;
+    text-decoration: none;
+    color: #33302a;
+    /*
+     * 紙の縁を少しゆがませる。
+     * 四隅がぴったり直角だと、板のように見える。
+     */
+    border-radius: 2px 3px 2px 3px;
+    box-shadow:
+        0 1px 2px rgba(60, 45, 25, .18),
+        0 6px 14px -8px rgba(60, 45, 25, .45);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.rb_card:hover {
+    transform: rotate(0deg) translateY(-3px) !important;
+    box-shadow:
+        0 2px 4px rgba(60, 45, 25, .2),
+        0 12px 22px -10px rgba(60, 45, 25, .5);
+}
+
+/* ジャンルの札 */
+.rb_genre {
+    align-self: flex-start;
+    padding: 3px 9px;
+    border-radius: 3px;
+    background: #3f5a74;
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+
+.rb_card-title {
+    font-family: garamond, "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: .03em;
+    /* 3 行まで。あふれると札からはみ出す */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.rb_card-head {
+    font-size: 11.5px;
+    line-height: 1.9;
+    opacity: .78;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.rb_card-author {
+    margin-top: auto;
+    padding-top: 10px;
+    font-size: 11px;
+    opacity: .6;
+}
+
+/* ---- 留め具 ---- */
+
+/* クリップ。右上に引っかける */
+.rb_clip {
+    position: absolute;
+    top: -9px;
+    right: 16px;
+    width: 13px;
+    height: 34px;
+    border: 2px solid #7f95ad;
+    border-radius: 7px;
+    /* 下側だけ紙の裏へ回す。挟んでいるように見せる */
+    border-bottom-color: transparent;
+}
+
+/* テープ。上辺に斜めに貼る */
+.rb_tape {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 56px;
+    height: 19px;
+    transform: translateX(-50%) rotate(-3deg);
+    background: rgba(190, 205, 180, .62);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+}

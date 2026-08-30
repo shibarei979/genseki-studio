@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
-import ReaderWorkList from "@/components/home/reader-work-list";
+import RecommendBoard from "@/components/recommend/recommend-board";
+import RecommendSidebar from "@/components/recommend/recommend-sidebar";
 import { createClient } from "@/lib/supabase/server";
 import { getCachedRecommendScores, buildRecommendation } from "@/lib/recommend";
 import { GENRES_SELECTABLE } from "@/types";
@@ -199,67 +200,33 @@ export default async function RecommendPage() {
         <div style={{ minHeight: "100vh" }}>
             <Header />
 
-            <div
-                className="main-layout"
-                style={{
-                    maxWidth: 1200,
-                    margin: "0 auto",
-                    padding: "20px 32px",
-                    display: "flex",
-                    gap: 20,
-                    alignItems: "flex-start",
-                }}
-            >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ marginBottom: 12 }}>
-                        <h1
-                            style={{
-                                fontSize: 20,
-                                fontWeight: 700,
-                                color: "var(--color-text)",
-                                marginBottom: 0,
-                            }}
-                        >
-                            おすすめ
-                        </h1>
-                        <p
-                            style={{
-                                fontSize: 12.5,
-                                color: "var(--color-text)",
-                                opacity: 0.75,
-                                marginTop: 6,
-                                lineHeight: 1.8,
-                            }}
-                        >
-                            読んだ傾向から選んだものと、まだ知られていない作品を並べます。
-                        </p>
-                    </div>
+            <div className="rec-page">
+                <RecommendSidebar current="recommend" />
 
-                    {/*
-                     * 一覧の見た目は .reader-home の中でだけ効く。
-                     * 囲いを付けないと、素の並びで出てしまう。
-                     */}
-                    <div className="reader-home space-y-4" data-theme="light">
+                <div style={{ minWidth: 0 }}>
+
                     {forYou.length > 0 && (
-                        <ReaderWorkList
+                        <RecommendBoard
                             title="あなたへのおすすめ"
+                            note="読んだ作品から選んでいます"
                             books={forYou}
                             moreHref="/search"
                         />
                     )}
 
-                    <ReaderWorkList
+                    <RecommendBoard
                         title="まだ知られていない作品"
+                        note="人目に触れていない、けれど読まれてほしい作品"
                         books={hidden}
                         moreHref="/search?sort=new"
                     />
 
-                    <ReaderWorkList
+                    <RecommendBoard
                         title="最近ふえている作品"
+                        note="ここしばらく読まれ方が伸びている作品"
                         books={rising}
                         moreHref="/ranking"
                     />
-                    </div>
 
                     {/*
                      * ジャンルから探す。

@@ -17,6 +17,8 @@ import "./globals.css";
  * 部品の中で import しても Next が確実には配らないため、
  * ここ（layout）で読む。参照元も同じ形。
  */
+/* おすすめのページ。掲示板の見た目 */
+import "@/styles/recommend.css";
 import "@/styles/home/base.css";
 import "@/styles/home/ui.css";
 import "@/styles/home/loading.css";
