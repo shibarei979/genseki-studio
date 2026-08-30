@@ -10,18 +10,30 @@ import { COVERS, hashOf } from '@/components/home/home-work-table'
  * 原石航路 Studio
  * FeaturedShowcase — 受賞作品・運営のおすすめの見せ場
  *
- * 木の板の上に、本を正面から 1 冊置く。
- * その横に、賞の名前を吹き出しで出す。
- * 左右の矢印で、次の作品へ送る。
+ * 板の上に本を 1 冊置き、横に賞の名前を吹き出しで出す。
+ * 左右の矢印で次の作品へ送る。
  *
- * ★ 本棚（home.js）には触らない。
+ * ★ 本の作りは、執筆向けホームの作品一覧をそのまま持ってきた。
  *
- *   本の絵は、執筆向けホームの作品一覧と同じ描き方。
- *   紙の端の縞と、表紙の影と光を CSS で重ねている。
- *   home.js の寸法の計算とは関わりがないので、
- *   ここを触っても棚は壊れない。
+ *     大きさ    128 × 166px
+ *     紙の端    右に 5px。上下 2px 内側
+ *     表紙      その左。左角 2px、右角 4px
+ *     背の影    左に 7px
+ *     題名      上から 22% の位置に、中央そろえで 2 行まで
+ *
+ *   数字を変えると別の本に見えるので、そのまま使う。
+ *
+ * ★ 本棚（home.js）には触っていない。
+ *   ここは数字と CSS だけで描いている。
  * ============================================================
  */
+
+/** 執筆向けホームと同じ寸法。変えると別の本に見える */
+const BOOK_WIDTH = 128
+const BOOK_HEIGHT = 166
+const SPINE = 7
+const EDGE = 5
+const TITLE_SIZE = 12
 
 export interface FeaturedItem {
     id: string
@@ -52,91 +64,109 @@ export default function FeaturedShowcase({
 
     return (
         <div className="fs">
-            <div className="fs_head">
-                <h2 className="fs_title">{title}</h2>
-            </div>
+            <div className="fs_title">{title}</div>
 
             <div className="fs_stage">
                 {items.length > 1 && (
-                    <button
-                        type="button"
-                        onClick={() => go(-1)}
-                        className="fs_arrow fs_arrow-prev"
-                        aria-label="前の作品"
-                    >
+                    <button type="button" onClick={() => go(-1)}
+                        className="fs_arrow fs_arrow-prev" aria-label="前の作品">
                         ‹
                     </button>
                 )}
 
                 <div className="fs_center">
-                    {/* 本。正面から見た姿 */}
-                    {/*
-                      * 本。
-                      *
-                      * ★ 表紙に文字は載せない。
-                      *   執筆向けホームの本も、絵だけで題名は外に置いている。
-                      *   表紙に載せると、長い題名で埋まって別物になる。
-                      */}
-                    {/*
-                      * 本。
-                      *
-                      * ★ 執筆向けホームの作品一覧と同じ作り。
-                      *   紙の端が右、その上に表紙が乗る。
-                      *   寸法は 34×48px を 3 倍にした 102×144px。
-                      *   比率を変えると、別の本に見える。
-                      *
-                      * ★ 表紙に文字は載せない。
-                      *   執筆向けも絵だけで、題名は外に置いている。
-                      */}
-                    <Link href={item.href} className="fs_book" aria-label={item.title}>
-                        {/* 紙の端。表紙の右からのぞく */}
-                        <span className="fs_pages" aria-hidden="true" />
-                        {/* 表紙 */}
-                        <span className="fs_cover" style={{ background: cover.base }}>
-                            {/* 背の側の影 */}
-                            <span className="fs_cover-spine" />
-                            {/* 上からの光 */}
-                            <span className="fs_cover-light" />
-                        </span>
-                    </Link>
+                    <div style={{ position: 'relative', width: BOOK_WIDTH, height: BOOK_HEIGHT }}>
+                        {/*
+                          * 板に落ちる影。
+                          * 本の下に薄く敷く。無いと宙に浮いて見える。
+                          */}
+                        <span aria-hidden="true" style={{
+                            position: 'absolute', bottom: -4, left: '8%', right: '4%', height: 5,
+                            background: 'rgba(70, 45, 25, 0.16)', filter: 'blur(3px)',
+                        }} />
 
-                    {/*
-                      * 吹き出し。
-                      *
-                      * 賞の名前が無いときは出さない。
-                      * 空の吹き出しは、置いてあるだけで意味がない。
-                      */}
+                        <Link href={item.href} className="fs_book" title={item.title}>
+                            {/* 紙の端 */}
+                            <span style={{
+                                position: 'absolute', top: 2, bottom: 2, right: 0,
+                                width: EDGE, borderRadius: '0 3px 3px 0',
+                                background: 'repeating-linear-gradient(90deg, #ebe4d5 0 1px, #f8f4ec 1px 2px)',
+                                boxShadow: 'inset -1px 0 0 rgba(0,0,0,0.10)',
+                            }} />
+
+                            {/* 表紙 */}
+                            <span style={{
+                                position: 'absolute', top: 0, bottom: 0, left: 0, right: EDGE - 2,
+                                overflow: 'hidden',
+                                borderRadius: '2px 4px 4px 2px',
+                                background: cover.base,
+                                boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.07)',
+                            }}>
+                                {/* 背の側の影 */}
+                                <span style={{
+                                    position: 'absolute', top: 0, bottom: 0, left: 0, width: SPINE,
+                                    background: 'linear-gradient(90deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.05) 60%, rgba(255,255,255,0.10) 100%)',
+                                }} />
+
+                                {/* 上からの光 */}
+                                <span style={{
+                                    position: 'absolute', inset: 0,
+                                    background: 'linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.06) 100%)',
+                                }} />
+
+                                {/* 題名。上から 22% の位置に、中央そろえで 2 行まで */}
+                                <span style={{
+                                    position: 'absolute', left: 0, right: 0,
+                                    top: Math.round(BOOK_HEIGHT * 0.22),
+                                    padding: `0 12px 0 ${SPINE + 10}px`,
+                                }}>
+                                    <span className="fs_book-title"
+                                        style={{ fontSize: TITLE_SIZE, color: cover.ink }}>
+                                        {item.title}
+                                    </span>
+                                </span>
+
+                                {/* 作者名。下に小さく */}
+                                <span style={{
+                                    position: 'absolute', left: SPINE + 10, right: 12, bottom: 12,
+                                    fontSize: 10, lineHeight: 1.5, color: cover.ink, opacity: .68,
+                                }}>
+                                    著：{item.author}
+                                </span>
+                            </span>
+                        </Link>
+                    </div>
+
                     {/*
                       * 吹き出しと、その下に題名。
-                      *
                       * 本の横にまとめて置く。
-                      * 板の下に離すより、どの本の話か分かりやすい。
                       */}
-                    <span className="fs_side">
-                        {item.label && (
-                            <span className="fs_bubble">{item.label}</span>
-                        )}
-                        <span className="fs_meta">
+                    <div className="fs_side">
+                        {item.label && <span className="fs_bubble">{item.label}</span>}
+                        <Link href={item.href} className="fs_meta">
                             <span className="fs_meta-title">{item.title}</span>
                             <span className="fs_meta-author">著：{item.author}</span>
-                        </span>
-                    </span>
+                        </Link>
+                    </div>
                 </div>
+
+                {items.length > 1 && (
+                    <button type="button" onClick={() => go(1)}
+                        className="fs_arrow fs_arrow-next" aria-label="次の作品">
+                        ›
+                    </button>
+                )}
             </div>
 
-            {/* 板。本が宙に浮いて見えないように敷く */}
+            {/* 板 */}
             <div className="fs_board" aria-hidden="true" />
 
             {items.length > 1 && (
                 <div className="fs_dots">
                     {items.map((one, i) => (
-                        <button
-                            key={one.id}
-                            type="button"
-                            onClick={() => setAt(i)}
+                        <button key={one.id} type="button" onClick={() => setAt(i)}
                             className={`fs_dot${i === at ? ' is-on' : ''}`}
-                            aria-label={`${i + 1} 冊目`}
-                        />
+                            aria-label={`${i + 1} 冊目`} />
                     ))}
                 </div>
             )}
