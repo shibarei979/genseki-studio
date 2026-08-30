@@ -963,16 +963,25 @@
     margin-top: 14px;
 }
 
+/*
+ * 細い欄。
+ *
+ * 柱だったころと同じ見え方に戻す。
+ *
+ *   白い地（bg-surface）
+ *   右に縦の線（border-r）
+ *   中身の左右に 20px の余白（px-5）
+ *
+ * これが無いと、札が灰色の地の上に直接並び、
+ * 浮いて見えて別物になる。
+ */
 .reader-home .rh_side {
     min-width: 0;
-    /*
-     * 中身に余白を持たせる。
-     *
-     * 柱だったころは外側に px-5 があり、
-     * 中身の幅は 260px ほどだった。
-     * 枠を 300px にしただけだと、札や絵が端まで届いて詰まって見える。
-     */
-    padding-right: 4px;
+    background: var(--color-bg-card);
+    border-right: 1px solid var(--color-brand-border);
+    padding: 20px;
+    /* 上の本棚と地続きに見せる。枠だけ浮かせない */
+    margin-top: -14px;
 }
 
 /*
@@ -1012,5 +1021,29 @@
     }
     .reader-home .rh_side {
         display: none;
+    }
+}
+
+
+/*
+ * 本棚の左右の空白を消す。
+ *
+ * main の左右に余白（px-5）があるので、
+ * 本棚だけがその内側に収まって両端が空いていた。
+ * 棚は端まで伸ばす。
+ */
+.reader-home .rh_shelf {
+    /*
+     * main の左右の余白（px-5 = 20px、sm 以上は px-6 = 24px）を
+     * 打ち消して、棚だけ端まで伸ばす。
+     */
+    margin-left: -20px;
+    margin-right: -20px;
+}
+
+@media (min-width: 640px) {
+    .reader-home .rh_shelf {
+        margin-left: -24px;
+        margin-right: -24px;
     }
 }
