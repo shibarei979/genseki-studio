@@ -739,7 +739,16 @@ export default async function ReaderHome() {
        * ★ 上の位置は「作品を探す」にそろえる。
        *   右の main が py-4（16px）なので、こちらも同じにする。
        */}
-      <aside className="hidden w-[300px] shrink-0 xl:block">
+      {/*
+       * 枠を広げる。
+       *
+       * 300px のままだと、中身をいくら右へ寄せても
+       * 枠の右端で止まり、「作品を探す」との間が開いたままだった。
+       *
+       * 枠を 380px にして、右端が本文のすぐ横まで届くようにする。
+       * そのうえで、左の余白で寄せ具合を決める。
+       */}
+      <aside className="hidden w-[380px] shrink-0 xl:block">
         {/*
          * 左に大きく余白を取って、札を右へ寄せる。
          *
@@ -750,7 +759,14 @@ export default async function ReaderHome() {
          *   もっと右へ  pl-20 pr-0
          *   もっと左へ  pl-8  pr-3
          */}
-        <div className="sticky top-14 py-4 pl-16 pr-0">
+        {/*
+         * 札の幅は 300px のまま、左の余白で右へ寄せる。
+         *
+         * ★ 寄せ具合はこの pl-* だけで変わる。
+         *   もっと右へ  pl-20（80px）
+         *   もっと左へ  pl-8 （32px）
+         */}
+        <div className="sticky top-14 py-4 pl-20 pr-0">
           <ReaderSidebar
             reading={sidebarReading}
             notices={sidebarNotices}
