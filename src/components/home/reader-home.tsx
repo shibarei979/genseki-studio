@@ -8,6 +8,7 @@ import WorkPopupFlag from '@/components/home/work-popup-flag'
 import ShelfCardPopup from '@/components/home/shelf-card-popup'
 import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
+import FeaturedShowcase from '@/components/home/featured-showcase'
 import HomeBannerCarousel from '@/components/home/home-banner-carousel'
 import ReaderHero from '@/components/home/reader-hero'
 import ShelfNav from '@/components/home/shelf-nav'
@@ -517,11 +518,20 @@ export default async function ReaderHome() {
    * 運営が選んだ作品。
    * 読める作品の中から、選ばれた順に並べる。
    */
-  const featuredBooks = picked
-    .map((f) => readable.find((n) => n.id === f.novel_id))
-    .filter((n): n is NovelRow => !!n)
+  const featuredItems = picked
+    .map((f) => {
+      const novel = readable.find((n) => n.id === f.novel_id)
+      if (!novel) return null
+      return {
+        id: novel.id,
+        href: `/novel/${novel.id}`,
+        title: novel.title || '（題名なし）',
+        author: extras.authorMap[novel.author_id] || '名前のない書き手',
+        label: featuredLabels[novel.id],
+      }
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
     .slice(0, LIST_SIZE)
-    .map((n) => toBook(n, extras))
 
   /* 短編。ひと息で読み切れるもの */
   const shortBooks = readable
@@ -967,12 +977,14 @@ export default async function ReaderHome() {
               * 受賞が 1 つも無いときは「運営のおすすめ」に変わる。
               * 選ばれた作品が 1 つも無ければ、枠ごと出ない。
               */}
-            <ReaderWorkList
-              title={featuredTitle}
-              books={featuredBooks}
-              labels={featuredLabels}
-              moreHref="/search"
-            />
+            {featuredItems.length > 0 && (
+              <section className="rwl">
+                <div className="rwl_head">
+                  <h2 className="rwl_title">{featuredTitle}</h2>
+                </div>
+                <FeaturedShowcase items={featuredItems} />
+              </section>
+            )}
 
             <div className="rh_banner">
               <HomeBannerCarousel contests={sidebarContests} />
