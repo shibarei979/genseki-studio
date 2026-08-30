@@ -112,6 +112,16 @@ export default function OperatorPage() {
                             { label: 'サイト名', value: '原石航路' },
                             { label: '運営者', value: '芝崎レイ' },
                             { label: '運営形態', value: '個人' },
+                            /*
+                             * X（旧 Twitter）。
+                             *
+                             * 別の窓で開く。
+                             * よそへ飛ばすときは、読んでいたページを残す。
+                             *
+                             * noreferrer を付けるのは、
+                             * どこから来たかを相手に渡さないため。
+                             */
+                            { label: 'X', value: '@shibasakirei', href: 'https://x.com/shibasakirei' },
                         ].map((row, at) => (
                             <div
                                 key={row.label}
@@ -120,7 +130,20 @@ export default function OperatorPage() {
                                 }`}
                             >
                                 <dt className="w-24 shrink-0 text-muted">{row.label}</dt>
-                                <dd className="text-ink">{row.value}</dd>
+                                <dd className="text-ink">
+                                    {row.href ? (
+                                        <a
+                                            href={row.href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-forest underline underline-offset-2 hover:opacity-80"
+                                        >
+                                            {row.value}
+                                        </a>
+                                    ) : (
+                                        row.value
+                                    )}
+                                </dd>
                             </div>
                         ))}
                     </dl>
