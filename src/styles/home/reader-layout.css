@@ -1115,7 +1115,9 @@
  */
 .reader-home .fs_bubble {
     position: relative;
-    margin: 0;
+    /* 本の高さの真ん中あたりに合わせる */
+    margin: 0 0 52px;
+    max-width: 190px;
     padding: 8px 13px;
     border-radius: 10px;
     background: var(--color-brand, #1f4e6b);
@@ -1125,7 +1127,7 @@
     line-height: 1.6;
 }
 
-/* 見出しの側へ向く三角 */
+/* 本の側へ向く三角 */
 .reader-home .fs_bubble::before {
     content: "";
     position: absolute;

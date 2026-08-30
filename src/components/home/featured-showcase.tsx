@@ -70,7 +70,6 @@ export default function FeaturedShowcase({
         <div className="fs">
             <div className="fs_head">
                 <span className="fs_title">{title}</span>
-                <span className="fs_bubble">{bubble}</span>
             </div>
 
             <div className="fs_stage book-shelf-area">
@@ -145,6 +144,14 @@ export default function FeaturedShowcase({
                             </div>
                         )
                     })}
+
+                    {/*
+                      * 吹き出し。
+                      *
+                      * 本の横に 1 つだけ置く。
+                      * 3 冊それぞれに付けると、同じ札が 3 つ並んで煩い。
+                      */}
+                    <span className="fs_bubble">{bubble}</span>
                 </div>
 
                 {/*
