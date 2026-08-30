@@ -262,6 +262,54 @@ export default async function ReaderHome() {
     if (f.label.trim()) featuredLabels[f.novel_id] = f.label.trim()
   }
 
+  /*
+   * 選ばれた作品は、別に読む。
+   *
+   * ★ ホームの読み込みは「新しい順に60件」。
+   *   運営が選んだ作品が古いと、その60件から外れて出なかった。
+   *
+   *   選んだのに出ないのでは、選ぶ意味がない。
+   *   id を名指しで読み直す。
+   *
+   * 読める作品かどうかは、ここでも確かめる。
+   * 話が1つも無い作品を見せ場に置くと、開いても何も無い。
+   */
+  const featuredNovelById = new Map<string, NovelRow>()
+  if (picked.length > 0) {
+    const ids = picked.map((f) => f.novel_id)
+
+    const [{ data: pickedNovels }, { data: pickedEpisodes }] = await Promise.all([
+      supabase
+        .from('novels')
+        .select('id, title, summary, catchcopy, genre, tags, author_id, created_at, age_rating, novel_type, serial_status, updated_at')
+        .in('id', ids)
+        .eq('published', true),
+      supabase
+        .from('episodes')
+        .select('novel_id')
+        .in('novel_id', ids)
+        .eq('is_published', true)
+        .limit(5000),
+    ])
+
+    const live = new Set(
+      (pickedEpisodes || []).map((e: { novel_id: string }) => e.novel_id),
+    )
+
+    for (const novel of (pickedNovels || []) as NovelRow[]) {
+      if (!live.has(novel.id)) continue
+      if ((novel.title ?? '').trim() === '') continue
+      featuredNovelById.set(novel.id, novel)
+
+      /*
+       * 作者名を引く一覧にも入れる。
+       * ここへ入れておかないと、60件の外の作品は
+       * 作者名が空のまま出る。
+       */
+      novelById[novel.id] = novel
+    }
+  }
+
   const readable = newest.filter(
     (n) => readableIds.has(n.id) && (n.title ?? '').trim() !== '',
   )
@@ -520,7 +568,7 @@ export default async function ReaderHome() {
    */
   const featuredItems = picked
     .map((f) => {
-      const novel = readable.find((n) => n.id === f.novel_id)
+      const novel = featuredNovelById.get(f.novel_id)
       if (!novel) return null
       return {
         id: novel.id,
