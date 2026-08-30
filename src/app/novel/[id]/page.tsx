@@ -166,9 +166,18 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
    * 並んでいた。見るのは is_published に統一する。
    * 予約投稿はどちらも一緒に立てているので、食い違わない。
    */
-  const episodes = isAuthor
-    ? rawEpisodes
-    : (rawEpisodes || []).filter(ep => ep.is_published === true)
+  /*
+   * 作者にも、読者と同じものを見せる。
+   *
+   * 前は作者にだけ未公開の話も渡していた。
+   * 自分の作品ページを開いたときに、読者が見る形と
+   * 違って見え、公開できているかを確かめられなかった。
+   *
+   * 書きかけを見たいときは執筆画面がある。
+   * 作品ページは「読者に何がどう見えているか」を
+   * 確かめる場所にする。
+   */
+  const episodes = (rawEpisodes || []).filter(ep => ep.is_published === true)
 
   /*
    * 投稿された話が 1 つも無ければ、読者には見せない。
@@ -176,7 +185,8 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
    */
   if (!isOwner && (episodes || []).length === 0) notFound()
 
-  const upcomingEpisode = (rawEpisodes || [])
+  /* 予告も読者と同じ。読者に出ないものは作者にも出さない */
+  const upcomingEpisode = (episodes || [])
     .filter(ep => ep.is_published !== true && ep.scheduled_at && new Date(ep.scheduled_at).getTime() > nowMs)
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0] || null
 
@@ -331,7 +341,8 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
 
   function EpisodeRow({ ep }: { ep: any }) {
     const isReadEp = readEpisodeIds.has(ep.id)
-    const isScheduled = isAuthor && ep.is_published !== true && ep.scheduled_at
+    /* 予約の札も出さない。読者には見えないもの */
+    const isScheduled = false
     return (
       <Link href={`/novel/${params.id}/episode/${ep.id}`} style={{textDecoration:'none',display:'block'}}>
         <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderBottom:'1px solid var(--color-brand-light)',background: isReadEp ? '#e5e7eb' : 'var(--color-bg-card)'}}>
