@@ -2220,11 +2220,56 @@ export const supabaseRepository: Repository = {
             .eq("contest_id", contestId)
             .order("created_at");
 
-        return rows<Record<string, unknown>>(data).map((row) => ({
+        const entries = rows<Record<string, unknown>>(data).map((row) => ({
             ...row,
             work_id: row.novel_id,
             entered_at: row.entered_at ?? row.created_at,
         })) as ContestEntry[];
+
+        /*
+         * 作者名を補う。
+         *
+         * 応募したときに author_name を空で保存していたので、
+         * 表には名前が入っていない。
+         * 応募のデータには触らず、読むときに引いて足す。
+         *
+         * 名前は変わることがある。
+         * 応募時の名前を焼き付けるより、
+         * いまの名前を出すほうが連絡を取りやすい。
+         */
+        const authorIds = Array.from(
+            new Set(
+                entries
+                    .map((entry) => (entry as { author_id?: string }).author_id)
+                    .filter(Boolean) as string[],
+            ),
+        );
+
+        if (authorIds.length === 0) return entries;
+
+        const { data: people } = await db()
+            .from("public_profiles")
+            .select("user_id, display_name")
+            .in("user_id", authorIds);
+
+        const nameById = new Map(
+            (people ?? []).map((person: { user_id: string; display_name: string }) => [
+                person.user_id,
+                person.display_name,
+            ]),
+        );
+
+        return entries.map((entry) => {
+            const id = (entry as { author_id?: string }).author_id;
+            return {
+                ...entry,
+                /* 既に入っていれば、そちらを優先する */
+                author_name:
+                    entry.author_name?.trim()
+                    || (id ? nameById.get(id) : undefined)
+                    || "名前のない書き手",
+            };
+        });
     },
 
     async listMyContestEntries(contestId: string): Promise<ContestEntry[]> {
