@@ -120,3 +120,115 @@
         row-gap: 6px !important;
     }
 }
+
+/*
+ * ============================================================
+ * 絞り込みを畳む
+ *
+ * 見本は 2 段（期間・ジャンル）だけ。
+ * 「特集」「絞り込み」と、ジャンルの 6 つ目から先は畳む。
+ *
+ * ★ 印（checkbox）と札（label）だけで作る。
+ *   このページはサーバー側で組み立てるので、
+ *   状態を持つ部品にすると作りが増える。
+ * ============================================================
+ */
+
+/* 印そのものは、いつでも見せない */
+.rk-more-check {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+/* パソコンでは畳まない。札も出さない */
+.rk-more-label {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .rk-more-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        margin-top: 4px;
+        padding: 9px;
+        border-top: 1px solid var(--color-brand-border);
+        color: var(--color-text-muted);
+        font-size: 12px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /*
+     * 2 段目「特集」と 4 段目「絞り込み」を畳む。
+     *
+     * 印は input なので、div の数には入らない。
+     * 期間=1 / 特集=2 / ジャンル=3 / 絞り込み=4 と数える。
+     */
+    .ranking-filter .rk-filter:nth-of-type(2),
+    .ranking-filter .rk-filter:nth-of-type(4) {
+        display: none;
+    }
+
+    /*
+     * ジャンルは 5 つまで。
+     * 14 個あると 3 段になり、作品が遠くなる。
+     */
+    .ranking-filter .rk-filter:nth-of-type(3) .ss-row > *:nth-child(n + 6) {
+        display: none;
+    }
+
+    /* 開いたとき */
+    .rk-more-check:checked ~ .ranking-filter .rk-filter:nth-of-type(2),
+    .rk-more-check:checked ~ .ranking-filter .rk-filter:nth-of-type(4) {
+        display: flex;
+    }
+
+    .rk-more-check:checked ~ .ranking-filter .rk-filter:nth-of-type(3) .ss-row > * {
+        display: inline-flex;
+    }
+
+    /* 札の文字。閉じているときと開いているときで入れ替える */
+    .rk-more-close { display: none; }
+    .rk-more-check:checked ~ .ranking-filter .rk-more-open { display: none; }
+    .rk-more-check:checked ~ .ranking-filter .rk-more-close { display: inline; }
+
+    .rk-more-arrow {
+        display: inline-block;
+        transition: transform .15s ease;
+    }
+
+    .rk-more-check:checked ~ .ranking-filter .rk-more-arrow {
+        transform: rotate(180deg);
+    }
+}
+
+/*
+ * ============================================================
+ * 1 件ぶんを軽くする
+ *
+ * 見本は「順位・題名・あらすじ1行・作者名・数字」だけ。
+ * いまはタグとあらすじ3行が入り、1 件が縦に長い。
+ * 5 件見るのに何度も送ることになる。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    /* タグは出さない。作品を選ぶ手がかりとしては弱い */
+    .rk-tags {
+        display: none !important;
+    }
+
+    /* あらすじは 1 行。続きは作品ページで読む */
+    .rk-summary {
+        display: -webkit-box !important;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 4px !important;
+    }
+}

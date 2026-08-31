@@ -433,7 +433,19 @@ export default async function RankingPage({ searchParams }: Props) {
             <h1 style={{fontSize:20,fontWeight:700,color:'var(--color-text)',marginBottom:0}}>ランキング</h1>
           </div>
 
-          <div className="ranking-filter" style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'12px 16px',marginBottom:16}}>
+          {/*
+              * 携帯で絞り込みを畳む。
+              *
+              * ★ 印（checkbox）と札（label）だけで作る。
+              *   このページはサーバー側で組み立てるので、
+              *   状態を持つ部品にすると作りが増える。
+              *   HTML の仕組みだけで足りる。
+              *
+              * パソコンでは CSS 側で隠してあるので、出ない。
+              */}
+            <input type="checkbox" id="rk-more" className="rk-more-check" />
+
+            <div className="ranking-filter" style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'12px 16px',marginBottom:16}}>
             {/* 期間 */}
             <div className="rk-filter" style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,minWidth:60,flexShrink:0,paddingTop:5,lineHeight:1.3}}>期間</div>
@@ -495,6 +507,13 @@ export default async function RankingPage({ searchParams }: Props) {
                 ))}
               </div>
             </div>
+
+            {/* 開く・閉じるの札。閉じているときだけ「開く」と出す */}
+            <label htmlFor="rk-more" className="rk-more-label">
+              <span className="rk-more-open">すべての絞り込みを開く</span>
+              <span className="rk-more-close">絞り込みを閉じる</span>
+              <span className="rk-more-arrow">⌄</span>
+            </label>
           </div>
 
           <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden'}}>
@@ -528,12 +547,12 @@ export default async function RankingPage({ searchParams }: Props) {
                       <div style={{fontSize:14,fontWeight:700,color:'var(--color-text)',marginBottom:2,lineHeight:1.4}}>{n.title}</div>
                       <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:4}}>作者：{n.display_name}</div>
                       {n.summary && (
-                        <div style={{fontSize:12,color:'#5a3a20',lineHeight:1.7,marginBottom:5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical' as any}}>
+                        <div className="rk-summary" style={{fontSize:12,color:'#5a3a20',lineHeight:1.7,marginBottom:5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical' as any}}>
                           {n.summary}
                         </div>
                       )}
                       {(n.tags||[]).length > 0 && (
-                        <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:5}}>
+                        <div className="rk-tags" style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:5}}>
                           {(n.tags as string[]).slice(0,4).map((tag: string) => (
                             <span key={tag} style={{fontSize:10,background:'var(--color-bg)',color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'1px 5px',borderRadius:3}}>#{tag}</span>
                           ))}
