@@ -171,7 +171,12 @@
      */
     .ranking-filter .rk-filter:nth-of-type(2),
     .ranking-filter .rk-filter:nth-of-type(4) {
-        display: none;
+        /*
+         * ★ !important が要る。
+         *   この段は要素に直接 display:'flex' が書かれていて、
+         *   ふつうの display: none では勝てない。
+         */
+        display: none !important;
     }
 
     /*
@@ -179,17 +184,17 @@
      * 14 個あると 3 段になり、作品が遠くなる。
      */
     .ranking-filter .rk-filter:nth-of-type(3) .ss-row > *:nth-child(n + 6) {
-        display: none;
+        display: none !important;
     }
 
     /* 開いたとき */
     .rk-more-check:checked ~ .ranking-filter .rk-filter:nth-of-type(2),
     .rk-more-check:checked ~ .ranking-filter .rk-filter:nth-of-type(4) {
-        display: flex;
+        display: flex !important;
     }
 
     .rk-more-check:checked ~ .ranking-filter .rk-filter:nth-of-type(3) .ss-row > * {
-        display: inline-flex;
+        display: inline-flex !important;
     }
 
     /* 札の文字。閉じているときと開いているときで入れ替える */
@@ -226,9 +231,9 @@
     /* あらすじは 1 行。続きは作品ページで読む */
     .rk-summary {
         display: -webkit-box !important;
-        -webkit-line-clamp: 1;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        -webkit-line-clamp: 1 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
         margin-bottom: 4px !important;
     }
 }
