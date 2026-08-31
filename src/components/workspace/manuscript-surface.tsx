@@ -36,6 +36,13 @@ interface Props {
     placeholder?: string;
     /** 選択された文字列を外へ伝える。資料へのリンクに使う */
     onSelectionChange?: (selected: string) => void;
+    /**
+     * 触れた行を、丸ごと選んだ状態にする。
+     *
+     * 蛍光ペンで来たときだけ。
+     * ふだんの執筆では、押した所にカーソルが立つ。
+     */
+    selectLineOnClick?: boolean;
     /** 選択の位置を外へ伝える。ルビや傍点の挿入に使う */
     onRangeChange?: (range: { start: number; end: number }) => void;
     /**
@@ -52,6 +59,7 @@ export default function ManuscriptSurface({
     readOnly = false,
     placeholder,
     onSelectionChange,
+    selectLineOnClick = false,
     onRangeChange,
     showLineNumbers = false,
     zoom = 1,
@@ -171,6 +179,44 @@ export default function ManuscriptSurface({
                 value={value}
                 onChange={(e) => onChange?.(e.target.value)}
                 onScroll={showLineNumbers ? handleScroll : undefined}
+                onClick={(e) => {
+                    if (!selectLineOnClick) return;
+
+                    /*
+                     * 触れた行を丸ごと選ぶ。
+                     *
+                     * ★ 蛍光ペンで来たときだけ。
+                     *   ふだんの執筆でこれをすると、
+                     *   打ち始めた瞬間に行が消える。
+                     */
+                    const area = e.currentTarget;
+                    const at = area.selectionStart;
+                    const head = area.value.lastIndexOf("\n", at - 1) + 1;
+                    const tail = area.value.indexOf("\n", at);
+                    area.setSelectionRange(
+                        head,
+                        tail === -1 ? area.value.length : tail,
+                    );
+
+                    onRangeChange?.({
+                        start: head,
+                        end: tail === -1 ? area.value.length : tail,
+                    });
+                }}
+                onKeyDown={() => {
+                    /*
+                     * 打ち始めたら、選びを解く。
+                     *
+                     * 選ばれたまま打つと、その行が消える。
+                     * 蛍光ペンで来ていても、本文は直せるようにする。
+                     */
+                    if (!selectLineOnClick) return;
+                    const area = areaRef.current;
+                    if (!area) return;
+                    if (area.selectionStart !== area.selectionEnd) {
+                        area.setSelectionRange(area.selectionStart, area.selectionStart);
+                    }
+                }}
                 onSelect={(e) => {
                     const area = e.currentTarget;
                     onRangeChange?.({

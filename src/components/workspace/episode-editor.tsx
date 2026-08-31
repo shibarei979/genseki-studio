@@ -737,6 +737,8 @@ export default function EpisodeEditor({
                     showLineNumbers={showLineNumbers}
                     onSelectionChange={onSelectionChange}
                     onRangeChange={setRange}
+                    /* 蛍光ペンで来たときだけ、触れた行を丸ごと選ぶ */
+                    selectLineOnClick={Boolean(pickEntryId)}
                     placeholder="ここに本文を書きます。"
                 />
 
