@@ -138,17 +138,17 @@ export default function HomeSelectPage() {
           <div style={{ display: 'flex', gap: 28, alignItems: 'stretch', zIndex: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
             {/* 書く人 */}
             <button onClick={() => handleSelectRole('writer')} disabled={loading} className="role-card"
-              style={{ width: 260, background: '#fff', border: '1px solid #F0E4D8', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' }}>
+              style={{ width: 260, background: '#fff', border: '1px solid #cfe0ea', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '36px 24px 28px', flex: 1 }}>
                 <div style={{ width: 76, height: 76, margin: '0 auto 22px', borderRadius: '50%', border: `1.5px solid #F5C9A8`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="WRITE" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={WRITE} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 3c-7 1-12 6-14 12l-3 6 6-3c6-2 11-7 12-14z"/><path d="M14 8c-3 2-6 5-8 9"/>
                   </svg>
                 </div>
-                <div style={{ fontSize: 30, fontWeight: 800, color: 'WRITE', marginBottom: 10, letterSpacing: '0.06em' }}>書く人</div>
+                <div style={{ fontSize: 30, fontWeight: 800, color: WRITE, marginBottom: 10, letterSpacing: '0.06em' }}>書く人</div>
                 <div style={{ fontSize: 14, color: '#666' }}>物語を投稿したい</div>
               </div>
-              <div style={{ background: 'WRITE', color: '#fff', padding: '18px 20px', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <div style={{ background: WRITE, color: '#fff', padding: '18px 20px', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                 書く人ではじめる
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
@@ -174,7 +174,7 @@ export default function HomeSelectPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 40, fontSize: 13, color: '#888', zIndex: 1 }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="WRITE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={WRITE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
             </svg>
             あとから設定でいつでも変更できます
@@ -187,7 +187,7 @@ export default function HomeSelectPage() {
           <img src="/logo.svg" alt="原石航路"
             style={{ height: 'clamp(62px, 7vw, 86px)', objectFit: 'contain', marginBottom: 20, zIndex: 1, filter: 'drop-shadow(0 3px 10px rgba(31,78,107,0.16))' }}/>
           <h1 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 800, color: '#333', marginBottom: 12, textAlign: 'center', letterSpacing: '0.04em' }}>
-            <span style={{ color: 'WRITE' }}>AI作品</span>を表示しますか？
+            <span style={{ color: WRITE }}>AI作品</span>を表示しますか？
           </h1>
           <p style={{ fontSize: 14.5, color: '#666', marginBottom: 40, textAlign: 'center', lineHeight: 1.9 }}>
             AIが全面的に生成した作品の表示を選べます
@@ -195,17 +195,17 @@ export default function HomeSelectPage() {
 
           <div style={{ display: 'flex', gap: 24, alignItems: 'stretch', flexWrap: 'wrap', justifyContent: 'center' }}>
             <button onClick={() => handleReaderAi(true)} disabled={loading} className="role-card"
-              style={{ width: 250, background: '#fff', border: '1px solid #F0E4D8', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' }}>
+              style={{ width: 250, background: '#fff', border: '1px solid #cfe0ea', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '32px 22px 24px', flex: 1 }}>
                 <div style={{ width: 68, height: 68, margin: '0 auto 18px', borderRadius: '50%', border: '1.5px solid #F5C9A8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="WRITE" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={WRITE} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/>
                   </svg>
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'WRITE', marginBottom: 10, letterSpacing: '0.04em' }}>表示する</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: WRITE, marginBottom: 10, letterSpacing: '0.04em' }}>表示する</div>
                 <div style={{ fontSize: 13, color: '#666', lineHeight: 1.7 }}>AI作品も人間の作品も<br/>すべて楽しみたい</div>
               </div>
-              <div style={{ background: 'WRITE', color: '#fff', padding: '16px 20px', fontSize: 14.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <div style={{ background: WRITE, color: '#fff', padding: '16px 20px', fontSize: 14.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                 これではじめる
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
@@ -236,7 +236,7 @@ export default function HomeSelectPage() {
           <img src="/logo.svg" alt="原石航路"
             style={{ height: 'clamp(62px, 7vw, 86px)', objectFit: 'contain', marginBottom: 20, zIndex: 1, filter: 'drop-shadow(0 3px 10px rgba(31,78,107,0.16))' }}/>
           <h1 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 800, color: '#333', marginBottom: 12, textAlign: 'center', letterSpacing: '0.04em' }}>
-            執筆で<span style={{ color: 'WRITE' }}>AI</span>を使いますか？
+            執筆で<span style={{ color: WRITE }}>AI</span>を使いますか？
           </h1>
           <p style={{ fontSize: 14.5, color: '#666', marginBottom: 40, textAlign: 'center', lineHeight: 1.9 }}>
             投稿時のデフォルト設定になります。作品ごとに変更できます
@@ -246,7 +246,7 @@ export default function HomeSelectPage() {
             {([
               { v: 'none',   label: 'AI未使用',   desc: 'AIを使わずに\n自分の言葉で執筆する', color: READ, border: '#DDEEEB', ring: '#A8D8D2',
                 icon: <><path d="M20 3c-7 1-12 6-14 12l-3 6 6-3c6-2 11-7 12-14z"/><path d="M14 8c-3 2-6 5-8 9"/></> },
-              { v: 'assist', label: '補助的利用', desc: '校正・アイデア出し等に\nAIを利用する', color: 'WRITE', border: '#F0E4D8', ring: '#F5C9A8',
+              { v: 'assist', label: '補助的利用', desc: '校正・アイデア出し等に\nAIを利用する', color: WRITE, border: '#F0E4D8', ring: '#F5C9A8',
                 icon: <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/> },
               { v: 'full',   label: '全面的利用', desc: '本文生成などAIが主体\n（AI作品バッジが付きます）', color: '#5b7fb8', border: '#EADDF8', ring: '#C9A8E8',
                 icon: <><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></> },
