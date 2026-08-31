@@ -1217,7 +1217,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
               </div>
             )}
 
-            <div style={{display:'flex',alignItems:'center',gap:10,paddingTop:12,borderTop:'1px solid #f4f5f3'}}>
+            <div className="tw-actions" style={{display:'flex',alignItems:'center',gap:10,paddingTop:12,borderTop:'1px solid #f4f5f3'}}>
               <button onClick={()=>handleLike(tweet.id, tweet.liked)}
                 style={{display:'inline-flex',alignItems:'center',gap:6,height:34,padding:'0 14px',borderRadius:10,border:'1px solid',fontSize:13,cursor:currentUserId?'pointer':'default',
                   background:tweet.liked?'#FEF2F2':'var(--color-bg-card)',

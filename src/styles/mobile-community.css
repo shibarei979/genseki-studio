@@ -93,6 +93,18 @@
     .tw-body {
         font-size: 13px !important;
         line-height: 1.8 !important;
+
+        /*
+         * 3 行で止める。
+         *
+         * 長いつぶやきが 10 行を超えると、
+         * 1 画面に 1 件しか入らない。
+         * 続きは押して開く頁で読む。
+         */
+        display: -webkit-box !important;
+        -webkit-line-clamp: 3 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
     }
 }
 
@@ -119,5 +131,31 @@
     /* 「投稿する」を押したときだけ開く */
     .tw-compose:target {
         display: block !important;
+    }
+}
+
+/*
+ * ============================================================
+ * ♥ 💬 🔖 の見た目
+ *
+ * 見本では、枠のない絵と数字だけ。
+ * 枠付きの押し具が 3 つ並ぶと、
+ * つぶやきの本文より目立ってしまう。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    .tw-actions {
+        gap: 18px !important;
+        padding-top: 9px !important;
+    }
+
+    .tw-actions > button {
+        /* 枠と地を外す。絵と数字だけにする */
+        border: none !important;
+        background: transparent !important;
+        height: auto !important;
+        padding: 4px 0 !important;
+        font-size: 12px !important;
     }
 }

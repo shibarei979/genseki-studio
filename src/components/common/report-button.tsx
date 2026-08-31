@@ -109,11 +109,21 @@ export default function ReportButton({
                 onClick={guard('通報する', () => setOpen(true))}
                 className={
                     look === 'quiet'
-                        ? 'shrink-0 text-[11px] text-faint hover:text-[var(--color-danger)]'
+                        ? 'shrink-0 px-1.5 text-[15px] leading-none text-faint hover:text-[var(--color-danger)]'
                         : 'shrink-0 rounded border border-line px-2 py-1 text-[11px] text-muted hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]'
                 }
             >
-                通報
+                {/*
+                  * ★ 「通報」とは書かない。
+                  *
+                  *   つぶやきの端に赤い文字で「通報」とあると、
+                  *   何もしていない人の目にも毎回入る。
+                  *   見本でも「⋯」になっている。
+                  *
+                  *   押せば何の押し具か分かる。
+                  */}
+                <span aria-hidden="true">⋯</span>
+                <span className="sr-only">通報する</span>
             </button>
 
             {prompt}
