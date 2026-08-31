@@ -32,10 +32,15 @@ export default function MobileHeader() {
     const pathname = usePathname() || "/";
 
     /*
-     * 書く画面では出さない。
-     * 本文の場所を、少しでも広く取る。
+     * 本文を書く画面だけ、出さない。
+     *
+     * ★ /workspace 全部を外してはいけない。
+     *   設定・資料・下読みも同じ道の下にあり、
+     *   丸ごと外すと、そこから戻る術が無くなる。
+     *
+     * 本文を書くのは /workspace/…/post だけ。
      */
-    if (pathname.startsWith("/workspace")) return null;
+    if (/^\/workspace\/[^/]+\/post/.test(pathname)) return null;
 
     return (
         <header className="mh">

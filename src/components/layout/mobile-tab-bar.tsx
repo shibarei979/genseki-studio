@@ -37,12 +37,22 @@ const TABS = [
  *   /login      入る途中。迷わせない
  *   /admin      運営の画面。柱がある
  */
-const HIDE_ON = ['/workspace', '/login', '/auth', '/admin']
+const HIDE_ON = ['/login', '/auth', '/admin']
+
+/*
+ * 本文を書く画面だけ、出さない。
+ *
+ * ★ /workspace 全部を外してはいけない。
+ *   設定・資料・下読みも同じ道の下にあり、
+ *   丸ごと外すと、そこから戻る術が無くなる。
+ */
+const HIDE_PATTERN = /^\/workspace\/[^/]+\/post/
 
 export default function MobileTabBar() {
     const pathname = usePathname() || '/'
 
     if (HIDE_ON.some((path) => pathname.startsWith(path))) return null
+    if (HIDE_PATTERN.test(pathname)) return null
 
     return (
         <nav className="mtb" aria-label="主な行き先">
