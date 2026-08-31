@@ -494,11 +494,11 @@ export default async function RankingPage({ searchParams }: Props) {
                   </Link>
                 ))}
                 {profile?.show_ai_works !== false && (
-                  <>
+                  <span className="rk-ai">
                     <span style={{width:1,height:18,background:'var(--color-brand-border)',margin:'0 4px',flexShrink:0}}/>
                     <Link href={buildUrl(period,novelType,serial,1,'human')} className={pillClass(aiMode==='human')} style={pill(aiMode==='human',true)}>通常</Link>
                     <Link href={buildUrl(period,novelType,serial,1,'ai')} className={pillClass(aiMode==='ai')} style={pill(aiMode==='ai',true)}>AI</Link>
-                  </>
+                  </span>
                 )}
               </div>
             </div>
