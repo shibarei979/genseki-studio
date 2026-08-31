@@ -601,15 +601,19 @@ export default function EntryView({
                                                         <button
                                                             type="button"
                                                             onClick={async () => {
-                                                                if (
-                                                                    !window.confirm(
-                                                                        `「${row.name}」を「${selected.name}」と同じものにまとめますか？\n\n` +
-                                                                            `「${row.name}」は ${selected.name} の別名として残ります。\n` +
-                                                                            `以後、本文に「${row.name}」が出てきても ${selected.name} として数えられます。`,
-                                                                    )
-                                                                ) {
-                                                                    return;
-                                                                }
+                                                                /*
+                                                                 * ★ 確認を出さない。
+                                                                 *
+                                                                 *   「同じものかもしれない」と
+                                                                 *   出ている時点で、
+                                                                 *   合体させるかどうかは
+                                                                 *   もう決まっている。
+                                                                 *
+                                                                 *   間違えたら、
+                                                                 *   分けて作り直せばよい。
+                                                                 *   一件ずつ確認を挟むと、
+                                                                 *   数が多いときに手間が勝つ。
+                                                                 */
                                                                 await onMerge(
                                                                     selected.id,
                                                                     row.id,
