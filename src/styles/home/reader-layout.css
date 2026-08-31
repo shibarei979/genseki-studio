@@ -1264,9 +1264,13 @@
          * 携帯では下限が効いて、上の余白 250px と合わせて
          * 620px を占めていた。画面の 4 分の 3 に近い。
          */
-        height: 300px !important;
+        /*
+         * 本を 0.55 倍にしたので、棚の高さもそれに合わせる。
+         * 高いままだと、本の上に大きな空きができる。
+         */
+        height: 200px !important;
         min-height: 0 !important;
-        margin-top: 120px !important;
+        margin-top: 70px !important;
     }
 }
 

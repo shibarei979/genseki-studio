@@ -13,9 +13,27 @@ class LayoutCalc {
     // Config
     //==================================================
 
-    static B_WIDTH = 245 * 0.9;
-    static B_HEIGHT = 300 * 0.9;
-    static B_DEPTH = 60 * 0.9;
+    /*
+     * 画面の幅に応じた縮尺。
+     *
+     * ★ 寸法を 1 か所でまとめて掛ける。
+     *
+     *   本の大きさだけを変えると、位置の計算と食い違って
+     *   本が散らばる。以前それで壊した。
+     *   ここで縮めれば、位置も余白も同じ割合でずれるので崩れない。
+     *
+     * 携帯では 0.55 倍。
+     * そのままだと 1 冊で画面の半分を占め、
+     * 両脇の本がほとんど見えない。
+     */
+    static get SCALE() {
+        if (typeof window === "undefined") return 1;
+        return window.innerWidth < 1024 ? 0.55 : 1;
+    }
+
+    static get B_WIDTH() { return 245 * 0.9 * this.SCALE; }
+    static get B_HEIGHT() { return 300 * 0.9 * this.SCALE; }
+    static get B_DEPTH() { return 60 * 0.9 * this.SCALE; }
 
     /*
      * 左右に並べる冊数。
@@ -42,14 +60,41 @@ class LayoutCalc {
      *
      *   増やすときは SHELF_COUNT も一緒に増やすこと。
      */
-    static B_SIDE_COUNT = 10;
+    /*
+     * 両脇に並べる冊数。
+     *
+     * ★ 本棚に並ぶ本の数（SHELF_COUNT = 25）より、
+     *   ここが要求する数（この値 × 2 + 1）を超えてはいけない。
+     *   超えると、同じ 1 冊が左端と右端の両方に要求され、
+     *   本が端から端へ飛ぶのが見える。
+     *
+     * 携帯では 6。
+     * 縮めたぶん 1 冊が細くなるので、10 のままだと
+     * 帯が横に伸びすぎる。
+     */
+    static get B_SIDE_COUNT() {
+        if (typeof window === "undefined") return 10;
+        return window.innerWidth < 1024 ? 6 : 10;
+    }
     static B_OVERFLOW_COUNT = 1.5;
 
     static SCALE = 1;
     static CENTER_MIN_SCALE = 1;
 
-    static CENTER_MARGIN = 200;
-    static TRACK_MIN_WIDTH = (this.B_DEPTH * this.B_SIDE_COUNT * 2) + (this.B_WIDTH * this.CENTER_MIN_SCALE) + (this.CENTER_MARGIN * 2);
+    /* 真ん中の本の左右に空ける幅。寸法と同じ割合で縮める */
+    static get CENTER_MARGIN() { return 200 * this.SCALE; }
+    /*
+     * 帯の最小の幅。
+     *
+     * ★ 静的な値ではなく、呼ばれるたびに計算する。
+     *   寸法が画面の幅で変わるので、
+     *   一度きりの計算だと古い値のまま残る。
+     */
+    static get TRACK_MIN_WIDTH() {
+        return (this.B_DEPTH * this.B_SIDE_COUNT * 2)
+            + (this.B_WIDTH * this.CENTER_MIN_SCALE)
+            + (this.CENTER_MARGIN * 2);
+    }
 
     //==================================================
     // Calculate
