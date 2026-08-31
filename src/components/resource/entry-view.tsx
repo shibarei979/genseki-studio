@@ -71,6 +71,8 @@ interface Props {
      */
     initialEntryId?: string | null;
     onJump?: (episodeId: string, line: number) => void;
+    /** 蛍光ペン。資料と話を決めて、本文を開く */
+    onPick?: (entryId: string, episodeId: string) => void;
     onMergeDuplicates: (group: DuplicateGroup) => void;
 }
 
@@ -91,6 +93,7 @@ export default function EntryView({
     imageUsedCount,
     initialEntryId,
     onJump,
+    onPick,
     onMergeDuplicates,
 }: Props) {
     const [selectedId, setSelectedId] = useState<string | null>(
@@ -677,6 +680,7 @@ export default function EntryView({
                                 imageUsedCount={imageUsedCount}
                                 onGenerateImage={(hint, era) => onGenerateImage(selected, hint, era)}
                                 onJump={onJump}
+                                onPick={onPick}
                                 onChange={(patch) => onUpdate(selected.id, patch)}
                                 onSelectEntry={setSelectedId}
                                 onClose={() => setSelectedId(null)}

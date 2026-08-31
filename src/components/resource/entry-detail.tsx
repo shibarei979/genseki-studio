@@ -45,6 +45,8 @@ interface Props {
     onSelectEntry: (entryId: string) => void;
     /** 本文のその場所へ飛ぶ */
     onJump?: (episodeId: string, line: number) => void;
+    /** 蛍光ペン。資料と話を決めて、本文を開く */
+    onPick?: (entryId: string, episodeId: string) => void;
     onClose: () => void;
 }
 
@@ -62,6 +64,7 @@ export default function EntryDetail({
     onChange,
     onSelectEntry,
     onJump,
+    onPick,
     onClose,
 }: Props) {
     /*
@@ -70,6 +73,8 @@ export default function EntryDetail({
      * 「言及・行動・台詞」は本文を読んで毎回数え直しているので、
      * 外したことは別に覚えておく必要がある。
      */
+    const [isPicking, setIsPicking] = useState(false);
+
     const [hiddenLines, setHiddenLines] = useState<
         { episode_id: string; line: number; text: string }[]
     >([]);
@@ -294,6 +299,59 @@ export default function EntryDetail({
                          * 関係のすぐ後ろに置く。
                          */}
                         <Card title="本文での登場">
+                            {/*
+                              * 蛍光ペン。
+                              *
+                              * 押すと話を選び、その本文が開く。
+                              * 本文で行を長押しすると、
+                              * この資料に足せる。
+                              *
+                              * ★ 資料の側から始める。
+                              *   どの資料に入れるかが最初に決まるので、
+                              *   本文の側で選ばせる手間が要らない。
+                              */}
+                            {onPick && episodes.length > 0 && (
+                                <div className="mb-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPicking((v) => !v)}
+                                        className="inline-flex items-center gap-1.5 rounded-md border border-forest-line px-3 py-1.5 text-[11.5px] text-forest hover:bg-forest-tint"
+                                    >
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" strokeWidth="1.8"
+                                            strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="m15 5 4 4" />
+                                            <path d="M13 7 8.5 11.5a2 2 0 0 0-.5 1v3h3a2 2 0 0 0 1-.5L16.5 10.5" />
+                                            <path d="M5 20h14" />
+                                        </svg>
+                                        本文から足す
+                                    </button>
+
+                                    {isPicking && (
+                                        <div className="mt-2 rounded-lg border border-line bg-canvas p-2">
+                                            <p className="px-1 pb-1.5 text-[11px] text-muted">
+                                                どの話の本文を開きますか
+                                            </p>
+                                            <div className="thin-scroll max-h-40 overflow-y-auto">
+                                                {episodes.map((ep) => (
+                                                    <button
+                                                        key={ep.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setIsPicking(false);
+                                                            onPick(entry.id, ep.id);
+                                                        }}
+                                                        className="block w-full truncate rounded px-2 py-1.5 text-left text-[12px] text-ink hover:bg-surface"
+                                                    >
+                                                        第{ep.ep_number}話　{ep.title || "無題"}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <MentionTimeline
                                 entry={entry}
                                 episodes={episodes}

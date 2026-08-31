@@ -1131,6 +1131,19 @@ export default function ResourceClient({ workId }: Props) {
                                         }
                                         await reload();
                                     }}
+                                    onPick={(entryId, episodeId) => {
+                                        /*
+                                         * 蛍光ペン。
+                                         *
+                                         * 本文の画面へ、
+                                         * 「この資料に足す」の印を付けて移る。
+                                         * 住所に残すので、
+                                         * 読み込み直しても状態が消えない。
+                                         */
+                                        router.push(
+                                            `/workspace/${workId}?ep=${episodeId}&pick=${entryId}`,
+                                        );
+                                    }}
                                     onJump={(episodeId, line) => {
                                         /*
                                          * 執筆ページへ、話と行を添えて移る。
