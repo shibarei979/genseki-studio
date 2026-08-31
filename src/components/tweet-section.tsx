@@ -1145,7 +1145,25 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                 </p>
               </div>
             ) : (
-            <div className="tw-body" style={{fontSize:14.5,color:'var(--color-text)',lineHeight:1.85,whiteSpace:'pre-wrap',marginBottom:tweet.image_url?12:14}}>
+            <div className="tw-more">
+              {/*
+                * 3 行を超えるつぶやきを、押して開く。
+                *
+                * ★ 印（checkbox）と札（label）だけで作る。
+                *   つぶやきは何十件も並ぶので、
+                *   1 件ずつに状態を持たせると重くなる。
+                *
+                * ★ id はつぶやきごとに変える。
+                *   同じ id が並ぶと、どれを開いても
+                *   いちばん上の 1 件しか反応しない。
+                */}
+              <input
+                type="checkbox"
+                id={`tw-more-${tweet.id}`}
+                className="tw-more-check"
+              />
+
+              <div className="tw-body" style={{fontSize:14.5,color:'var(--color-text)',lineHeight:1.85,whiteSpace:'pre-wrap',marginBottom:tweet.image_url?12:14}}>
               {tweet.body}
               {/*
                 * 直した印。
@@ -1159,6 +1177,13 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                   （修正済み）
                 </span>
               )}
+            </div>
+
+              {/* 3 行に収まっているときは、CSS 側で出さない */}
+              <label htmlFor={`tw-more-${tweet.id}`} className="tw-more-label">
+                <span className="tw-more-open">続きを読む</span>
+                <span className="tw-more-close">とじる</span>
+              </label>
             </div>
             )}
 

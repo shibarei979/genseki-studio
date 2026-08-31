@@ -99,13 +99,40 @@
          *
          * 長いつぶやきが 10 行を超えると、
          * 1 画面に 1 件しか入らない。
-         * 続きは押して開く頁で読む。
          */
         display: -webkit-box !important;
         -webkit-line-clamp: 3 !important;
         -webkit-box-orient: vertical !important;
         overflow: hidden !important;
     }
+
+    /* 開いたとき */
+    .tw-more-check:checked ~ .tw-body {
+        -webkit-line-clamp: unset !important;
+        overflow: visible !important;
+    }
+
+    /*
+     * 続きを読む。
+     *
+     * ★ 3 行に収まっているつぶやきにも出てしまう。
+     *   何行あるかは CSS では数えられないので、
+     *   短いものにも押し具が付く。
+     *   押しても見た目が変わらないだけで、害は無い。
+     */
+    .tw-more-label {
+        display: inline-block;
+        margin: -6px 0 10px;
+        color: var(--color-brand);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .tw-more-close { display: none; }
+    .tw-more-check:checked ~ .tw-more-label .tw-more-open { display: none; }
+    .tw-more-check:checked ~ .tw-more-label .tw-more-close { display: inline; }
 }
 
 /*
@@ -158,4 +185,19 @@
         padding: 4px 0 !important;
         font-size: 12px !important;
     }
+}
+
+
+/* 開閉の印は、いつでも見せない */
+.tw-more-check {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+/* パソコンでは畳まない。札も出さない */
+.tw-more-label {
+    display: none;
 }
