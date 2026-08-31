@@ -1145,7 +1145,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                 </p>
               </div>
             ) : (
-            <div style={{fontSize:14.5,color:'var(--color-text)',lineHeight:1.85,whiteSpace:'pre-wrap',marginBottom:tweet.image_url?12:14}}>
+            <div className="tw-body" style={{fontSize:14.5,color:'var(--color-text)',lineHeight:1.85,whiteSpace:'pre-wrap',marginBottom:tweet.image_url?12:14}}>
               {tweet.body}
               {/*
                 * 直した印。
