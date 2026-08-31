@@ -1,0 +1,66 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯の「ランキング」
+ *
+ * ★ 1024px 未満でだけ効く。パソコンには影響しない。
+ *
+ * ★ 元の指定が要素に直接書かれているため、
+ *   上から効かせるには !important が要る。
+ *   パソコン側を書き換えない代償として受け入れる。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    /*
+     * 頁の余白。
+     * 32px は携帯には広すぎる。
+     */
+    .rk-page {
+        padding: 12px 12px 0 !important;
+        gap: 0 !important;
+    }
+
+    /* 横に並べる柱は出さない */
+    .rk-page > aside {
+        display: none !important;
+    }
+
+    /*
+     * 1 件ぶん。
+     *
+     * 見本は「順位の丸 → 題名 → あらすじ → 数字」の縦並び。
+     * 携帯では横に詰めると、題名が 2 文字で折り返す。
+     */
+    .rk-row {
+        gap: 10px !important;
+        padding: 14px 4px !important;
+    }
+
+    /*
+     * 順位。
+     *
+     * 上位 3 つは見本のように丸で囲む。
+     * 数字だけだと、何位かが一瞬で分からない。
+     */
+    .rk-no {
+        width: 26px !important;
+        padding-top: 1px !important;
+    }
+}
+
+/*
+ * とても狭い端末（iPhone SE など）。
+ *
+ * 数字の欄をさらに詰めて、題名の場所を稼ぐ。
+ */
+@media (max-width: 380px) {
+    .rk-row {
+        gap: 8px !important;
+        padding: 12px 2px !important;
+    }
+
+    .rk-no {
+        width: 22px !important;
+    }
+}

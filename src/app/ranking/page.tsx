@@ -427,7 +427,7 @@ export default async function RankingPage({ searchParams }: Props) {
     <div style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
       <Header />
 
-      <div className="main-layout" style={{maxWidth:1200,margin:'0 auto',padding:'20px 32px',display:'flex',gap:20,alignItems:'flex-start'}}>
+      <div className="main-layout rk-page" style={{maxWidth:1200,margin:'0 auto',padding:'20px 32px',display:'flex',gap:20,alignItems:'flex-start'}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{marginBottom:12}}>
             <h1 style={{fontSize:20,fontWeight:700,color:'var(--color-text)',marginBottom:0}}>ランキング</h1>
@@ -515,8 +515,8 @@ export default async function RankingPage({ searchParams }: Props) {
               return (
                 <div key={n.id} style={{borderBottom:'1px solid var(--color-brand-light)'}}>
                   <NovelPopup novel={{...n, like_count: n.hideStats ? 0 : (n.score||n.like_count||0)}}>
-                  <div style={{display:'flex',gap:12,padding:'12px 14px',alignItems:'flex-start',cursor:'pointer'}}>
-                    <div style={{width:28,textAlign:'center',flexShrink:0,paddingTop:2}}>
+                  <div className="rk-row" style={{display:'flex',gap:12,padding:'12px 14px',alignItems:'flex-start',cursor:'pointer'}}>
+                    <div className="rk-no" style={{width:28,textAlign:'center',flexShrink:0,paddingTop:2}}>
                       <span style={{fontSize:rankSize(abs),fontWeight:800,color:rankColor(abs),fontFamily:"'Noto Serif JP',serif"}}>{abs+1}</span>
                     </div>
                     <div style={{flex:1,minWidth:0}}>

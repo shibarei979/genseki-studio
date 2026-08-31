@@ -23,6 +23,8 @@ import "@/styles/recommend.css";
 import "@/styles/mobile-tab-bar.css";
 /* 携帯の「作品を探す」 */
 import "@/styles/mobile-search.css";
+/* 携帯の「ランキング」 */
+import "@/styles/mobile-ranking.css";
 import "@/styles/home/base.css";
 import "@/styles/home/ui.css";
 import "@/styles/home/loading.css";
