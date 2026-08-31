@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -35,13 +35,36 @@ export default function ModeToggle({
     const [isBusy, setIsBusy] = useState(false);
     const [now, setNow] = useState(mode === "read" ? "read" : "write");
 
+    /*
+     * 誰が入っているか。
+     *
+     * ★ 渡された userId をあてにしない。
+     *   profile に user_id が入っていないことがあり、
+     *   そのとき押し具そのものが出なくなっていた。
+     *
+     * 自分で確かめる。
+     */
+    const [me, setMe] = useState<string | null>(userId);
+
+    useEffect(() => {
+        if (userId) { setMe(userId); return }
+        void (async () => {
+            const { data } = await createClient().auth.getUser();
+            setMe(data.user?.id ?? null);
+        })();
+    }, [userId]);
+
+    useEffect(() => {
+        setNow(mode === "read" ? "read" : "write");
+    }, [mode]);
+
     /* 集中しているときと、入っていないときは出さない */
-    if (!userId || mode === "focus") return null;
+    if (!me || mode === "focus") return null;
 
     const isRead = now === "read";
 
     async function toggle() {
-        if (isBusy || !userId) return;
+        if (isBusy || !me) return;
 
         const next = isRead ? "write" : "read";
 
@@ -55,7 +78,7 @@ export default function ModeToggle({
         const { error } = await createClient()
             .from("profiles")
             .update({ home_mode: next })
-            .eq("user_id", userId);
+            .eq("user_id", me);
 
         if (error) {
             setNow(isRead ? "read" : "write");

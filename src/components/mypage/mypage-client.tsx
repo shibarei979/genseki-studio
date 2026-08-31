@@ -1584,9 +1584,16 @@ export default function MypageClient({
               </button>
               <button
                 onClick={()=>saveHomeMode('write')}
-                style={{padding:'8px 18px',fontSize:13,fontWeight:isFocusWriting?500:700,cursor:'pointer',border:'none',
-                  background:isFocusWriting?'var(--color-bg-card)':'var(--color-brand)',
-                  color:isFocusWriting?'var(--color-text-muted)':'var(--base-color-1)'}}>
+                /*
+                 * ★ いま選ばれているものだけ塗る。
+                 *
+                 *   前は「集中しているか」だけで見ていた。
+                 *   読書向きのときも「集中していない」ので、
+                 *   作家向きまで塗られたままだった。
+                 */
+                style={{padding:'8px 18px',fontSize:13,fontWeight:homeMode==='write'?700:500,cursor:'pointer',border:'none',
+                  background:homeMode==='write'?'var(--color-brand)':'var(--color-bg-card)',
+                  color:homeMode==='write'?'var(--base-color-1)':'var(--color-text-muted)'}}>
                 作家向け
               </button>
               <button
