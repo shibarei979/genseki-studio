@@ -902,7 +902,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
         </div>
       )}
       {isOwner && (
-        <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px',marginBottom:20,boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
+        <div id="compose" className="tw-compose" style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px',marginBottom:20,boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
           <div style={{display:'flex',gap:12}}>
             <Avatar name={currentUserName||''} iconUrl={currentUserIconUrl} size={40}/>
             <div style={{flex:1}}>

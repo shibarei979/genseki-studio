@@ -392,7 +392,7 @@ export default function CommunityClient() {
                         ) : view === "notices" ? (
                             <NoticePanel userId={me.id} />
                         ) : (
-                            <div id="compose">
+                            <div>
                                 <TweetSection
                                     /*
                                      * 何を出すか。
