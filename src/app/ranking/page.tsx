@@ -429,8 +429,30 @@ export default async function RankingPage({ searchParams }: Props) {
 
       <div className="main-layout rk-page" style={{maxWidth:1200,margin:'0 auto',padding:'20px 32px',display:'flex',gap:20,alignItems:'flex-start'}}>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{marginBottom:12}}>
-            <h1 style={{fontSize:20,fontWeight:700,color:'var(--color-text)',marginBottom:0}}>ランキング</h1>
+                    {/*
+            * 見出し。
+            *
+            * 絵と説明文を添える。
+            * 題名だけだと、何が並んでいるのか
+            * 一目では伝わらない。
+            */}
+          <div className="rk-head">
+            <span className="rk-head-icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.7"
+                strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+                <path d="M7 6H4v1.5A3.5 3.5 0 0 0 7 11" />
+                <path d="M17 6h3v1.5A3.5 3.5 0 0 1 17 11" />
+                <path d="M12 14v3" />
+                <path d="M8.5 20h7" />
+                <path d="M10 17h4v3h-4z" />
+              </svg>
+            </span>
+            <span className="rk-head-text">
+              <h1 className="rk-head-title">ランキング</h1>
+              <span className="rk-head-note">今、読者に支持されている作品をチェック！</span>
+            </span>
           </div>
 
           {/*
