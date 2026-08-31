@@ -41,7 +41,7 @@ export default function manifest(): MetadataRoute.Manifest {
         display: "standalone",
 
         background_color: "#f4f5f3",
-        theme_color: "#1f4e6b",
+        theme_color: "#0b57b8",
 
         lang: "ja",
         dir: "ltr",
@@ -69,13 +69,20 @@ export default function manifest(): MetadataRoute.Manifest {
                 purpose: "any",
             },
             /*
-             * maskable。
+             * 切り抜かれるとき用（maskable）。
              *
-             * 端末が絵を丸や角丸に切り抜くとき用。
-             * これが無いと、周りに白い枠が付いて浮いて見える。
+             * ★ ふつうの絵をそのまま使ってはいけない。
+             *
+             *   端末は絵を丸や角丸に切り抜く。
+             *   いまの絵には既に角丸が付いていて、
+             *   その外は白い。
+             *   そのまま切り抜くと、白いふちが残る。
+             *
+             *   端まで青く塗り、その上に絵を少し小さく置いたものを
+             *   別に用意してある。
              */
             {
-                src: "/icon-512.png",
+                src: "/icon-maskable.png",
                 sizes: "512x512",
                 type: "image/png",
                 purpose: "maskable",
