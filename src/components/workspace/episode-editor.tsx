@@ -22,6 +22,8 @@ import {
 } from "@/lib/utils/vertical-text";
 import type { DisplaySettings, Episode } from "@/types";
 import { WRITING_MODE_LABEL } from "@/types";
+import PickSurface from "@/components/workspace/pick-surface";
+import { useRouter } from "next/navigation";
 
 interface Props {
     episode: Episode;
@@ -30,6 +32,8 @@ interface Props {
      * 資料から来たとき、その資料の id が入る。
      */
     pickEntryId?: string | null;
+    /** 足す先の資料の名前。何に足しているかを見せる */
+    pickEntryName?: string;
     settings: DisplaySettings;
     /** 資料から飛んできたときの行番号。1 から数える */
     jumpToLine?: number | null;
@@ -55,6 +59,7 @@ interface Props {
 export default function EpisodeEditor({
     episode,
     pickEntryId = null,
+    pickEntryName = "この資料",
     settings,
     onSave,
     jumpToLine,
@@ -112,44 +117,26 @@ export default function EpisodeEditor({
      * 資料から「本文から足す」で来たとき、
      * 住所に ?pick=資料のid が付いている。
      *
-     * ★ 選んだ場所を見る。
-     *   携帯で長押しすると、その語が選ばれる。
-     *   選ばれたことを見れば、長押しを見たのと同じになる。
-     *   打ち込む欄に押し具を重ねずに済む。
+     * ★ そのあいだは、打ち込む欄をやめて読む形にする。
+     *   引用コメントと同じく、文ごとに押せる。
+     *
+     *   打ち込む欄（textarea）の中には、
+     *   文を包む入れ物を置けない。
+     *   選んだ範囲から行を割り出す形も試したが、
+     *   何が押せるのか分かりにくかった。
      */
-    const [pickDone, setPickDone] = useState(false);
+    const router = useRouter();
 
-    /** 選んでいる行の本文。空なら押し具を出さない */
-    const pickedLine = (() => {
-        if (!pickEntryId || range.start === range.end) return "";
-        const head = body.lastIndexOf("\n", range.start - 1) + 1;
-        const tail = body.indexOf("\n", range.end);
-        return body.slice(head, tail === -1 ? undefined : tail).trim();
-    })();
-
-    /** その行が何行目か */
-    const pickedLineNo = (() => {
-        if (!pickedLine) return 0;
-        return body.slice(0, range.start).split("\n").length;
-    })();
+    /*
+     * 足す先の名前は、資料の側から渡してもらう。
+     * ここで引くと、作品の id が要る。
+     */
 
     const episodeId = episode.id;
 
-    async function addToEntry() {
-        if (!pickEntryId || !pickedLine || !episodeId) return;
-
-        try {
-            await getRepository().pickMentionLine(
-                pickEntryId,
-                episodeId,
-                pickedLineNo,
-                pickedLine,
-            );
-            setPickDone(true);
-            window.setTimeout(() => setPickDone(false), 1800);
-        } catch {
-            window.alert("足せませんでした。時間をおいて試してください。");
-        }
+    async function addToEntry(text: string, line: number) {
+        if (!pickEntryId) return;
+        await getRepository().pickMentionLine(pickEntryId, episode.id, line, text);
     }
 
     // 別の話に切り替わったら編集中の値を差し替える
@@ -729,6 +716,18 @@ export default function EpisodeEditor({
                  * 広く書きたいとの声で外した。
                  */}
                 <div className="mx-auto flex h-full min-h-0 w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded">
+                {pickEntryId ? (
+                    /*
+                      * 蛍光ペンのあいだは、打ち込む欄をやめる。
+                      * 文ごとに押せる読む形に差し替える。
+                      */
+                    <PickSurface
+                        body={body}
+                        entryName={pickEntryName}
+                        onPick={addToEntry}
+                        onClose={() => router.back()}
+                    />
+                ) : (
                 <ManuscriptSurface
                     zoom={zoom}
                     settings={settings}
@@ -741,40 +740,9 @@ export default function EpisodeEditor({
                     selectLineOnClick={Boolean(pickEntryId)}
                     placeholder="ここに本文を書きます。"
                 />
+                )}
 
                 </div>
-
-                {/*
-                  * 資料に足す。
-                  *
-                  * ★ 選んでいるあいだだけ出す。
-                  *   打ち込む欄に重ねず、下に浮かせる。
-                  *   打っている最中に出ると、指が当たる。
-                  */}
-                {pickEntryId && pickedLine && (
-                    <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-                        <button
-                            type="button"
-                            onClick={() => void addToEntry()}
-                            className="pointer-events-auto flex max-w-[90%] items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[12.5px] text-white shadow-lg"
-                        >
-                            {pickDone ? (
-                                "足しました"
-                            ) : (
-                                <>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" strokeWidth="2"
-                                        strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M12 5v14M5 12h14" />
-                                    </svg>
-                                    <span className="truncate">
-                                        この行を資料に足す
-                                    </span>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                )}
 
                 {flashLine !== null && (
                     <p className="pointer-events-none absolute right-4 top-3 rounded-full bg-forest px-3 py-1 text-[11px] text-white shadow">

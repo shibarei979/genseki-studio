@@ -50,6 +50,28 @@ export default function WorkspaceClient({ workId }: Props) {
      */
     const searchParams = useSearchParams();
 
+    /*
+     * 蛍光ペンの足す先の名前。
+     * 何に足しているか分からないまま押させない。
+     */
+    const [pickEntryName, setPickEntryName] = useState("この資料");
+
+    useEffect(() => {
+        const pickId = searchParams.get("pick");
+        if (!pickId) return;
+
+        void (async () => {
+            try {
+                const entries = await getRepository().listEntries(workId);
+                setPickEntryName(
+                    entries.find((one) => one.id === pickId)?.name || "この資料",
+                );
+            } catch {
+                /* 引けなくても、既定の言葉で足りる */
+            }
+        })();
+    }, [searchParams, workId]);
+
     const [work, setWork] = useState<Work | null>(null);
     const [settings, setSettings] = useState<DisplaySettings | null>(null);
     const [isWorkLoading, setIsWorkLoading] = useState(true);
@@ -647,6 +669,7 @@ export default function WorkspaceClient({ workId }: Props) {
                     {selected ? (
                         <EpisodeEditor
                             pickEntryId={searchParams.get("pick")}
+                            pickEntryName={pickEntryName}
                             key={selected.id}
                             episode={selected}
                             settings={settings}
