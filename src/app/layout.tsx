@@ -25,6 +25,8 @@ import "@/styles/mobile-tab-bar.css";
 import "@/styles/mobile-search.css";
 /* 携帯の「ランキング」 */
 import "@/styles/mobile-ranking.css";
+/* 携帯の「コミュニティ」 */
+import "@/styles/mobile-community.css";
 import "@/styles/home/base.css";
 import "@/styles/home/ui.css";
 import "@/styles/home/loading.css";

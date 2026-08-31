@@ -1,0 +1,77 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯の「コミュニティ」
+ *
+ * ★ 1024px 未満でだけ効く。パソコンには影響しない。
+ * ============================================================
+ */
+
+/* パソコンでは出さない */
+.cm-fab {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    /*
+     * 投稿する。
+     *
+     * 右下に浮かせる。
+     * 柱を出さない代わりに、投稿の入口が要る。
+     * 上まで戻らないと書けないのでは、
+     * 思いついたときに書き留められない。
+     */
+    .cm-fab {
+        position: fixed;
+        right: 16px;
+        /*
+         * 下の帯（58px）＋ 安全域 ＋ 余白。
+         * 帯に重なると、どちらも押しにくい。
+         */
+        bottom: calc(58px + env(safe-area-inset-bottom, 0) + 14px);
+        z-index: 55;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+
+        width: 62px;
+        height: 62px;
+        border-radius: 50%;
+
+        background: var(--color-accent, #e07b39);
+        color: #fff;
+        text-decoration: none;
+        box-shadow: 0 4px 12px -3px rgba(140, 70, 20, .45);
+
+        -webkit-tap-highlight-color: transparent;
+        transition: transform .15s ease;
+    }
+
+    .cm-fab:active {
+        transform: scale(.94);
+    }
+
+    .cm-fab-icon {
+        display: flex;
+    }
+
+    .cm-fab-label {
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -.02em;
+    }
+
+    /*
+     * 上の並び（タイムライン／執筆室／…）。
+     *
+     * 下の線をはっきりさせる。
+     * 見本では、いま居る所が太い線で示されている。
+     */
+    .cm-tabs {
+        border-bottom-width: 1px;
+    }
+}

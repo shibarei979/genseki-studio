@@ -668,6 +668,32 @@ export default function CommunityClient() {
 
                 </div>
             </main>
+
+            {/*
+              * 投稿する。
+              *
+              * ★ 携帯だけ。右下に浮かせる。
+              *
+              *   柱を出さない代わりに、投稿の入口が要る。
+              *   上まで戻らないと書けないのでは、
+              *   思いついたときに書き留められない。
+              *
+              *   view が「タイムライン」のときだけ出す。
+              *   執筆室やお知らせでは、投稿する先が違う。
+              */}
+            {view === "timeline" && (
+                <a href="#compose" className="cm-fab">
+                    <span className="cm-fab-icon" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="1.8"
+                            strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4 20c6-1 10-4 13-9 1.5-2.5 2-4.5 2-7-3 .5-5.5 1.5-8 3.5C7 10.5 5 14.5 4 20Z" />
+                            <path d="M4 20c2.5-2.5 5-4.5 8-6" />
+                        </svg>
+                    </span>
+                    <span className="cm-fab-label">投稿する</span>
+                </a>
+            )}
         </div>
     );
 }
