@@ -26,14 +26,17 @@
     }
 
     /*
-     * 中の白い箱も、端まで広げる。
-     * 角丸と左右の枠を外して、帯のようにつなげる。
+     * 中の白い箱は、角丸と枠をそのまま残す。
+     *
+     * ★ 一度は角丸を外して端までつなげたが、
+     *   箱の切れ目が分からなくなった。
+     *   「目次」「おすすめ作品」がどこで区切れるのか、
+     *   見た目で追えない。
+     *
+     * 左右に少しだけ余白を入れて、角丸を見せる。
      */
-    .nv-page > div > div[style*="border-radius"],
-    .nv-page section {
-        border-radius: 0 !important;
-        border-left: none !important;
-        border-right: none !important;
+    .nv-page > div {
+        padding: 0 10px;
     }
 }
 

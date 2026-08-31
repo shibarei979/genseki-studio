@@ -1289,8 +1289,10 @@
         max-width: none !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
-        border-radius: 0 !important;
-        border-left: none !important;
-        border-right: none !important;
+        /*
+         * ★ 角丸と枠は残す。
+         *   外して端までつなげたら、
+         *   まとまりの切れ目が分からなくなった。
+         */
     }
 }
