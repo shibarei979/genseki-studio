@@ -473,6 +473,26 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
                             </div>
                         </Field>
 
+                        {/*
+                          * 合言葉を忘れた方。
+                          *
+                          * ★ 入るときだけ出す。
+                          *   これから登録する人には要らない。
+                          *
+                          * ★ 押し具ではなく、控えめな文字にする。
+                          *   忘れていない人の目には入らないほうがよい。
+                          */}
+                        {mode === "signin" && (
+                            <p className="-mt-2 text-right">
+                                <Link
+                                    href="/login/reset"
+                                    className="text-[11.5px] text-muted underline underline-offset-2 hover:text-forest"
+                                >
+                                    パスワードを忘れた方
+                                </Link>
+                            </p>
+                        )}
+
                         {mode === "signup" && (
                             <Field label="パスワード（確認）">
                                 <input
