@@ -125,7 +125,7 @@
 .nv-summary-label {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 5px;
     margin-top: 10px;
 
     color: var(--color-brand);
@@ -141,6 +141,7 @@
     flex: 1;
     height: 1px;
     background: var(--color-brand-border);
+    margin: 0 7px;
 }
 
 /* 文字と矢印を、線に割り込ませない */
@@ -154,15 +155,24 @@
 .nv-summary-check:checked ~ .nv-summary-label .nv-summary-open { display: none; }
 .nv-summary-check:checked ~ .nv-summary-label .nv-summary-close { display: inline; }
 
-/* 矢印。丸で囲まず、文字のすぐ横に置く */
+/*
+ * 矢印。
+ *
+ * ★ 負の余白で寄せない。
+ *   前は margin-left: -6px で文字に食い込ませていたが、
+ *   文字の下端と矢印の中心が合わず、浮いて見えていた。
+ *
+ * gap で間を取り、上下の中心をそろえる。
+ */
 .nv-summary-arrow {
     display: inline-block;
-    margin-left: -6px;
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1;
+    /* 文字の中心に合わせる。矢印は下に重心があるため */
+    transform: translateY(-1px);
     transition: transform .15s ease;
 }
 
 .nv-summary-check:checked ~ .nv-summary-label .nv-summary-arrow {
-    transform: rotate(180deg);
+    transform: translateY(-1px) rotate(180deg);
 }
