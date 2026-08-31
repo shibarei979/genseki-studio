@@ -147,8 +147,8 @@ export default function RecommendSidebar({
 
             {/* 開く・閉じるの札 */}
             <label htmlFor="rs-more" className="rs-more-label">
-                <span className="rs-more-open">絞り込みを開く</span>
-                <span className="rs-more-close">絞り込みを閉じる</span>
+                <span className="rs-more-open">ジャンル・条件を見る</span>
+                <span className="rs-more-close">とじる</span>
                 <span className="rs-more-arrow">⌄</span>
             </label>
         </aside>

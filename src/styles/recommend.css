@@ -440,18 +440,48 @@
 }
 
 @media (max-width: 900px) {
+    /*
+     * 開く・閉じるの押し具。
+     *
+     * ★ 線と文字だけだと、押せると分からない。
+     *   枠のある押し具の形にする。
+     *
+     * 真ん中に置いて、幅は中身ぶんだけ。
+     * 全幅にすると、札の並びと見分けが付かない。
+     */
     .rs-more-label {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        gap: 5px;
-        margin-top: 10px;
-        padding: 9px;
-        border-top: 1px solid var(--color-brand-border);
-        color: var(--color-text-muted);
-        font-size: 12px;
+        gap: 8px;
+        margin: 14px auto 0;
+        padding: 9px 16px 9px 18px;
+
+        border: 1px solid var(--color-brand-border);
+        border-radius: 999px;
+        background: var(--color-bg-card);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+
+        color: var(--color-brand);
+        font-size: 12.5px;
+        font-weight: 600;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
+        transition: background .15s ease;
+    }
+
+    /* 真ん中に置く。inline-flex なので、親側で寄せる */
+    .rs {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .rs_group {
+        width: 100%;
+    }
+
+    .rs-more-label:active {
+        background: var(--color-brand-light);
     }
 
     /*
@@ -475,8 +505,17 @@
     .rs-more-check:checked ~ .rs-more-label .rs-more-open { display: none; }
     .rs-more-check:checked ~ .rs-more-label .rs-more-close { display: inline; }
 
+    /* 矢印。丸で囲んで、押す所だと分かるようにする */
     .rs-more-arrow {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--color-brand-light);
+        font-size: 11px;
+        line-height: 1;
         transition: transform .15s ease;
     }
 
