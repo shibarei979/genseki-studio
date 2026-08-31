@@ -331,8 +331,17 @@ export default function MypageClient({
       /* 保存できなければ戻す。黙って飲まない */
       setShowAiWorks(!next)
       window.alert('変えられませんでした。時間をおいて試してください。')
+      setAiSaving(false)
+      return
     }
+
     setAiSaving(false)
+
+    /*
+     * 読み込み直す。
+     * 出す作品が変わるので、いまの画面のままだと食い違う。
+     */
+    setTimeout(() => window.location.reload(), 500)
   }
   const isFocusWriting = homeMode === 'focus'
   /* 運営だけが触れる。作りかけの画面を確かめるため */
@@ -377,6 +386,9 @@ export default function MypageClient({
 
     setToast(next === 'book' ? '本を開く表示にしました' : '札で見る表示にしました')
     setTimeout(()=>setToast(''), 2500)
+
+    /* 見せ方が変わるので、読み込み直す */
+    setTimeout(() => window.location.reload(), 700)
   }
 
   async function saveHomeMode(next: string) {
@@ -402,7 +414,18 @@ export default function MypageClient({
       : '作家向けの表示にしました'
     )
     setTimeout(()=>setToast(''), 2500)
-  }
+
+    /*
+     * 読み込み直す。
+     *
+     * ★ 向きによって、ホームもヘッダーも下の帯も変わる。
+     *   設定の画面だけ切り替わって、
+     *   ほかが古いままだと、効いていないように見える。
+     *
+     * 知らせを見せてから動かす。
+     * すぐ消えると、何が起きたか分からない。
+     */
+    setTimeout(() => window.location.reload(), 700)  }
   const [notifyLike,       setNotifyLike]       = useState(profile.notify_like       !== false)
   const [notifyComment,    setNotifyComment]    = useState(profile.notify_comment    !== false)
   const [notifyFollow,     setNotifyFollow]     = useState(profile.notify_follow     !== false)

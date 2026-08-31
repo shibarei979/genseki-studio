@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -31,7 +30,6 @@ export default function ModeToggle({
     mode: string | null | undefined;
     userId: string | null;
 }) {
-    const router = useRouter();
     const [isBusy, setIsBusy] = useState(false);
     const [now, setNow] = useState(mode === "read" ? "read" : "write");
 
@@ -87,11 +85,17 @@ export default function ModeToggle({
             /*
              * 頁を作り直す。
              *
-             * ホームの中身も、行き先の並びも向きで変わる。
-             * 押し具だけ動いて中身が古いままだと、
-             * 効いていないように見える。
+             * ★ router.refresh() だけでは足りない。
+             *
+             *   ホームは向きによって別の部品を出す。
+             *   ヘッダーの行き先も、下の帯の中身も変わる。
+             *   作り直しだけだと、古い部品が残ることがある。
+             *
+             *   読み込み直すのが確実。
+             *   切り替えは何度も押すものではないので、
+             *   一瞬の待ちより、確実に変わるほうがよい。
              */
-            router.refresh();
+            window.location.reload();
         }
 
         setIsBusy(false);
@@ -120,11 +124,17 @@ export default function ModeToggle({
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                     </svg>
                 ) : (
+                    /*
+                      * ペン。
+                      *
+                      * ★ 前は葉の形だった。
+                      *   「書く」を表すなら、ペンのほうが伝わる。
+                      */
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" strokeWidth="1.8"
                         strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 20c6-1 10-4 13-9 1.5-2.5 2-4.5 2-7-3 .5-5.5 1.5-8 3.5C7 10.5 5 14.5 4 20Z" />
-                        <path d="M4 20c2.5-2.5 5-4.5 8-6" />
+                        <path d="m15.5 4.5 4 4" />
+                        <path d="M17.5 2.5a2.1 2.1 0 0 1 3 3L7.5 18.5l-4.5 1.5 1.5-4.5Z" />
                     </svg>
                 )}
             </span>
