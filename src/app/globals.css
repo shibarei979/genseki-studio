@@ -265,6 +265,17 @@ body {
 
 .thin-scroll::-webkit-scrollbar {
     width: 8px;
+    /*
+     * 横の送りは出さない。
+     *
+     * ★ 前は width だけ指定していた。
+     *   横に動く並び（ヘッダーの行き先）では効かず、
+     *   既定の太い灰色の帯がそのまま出ていた。
+     *   携帯では、その帯が頁の題名に重なっていた。
+     *
+     * 指で動かせるので、つまみは要らない。
+     */
+    height: 0;
 }
 
 .thin-scroll::-webkit-scrollbar-thumb {

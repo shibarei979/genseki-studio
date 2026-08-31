@@ -88,6 +88,17 @@ export default function SearchForm({
   const GENRES = ageVerified ? [...GENRES_BASE, 'BL', 'GL', '官能'] : GENRES_BASE
 
   /* 題名と作者名をまとめて探す枠。いちばん上に置く */
+  /*
+   * 携帯で条件を畳むかどうか。
+   *
+   * ★ 既定は閉じる。
+   *   多くの人は言葉を入れて押すだけ。
+   *   細かい条件を使う人のほうが少ない。
+   *
+   * パソコンでは使わない。CSS 側で常に開いた形にしている。
+   */
+  const [spOpen, setSpOpen] = useState(false)
+
   const [name,               setName]               = useState(defaultName)
   const [q,                  setQ]                  = useState(defaultQ)
   const [author,             setAuthor]             = useState(defaultAuthor)
@@ -205,11 +216,32 @@ export default function SearchForm({
      * 枠の中にあると絞り込みの一項目に見えて、
      * このページが何なのかが伝わりにくい。
      */}
-    <h1 style={{fontSize:20,fontWeight:700,color:'var(--color-text)',marginBottom:12}}>
-      作品を探す
-    </h1>
+    {/*
+      * 見出しの行。
+      *
+      * 携帯では右に「検索条件を開く」を出す。
+      * 条件が最初から全部開いていると縦に長く、
+      * 作品にたどり着くまで何度も送ることになる。
+      */}
+    <div className="sf-head" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12}}>
+      <h1 style={{fontSize:20,fontWeight:700,color:'var(--color-text)',margin:0}}>
+        作品を探す
+      </h1>
 
-    <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding: isMobile ? '16px' : '20px',marginBottom:16}}>
+      <button
+        type="button"
+        className="sf-toggle"
+        onClick={() => setSpOpen((v) => !v)}
+        aria-expanded={spOpen}
+      >
+        検索条件を{spOpen ? '閉じる' : '開く'}
+        <span style={{transform:spOpen?'rotate(180deg)':'none',display:'inline-block',transition:'transform .15s'}}>
+          ⌄
+        </span>
+      </button>
+    </div>
+
+    <div className={`sf-box${spOpen ? ' is-open' : ''}`} style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding: isMobile ? '16px' : '20px',marginBottom:16}}>
 
       {/*
         * 題名・作者名。

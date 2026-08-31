@@ -68,3 +68,53 @@
         line-height: 1.6 !important;
     }
 }
+
+/*
+ * ============================================================
+ * 検索の欄を畳む
+ *
+ * 条件が最初から全部開いていると縦に長く、
+ * 作品にたどり着くまで何度も送ることになる。
+ *
+ * 携帯では、題名の欄と検索の押し具だけを出す。
+ * 細かい条件は「検索条件を開く」を押したときに出る。
+ * ============================================================
+ */
+
+/* パソコンでは押し具そのものを出さない */
+.sf-toggle {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .sf-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        flex-shrink: 0;
+        padding: 7px 13px;
+        border-radius: 8px;
+        border: 1px solid var(--color-brand-border);
+        background: var(--color-bg-card);
+        color: var(--color-text-muted);
+        font-size: 12px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /*
+     * 閉じているとき、真ん中の塊を隠す。
+     *
+     * ★ 最初の子（題名・作者名）と
+     *   最後の子（検索の押し具）は残す。
+     *   その 2 つだけで探せる人が、いちばん多い。
+     */
+    .sf-box:not(.is-open) > *:not(:first-child):not(:last-child) {
+        display: none !important;
+    }
+
+    /* 閉じているときは、枠も薄くする */
+    .sf-box:not(.is-open) {
+        padding: 14px !important;
+    }
+}
