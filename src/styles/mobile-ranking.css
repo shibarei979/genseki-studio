@@ -119,6 +119,23 @@
          *   そこで初めて flex-wrap が効く。
          */
         align-items: stretch !important;
+
+        /*
+         * ★ 折り返さないことが要る。
+         *
+         *   元の指定に flexWrap: 'wrap' がある。
+         *   縦並び（column）で「折り返す」にすると、
+         *   列が段に分かれる形になる。
+         *
+         *   そのとき中の箱は、画面の幅ではなく
+         *   「その段の中身の幅」まで広がる。
+         *   だから .rk-chips が横に伸びたままになり、
+         *   中の札がいくら flex-wrap を持っていても折り返さない。
+         *
+         *   ここを nowrap にして、
+         *   箱が画面の幅に収まるようにする。
+         */
+        flex-wrap: nowrap !important;
     }
 
     .rk-filter > div:first-child {
