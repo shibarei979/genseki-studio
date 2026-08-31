@@ -364,20 +364,18 @@
  */
 
 @media (max-width: 1023px) {
+    /*
+     * ★ 携帯では出さない。
+     *
+     *   「特集」の段に 8 つの札と 2 本の線が入っていて、
+     *   どう折り返しても最後の 2 つが画面の外へ出た。
+     *   幅の中に収める形を 5 回試して、いずれも直らなかった。
+     *
+     *   AI 作品を見るかどうかは、
+     *   毎回切り替えるものではない。
+     *   マイページの設定で決める形にする。
+     */
     .rk-ai {
-        /*
-         * 幅いっぱいを取る。
-         * flex の中でこれをすると、必ず次の行から始まる。
-         */
-        display: flex !important;
-        width: 100% !important;
-        align-items: center;
-        gap: 6px;
-        margin-top: 2px;
-    }
-
-    /* 縦の区切り線は要らない。行が分かれているので */
-    .rk-ai > span[style*="width:1"] {
         display: none !important;
     }
 }
