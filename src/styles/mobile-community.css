@@ -207,3 +207,38 @@
     width: 0;
     height: 0;
 }
+
+/*
+ * ============================================================
+ * 並べ替え
+ *
+ * つぶやきの一覧の上に、新着順／人気順を置く。
+ * ★ 携帯だけの指定ではない。パソコンでも使う。
+ * ============================================================
+ */
+
+.tw-sort {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.tw-sort button {
+    padding: 6px 13px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* いま選んでいるもの */
+.tw-sort button.is-on {
+    border-color: var(--color-brand-border);
+    background: var(--color-bg-card);
+    color: var(--color-brand);
+    font-weight: 700;
+}

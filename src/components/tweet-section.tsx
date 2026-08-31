@@ -194,6 +194,18 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
    * 増やせるようにすると、読む側が全部を読まずに選ぶ。
    */
   const [pollOptions, setPollOptions] = useState<string[] | null>(null)
+  /*
+   * 並べ替え。
+   *
+   *   new     新しい順
+   *   liked   いいねの多い順
+   *
+   * ★ いいね順は、読んだあとに並べ替える。
+   *   いいねの数は別の表にあり、
+   *   つぶやきを読む問い合わせだけでは数えられない。
+   */
+  const [sortBy, setSortBy] = useState<'new' | 'liked'>('new')
+
   const [topicList, setTopicList] = useState<
     { key: string; label: string; is_official?: boolean }[]
   >([])
@@ -242,7 +254,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
   useEffect(() => {
     loadTweets()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authorId, scope, topic, currentUserId])
+  }, [authorId, scope, topic, sortBy, currentUserId])
 
   async function loadTweets() {
     setLoading(true)
@@ -1050,7 +1062,36 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
             </div>
           ) : null
         )
-      ) : tweets.map(tweet => (
+      ) : (
+        <>
+          {/*
+            * 並べ替え。
+            *
+            * ★ つぶやきの一覧の上に置く。
+            *   タイムラインのときだけ出す。
+            *   誰か 1 人のつぶやきを見ているときは、
+            *   件数が少なく、並べ替える意味がない。
+            */}
+          {!authorId && tweets.length > 1 && (
+            <div className="tw-sort">
+              <button
+                type="button"
+                onClick={() => setSortBy('new')}
+                className={sortBy === 'new' ? 'is-on' : ''}
+              >
+                新着順
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortBy('liked')}
+                className={sortBy === 'liked' ? 'is-on' : ''}
+              >
+                人気順
+              </button>
+            </div>
+          )}
+
+          {tweets.map(tweet => (
         <div key={tweet.id} style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,marginBottom:16,overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
           <div style={{padding:'20px 22px'}}>
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
@@ -1415,7 +1456,9 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
             </div>
           )}
         </div>
-      ))}
+          ))}
+        </>
+      )}
     </div>
   )
 }
