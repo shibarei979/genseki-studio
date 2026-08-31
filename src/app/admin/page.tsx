@@ -494,7 +494,7 @@ export default async function AdminPage({
       label: '総登録ユーザー数', icon: 'user',
       value: userCount ?? 0, prev: prevUserRes.count ?? 0,
       breakdown: [
-        { label: '執筆向け', value: `${authorCount.toLocaleString()} 人` },
+        { label: '作家向け', value: `${authorCount.toLocaleString()} 人` },
         { label: '読者向け', value: `${readerCount.toLocaleString()} 人` },
       ],
     },

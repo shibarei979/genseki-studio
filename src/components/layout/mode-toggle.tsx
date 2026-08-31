@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 /**
  * ============================================================
  * 原石航路 Studio
- * ModeToggle — 執筆向きと読書向きを入れ替える
+ * ModeToggle — 作家向けと読書向けを入れ替える
  *
  * ベルの横に置く。
  *
@@ -79,8 +79,8 @@ export default function ModeToggle({
             type="button"
             onClick={() => void toggle()}
             disabled={isBusy}
-            aria-label={isRead ? "執筆向きに切り替える" : "読書向きに切り替える"}
-            title={isRead ? "いまは読書向き。押すと執筆向きになります" : "いまは執筆向き。押すと読書向きになります"}
+            aria-label={isRead ? "作家向けに切り替える" : "読書向けに切り替える"}
+            title={isRead ? "いまは読書向け。押すと作家向けになります" : "いまは作家向け。押すと読書向けになります"}
             className="mode-toggle"
             data-on={isRead ? "read" : "write"}
         >

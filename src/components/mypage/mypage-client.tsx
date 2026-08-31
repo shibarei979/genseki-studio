@@ -399,7 +399,7 @@ export default function MypageClient({
     setToast(
       next === 'focus' ? '執筆集中モードにしました'
       : next === 'read' ? '読書向けの表示にしました'
-      : '執筆向けの表示にしました'
+      : '作家向けの表示にしました'
     )
     setTimeout(()=>setToast(''), 2500)
   }
@@ -1558,7 +1558,7 @@ export default function MypageClient({
               ランキング・ミッションなどの数字と、
               コミュニティーやランキングへの入口を隠します。
               数えるのをやめるだけで、記録は残ります。
-              いつでも「執筆向け」に戻せます。
+              いつでも「作家向け」に戻せます。
             </div>
             {/*
               読書向けはまだ用意していない。
@@ -1587,7 +1587,7 @@ export default function MypageClient({
                 style={{padding:'8px 18px',fontSize:13,fontWeight:isFocusWriting?500:700,cursor:'pointer',border:'none',
                   background:isFocusWriting?'var(--color-bg-card)':'var(--color-brand)',
                   color:isFocusWriting?'var(--color-text-muted)':'var(--base-color-1)'}}>
-                執筆向け
+                作家向け
               </button>
               <button
                 onClick={()=>saveHomeMode('focus')}

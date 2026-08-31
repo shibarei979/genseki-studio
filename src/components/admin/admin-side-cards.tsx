@@ -3,7 +3,7 @@
  * 原石航路 Studio
  * AdminSideCards — 図の横に置く2枚
  *
- *   ユーザー属性    執筆向け／読者向けの割合
+ *   ユーザー属性    作家向け／読者向けの割合
  *   人気ジャンル    作品数の多い順に5つ
  *
  * 図と並べて置く。数字だけでは、全体の中で
@@ -27,7 +27,7 @@ export function UserDonut({
 }) {
     const total = authorCount + readerCount
     const parts = [
-        { label: '執筆向け', value: authorCount },
+        { label: '作家向け', value: authorCount },
         { label: '読者向け', value: readerCount },
     ]
 
