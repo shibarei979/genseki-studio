@@ -281,7 +281,7 @@ function RecentRow({
     })();
 
     return (
-        <div className="flex flex-wrap items-center gap-4 rounded-xl px-3 py-3.5 transition-colors hover:bg-canvas">
+        <div className="flex flex-col items-stretch gap-2.5 rounded-xl px-3 py-3.5 transition-colors hover:bg-canvas sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
             <Cover
                 work={work}
                 onChange={(tile) => void onChangeTile(work.id, tile)}
@@ -289,7 +289,7 @@ function RecentRow({
 
             <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-[16px] font-medium text-ink">
+                    <span className="text-[15px] font-medium text-ink sm:truncate sm:text-[16px]">
                         {work.title || "名前のない作品"}
                     </span>
                     <StateChip work={work} />
@@ -312,7 +312,7 @@ function RecentRow({
 
             <Link
                 href={`/workspace/${work.id}`}
-                className="shrink-0 rounded-lg border border-forest-line px-6 py-2.5 text-[13px] font-medium text-forest hover:bg-forest-tint"
+                className="w-full shrink-0 rounded-lg border border-forest-line px-6 py-2.5 text-[13px] font-medium text-forest sm:w-auto hover:bg-forest-tint"
             >
                 続きを書く
             </Link>
