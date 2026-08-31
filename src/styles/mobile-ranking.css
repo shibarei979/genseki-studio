@@ -83,9 +83,17 @@
 
     .ss-track {
         overflow-x: visible !important;
-        flex-wrap: wrap !important;
         /* 横に送らないので、はみ出しの余白も要らない */
         padding-right: 0 !important;
+    }
+
+    /*
+     * ★ 折り返さない指定は、track の中の箱にある。
+     *   track だけ直しても効かない。
+     */
+    .ss-row {
+        flex-wrap: wrap !important;
+        row-gap: 6px !important;
     }
 
     /*

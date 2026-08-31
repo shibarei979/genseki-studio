@@ -133,7 +133,12 @@ export default function SideScroller({
                     minWidth: 0,
                 } as React.CSSProperties}
             >
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
+                {/*
+                  * ★ 折り返さない指定は、この中の箱にある。
+                  *   外側だけ直しても効かない。
+                  *   携帯では ss-row の指定で折り返しに変える。
+                  */}
+                <div className="ss-row" style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
                     {children}
                 </div>
             </div>

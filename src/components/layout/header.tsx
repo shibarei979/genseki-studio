@@ -528,7 +528,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                  * 左端（ホーム）が画面の外に出て戻せなくなる。
                  * 左から詰めれば、頭が必ず見える。
                  */
-                className="thin-scroll flex items-center gap-1 overflow-x-auto border-t border-line px-4 py-1.5 sm:px-8 lg:hidden"
+                className="hd-nav thin-scroll flex items-center gap-1 overflow-x-auto border-t border-line px-4 py-1.5 sm:px-8 lg:hidden"
             >
                 {shownNav.map((item) => (
                     <Link
