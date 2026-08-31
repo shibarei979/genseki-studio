@@ -301,6 +301,39 @@ export default function MypageClient({
    * 切り替えれば元どおり出る。
    */
   const [homeMode, setHomeMode] = useState(profile.home_mode || 'write')
+
+  /*
+   * AI が書いた作品を出すかどうか。
+   *
+   * ★ 既定は出す。
+   *   何も決めていない人には、これまでどおり見せる。
+   *   「出さない」を選んだ人にだけ、隠す。
+   *
+   * ★ 表紙は別。
+   *   AI で作った表紙は、作品そのものとは分けて考える。
+   *   本文を AI が書いていない作品まで消えると、行き過ぎになる。
+   */
+  const [showAiWorks, setShowAiWorks] = useState(profile.show_ai_works !== false)
+  const [aiSaving, setAiSaving] = useState(false)
+
+  async function saveShowAiWorks(next: boolean) {
+    if (next === showAiWorks || aiSaving) return
+
+    setAiSaving(true)
+    setShowAiWorks(next)
+
+    const { error } = await createClient()
+      .from('profiles')
+      .update({ show_ai_works: next })
+      .eq('user_id', profile.user_id)
+
+    if (error) {
+      /* 保存できなければ戻す。黙って飲まない */
+      setShowAiWorks(!next)
+      window.alert('変えられませんでした。時間をおいて試してください。')
+    }
+    setAiSaving(false)
+  }
   const isFocusWriting = homeMode === 'focus'
   /* 運営だけが触れる。作りかけの画面を確かめるため */
   const isRootAdmin = (profile.email || '').toLowerCase() === ROOT_ADMIN_EMAIL
@@ -1574,6 +1607,50 @@ export default function MypageClient({
             </div>
 
             {roleSaving && <span style={{fontSize:11,color:'var(--color-brand)',marginLeft:10}}>保存中...</span>}
+
+            {/*
+              * AI が書いた作品を出すかどうか。
+              *
+              * 読む向きの設定なので、その隣に置く。
+              */}
+            <div style={{marginTop:18}}>
+              <p style={{fontSize:12,fontWeight:700,color:'var(--color-text)',marginBottom:4}}>
+                AI が書いた作品
+              </p>
+              <p style={{fontSize:11,color:'var(--color-text-muted)',lineHeight:1.8,marginBottom:8}}>
+                出さないを選ぶと、探すページやランキング、
+                おすすめから、AI が本文を書いた作品が出なくなります。
+                <br />
+                AI で作った表紙は、これに含みません。
+              </p>
+
+              <div style={{display:'inline-flex',border:'1px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden'}}>
+                <button
+                  type="button"
+                  onClick={() => void saveShowAiWorks(true)}
+                  style={{padding:'8px 18px',fontSize:13,border:'none',cursor:'pointer',
+                    fontWeight:showAiWorks?700:500,
+                    background:showAiWorks?'var(--color-brand)':'var(--color-bg-card)',
+                    color:showAiWorks?'var(--base-color-1)':'var(--color-text-muted)'}}>
+                  出す
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void saveShowAiWorks(false)}
+                  style={{padding:'8px 18px',fontSize:13,border:'none',cursor:'pointer',
+                    fontWeight:!showAiWorks?700:500,
+                    background:!showAiWorks?'var(--color-brand)':'var(--color-bg-card)',
+                    color:!showAiWorks?'var(--base-color-1)':'var(--color-text-muted)'}}>
+                  出さない
+                </button>
+              </div>
+
+              {aiSaving && (
+                <span style={{fontSize:11,color:'var(--color-brand)',marginLeft:10}}>
+                  保存中...
+                </span>
+              )}
+            </div>
 
             {/*
              * 作品を押したときの見せ方。

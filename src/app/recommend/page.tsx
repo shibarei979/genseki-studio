@@ -108,7 +108,7 @@ export default async function RecommendPage({
     const { data: viewer } = user
         ? await supabase
               .from("profiles")
-              .select("birthdate")
+              .select("birthdate, show_ai_works")
               .eq("user_id", user.id)
               .maybeSingle()
         : { data: null };
@@ -117,8 +117,21 @@ export default async function RecommendPage({
         ageFromBirthdate((viewer as { birthdate?: string } | null)?.birthdate),
     );
 
-    const rated = all.filter((n) =>
-        ratings.includes((n.age_rating as "all" | "r15" | "r18") ?? "all"),
+    /*
+     * AI が本文を書いた作品を外す。
+     *
+     * ★ マイページで「出さない」を選んだ人にだけ。
+     *   ai_usage が 'full' のものだけ外す。
+     *   'assist'（下調べなどに使った）は残す。
+     *   表紙を AI で作っただけの作品も残る。
+     */
+    const hideAi =
+        (viewer as { show_ai_works?: boolean } | null)?.show_ai_works === false;
+
+    const rated = all.filter(
+        (n) =>
+            ratings.includes((n.age_rating as "all" | "r15" | "r18") ?? "all")
+            && !(hideAi && (n as { ai_usage?: string }).ai_usage === "full"),
     );
 
     /*

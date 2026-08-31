@@ -161,7 +161,7 @@ export default async function ReaderHome() {
   const { data: viewer } = user
     ? await supabase
         .from('profiles')
-        .select('birthdate, role')
+        .select('birthdate, role, show_ai_works')
         .eq('user_id', user.id)
         .maybeSingle()
     : { data: null }
@@ -202,8 +202,22 @@ export default async function ReaderHome() {
    * 相手が多いときに URL が長くなりすぎて通らない。
    */
   const blockedAuthors = await loadBlockedIds(supabase, user?.id)
+  /*
+   * AI が本文を書いた作品を外す。
+   *
+   * ★ マイページで「出さない」を選んだ人にだけ。
+   *   何も決めていない人には、これまでどおり見せる。
+   *
+   * ★ ai_usage が 'full' のものだけ外す。
+   *   'assist'（下調べなどに使った）は残す。
+   *   表紙を AI で作っただけの作品も残る。
+   */
+  const hideAi = (viewer as { show_ai_works?: boolean } | null)?.show_ai_works === false
+
   const newest: NovelRow[] = (newestRaw || []).filter(
-    (n: NovelRow) => !blockedAuthors.has((n as { author_id?: string }).author_id ?? ''),
+    (n: NovelRow) =>
+      !blockedAuthors.has((n as { author_id?: string }).author_id ?? '')
+      && !(hideAi && (n as { ai_usage?: string }).ai_usage === 'full'),
   )
   const novelById: Record<string, NovelRow> = {}
   newest.forEach((n) => { novelById[n.id] = n })

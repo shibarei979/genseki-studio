@@ -269,7 +269,16 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
 
         const { data: session } = await createClient().auth.getSession();
         if (session.session) {
-            router.push(nextPath);
+            /*
+             * 登録できたら、2つ聞く画面へ送る。
+             *
+             * ★ 入るだけの人は通さない。
+             *   ここは登録（signup）の側だけ。
+             *
+             * 読む向きか書く向きか、AI が書いた作品を見るか。
+             * あとからマイページで変えられる。
+             */
+            router.push("/welcome");
             router.refresh();
             return;
         }
