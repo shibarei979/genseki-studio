@@ -333,7 +333,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
              * 中くらいの画面では詰めて、真ん中の行き先が
              * 収まる幅を空ける。
              */}
-            <div className="relative flex h-[64px] items-center px-4 sm:h-[72px] sm:px-6 xl:px-10">
+            <div className="relative flex h-[54px] items-center px-4 sm:px-6 lg:h-[72px] xl:px-10">
                 {/*
                  * ロゴはヘッダーの高さより少し大きく見せたいので、
                  * 高さを固定したまま overflow を許して外へはみ出させる。
