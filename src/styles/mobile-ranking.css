@@ -64,3 +64,51 @@
         width: 22px !important;
     }
 }
+
+/*
+ * ============================================================
+ * 携帯では横に送らず、折り返す
+ *
+ * 横に隠れると、端に何があるか分からない。
+ * 「四半期」「年間」などが見えないまま終わる。
+ * 指で送れると気づかない人も多い。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    /* 送りの矢印は出さない。折り返すので要らない */
+    .ss-arrow {
+        display: none !important;
+    }
+
+    .ss-track {
+        overflow-x: visible !important;
+        flex-wrap: wrap !important;
+        /* 横に送らないので、はみ出しの余白も要らない */
+        padding-right: 0 !important;
+    }
+
+    /*
+     * 段の見出し（期間・特集・ジャンル・絞り込み）。
+     *
+     * 60px を左に取ると、札の場所が狭くなる。
+     * 上に置いて、札は全幅を使う。
+     */
+    .rk-filter {
+        flex-direction: column !important;
+        gap: 6px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .rk-filter > div:first-child {
+        min-width: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    /* 札は少し小さく。4 段あるので、そのままだと縦に長い */
+    .rk-chips,
+    .ss-track {
+        gap: 5px !important;
+        row-gap: 6px !important;
+    }
+}

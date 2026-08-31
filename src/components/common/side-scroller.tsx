@@ -93,13 +93,23 @@ export default function SideScroller({
     })
 
     return (
-        <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+        /*
+         * ★ 携帯では横に送らず、折り返す。
+         *
+         *   横に隠れると、端に何があるか分からない。
+         *   「四半期」「年間」などが見えないまま終わる。
+         *   指で送れると気づかない人も多い。
+         *
+         *   ss-wrap の印を付けて、CSS 側で折り返しに変える。
+         */
+        <div className="ss-wrap" style={{ position: 'relative', flex: 1, minWidth: 0 }}>
             {canLeft && (
                 <button
                     type="button"
                     onClick={() => go(-1)}
                     aria-label={`${label}（左へ）`}
                     style={arrow('left')}
+                    className="ss-arrow"
                 >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" strokeWidth="3"
@@ -111,6 +121,7 @@ export default function SideScroller({
 
             <div
                 ref={track}
+                className="ss-track"
                 style={{
                     overflowX: 'auto',
                     /*
@@ -133,6 +144,7 @@ export default function SideScroller({
                     onClick={() => go(1)}
                     aria-label={`${label}（右へ）`}
                     style={arrow('right')}
+                    className="ss-arrow"
                 >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" strokeWidth="3"
