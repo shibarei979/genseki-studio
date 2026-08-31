@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 
 import EntryImage from "@/components/common/entry-image";
 import AccountMenu from "@/components/layout/account-menu";
+import ModeToggle from "@/components/layout/mode-toggle";
 import RoomPresenceBar from "@/components/room/room-presence-bar";
 import { getRepository } from "@/lib/repository";
 import { createClient } from "@/lib/supabase/client";
@@ -403,6 +404,15 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
 
                 {/* 右端。通知とアイコンのあいだを空ける */}
                 <div className="ml-auto flex shrink-0 items-center gap-3.5">
+                    {/*
+                      * 執筆向き／読書向きの切り替え。
+                      * ベルの横。押すとすぐ入れ替わる。
+                      */}
+                    <ModeToggle
+                        mode={profile?.home_mode}
+                        userId={profile?.user_id ?? null}
+                    />
+
                     <div ref={noticeRef} className="relative">
                         <button
                             type="button"

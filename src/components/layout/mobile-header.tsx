@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useEffect, useState } from "react";
+
 import AccountMenu from "@/components/layout/account-menu";
+import ModeToggle from "@/components/layout/mode-toggle";
+import { getRepository } from "@/lib/repository";
+import type { Profile } from "@/types";
 
 /**
  * ============================================================
@@ -32,6 +37,22 @@ export default function MobileHeader() {
     const pathname = usePathname() || "/";
 
     /*
+     * 向きの切り替えに要る。
+     * 読めるまでは押し具を出さない。
+     */
+    const [profile, setProfile] = useState<Profile | null>(null);
+
+    useEffect(() => {
+        void (async () => {
+            try {
+                setProfile(await getRepository().getProfile());
+            } catch {
+                /* 読めなくても、ロゴとベルは出す */
+            }
+        })();
+    }, []);
+
+    /*
      * 本文を書く画面だけ、出さない。
      *
      * ★ /workspace 全部を外してはいけない。
@@ -50,6 +71,12 @@ export default function MobileHeader() {
             </Link>
 
             <div className="mh_right">
+                {/*
+                  * 執筆向き／読書向きの切り替え。
+                  * パソコンと同じく、ベルの左に置く。
+                  */}
+                <ModeToggle mode={profile?.home_mode} userId={profile?.user_id ?? null} />
+
                 {/*
                   * ベル。
                   *

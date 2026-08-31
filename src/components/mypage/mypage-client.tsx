@@ -1567,29 +1567,21 @@ export default function MypageClient({
             */}
             <div style={{display:'inline-flex',border:'1px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden'}}>
               {/*
-               * 読書向け。
-               *
-               * まだ作りかけなので、ふつうの人には押させない。
-               * 運営だけ、実際の見え方を確かめながら作るために選べる。
-               * できあがったら、この見分けを外して全員に出す。
-               */}
-              {isRootAdmin ? (
-                <button
-                  onClick={()=>saveHomeMode('read')}
-                  title="作りかけの画面です（運営のみ）"
-                  style={{padding:'8px 18px',fontSize:13,fontWeight:homeMode==='read'?700:500,cursor:'pointer',border:'none',
-                    background:homeMode==='read'?'var(--color-brand)':'var(--color-bg-card)',
-                    color:homeMode==='read'?'var(--base-color-1)':'var(--color-text-muted)'}}>
-                  読書向け（作成中）
-                </button>
-              ) : (
-                <span
-                  title="読書向けの画面は準備中です"
-                  style={{padding:'8px 18px',fontSize:13,fontWeight:500,
-                    background:'var(--color-bg-card)',color:'var(--color-text-faint)'}}>
-                  読書向け（準備中）
-                </span>
-              )}
+                * 読書向け。
+                *
+                * ★ 運営だけの封を外した。
+                *   作りかけのあいだは運営だけが選べる形にしていたが、
+                *   読者向けのホーム・探す・ランキング・おすすめが
+                *   ひととおり整ったので、誰でも選べるようにする。
+                */}
+              <button
+                onClick={()=>saveHomeMode('read')}
+                title="読む人向けの画面にします"
+                style={{padding:'8px 18px',fontSize:13,fontWeight:homeMode==='read'?700:500,cursor:'pointer',border:'none',
+                  background:homeMode==='read'?'var(--color-brand)':'var(--color-bg-card)',
+                  color:homeMode==='read'?'var(--base-color-1)':'var(--color-text-muted)'}}>
+                読書向け
+              </button>
               <button
                 onClick={()=>saveHomeMode('write')}
                 style={{padding:'8px 18px',fontSize:13,fontWeight:isFocusWriting?500:700,cursor:'pointer',border:'none',

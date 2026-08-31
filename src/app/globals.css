@@ -1354,3 +1354,72 @@ body {
     white-space: nowrap;
     border: 0;
 }
+
+/*
+ * ============================================================
+ * 執筆向き／読書向きの切り替え
+ *
+ * ベルの横に置く、入り切りの形の押し具。
+ * ============================================================
+ */
+
+.mode-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+
+    width: 54px;
+    height: 28px;
+    padding: 0 7px;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    /* 執筆向きは濃い青、読書向きは水色 */
+    background: var(--color-forest, #1f4e6b);
+    color: #fff;
+    transition: background .2s ease;
+}
+
+.mode-toggle[data-on="read"] {
+    background: #3d9fd4;
+    /* つまみが右にあるので、絵は左に寄せる */
+    justify-content: flex-start;
+}
+
+.mode-toggle[data-on="write"] {
+    justify-content: flex-end;
+}
+
+.mode-toggle:disabled {
+    opacity: .6;
+    cursor: default;
+}
+
+.mode-toggle_icon {
+    display: flex;
+    position: relative;
+    z-index: 1;
+}
+
+/*
+ * つまみ。
+ *
+ * 絵と反対の側に置く。
+ * 同じ側だと重なって、どちらの向きか分からない。
+ */
+.mode-toggle_knob {
+    position: absolute;
+    top: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+    transition: left .2s ease;
+}
+
+.mode-toggle[data-on="write"] .mode-toggle_knob { left: 3px; }
+.mode-toggle[data-on="read"]  .mode-toggle_knob { left: 29px; }
