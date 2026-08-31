@@ -219,7 +219,7 @@
 
 .tw-sort {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 4px;
     margin-bottom: 10px;
 }

@@ -481,7 +481,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
       })
     })
 
-    setTweets(tweetsData.map(t => ({
+    const built = tweetsData.map(t => ({
       ...t,
       display_name: authorMap[t.user_id]?.display_name || '名前のない書き手',
       icon_url: authorMap[t.user_id]?.icon_url || null,
@@ -494,7 +494,26 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
       comments: commentMap[t.id] || [],
       showComments: false,
       showCount: 5,
-    })))
+    }))
+
+    /*
+     * 並べ替え。
+     *
+     * ★ 読んだあとに並べ替える。
+     *   いいねの数は別の表にあり、
+     *   つぶやきを読む問い合わせだけでは数えられない。
+     *
+     * ★ いいねが同じときは、新しい順。
+     *   そうしないと、並びが毎回入れ替わって落ち着かない。
+     */
+    if (sortBy === 'liked') {
+      built.sort((a, b) =>
+        (b.like_count || 0) - (a.like_count || 0)
+        || (a.created_at < b.created_at ? 1 : -1),
+      )
+    }
+
+    setTweets(built)
     setLoading(false)
   }
 
