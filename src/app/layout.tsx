@@ -21,6 +21,8 @@ import "./globals.css";
 import "@/styles/recommend.css";
 /* 携帯の下の帯 */
 import "@/styles/mobile-tab-bar.css";
+/* 携帯の「作品を探す」 */
+import "@/styles/mobile-search.css";
 import "@/styles/home/base.css";
 import "@/styles/home/ui.css";
 import "@/styles/home/loading.css";

@@ -441,7 +441,7 @@ export default async function SearchPage({ searchParams }: Props) {
     <div style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
       <Header />
 
-      <div className="main-layout" style={{maxWidth:1200,margin:'0 auto',padding:'24px 32px',display:'flex',gap:20,alignItems:'flex-start'}}>
+      <div className="main-layout sp-page" style={{maxWidth:1200,margin:'0 auto',padding:'24px 32px',display:'flex',gap:20,alignItems:'flex-start'}}>
         <div style={{flex:1,minWidth:0}}>
 
           <SearchForm
@@ -461,7 +461,7 @@ export default async function SearchPage({ searchParams }: Props) {
             }
           </div>
 
-          <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden'}}>
+          <div className="sp-list" style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden'}}>
             {novels.length === 0 ? (
               <div style={{padding:'60px',textAlign:'center',color:'var(--color-text-faint)'}}>
                 <div style={{fontSize:14,marginBottom:8}}>作品が見つかりませんでした</div>
@@ -469,7 +469,7 @@ export default async function SearchPage({ searchParams }: Props) {
               </div>
             ) : novels.map((n: any, idx: number) => (
               <NovelPopup key={n.id} novel={{...n, like_count: n.hideStats ? 0 : (n.likeCount||0)}}>
-              <div style={{cursor:'pointer',padding:'16px 20px',borderBottom:idx<novels.length-1?'1px solid var(--color-brand-light)':'none'}}>
+              <div className="sp-card" style={{cursor:'pointer',padding:'16px 20px',borderBottom:idx<novels.length-1?'1px solid var(--color-brand-light)':'none'}}>
                 <span style={{display:'flex',gap:5,marginBottom:6,flexWrap:'wrap',alignItems:'center'}}>
                   <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 6px',borderRadius:3}}>{n.genre}</span>
                   <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 6px',borderRadius:3}}>{n.novel_type}</span>
@@ -479,7 +479,7 @@ export default async function SearchPage({ searchParams }: Props) {
                     : <span style={{fontSize:10,background:'#f5f5f5',color:'#757575',border:'1px solid #e0e0e0',padding:'1px 6px',borderRadius:3}}>完結</span>}
                   {n.is_r18 && <span style={{fontSize:10,background:'#fef2f2',color:'var(--color-danger)',border:'1px solid #fca5a5',padding:'1px 6px',borderRadius:3}}>R18</span>}
                 </span>
-                <span style={{display:'block',fontSize:17,fontWeight:700,color:'var(--color-text)',marginBottom:4,lineHeight:1.4}}>{n.title}</span>
+                <span className="sp-card-title" style={{display:'block',fontSize:17,fontWeight:700,color:'var(--color-text)',marginBottom:4,lineHeight:1.4}}>{n.title}</span>
                 <span style={{display:'block',fontSize:12,color:'var(--color-text-muted)',marginBottom:6}}>作者：{n.display_name}</span>
                 {n.summary && (
                   <span style={{display:'block',fontSize:12,color:'#5a3a20',lineHeight:1.7,marginBottom:7,overflow:'hidden',WebkitLineClamp:3,WebkitBoxOrient:'vertical' as any}}>

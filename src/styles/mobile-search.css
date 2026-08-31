@@ -1,0 +1,70 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯の「作品を探す」
+ *
+ * ★ 1024px 未満でだけ効く。
+ *   パソコンには一切影響しない。
+ *
+ * ★ 元の指定は要素に直接書かれている（style={{...}}）。
+ *   CSS で上から効かせるには !important が要る。
+ *   本来は避けたい書き方だが、
+ *   パソコン側を書き換えないための代償として受け入れる。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    /*
+     * 頁の余白。
+     *
+     * 32px は携帯には広すぎる。
+     * 画面の幅が 390px しかない端末では、
+     * 中身が 326px しか残らない。
+     */
+    .sp-page {
+        padding: 12px 12px 0 !important;
+        gap: 0 !important;
+    }
+
+    /* 横に並べる柱は、携帯では出さない */
+    .sp-page > aside {
+        display: none !important;
+    }
+
+    /*
+     * 一覧の器。
+     *
+     * 角丸と枠をやめ、1 件ずつを離して並べる。
+     * 見本もそうなっている。
+     * 1 つの箱に詰めると、どこで切れるか分からない。
+     */
+    .sp-list {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* 1 件ぶん。それぞれを白い札にする */
+    .sp-card {
+        background: var(--color-bg-card) !important;
+        border: 1px solid var(--color-brand-border) !important;
+        border-bottom: 1px solid var(--color-brand-border) !important;
+        border-radius: 12px !important;
+        padding: 14px 15px !important;
+    }
+
+    /*
+     * 題名。
+     *
+     * 17px は携帯では大きい。
+     * 長い題名が 3 行を超えて、札が縦に伸びる。
+     */
+    .sp-card-title {
+        font-size: 15.5px !important;
+        line-height: 1.6 !important;
+    }
+}
