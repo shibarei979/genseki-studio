@@ -124,7 +124,7 @@ export default function PostClient() {
                      * 道具らしさより本らしさを前に出す。
                      */}
                     <h1
-                        className="text-[40px] font-semibold tracking-[0.12em]"
+                        className="text-[28px] sm:text-[40px] font-semibold tracking-[0.12em]"
                         style={{
                             fontFamily: "var(--font-serif), serif",
                             color: "var(--color-forest-dark)",
@@ -139,7 +139,7 @@ export default function PostClient() {
 
                 <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,390px)_minmax(0,1fr)]">
                     {/* ---- 新しく ---- */}
-                    <section className="rounded-2xl border border-line bg-surface px-8 py-11 text-center">
+                    <section className="rounded-2xl border border-line bg-surface px-5 py-8 sm:px-8 sm:py-11 text-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src="/icons/book-quill.png"
