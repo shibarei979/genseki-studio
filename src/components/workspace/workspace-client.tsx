@@ -163,7 +163,26 @@ export default function WorkspaceClient({ workId }: Props) {
         if (Number.isFinite(line) && line > 0) wantedLineRef.current = line;
 
         // 印を消す。読み込み直すたびに飛ばないように
-        window.history.replaceState({}, "", window.location.pathname);
+        /*
+         * 住所の後ろを片付ける。
+         *
+         * ★ pick は残す。
+         *
+         *   蛍光ペンで来たときの「どの資料に足すか」が
+         *   ここに入っている。
+         *   丸ごと消すと、開いた瞬間に蛍光ペンが解ける。
+         *
+         * ep と line は、もう読み取ったので消してよい。
+         * 残すと、読み込み直すたびにその話へ飛ぶ。
+         */
+        const pickId = params.get("pick");
+        window.history.replaceState(
+            {},
+            "",
+            pickId
+                ? `${window.location.pathname}?pick=${pickId}`
+                : window.location.pathname,
+        );
 
         /*
          * すでに読み込みが終わっていれば、その場で選び直す。
