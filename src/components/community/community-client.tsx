@@ -51,7 +51,7 @@ const VIEWS = [
     { key: "timeline", label: "タイムライン", icon: <HomeIcon /> },
     { key: "rooms", label: "執筆室", icon: <DoorIcon /> },
     { key: "mine", label: "自分のつぶやき", icon: <PenIcon /> },
-    { key: "following", label: "友達のつぶやき", icon: <PeopleIcon /> },
+    { key: "following", label: "フォロー中", icon: <PeopleIcon /> },
     { key: "notices", label: "お知らせ", icon: <BellIcon /> },
     { key: "bookmarks", label: "ブックマーク", icon: <BookmarkIcon /> },
 ] as const;
