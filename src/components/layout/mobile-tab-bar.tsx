@@ -2,6 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
+
+import { getRepository } from '@/lib/repository'
 
 /**
  * ============================================================
@@ -20,14 +23,32 @@ import { usePathname } from 'next/navigation'
  * ============================================================
  */
 
-/** 下に並べる行き先。見本と同じ 6 つ */
-const TABS = [
+/*
+ * 下に並べる行き先。
+ *
+ * ★ 読む向きと書く向きで、並びを変える。
+ *
+ *   読む人に「作品を書く」「コンテスト」を出しても、
+ *   使う道ではない。
+ *   代わりに「おすすめ」を出す。
+ *
+ *   上のヘッダーの並び（NAV_ITEMS）と同じ考え方。
+ */
+const WRITER_TABS = [
     { href: '/', label: 'ホーム', icon: 'home' },
     { href: '/post', label: '作品を書く', icon: 'pen' },
     { href: '/search', label: '作品を探す', icon: 'search' },
     { href: '/ranking', label: 'ランキング', icon: 'chart' },
     { href: '/rooms', label: 'コミュニティー', icon: 'people' },
     { href: '/contest', label: 'コンテスト', icon: 'trophy' },
+] as const
+
+const READER_TABS = [
+    { href: '/', label: 'ホーム', icon: 'home' },
+    { href: '/search', label: '作品を探す', icon: 'search' },
+    { href: '/ranking', label: 'ランキング', icon: 'chart' },
+    { href: '/recommend', label: 'おすすめ', icon: 'star' },
+    { href: '/rooms', label: 'コミュニティー', icon: 'people' },
 ] as const
 
 /*
@@ -50,6 +71,27 @@ const HIDE_PATTERN = /^\/workspace\/[^/]+\/post/
 
 export default function MobileTabBar() {
     const pathname = usePathname() || '/'
+
+    /*
+     * 見る向き。
+     *
+     * 読めるまでは執筆向けを出す。
+     * 一瞬で並びが入れ替わると、押そうとした所が動く。
+     */
+    const [isReader, setIsReader] = useState(false)
+
+    useEffect(() => {
+        void (async () => {
+            try {
+                const profile = await getRepository().getProfile()
+                setIsReader(profile?.home_mode === 'read')
+            } catch {
+                /* 読めなくても、執筆向けの並びで足りる */
+            }
+        })()
+    }, [])
+
+    const TABS = isReader ? READER_TABS : WRITER_TABS
 
     if (HIDE_ON.some((path) => pathname.startsWith(path))) return null
     if (HIDE_PATTERN.test(pathname)) return null
@@ -134,6 +176,12 @@ function Icon({ name }: { name: string }) {
                     <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
                     <path d="M16.5 5.5a3.2 3.2 0 0 1 0 6" />
                     <path d="M18 14.8c2 .8 3 2.6 3 5.2" />
+                </svg>
+            )
+        case 'star':
+            return (
+                <svg {...common}>
+                    <path d="m12 3.5 2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.7l5.9-.9L12 3.5Z" />
                 </svg>
             )
         case 'trophy':
