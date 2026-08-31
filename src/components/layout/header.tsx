@@ -517,7 +517,17 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                 </div>
             </div>
 
-            {/* 幅が狭いときは行き先を下の段に出す */}
+            {/*
+              * 携帯用の行き先。いまは出さない。
+              *
+              * ★ 下に帯（MobileTabBar）を作ったので、二重になる。
+              *   同じ行き先が上下に並ぶと、どちらを押せばよいか迷う。
+              *
+              * ★ パソコンには影響しない。
+              *   もともと lg:hidden で、1024px 以上では消えていた。
+              *
+              * 消さずに残すのは、下の帯をやめたときに戻せるようにするため。
+              */}
             <nav
                 aria-label="主なページ"
                 /*
@@ -528,7 +538,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                  * 左端（ホーム）が画面の外に出て戻せなくなる。
                  * 左から詰めれば、頭が必ず見える。
                  */
-                className="hd-nav thin-scroll flex items-center gap-1 overflow-x-auto border-t border-line px-4 py-1.5 sm:px-8 lg:hidden"
+                className="hidden"
             >
                 {shownNav.map((item) => (
                     <Link
