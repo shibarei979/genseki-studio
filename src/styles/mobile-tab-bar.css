@@ -46,6 +46,19 @@
          * env() が効かない端末では 0 になり、そのぶんだけ低くなる。
          */
         padding-bottom: env(safe-area-inset-bottom, 0);
+
+        /*
+         * ★ 左右の端も空ける。
+         *
+         *   iPhone の画面は角が丸いので、
+         *   いちばん端の「ホーム」と「コンテスト」が
+         *   角にかかって切れて見えていた。
+         *
+         *   env() が無い端末では 0 になるので、
+         *   最低でも 4px は確保する。
+         */
+        padding-left: max(4px, env(safe-area-inset-left, 0));
+        padding-right: max(4px, env(safe-area-inset-right, 0));
     }
 
     .mtb_item {
