@@ -333,7 +333,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
              * 中くらいの画面では詰めて、真ん中の行き先が
              * 収まる幅を空ける。
              */}
-            <div className="relative flex h-[72px] items-center px-4 sm:px-6 xl:px-10">
+            <div className="relative flex h-[56px] items-center px-4 sm:h-[72px] sm:px-6 xl:px-10">
                 {/*
                  * ロゴはヘッダーの高さより少し大きく見せたいので、
                  * 高さを固定したまま overflow を許して外へはみ出させる。
@@ -348,7 +348,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                     <img
                         src="/logo.svg"
                         alt="原石航路"
-                        className="h-[64px] w-auto"
+                        className="h-[42px] w-auto sm:h-[64px]"
                     />
                 </Link>
 
