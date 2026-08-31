@@ -76,3 +76,93 @@
         font-size: 16px;
     }
 }
+
+/*
+ * ============================================================
+ * あらすじを 5 行で止める
+ *
+ * ★ パソコンでも効かせる。
+ *
+ *   長いあらすじは 20 行を超えることがあり、
+ *   目次や「最初から読む」が画面の外へ押し出される。
+ *   読むかどうかを決める前に、その道が見えなくなる。
+ *   これは画面の幅に関わらず起きる。
+ * ============================================================
+ */
+
+/* 印は、いつでも見せない */
+.nv-summary-check {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+.nv-summary-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 開いたとき */
+.nv-summary-check:checked ~ .nv-summary-text {
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+/*
+ * 続きを読む。
+ *
+ * 左右に線を引き、その真ん中に文字を置く。
+ * 枠で囲むより静かで、区切りとしても働く。
+ *
+ * ★ ::before と ::after で線を引き、
+ *   余った幅いっぱいに伸ばす（flex: 1）。
+ *   文字の長さが変わっても、線が勝手に合う。
+ */
+.nv-summary-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+
+    color: var(--color-brand);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.nv-summary-label::before,
+.nv-summary-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--color-brand-border);
+}
+
+/* 文字と矢印を、線に割り込ませない */
+.nv-summary-open,
+.nv-summary-close,
+.nv-summary-arrow {
+    flex-shrink: 0;
+}
+
+.nv-summary-close { display: none; }
+.nv-summary-check:checked ~ .nv-summary-label .nv-summary-open { display: none; }
+.nv-summary-check:checked ~ .nv-summary-label .nv-summary-close { display: inline; }
+
+/* 矢印。丸で囲まず、文字のすぐ横に置く */
+.nv-summary-arrow {
+    display: inline-block;
+    margin-left: -6px;
+    font-size: 11px;
+    line-height: 1;
+    transition: transform .15s ease;
+}
+
+.nv-summary-check:checked ~ .nv-summary-label .nv-summary-arrow {
+    transform: rotate(180deg);
+}
