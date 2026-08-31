@@ -470,8 +470,7 @@
     }
 
     .rs-more-open,
-    .rs-more-close,
-    .rs-more-arrow {
+    .rs-more-close {
         flex-shrink: 0;
     }
 
@@ -502,25 +501,4 @@
     .rs-more-check:checked ~ .rs-more-label .rs-more-close { display: inline; }
 
     /* 矢印。丸で囲んで、押す所だと分かるようにする */
-    /*
-     * 矢印。
-     *
-     * ★ 負の余白で寄せない。
-     *   前は margin-left: -6px で文字に食い込ませていたが、
-     *   文字の下端と矢印の中心が合わず、浮いて見えていた。
-     *
-     * gap で間を取り、上下の中心をそろえる。
-     */
-    .rs-more-arrow {
-        display: inline-block;
-        font-size: 10px;
-        line-height: 1;
-        /* 文字の中心に合わせる。矢印は下に重心があるため */
-        transform: translateY(-1px);
-        transition: transform .15s ease;
     }
-
-    .rs-more-check:checked ~ .rs-more-label .rs-more-arrow {
-        transform: translateY(-1px) rotate(180deg);
-    }
-}

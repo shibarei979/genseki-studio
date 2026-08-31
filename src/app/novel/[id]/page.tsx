@@ -525,8 +525,30 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                   justifyContent: novel.summary ? 'flex-start' : 'center',
                 }}>
                   {novel.summary && (
-                    <div style={{fontSize:13,color:'var(--color-text)',lineHeight:1.85,padding:'10px 12px',background:'var(--color-bg)',borderRadius:8,borderLeft:'3px solid #f5a060',whiteSpace:'pre-wrap',flex:'1 1 320px',minWidth:0}}>
-                      {novel.summary}
+                    /*
+                     * あらすじ。
+                     *
+                     * ★ 5 行で止めて、続きは押して出す。
+                     *
+                     *   長いあらすじは 20 行を超えることがあり、
+                     *   目次や「最初から読む」が画面の外へ押し出される。
+                     *   読むかどうかを決める前に、その道が見えなくなる。
+                     *
+                     * ★ 印（checkbox）と札（label）だけで作る。
+                     *   このページはサーバー側で組み立てるので、
+                     *   状態を持つ部品にすると作りが増える。
+                     */
+                    <div className="nv-summary" style={{flex:'1 1 320px',minWidth:0}}>
+                      <input type="checkbox" id="nv-more" className="nv-summary-check" />
+
+                      <div className="nv-summary-text" style={{fontSize:13,color:'var(--color-text)',lineHeight:1.85,padding:'10px 12px',background:'var(--color-bg)',borderRadius:8,borderLeft:'3px solid #f5a060',whiteSpace:'pre-wrap'}}>
+                        {novel.summary}
+                      </div>
+
+                      <label htmlFor="nv-more" className="nv-summary-label">
+                        <span className="nv-summary-open">続きを読む</span>
+                        <span className="nv-summary-close">とじる</span>
+                      </label>
                     </div>
                   )}
 

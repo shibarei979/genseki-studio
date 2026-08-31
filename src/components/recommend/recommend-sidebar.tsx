@@ -149,7 +149,6 @@ export default function RecommendSidebar({
             <label htmlFor="rs-more" className="rs-more-label">
                 <span className="rs-more-open">ジャンル・条件を見る</span>
                 <span className="rs-more-close">とじる</span>
-                <span className="rs-more-arrow">⌄</span>
             </label>
         </aside>
     )
