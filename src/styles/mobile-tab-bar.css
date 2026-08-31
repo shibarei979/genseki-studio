@@ -1,0 +1,123 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯の下の帯
+ *
+ * ★ 携帯だけ。1024px 以上では出さない。
+ *   パソコンには上の柱があるので、二重になる。
+ *
+ * ★ ここ以外に手を入れない。
+ *   パソコンの見た目を変えないための決まり。
+ * ============================================================
+ */
+
+.mtb {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .mtb {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        /*
+         * 中身より上に出す。
+         * 作品の一覧や画像に隠れると、押せなくなる。
+         */
+        z-index: 60;
+
+        display: flex;
+        align-items: stretch;
+
+        /*
+         * 地は白く塗る。
+         *
+         * 透かすと、下の文字が透けて読みにくい。
+         * うっすら透かす作りもあるが、
+         * 端末によって効かず、まだらになる。
+         */
+        background: #ffffff;
+        border-top: 1px solid rgba(15, 23, 42, .08);
+        box-shadow: 0 -1px 3px rgba(15, 23, 42, .04);
+
+        /*
+         * iPhone の下の横線に隠れないようにする。
+         * env() が効かない端末では 0 になり、そのぶんだけ低くなる。
+         */
+        padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    .mtb_item {
+        /* 6 つを均等に割る。長い名前でも幅を取りすぎない */
+        flex: 1 1 0;
+        min-width: 0;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+
+        /* 指で押せる大きさ。44px を下回らない */
+        min-height: 52px;
+        padding: 7px 2px 6px;
+
+        text-decoration: none;
+        color: #94a3b8;
+        /* 押したときの色の変化を、待たせない */
+        transition: color .12s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* いま居る所 */
+    .mtb_item.is-here {
+        color: var(--color-brand, #1f4e6b);
+    }
+
+    .mtb_label {
+        /*
+         * 10px。6 つ並ぶので、これ以上大きいと
+         * 「コミュニティー」が折り返す。
+         */
+        font-size: 10px;
+        line-height: 1.2;
+        letter-spacing: -.02em;
+        white-space: nowrap;
+        /* それでも入らない端末では、はみ出さずに切る */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    /*
+     * 中身の下に、帯のぶんの余白を空ける。
+     *
+     * これが無いと、頁のいちばん下が帯に隠れて読めない。
+     * フッターの著作権表示などが特に隠れやすい。
+     */
+    body {
+        padding-bottom: calc(58px + env(safe-area-inset-bottom, 0));
+    }
+}
+
+/*
+ * 横向きにしたとき。
+ *
+ * 画面が低くなるので、帯を薄くする。
+ * そのままだと、本文の場所がほとんど残らない。
+ */
+@media (max-width: 1023px) and (max-height: 480px) {
+    .mtb_item {
+        min-height: 44px;
+        padding: 4px 2px;
+    }
+
+    .mtb_label {
+        font-size: 9px;
+    }
+
+    body {
+        padding-bottom: calc(48px + env(safe-area-inset-bottom, 0));
+    }
+}
