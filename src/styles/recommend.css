@@ -24,10 +24,62 @@
 @media (max-width: 900px) {
     .rec-page {
         grid-template-columns: minmax(0, 1fr);
+        padding: 14px 12px 40px;
+        gap: 14px;
     }
-    /* 狭い画面では柱を出さない。条件は探すページにある */
-    .rec-page > .rs {
-        display: none;
+
+    /*
+     * 柱は、板の上に置く。
+     *
+     * ★ 前は出さないことにしていたが、
+     *   それだとジャンルも条件も選べなくなっていた。
+     *   このページの絞り込みは、ここにしか無い。
+     *
+     * 縦の一覧のままだと場所を取るので、札の形に並べる。
+     */
+    .rs {
+        position: static;
+    }
+
+    .rs_group + .rs_group {
+        margin-top: 14px;
+    }
+
+    .rs_label {
+        padding-left: 0;
+        margin-bottom: 6px;
+    }
+
+    /*
+     * 札を横に並べる。
+     *
+     * ★ ul は block のまま。
+     *   flex にして折り返すと、幅の計算で外へ漏れる。
+     *   inline-block を並べるほうが確実。
+     */
+    .rs_group ul {
+        font-size: 0;
+    }
+
+    .rs_group li {
+        display: inline-block;
+        margin: 0 5px 5px 0;
+    }
+
+    .rs_item {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--color-brand-border);
+        background: var(--color-bg-card);
+        font-size: 12.5px;
+        white-space: nowrap;
+    }
+
+    .rs_item.is-on {
+        background: var(--color-brand);
+        border-color: var(--color-brand);
+        color: #fff;
     }
 }
 
