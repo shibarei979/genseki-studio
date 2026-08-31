@@ -11,12 +11,13 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import EntryImage from "@/components/common/entry-image";
 import EntryImagePanel from "@/components/resource/entry-image-panel";
 import MentionTimeline from "@/components/resource/mention-timeline";
 import ResourceIcon from "@/components/resource/resource-icons";
+import { getRepository } from "@/lib/repository";
 import type {
     Episode,
     EntryMention,
@@ -63,6 +64,47 @@ export default function EntryDetail({
     onJump,
     onClose,
 }: Props) {
+    /*
+     * 資料から外した行。
+     *
+     * 「言及・行動・台詞」は本文を読んで毎回数え直しているので、
+     * 外したことは別に覚えておく必要がある。
+     */
+    const [hiddenLines, setHiddenLines] = useState<
+        { episode_id: string; line: number; text: string }[]
+    >([]);
+
+    useEffect(() => {
+        void (async () => {
+            try {
+                const rows = await getRepository().listLineMarks(entry.id);
+                setHiddenLines(rows.filter((row) => row.kind === "hidden"));
+            } catch {
+                /* 読めなくても、数え直した一覧は出す */
+            }
+        })();
+    }, [entry.id]);
+
+    async function hideLine(episodeId: string, line: number, text: string) {
+        /*
+         * 画面から先に消す。
+         * 保存を待たせると、押しても反応が無いように見える。
+         */
+        setHiddenLines((prev) => [...prev, { episode_id: episodeId, line, text }]);
+
+        try {
+            await getRepository().hideMentionLine(entry.id, episodeId, line, text);
+        } catch {
+            /* 保存できなければ、戻す */
+            setHiddenLines((prev) =>
+                prev.filter(
+                    (row) => !(row.episode_id === episodeId && row.line === line),
+                ),
+            );
+            window.alert("外せませんでした。時間をおいて試してください。");
+        }
+    }
+
     const [isEditing, setIsEditing] = useState(false);
 
     const aliases = Array.isArray(entry.aliases) ? entry.aliases : [];
@@ -256,6 +298,8 @@ export default function EntryDetail({
                                 entry={entry}
                                 episodes={episodes}
                                 onJump={onJump}
+                                hidden={hiddenLines}
+                                onHide={hideLine}
                             />
                         </Card>
 

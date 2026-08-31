@@ -1704,6 +1704,71 @@ export const supabaseRepository: Repository = {
     },
 
     /**
+     * 資料の行の覚え書きを読む。
+     *
+     * 資料を開いたときに、その資料ぶんをまとめて読む。
+     * 1 行ずつ問い合わせると、行数だけ往復することになる。
+     */
+    async listLineMarks(entryId: string): Promise<{
+        episode_id: string;
+        line: number;
+        kind: string;
+        text: string;
+    }[]> {
+        const { data } = await db()
+            .from("entry_line_marks")
+            .select("episode_id, line, kind, text")
+            .eq("entry_id", entryId);
+
+        return (data ?? []) as {
+            episode_id: string;
+            line: number;
+            kind: string;
+            text: string;
+        }[];
+    },
+
+    /**
+     * この行は消した、と覚える。
+     *
+     * ★ そのときの本文も一緒に残す。
+     *   行の番号だけでは、本文を直したときにずれる。
+     *   照らし合わせて、違っていたら記録を捨てる。
+     */
+    async hideMentionLine(
+        entryId: string,
+        episodeId: string,
+        line: number,
+        text: string,
+    ): Promise<void> {
+        await db().from("entry_line_marks").upsert(
+            {
+                entry_id: entryId,
+                episode_id: episodeId,
+                line,
+                kind: "hidden",
+                text,
+            },
+            { onConflict: "entry_id,episode_id,line,kind" },
+        );
+    },
+
+    /** 消したのを取り消す */
+    async unhideMentionLine(
+        entryId: string,
+        episodeId: string,
+        line: number,
+    ): Promise<void> {
+        await db()
+            .from("entry_line_marks")
+            .delete()
+            .eq("entry_id", entryId)
+            .eq("episode_id", episodeId)
+            .eq("line", line)
+            .eq("kind", "hidden");
+    },
+
+    /**
      * ==========================================================
      * 書き出しと読み込み
      *

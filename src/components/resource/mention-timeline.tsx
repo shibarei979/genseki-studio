@@ -26,19 +26,51 @@ type Filter = "all" | MentionKind;
 interface Props {
     entry: ResourceEntry;
     episodes: Episode[];
+    /**
+     * 消した行。
+     *
+     * 「言及・行動・台詞」は本文を読んで毎回数え直しているので、
+     * 消したことは別に覚えておく必要がある。
+     */
+    hidden?: { episode_id: string; line: number; text: string }[];
+    /** ゴミ箱を押したとき */
+    onHide?: (episodeId: string, line: number, text: string) => void;
     /** 本文のその場所へ飛ぶ */
     onJump?: (episodeId: string, line: number) => void;
 }
 
-export default function MentionTimeline({ entry, episodes, onJump }: Props) {
+export default function MentionTimeline({ entry, episodes, onJump, hidden = [], onHide }: Props) {
     const [filter, setFilter] = useState<Filter>("all");
     const [limit, setLimit] = useState(20);
 
     // 本文を全部走査する。項目か本文が変わったときだけ数え直す
-    const mentions = useMemo(
-        () => scanMentions(entry, episodes),
-        [entry, episodes],
-    );
+    const mentions = useMemo(() => {
+        const found = scanMentions(entry, episodes);
+
+        if (hidden.length === 0) return found;
+
+        /*
+         * 消した行を外す。
+         *
+         * ★ 行の番号だけでは足りない。
+         *
+         *   消したあとで作者が前のほうに段落を足すと、
+         *   その行の番号がずれる。
+         *   番号だけで判断すると、別の行を消してしまう。
+         *
+         *   本文も照らし合わせて、同じときだけ外す。
+         *   違っていたら、その覚え書きはもう合っていない。
+         */
+        return found.filter((row) => {
+            const mark = hidden.find(
+                (h) => h.episode_id === row.episodeId && h.line === row.line,
+            );
+            if (!mark) return true;
+
+            const now = (row.speech || row.text || "").trim();
+            return mark.text.trim() !== now.trim();
+        });
+    }, [entry, episodes, hidden]);
     const summary = useMemo(() => summarizeMentions(mentions), [mentions]);
 
     if (mentions.length === 0) {
@@ -110,7 +142,7 @@ export default function MentionTimeline({ entry, episodes, onJump }: Props) {
             <ul className="thin-scroll max-h-96 space-y-1 overflow-y-auto">
                 {shown.map((row, index) => (
                     <li key={`${row.episodeId}-${row.line}-${index}`}>
-                        <MentionRow mention={row} onJump={onJump} />
+                        <MentionRow mention={row} onJump={onJump} onHide={onHide} />
                     </li>
                 ))}
             </ul>
@@ -133,14 +165,52 @@ export default function MentionTimeline({ entry, episodes, onJump }: Props) {
 function MentionRow({
     mention,
     onJump,
+    onHide,
 }: {
     mention: Mention;
     onJump?: (episodeId: string, line: number) => void;
+    onHide?: (episodeId: string, line: number, text: string) => void;
 }) {
     const label = `第${mention.epNumber}話 ${mention.line}行目`;
 
     return (
-        <div className="flex items-start gap-2 rounded-md px-1.5 py-1.5 hover:bg-canvas">
+        <div className="group flex items-start gap-2 rounded-md px-1.5 py-1.5 hover:bg-canvas">
+            {/*
+              * 消す押し具。
+              *
+              * ★ 行の左に置く。
+              *   数え違いに気づくのは、その行を読んだとき。
+              *   目で追う先に押し具があるほうが早い。
+              *
+              * ★ 確認は出さない。
+              *   資料から外すだけで、本文は変わらない。
+              *   間違えても、また数え直せば戻る。
+              */}
+            {onHide && (
+                <button
+                    type="button"
+                    onClick={() =>
+                        onHide(
+                            mention.episodeId,
+                            mention.line,
+                            (mention.speech || mention.text || "").trim(),
+                        )
+                    }
+                    title="この行を資料から外す"
+                    aria-label="この行を資料から外す"
+                    className="mt-0.5 shrink-0 text-faint opacity-0 transition-opacity hover:text-[var(--color-danger)] group-hover:opacity-100"
+                >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="1.8"
+                        strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 6h16" />
+                        <path d="M9 6V4h6v2" />
+                        <path d="M6.5 6.5 7.5 20h9l1-13.5" />
+                        <path d="M10 10v6M14 10v6" />
+                    </svg>
+                </button>
+            )}
+
             <button
                 type="button"
                 onClick={() => onJump?.(mention.episodeId, mention.line)}

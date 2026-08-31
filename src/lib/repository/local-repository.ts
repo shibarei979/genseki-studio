@@ -1060,6 +1060,23 @@ export const localRepository: Repository = {
         );
     },
 
+    /*
+     * 手元だけの置き場では、覚え書きを持たない。
+     * 資料の行を消す機能は、繋がっているときだけ使える。
+     */
+    async listLineMarks(): Promise<{
+        episode_id: string;
+        line: number;
+        kind: string;
+        text: string;
+    }[]> {
+        return [];
+    },
+
+    async hideMentionLine(): Promise<void> {},
+
+    async unhideMentionLine(): Promise<void> {},
+
     /**
      * ==========================================================
      * AiSettings

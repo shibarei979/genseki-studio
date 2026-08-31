@@ -302,6 +302,36 @@ export interface Repository {
     deleteMention(mentionId: string): Promise<void>;
 
     /**
+     * 資料の行の覚え書き。
+     *
+     * 「言及・行動・台詞」は本文を読んで毎回数え直しているので、
+     * 消したことを別に覚えておく必要がある。
+     *
+     * kind
+     *   hidden  消した
+     *   picked  自分で入れた（あとで作る）
+     */
+    listLineMarks(entryId: string): Promise<{
+        episode_id: string;
+        line: number;
+        kind: string;
+        text: string;
+    }[]>;
+
+    hideMentionLine(
+        entryId: string,
+        episodeId: string,
+        line: number,
+        text: string,
+    ): Promise<void>;
+
+    unhideMentionLine(
+        entryId: string,
+        episodeId: string,
+        line: number,
+    ): Promise<void>;
+
+    /**
      * ==========================================================
      * AiSettings（AI補助設定）
      * ==========================================================
