@@ -1239,3 +1239,58 @@
     line-height: 1.5;
     letter-spacing: .04em;
 }
+
+/*
+ * ============================================================
+ * 携帯の本棚
+ *
+ * ★ 高さだけ下げる。
+ *
+ *   本の大きさと位置は home.js が計算して、
+ *   要素ごとに直接書き込んでいる。
+ *   CSS で大きさだけ変えると、位置と食い違って散らばる。
+ *
+ *   3 冊を収めるには home.js の側で
+ *   画面の幅に応じた縮尺を持たせる必要がある。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    .reader-home .bookshelf-loop {
+        /*
+         * 画面の高さの半分まで。
+         *
+         * 前は 60vh − 250px に下限 370px。
+         * 携帯では下限が効いて、上の余白 250px と合わせて
+         * 620px を占めていた。画面の 4 分の 3 に近い。
+         */
+        height: 300px !important;
+        min-height: 0 !important;
+        margin-top: 120px !important;
+    }
+}
+
+/*
+ * ============================================================
+ * 携帯では、作品の並びの左右を詰める
+ *
+ * 12px の余白が両側にあると、
+ * 幅 390px の画面で中身が 366px しか残らない。
+ * 題名が途中で切れる。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    .reader-home .rwl,
+    .reader-home .rh_search,
+    .reader-home .rh_banner,
+    .reader-home .fs {
+        width: 100% !important;
+        max-width: none !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+    }
+}
