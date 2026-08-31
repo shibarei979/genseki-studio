@@ -483,12 +483,12 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
                           *   忘れていない人の目には入らないほうがよい。
                           */}
                         {mode === "signin" && (
-                            <p className="-mt-2 text-right">
+                            <p className="-mt-2 text-center">
                                 <Link
                                     href="/login/reset"
                                     className="text-[11.5px] text-muted underline underline-offset-2 hover:text-forest"
                                 >
-                                    パスワードを忘れた方
+                                    パスワードを再設定する
                                 </Link>
                             </p>
                         )}
