@@ -20,6 +20,7 @@ import "./globals.css";
 /* おすすめのページ。掲示板の見た目 */
 import "@/styles/recommend.css";
 /* 携帯の下の帯 */
+import "@/styles/mobile-header.css";
 import "@/styles/mobile-tab-bar.css";
 /* 携帯の「作品を探す」 */
 import "@/styles/mobile-search.css";
@@ -39,6 +40,7 @@ import "@/styles/home/book_info.css";
 import "@/styles/home/responsive.css";
 import "@/styles/home/reader-layout.css";
 import MobileTabBar from "@/components/layout/mobile-tab-bar";
+import MobileHeader from "@/components/layout/mobile-header";
 
 const notoSans = Noto_Sans_JP({
     subsets: ["latin"],
@@ -155,6 +157,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         </noscript>
                     </>
                 )}
+                {/*
+                  * 携帯だけのヘッダー。
+                  * 同じ幅で、既存のヘッダーは CSS 側で出さない。
+                  */}
+                <MobileHeader />
+
                 <AuthGate>{children}</AuthGate>
 
                 {/*

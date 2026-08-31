@@ -1,0 +1,79 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯だけのヘッダー
+ *
+ * ★ 1024px 未満でだけ出す。
+ *   同じ幅で、既存のヘッダーは出さない。
+ *
+ * ★ 既存のヘッダーには手を入れない。
+ *   パソコンの見た目を変えないため。
+ * ============================================================
+ */
+
+.mh {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    /*
+     * 既存のヘッダーを出さない。
+     *
+     * 中に行き先の並び・パンくず・入室中の帯があり、
+     * 隠しても高さが残っていた。
+     * 丸ごと出さないほうが確実。
+     */
+    body > div > header:not(.mh),
+    header:not(.mh) {
+        display: none !important;
+    }
+
+    .mh {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        /* ロゴの高さぴったり。余計な余白を作らない */
+        height: 54px;
+        padding: 0 14px;
+
+        background: var(--color-surface, #fff);
+        border-bottom: 1px solid var(--color-line, #e5e7eb);
+    }
+
+    .mh_logo {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .mh_logo img {
+        /* ヘッダーと同じ高さ。はみ出させない */
+        height: 54px;
+        width: auto;
+    }
+
+    .mh_right {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+
+    .mh_bell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid var(--color-line, #e5e7eb);
+        color: var(--color-text-muted, #6b7280);
+        -webkit-tap-highlight-color: transparent;
+    }
+}
