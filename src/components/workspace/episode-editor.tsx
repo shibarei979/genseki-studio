@@ -25,6 +25,11 @@ import { WRITING_MODE_LABEL } from "@/types";
 
 interface Props {
     episode: Episode;
+    /**
+     * 蛍光ペン。
+     * 資料から来たとき、その資料の id が入る。
+     */
+    pickEntryId?: string | null;
     settings: DisplaySettings;
     /** 資料から飛んできたときの行番号。1 から数える */
     jumpToLine?: number | null;
@@ -49,6 +54,7 @@ interface Props {
 
 export default function EpisodeEditor({
     episode,
+    pickEntryId = null,
     settings,
     onSave,
     jumpToLine,
@@ -99,6 +105,52 @@ export default function EpisodeEditor({
     const surfaceRef = useRef<HTMLDivElement>(null);
     /** 本文の選択位置。ルビを振るときに使う */
     const [range, setRange] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
+
+    /*
+     * 蛍光ペン。
+     *
+     * 資料から「本文から足す」で来たとき、
+     * 住所に ?pick=資料のid が付いている。
+     *
+     * ★ 選んだ場所を見る。
+     *   携帯で長押しすると、その語が選ばれる。
+     *   選ばれたことを見れば、長押しを見たのと同じになる。
+     *   打ち込む欄に押し具を重ねずに済む。
+     */
+    const [pickDone, setPickDone] = useState(false);
+
+    /** 選んでいる行の本文。空なら押し具を出さない */
+    const pickedLine = (() => {
+        if (!pickEntryId || range.start === range.end) return "";
+        const head = body.lastIndexOf("\n", range.start - 1) + 1;
+        const tail = body.indexOf("\n", range.end);
+        return body.slice(head, tail === -1 ? undefined : tail).trim();
+    })();
+
+    /** その行が何行目か */
+    const pickedLineNo = (() => {
+        if (!pickedLine) return 0;
+        return body.slice(0, range.start).split("\n").length;
+    })();
+
+    const episodeId = episode.id;
+
+    async function addToEntry() {
+        if (!pickEntryId || !pickedLine || !episodeId) return;
+
+        try {
+            await getRepository().pickMentionLine(
+                pickEntryId,
+                episodeId,
+                pickedLineNo,
+                pickedLine,
+            );
+            setPickDone(true);
+            window.setTimeout(() => setPickDone(false), 1800);
+        } catch {
+            window.alert("足せませんでした。時間をおいて試してください。");
+        }
+    }
 
     // 別の話に切り替わったら編集中の値を差し替える
     useEffect(() => {
@@ -689,6 +741,38 @@ export default function EpisodeEditor({
                 />
 
                 </div>
+
+                {/*
+                  * 資料に足す。
+                  *
+                  * ★ 選んでいるあいだだけ出す。
+                  *   打ち込む欄に重ねず、下に浮かせる。
+                  *   打っている最中に出ると、指が当たる。
+                  */}
+                {pickEntryId && pickedLine && (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+                        <button
+                            type="button"
+                            onClick={() => void addToEntry()}
+                            className="pointer-events-auto flex max-w-[90%] items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-[12.5px] text-white shadow-lg"
+                        >
+                            {pickDone ? (
+                                "足しました"
+                            ) : (
+                                <>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" strokeWidth="2"
+                                        strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                    <span className="truncate">
+                                        この行を資料に足す
+                                    </span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
 
                 {flashLine !== null && (
                     <p className="pointer-events-none absolute right-4 top-3 rounded-full bg-forest px-3 py-1 text-[11px] text-white shadow">

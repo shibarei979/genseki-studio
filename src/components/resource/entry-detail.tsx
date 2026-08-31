@@ -79,11 +79,17 @@ export default function EntryDetail({
         { episode_id: string; line: number; text: string }[]
     >([]);
 
+    /** 蛍光ペンで自分で足した行 */
+    const [pickedLines, setPickedLines] = useState<
+        { episode_id: string; line: number; text: string }[]
+    >([]);
+
     useEffect(() => {
         void (async () => {
             try {
                 const rows = await getRepository().listLineMarks(entry.id);
                 setHiddenLines(rows.filter((row) => row.kind === "hidden"));
+                setPickedLines(rows.filter((row) => row.kind === "picked"));
             } catch {
                 /* 読めなくても、数え直した一覧は出す */
             }
@@ -357,6 +363,7 @@ export default function EntryDetail({
                                 episodes={episodes}
                                 onJump={onJump}
                                 hidden={hiddenLines}
+                                picked={pickedLines}
                                 onHide={hideLine}
                             />
                         </Card>

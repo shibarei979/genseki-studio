@@ -1077,6 +1077,8 @@ export const localRepository: Repository = {
 
     async unhideMentionLine(): Promise<void> {},
 
+    async pickMentionLine(): Promise<void> {},
+
     /**
      * ==========================================================
      * AiSettings

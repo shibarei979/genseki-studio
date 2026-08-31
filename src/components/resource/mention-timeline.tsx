@@ -35,11 +35,13 @@ interface Props {
     hidden?: { episode_id: string; line: number; text: string }[];
     /** ゴミ箱を押したとき */
     onHide?: (episodeId: string, line: number, text: string) => void;
+    /** 蛍光ペンで自分で足した行 */
+    picked?: { episode_id: string; line: number; text: string }[];
     /** 本文のその場所へ飛ぶ */
     onJump?: (episodeId: string, line: number) => void;
 }
 
-export default function MentionTimeline({ entry, episodes, onJump, hidden = [], onHide }: Props) {
+export default function MentionTimeline({ entry, episodes, onJump, hidden = [], picked = [], onHide }: Props) {
     const [filter, setFilter] = useState<Filter>("all");
     const [limit, setLimit] = useState(20);
 
@@ -61,6 +63,31 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
          *   本文も照らし合わせて、同じときだけ外す。
          *   違っていたら、その覚え書きはもう合っていない。
          */
+        /*
+         * 自分で足した行を混ぜる。
+         *
+         * 数え直しでは見つからなかったが、
+         * 本文を読んで手で入れたもの。
+         */
+        for (const one of picked) {
+            const already = found.some(
+                (row) => row.episodeId === one.episode_id && row.line === one.line,
+            );
+            if (already) continue;
+
+            const ep = episodes.find((e) => e.id === one.episode_id);
+            found.push({
+                episodeId: one.episode_id,
+                epNumber: ep?.ep_number ?? 0,
+                line: one.line,
+                kind: "mention",
+                text: one.text,
+                speech: "",
+            } as Mention);
+        }
+
+        found.sort((a, b) => a.epNumber - b.epNumber || a.line - b.line);
+
         return found.filter((row) => {
             const mark = hidden.find(
                 (h) => h.episode_id === row.episodeId && h.line === row.line,
@@ -70,7 +97,7 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
             const now = (row.speech || row.text || "").trim();
             return mark.text.trim() !== now.trim();
         });
-    }, [entry, episodes, hidden]);
+    }, [entry, episodes, hidden, picked]);
     const summary = useMemo(() => summarizeMentions(mentions), [mentions]);
 
     if (mentions.length === 0) {

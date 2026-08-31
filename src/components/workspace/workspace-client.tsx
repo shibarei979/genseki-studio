@@ -646,6 +646,7 @@ export default function WorkspaceClient({ workId }: Props) {
 
                     {selected ? (
                         <EpisodeEditor
+                            pickEntryId={searchParams.get("pick")}
                             key={selected.id}
                             episode={selected}
                             settings={settings}

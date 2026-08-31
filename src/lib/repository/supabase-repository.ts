@@ -1753,6 +1753,30 @@ export const supabaseRepository: Repository = {
         );
     },
 
+    /**
+     * 蛍光ペンで、自分で資料に足した行。
+     *
+     * 消したときと同じ表に入れる。
+     * kind で見分けるので、表を増やさずに済む。
+     */
+    async pickMentionLine(
+        entryId: string,
+        episodeId: string,
+        line: number,
+        text: string,
+    ): Promise<void> {
+        await db().from("entry_line_marks").upsert(
+            {
+                entry_id: entryId,
+                episode_id: episodeId,
+                line,
+                kind: "picked",
+                text,
+            },
+            { onConflict: "entry_id,episode_id,line,kind" },
+        );
+    },
+
     /** 消したのを取り消す */
     async unhideMentionLine(
         entryId: string,

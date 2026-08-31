@@ -331,6 +331,14 @@ export interface Repository {
         line: number,
     ): Promise<void>;
 
+    /** 蛍光ペンで、自分で資料に足した行 */
+    pickMentionLine(
+        entryId: string,
+        episodeId: string,
+        line: number,
+        text: string,
+    ): Promise<void>;
+
     /**
      * ==========================================================
      * AiSettings（AI補助設定）
