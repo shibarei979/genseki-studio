@@ -118,3 +118,25 @@
         padding: 14px !important;
     }
 }
+
+/*
+ * ============================================================
+ * あらすじは 1 行
+ *
+ * 3 行あると 1 件が縦に長く、
+ * 1 画面に 2 件しか入らない。
+ * 続きは作品ページで読む。
+ *
+ * ★ ランキングと同じ扱いにそろえる。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    .sp-summary {
+        display: -webkit-box !important;
+        -webkit-line-clamp: 1 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        margin-bottom: 4px !important;
+    }
+}

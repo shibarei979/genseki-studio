@@ -482,7 +482,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 <span className="sp-card-title" style={{display:'block',fontSize:17,fontWeight:700,color:'var(--color-text)',marginBottom:4,lineHeight:1.4}}>{n.title}</span>
                 <span style={{display:'block',fontSize:12,color:'var(--color-text-muted)',marginBottom:6}}>作者：{n.display_name}</span>
                 {n.summary && (
-                  <span style={{display:'block',fontSize:12,color:'#5a3a20',lineHeight:1.7,marginBottom:7,overflow:'hidden',WebkitLineClamp:3,WebkitBoxOrient:'vertical' as any}}>
+                  <span className="sp-summary" style={{display:'block',fontSize:12,color:'#5a3a20',lineHeight:1.7,marginBottom:7,overflow:'hidden',WebkitLineClamp:3,WebkitBoxOrient:'vertical' as any}}>
                     {n.summary}
                   </span>
                 )}
