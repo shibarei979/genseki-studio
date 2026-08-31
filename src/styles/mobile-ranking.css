@@ -106,6 +106,19 @@
         flex-direction: column !important;
         gap: 6px !important;
         margin-bottom: 12px !important;
+
+        /*
+         * ★ 横に漏れる原因はここ。
+         *
+         *   元の指定に alignItems: 'flex-start' がある。
+         *   縦並びで「左寄せ」にすると、
+         *   中の箱は「画面の幅」ではなく「中身の幅」になる。
+         *   札を全部横に並べた幅になり、折り返さず外へ出る。
+         *
+         *   stretch にして、画面の幅いっぱいに広げる。
+         *   そこで初めて flex-wrap が効く。
+         */
+        align-items: stretch !important;
     }
 
     .rk-filter > div:first-child {
