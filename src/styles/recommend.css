@@ -412,3 +412,75 @@
     /* 上に光。粘着テープの艶 */
     box-shadow: inset 0 2px 3px rgba(255, 255, 255, .5);
 }
+
+/*
+ * ============================================================
+ * 携帯で絞り込みを畳む
+ *
+ * 5 つ ＋ 19 個 ＋ 2 つで、26 個の札が並ぶ。
+ * 全部出していると、作品にたどり着くまで送り続けることになる。
+ *
+ * ★ 「探す」の 5 つだけ残す。
+ *   どの見方をしているかは、いつでも分かるほうがよい。
+ * ============================================================
+ */
+
+/* 印は、いつでも見せない */
+.rs-more-check {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+/* パソコンでは畳まない。札も出さない */
+.rs-more-label {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .rs-more-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        margin-top: 10px;
+        padding: 9px;
+        border-top: 1px solid var(--color-brand-border);
+        color: var(--color-text-muted);
+        font-size: 12px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /*
+     * 2 つめ「ジャンルから探す」と
+     * 3 つめ「こだわり条件」を畳む。
+     *
+     * 印は input なので、div の数には入らない。
+     */
+    .rs .rs_group:nth-of-type(2),
+    .rs .rs_group:nth-of-type(3) {
+        display: none;
+    }
+
+    .rs-more-check:checked ~ .rs_group:nth-of-type(2),
+    .rs-more-check:checked ~ .rs_group:nth-of-type(3) {
+        display: block;
+    }
+
+    /* 札の文字。閉じているときと開いているときで入れ替える */
+    .rs-more-close { display: none; }
+    .rs-more-check:checked ~ .rs-more-label .rs-more-open { display: none; }
+    .rs-more-check:checked ~ .rs-more-label .rs-more-close { display: inline; }
+
+    .rs-more-arrow {
+        display: inline-block;
+        transition: transform .15s ease;
+    }
+
+    .rs-more-check:checked ~ .rs-more-label .rs-more-arrow {
+        transform: rotate(180deg);
+    }
+}

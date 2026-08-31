@@ -83,6 +83,16 @@ export default function RecommendSidebar({
 
     return (
         <aside className="rs">
+            {/*
+              * 携帯で畳む。
+              *
+              * ★ 印（checkbox）と札（label）だけで作る。
+              *   このページはサーバー側で組み立てるので、
+              *   状態を持つ部品にすると作りが増える。
+              *
+              * パソコンでは CSS 側で隠してあるので、出ない。
+              */}
+            <input type="checkbox" id="rs-more" className="rs-more-check" />
             <div className="rs_group">
                 <p className="rs_label">探す</p>
                 <ul>
@@ -134,6 +144,13 @@ export default function RecommendSidebar({
                     ))}
                 </ul>
             </div>
+
+            {/* 開く・閉じるの札 */}
+            <label htmlFor="rs-more" className="rs-more-label">
+                <span className="rs-more-open">絞り込みを開く</span>
+                <span className="rs-more-close">絞り込みを閉じる</span>
+                <span className="rs-more-arrow">⌄</span>
+            </label>
         </aside>
     )
 }
