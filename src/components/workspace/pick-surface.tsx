@@ -72,6 +72,19 @@ export default function PickSurface({
     const [doneIdx, setDoneIdx] = useState<Set<number>>(new Set());
 
     /*
+     * 押した文。
+     *
+     * ★ すぐ足さず、いったん止めて聞く。
+     *
+     *   読んでいる途中で触れてしまうことがある。
+     *   資料は書く人の手控えなので、
+     *   知らないうちに増えていると、
+     *   あとで何が正しいのか分からなくなる。
+     */
+    const [asking, setAsking] = useState<{ text: string; idx: number } | null>(null);
+    const [isBusy, setIsBusy] = useState(false);
+
+    /*
      * 文が何行目から始まるかを、先に数えておく。
      *
      * 押すたびに数え直すと、長い本文で重くなる。
@@ -85,14 +98,25 @@ export default function PickSurface({
         }
     }
 
-    async function pick(raw: string, idx: number) {
+    function ask(raw: string, idx: number) {
         const clean = stripRuby(raw).replace(/\n/g, "").trim();
         if (!clean) return;
+        setAsking({ text: clean, idx });
+    }
 
-        await onPick(clean, lineOf[idx]);
+    async function confirm() {
+        if (!asking || isBusy) return;
 
-        /* 押した文に印を残す。二度押しを防ぐ */
-        setDoneIdx((prev) => new Set(prev).add(idx));
+        setIsBusy(true);
+        try {
+            await onPick(asking.text, lineOf[asking.idx]);
+            /* 足した文に印を残す。二度押しを防ぐ */
+            setDoneIdx((prev) => new Set(prev).add(asking.idx));
+            setAsking(null);
+        } catch {
+            window.alert("足せませんでした。時間をおいて試してください。");
+        }
+        setIsBusy(false);
     }
 
     return (
@@ -142,7 +166,7 @@ export default function PickSurface({
                                 onMouseLeave={() =>
                                     setHoverIdx((prev) => (prev === idx ? null : prev))
                                 }
-                                onClick={() => void pick(raw, idx)}
+                                onClick={() => ask(raw, idx)}
                                 style={{
                                     borderRadius: 3,
                                     cursor: "pointer",
@@ -160,6 +184,51 @@ export default function PickSurface({
                     })}
                 </div>
             </div>
+
+            {/*
+              * 足すかどうかを聞く小窓。
+              *
+              * ★ 何を足すのかを、そのまま見せる。
+              *   文の一部だけを写すと、
+              *   本当にその文でよいのか確かめられない。
+              */}
+            {asking && (
+                <div
+                    onClick={() => setAsking(null)}
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/45 px-6"
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-[400px] rounded-xl bg-surface p-5 shadow-xl"
+                    >
+                        <p className="text-[13px] font-bold text-ink">
+                            {entryName} に足しますか
+                        </p>
+
+                        <p className="mt-3 max-h-32 overflow-y-auto rounded-lg bg-canvas px-3.5 py-3 text-[12.5px] leading-[1.9] text-muted">
+                            {asking.text}
+                        </p>
+
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setAsking(null)}
+                                className="rounded-lg border border-line px-4 py-2 text-[12.5px] text-muted hover:text-ink"
+                            >
+                                やめる
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void confirm()}
+                                disabled={isBusy}
+                                className="rounded-lg bg-forest px-5 py-2 text-[12.5px] text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                            >
+                                {isBusy ? "足しています…" : "足す"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
