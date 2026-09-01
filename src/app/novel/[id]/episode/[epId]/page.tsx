@@ -247,7 +247,7 @@ export default async function EpisodePage({ params }: Props) {
             <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
           )}
 
-          <EpisodeBody novelId={params.id} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
+          <EpisodeBody novelId={params.id} episodeId={params.epId} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
             <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
             {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
@@ -319,7 +319,7 @@ export default async function EpisodePage({ params }: Props) {
 
         {/* 挿絵は EpisodeBody の中で、縦書きの流れに沿って出す */}
 
-        <EpisodeBody novelId={params.id} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
+        <EpisodeBody novelId={params.id} episodeId={params.epId} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
 
         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:14,flexWrap:'wrap'}}>
           <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>

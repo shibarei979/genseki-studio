@@ -41,11 +41,23 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
      * 住所は /novel/{作品id}/episode/{話id} の形なので、
      * そこから取れる。
      */
-    const workId =
-        novelId
-        || (typeof window !== 'undefined'
-            ? (window.location.pathname.split('/')[2] ?? '')
-            : '')
+    const parts =
+        typeof window !== 'undefined'
+            ? window.location.pathname.split('/')
+            : []
+
+    const workId = novelId || (parts[2] ?? '')
+
+    /*
+     * 話の id も同じ。
+     *
+     * ★ 渡されていなかった。
+     *   読む画面の呼び出しに episodeId が無く、
+     *   空のまま保存しようとして落ちていた。
+     *
+     * 住所は /novel/{作品id}/episode/{話id} の形。
+     */
+    const epId = episodeId || (parts[4] ?? '')
 
     const [marks, setMarks] = useState<EpisodeMark[]>([])
     const [userId, setUserId] = useState<string | null>(null)
@@ -61,19 +73,19 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
                 .from('episode_marks')
                 .select('id, sentence, text')
                 .eq('user_id', user.id)
-                .eq('episode_id', episodeId)
+                .eq('episode_id', epId)
                 .order('sentence')
 
             setMarks((data ?? []) as EpisodeMark[])
         })()
-    }, [episodeId])
+    }, [epId])
 
     const add = useCallback(async (sentence: number, text: string) => {
         if (!userId) {
             window.alert('付箋を使うには、ログインが要ります。')
             return
         }
-        if (!workId || !episodeId) {
+        if (!workId || !epId) {
             window.alert('この画面では付箋を使えません。')
             return
         }
@@ -87,7 +99,7 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
 
         const { data, error } = await createClient()
             .from('episode_marks')
-            .insert({ user_id: userId, novel_id: workId, episode_id: episodeId, sentence, text })
+            .insert({ user_id: userId, novel_id: workId, episode_id: epId, sentence, text })
             .select('id, sentence, text')
             .single()
 
@@ -110,7 +122,7 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
         }
 
         setMarks(prev => prev.map(one => (one.id === temp.id ? (data as EpisodeMark) : one)))
-    }, [userId, workId, episodeId])
+    }, [userId, workId, epId])
 
     const remove = useCallback(async (id: string) => {
         const before = marks
