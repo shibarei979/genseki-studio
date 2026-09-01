@@ -783,10 +783,18 @@ function VerticalBody({ illustUrl, illustIsAi, title, body, preface, afterword, 
             *   戻さないと、絵の入れ物まで縦に伸びる。
             */}
           {illustUrl && (
-            <div style={{display:'inline-block',verticalAlign:'top',marginLeft:'1.5em',writingMode:'horizontal-tb',position:'relative'}}>
+            <div style={{display:'inline-block',verticalAlign:'top',marginLeft:'1.5em',writingMode:'horizontal-tb',position:'relative',
+              /*
+               * ★ 高さを入れ物いっぱいにする。
+               *
+               *   前は絵に maxHeight:'70%' と書いていたが、
+               *   入れ物の高さが決まっていないと 0 になる。
+               *   だから絵が出なかった。
+               */
+              height:'100%'}}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={illustUrl} alt="挿絵"
-                style={{maxHeight:'70%',maxWidth:260,objectFit:'contain',borderRadius:8,display:'block'}}/>
+                style={{maxHeight:'100%',maxWidth:260,objectFit:'contain',borderRadius:8,display:'block'}}/>
               {illustIsAi && (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
@@ -797,7 +805,17 @@ function VerticalBody({ illustUrl, illustIsAi, title, body, preface, afterword, 
             </div>
           )}
 
-          <div style={{display:'inline-block',marginRight:'2em',verticalAlign:'top'}}>
+          <div style={{display:'inline-block',marginRight:'2em',verticalAlign:'top',
+            /*
+             * ★ 列いっぱいの高さにする。
+             *
+             *   縦書きでは、上から下へ流れて列が変わる。
+             *   高さを決めないと、字が小さいときに
+             *   題名の下へ本文が入り込み、同じ列に並ぶ。
+             *
+             *   いっぱいにすれば、本文は必ず次の列から始まる。
+             */
+            height:'100%'}}>
             <div style={{fontSize:fontSize+4,fontWeight:700,color:'var(--color-text)',fontFamily,lineHeight:1.8}}>
               {/* 題名にも英数字が入る。「(Pr. I)」など */}
               {withTateChuYoko(title, 'v-title')}
