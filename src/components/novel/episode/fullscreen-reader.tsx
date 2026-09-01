@@ -36,6 +36,38 @@ export default function FullscreenReader({
 }) {
     /* 道具を出しているか */
     const [isBarOpen, setIsBarOpen] = useState(false);
+
+    /*
+     * 画面の大きさ。
+     *
+     * ★ inset: 0 をあてにしない。
+     *
+     *   position: fixed は本来「画面が基準」だが、
+     *   親のどこかに transform があると、その親が基準になる。
+     *   createPortal で body の直下へ出しても、
+     *   端末によっては拾われることがある。
+     *   実際、幅が 244px しか出ていなかった（画面は 320px）。
+     *
+     *   画面の大きさを自分で測って、そのまま当てる。
+     *   基準がどこであろうと、画面ぴったりになる。
+     */
+    const [size, setSize] = useState({ w: 0, h: 0 });
+
+    useEffect(() => {
+        function measure() {
+            setSize({ w: window.innerWidth, h: window.innerHeight });
+        }
+        measure();
+
+        window.addEventListener("resize", measure);
+        /* 携帯を横にしたときも測り直す */
+        window.addEventListener("orientationchange", measure);
+
+        return () => {
+            window.removeEventListener("resize", measure);
+            window.removeEventListener("orientationchange", measure);
+        };
+    }, []);
     const [page, setPage] = useState({ index: 0, count: 1 });
 
     useEffect(() => {
@@ -71,10 +103,15 @@ export default function FullscreenReader({
              */
             style={{
                 position: "fixed",
-                inset: 0,
+                /*
+                 * 左上に置き、測った大きさを当てる。
+                 * inset: 0 だと、基準がずれたときに一緒にずれる。
+                 */
+                top: 0,
+                left: 0,
                 zIndex: 300,
-                height: "100dvh",
-                maxHeight: "100dvh",
+                width: size.w || "100vw",
+                height: size.h || "100vh",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
