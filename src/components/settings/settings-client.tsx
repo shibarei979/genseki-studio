@@ -256,18 +256,12 @@ export default function SettingsClient({ workId }: Props) {
                               *   矢印だけだと、飾りに見えて押されない。
                               *   言葉を添えて、丸で囲む。
                               */}
-                            <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-canvas px-2.5 py-1 text-[11px] text-muted">
+                            {/*
+                              * ★ 矢印は使わない。
+                              *   言葉だけで、押すと何が起きるか分かる。
+                              */}
+                            <span className="shrink-0 rounded-full border border-line bg-canvas px-3 py-1 text-[11px] text-muted">
                                 {isNavOpen ? "とじる" : "ほかの項目"}
-                                <span
-                                    aria-hidden="true"
-                                    style={{
-                                        display: "inline-block",
-                                        transform: isNavOpen ? "rotate(180deg)" : "none",
-                                        transition: "transform .15s ease",
-                                    }}
-                                >
-                                    ⌄
-                                </span>
                             </span>
                         </button>
 

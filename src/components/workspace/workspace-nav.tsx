@@ -61,18 +61,12 @@ export default function WorkspaceNav({ workId, current, episodeId, alwaysOpen = 
                       *   矢印だけだと、飾りに見えて押されない。
                       *   言葉を添えて、丸で囲む。
                       */}
-                    <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[11px]">
+                    {/*
+                      * ★ 矢印は使わない。
+                      *   言葉だけで、押すと何が起きるか分かる。
+                      */}
+                    <span className="shrink-0 rounded-full bg-white/20 px-3 py-1 text-[11px]">
                         {isOpen ? "とじる" : "ほかを見る"}
-                        <span
-                            aria-hidden="true"
-                            style={{
-                                display: "inline-block",
-                                transform: isOpen ? "rotate(180deg)" : "none",
-                                transition: "transform .15s ease",
-                            }}
-                        >
-                            ⌄
-                        </span>
                     </span>
                 </button>
             )}
