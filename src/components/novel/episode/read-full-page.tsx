@@ -76,10 +76,7 @@ export default function ReadFullPage({
     const innerRef = useRef<HTMLDivElement>(null);
     const [pageCount, setPageCount] = useState(1);
     /* 入れ物の幅。1 頁ぶんの動かす量になる */
-    const [boxWidth, setBoxWidth] = useState(0);
 
-    /* 中身の全部の幅。ずらす量の計算に使う */
-    const [contentWidth, setContentWidth] = useState(0);
 
     /* 何頁ぶんあるかを測る */
     useEffect(() => {
@@ -97,7 +94,6 @@ export default function ReadFullPage({
              */
             const total = Math.max(1, Math.ceil(inner.scrollWidth / w));
             setPageCount(total);
-            setBoxWidth(w);
             setPage((p) => Math.min(p, total - 1));
         }
 
@@ -110,6 +106,24 @@ export default function ReadFullPage({
             window.removeEventListener("resize", measure);
         };
     }, [body, size, fontSize, isVertical]);
+
+    /*
+     * 頁が変わったら、そこへ送る。
+     *
+     * ★ 縦書きは右から左へ流れる。
+     *   文の頭は中身の右端にあるので、
+     *   1 頁目はいちばん右まで送った所。
+     */
+    useEffect(() => {
+        const box = bodyRef.current;
+        if (!box) return;
+
+        const max = box.scrollWidth - box.clientWidth;
+        box.scrollTo({
+            left: Math.max(0, max - page * box.clientWidth),
+            behavior: "smooth",
+        });
+    }, [page, pageCount, size, fontSize, isVertical]);
 
     function turn(step: 1 | -1) {
         setPage((p) => Math.min(Math.max(p + step, 0), pageCount - 1));
@@ -245,7 +259,19 @@ export default function ReadFullPage({
                     bottom: 46,
                     left: 30,
                     right: 30,
-                    overflow: "hidden",
+                    /*
+                     * ★ 送りで場所を変える。
+                     *
+                     *   transform で計算してずらしていたが、
+                     *   幅を状態に持つと、測る前の 0 のまま
+                     *   使われることがあった。
+                     *
+                     *   送り（scrollLeft）なら、
+                     *   そのときの実際の幅で動く。
+                     *   指では動かせないよう、送り具は隠す。
+                     */
+                    overflowX: "hidden",
+                    overflowY: "hidden",
                 }}
             >
                 <div
@@ -287,25 +313,7 @@ export default function ReadFullPage({
                          *   1 頁ぶんにならない。
                          *   だから最後の頁とその手前しか出なかった。
                          */
-                        /*
-                         * ★ 左へずらす。
-                         *
-                         *   中身は 0 から右へ伸びている（測って確かめた）。
-                         *   縦書きなので、文の頭は中身の右端。
-                         *
-                         *   1 頁目を見せるには、
-                         *   右端が窓に来るまで左へずらす。
-                         *   進むほど、ずらす量が減る。
-                         *
-                         * ★ 前は右へずらしていた。
-                         *   中身の外を見ていたので、
-                         *   どの頁も空に見えていた。
-                         */
-                        transform: `translateX(${-Math.max(
-                            0,
-                            contentWidth - (page + 1) * boxWidth,
-                        )}px)`,
-                        transition: "transform .2s ease",
+/* ずらしは入れ物の側で行う。ここでは何もしない */
                     }}
                 >
                     {body}
