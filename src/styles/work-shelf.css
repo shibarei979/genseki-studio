@@ -30,6 +30,14 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    /*
+     * 本を下にそろえる。
+     *
+     * 題名の行数がまちまちなので、
+     * 上にそろえると本の高さがばらつき、
+     * 板から浮いたり沈んだりする。
+     */
+    justify-content: flex-end;
     align-items: center;
 }
 
@@ -85,7 +93,8 @@
 .ws_label {
     display: block;
     width: 100%;
-    margin-top: 12px;
+    /* 本の上に置く。板と本のあいだに挟まない */
+    margin-bottom: 10px;
     text-align: center;
     text-decoration: none;
 }
@@ -175,4 +184,49 @@
     background: var(--color-brand);
     color: var(--base-color-1);
     font-weight: 700;
+}
+
+
+/*
+ * ============================================================
+ * 木の板
+ *
+ * 段ごとに、本の下に敷く。
+ *
+ * ★ 本の背景として敷く。
+ *   板を別の要素にすると、
+ *   本の数が半端な段（3 冊しかない段など）で
+ *   板だけが伸びて見える。
+ *
+ *   段の高さぶんの背景にすれば、
+ *   本が何冊でも板は同じ幅で出る。
+ * ============================================================
+ */
+
+.ws_slot::after {
+    content: "";
+    position: absolute;
+    left: -10px;
+    right: -10px;
+    bottom: -14px;
+    height: 14px;
+
+    /*
+     * 木の色。上が明るく、下が暗い。
+     * 1 色だと板というより帯に見える。
+     */
+    background:
+        linear-gradient(180deg, #e6c28f 0%, #d5a763 34%, #c98b47 100%);
+
+    /* 板の下に落ちる影 */
+    box-shadow: 0 3px 5px -2px rgba(90, 60, 25, .3);
+}
+
+@media (max-width: 1023px) {
+    .ws_slot::after {
+        left: -5px;
+        right: -5px;
+        bottom: -10px;
+        height: 10px;
+    }
 }

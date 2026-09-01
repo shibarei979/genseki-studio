@@ -51,6 +51,22 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                 return (
                     <div key={work.id} className="ws_slot">
                         {/*
+                          * 題名と作者は、本の上に置く。
+                          *
+                          * ★ 下に置くと、板との間に挟まって
+                          *   本が板に載っているように見えない。
+                          *
+                          * 表紙の絵がある作品は、題名が絵に隠れる。
+                          * どこかに出さないと、何の本か分からない。
+                          */}
+                        <Link href={`/novel/${work.id}`} className="ws_label">
+                            <span className="ws_label-title">{work.title || '無題'}</span>
+                            {work.author && (
+                                <span className="ws_label-author">著：{work.author}</span>
+                            )}
+                        </Link>
+
+                        {/*
                           * 板に落ちる影。
                           * 無いと、本が宙に浮いて見える。
                           */}
@@ -142,18 +158,7 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                             </span>
                         </Link>
 
-                        {/*
-                          * 本の下に、題名と作者。
-                          *
-                          * 表紙の絵がある作品は、題名が絵に隠れる。
-                          * 下に出さないと、何の本か分からない。
-                          */}
-                        <Link href={`/novel/${work.id}`} className="ws_label">
-                            <span className="ws_label-title">{work.title || '無題'}</span>
-                            {work.author && (
-                                <span className="ws_label-author">著：{work.author}</span>
-                            )}
-                        </Link>
+
                     </div>
                 )
             })}
