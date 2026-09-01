@@ -104,7 +104,7 @@ export default async function SearchPage({ searchParams }: Props) {
   // いいね数・ブックマーク数・閲覧数・コメント数を後で集計するためnovel_idsを先に取得
   if (!hasSearch) {
     let q2 = supabase.from('novels')
-      .select('id, title, cover_url, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
+      .select('id, title, cover_url, cover_is_ai, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
       .eq('published', true)
       .order('created_at', { ascending: false })
       .limit(200)
@@ -143,7 +143,7 @@ export default async function SearchPage({ searchParams }: Props) {
     count = allCount || 0
   } else {
     let query = supabase.from('novels')
-      .select('id, title, cover_url, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
+      .select('id, title, cover_url, cover_is_ai, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
       .eq('published', true)
 
     if (!isAdmin) {
@@ -537,11 +537,15 @@ export default async function SearchPage({ searchParams }: Props) {
 
           {shelfView ? (
             <WorkShelf
-              works={results.map((n: any) => ({
+              works={novels.map((n: any) => ({
                 id: n.id,
                 title: n.title,
-                author: authorMap[n.author_id],
+                author: n.display_name,
                 cover_url: n.cover_url,
+                /* 表紙が AI かどうか。本の右上に札を出す */
+                cover_is_ai: n.cover_is_ai,
+                /* 押したときに出す札の中身 */
+                novel: { ...n, like_count: n.hideStats ? 0 : (n.likeCount || 0) },
               }))}
             />
           ) : (

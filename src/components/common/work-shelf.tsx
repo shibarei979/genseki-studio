@@ -3,6 +3,7 @@
 import Link from 'next/link'
 
 import { COVERS, hashOf } from '@/components/home/home-work-table'
+import NovelPopup from '@/components/novel-popup'
 
 /**
  * ============================================================
@@ -38,6 +39,16 @@ export interface ShelfWork {
     author?: string
     /** 表紙の絵。無ければ紙の表紙を作る */
     cover_url?: string | null
+    /** 表紙を AI で作ったか。右上に札を出す */
+    cover_is_ai?: boolean | null
+    /**
+     * 押したときに出す札の中身。
+     *
+     * 渡されたときは、作品ページへ直に飛ばさず、
+     * 文字の一覧と同じ札を出す。
+     */
+    novel?: Record<string, unknown>
+    /** 表紙を AI で作ったか。作品ページと同じ印を出す */
 }
 
 export default function WorkShelf({ works }: { works: ShelfWork[] }) {
@@ -83,6 +94,114 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                           */}
                         <span aria-hidden="true" className="ws_shadow" />
 
+                        {/*
+                          * ★ 押すと札を出す。
+                          *
+                          *   文字の一覧では NovelPopup を通していた。
+                          *   本の形だけ作品ページへ直に飛ぶと、
+                          *   同じものを押したのに違うことが起きる。
+                          */}
+                        {work.novel ? (
+                            <NovelPopup novel={work.novel as never}>
+                                <div className="ws_book" title={work.title}>
+
+                            {/* 紙の端 */}
+                            <span
+                                style={{
+                                    position: 'absolute', top: 2, bottom: 2, right: 0,
+                                    width: EDGE, borderRadius: '0 3px 3px 0',
+                                    background:
+                                        'repeating-linear-gradient(90deg, #ebe4d5 0 1px, #f8f4ec 1px 2px)',
+                                    boxShadow: 'inset -1px 0 0 rgba(0,0,0,0.10)',
+                                }}
+                            />
+
+                            {/* 表紙 */}
+                            <span
+                                style={{
+                                    position: 'absolute', top: 0, bottom: 0, left: 0,
+                                    right: EDGE - 2,
+                                    overflow: 'hidden',
+                                    borderRadius: '2px 4px 4px 2px',
+                                    background: cover.base,
+                                    boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.07)',
+                                }}
+                            >
+                                {work.cover_url ? (
+                                    /*
+                                     * 表紙の絵がある作品。
+                                     *
+                                     * 背の影のぶんだけ右にずらして敷く。
+                                     * 端まで敷くと、背の影に絵がかぶって
+                                     * 本の形に見えなくなる。
+                                     */
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                        src={work.cover_url}
+                                        alt=""
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0, bottom: 0, left: SPINE, right: 0,
+                                            width: `calc(100% - ${SPINE}px)`,
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                        }}
+                                    />
+                                ) : (
+                                    /* 表紙が無い作品。題名を書いた紙にする */
+                                    <span
+                                        style={{
+                                            position: 'absolute', left: 0, right: 0,
+                                            top: Math.round(BOOK_HEIGHT * 0.22),
+                                            padding: `0 10px 0 ${SPINE + 8}px`,
+                                        }}
+                                    >
+                                        <span
+                                            className="ws_title"
+                                            style={{ color: cover.ink }}
+                                        >
+                                            {work.title || '無題'}
+                                        </span>
+                                    </span>
+                                )}
+
+                                {/* 背の側の影 */}
+                                <span
+                                    style={{
+                                        position: 'absolute', top: 0, bottom: 0, left: 0,
+                                        width: SPINE,
+                                        background:
+                                            'linear-gradient(90deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.05) 60%, rgba(255,255,255,0.10) 100%)',
+                                    }}
+                                />
+
+                                {/*
+                                  * AI の印。
+                                  *
+                                  * ★ 作品ページと同じ場所（右上）に出す。
+                                  *   場所が違うと、別の意味に見える。
+                                  *
+                                  * 表紙の絵があるときだけ。
+                                  * 題名の紙には、そもそも絵が無い。
+                                  */}
+                                {work.cover_url && work.cover_is_ai && (
+                                    <span className="ws_ai" aria-label="AIで作った表紙">
+                                        AI
+                                    </span>
+                                )}
+
+                                {/* 上からの光 */}
+                                <span
+                                    style={{
+                                        position: 'absolute', inset: 0,
+                                        background:
+                                            'linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.06) 100%)',
+                                    }}
+                                />
+                            </span>
+                                                        </div>
+                            </NovelPopup>
+                        ) : (
                         <Link
                             href={`/novel/${work.id}`}
                             className="ws_book"
@@ -158,6 +277,21 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                     }}
                                 />
 
+                                {/*
+                                  * AI の印。
+                                  *
+                                  * ★ 作品ページと同じ場所（右上）に出す。
+                                  *   場所が違うと、別の意味に見える。
+                                  *
+                                  * 表紙の絵があるときだけ。
+                                  * 題名の紙には、そもそも絵が無い。
+                                  */}
+                                {work.cover_url && work.cover_is_ai && (
+                                    <span className="ws_ai" aria-label="AIで作った表紙">
+                                        AI
+                                    </span>
+                                )}
+
                                 {/* 上からの光 */}
                                 <span
                                     style={{
@@ -168,6 +302,7 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                 />
                             </span>
                         </Link>
+                        )}
 
 
                     </div>
