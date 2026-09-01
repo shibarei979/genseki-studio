@@ -8,35 +8,28 @@
  */
 
 .ws {
-    /*
-     * 段を縦に積む。
-     * 段の中で 5 冊を横に並べる。
-     */
-    display: flex;
-    flex-direction: column;
-    gap: 34px;
     padding: 20px 18px 28px;
 }
 
 /*
- * 1 段。
+ * 本の並び。
  *
- * ★ book-shelf-area を付けている。
- *   板のぶんの余白（18px）が入り、
- *   本の底が板の上端に着く。
+ * ★ 何冊入るかは画面の幅で決める。
+ *   冊数を決め打ちにすると、
+ *   携帯で 1 冊が細くなりすぎる。
+ *
+ * ★ 板は、段ごとに背景として敷く。
+ *   本を別の要素で囲まずに済むので、
+ *   何冊で折り返しても板が途中に出ない。
  */
-.ws_row {
-    position: relative;
-}
-
 .ws_books {
-    position: relative;
-    /* 板より前に置く。後ろだと本が板に埋まる */
-    z-index: 3;
-
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    /*
+     * 段の間。
+     * 板（18px）と、その影（12px）のぶんを空ける。
+     */
+    gap: 52px 20px;
     align-items: end;
 }
 
@@ -55,16 +48,52 @@
     align-items: center;
 }
 
+/*
+ * 板。
+ *
+ * ★ 本 1 冊ぶんの幅で敷く。
+ *   隣り合う本の板がつながって、1 枚の板に見える。
+ *   段の途中で折り返しても、そこで板も切れる。
+ *
+ * 執筆向けホームの板と同じ 3 層にする。
+ */
+
+/* 奥へ寝ている板 */
+.ws_slot::before {
+    content: "";
+    position: absolute;
+    left: -10px;
+    right: -10px;
+    bottom: -6px;
+    height: 10px;
+    background: linear-gradient(180deg, #e8cb9e 0%, #d3ab74 100%);
+}
+
+/* 手前の正面板と、その下の影 */
+.ws_slot::after {
+    content: "";
+    position: absolute;
+    left: -10px;
+    right: -10px;
+    bottom: -22px;
+    height: 18px;
+
+    background: linear-gradient(180deg, #d8a764 0%, #c98b47 45%, #a86830 100%);
+    border-top: 1px solid rgba(255, 255, 255, .55);
+    border-bottom: 1px solid rgba(98, 58, 27, .8);
+    box-shadow: 0 6px 10px -4px rgba(90, 60, 25, .38);
+}
+
 .ws_book {
     position: relative;
+    /* 板より前に置く。後ろだと本が板に埋まる */
+    z-index: 2;
     display: block;
-    /* 120 × 156 の 1.5 倍 */
-    width: 180px;
-    height: 234px;
-    flex-shrink: 0;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 180 / 234;
     text-decoration: none;
 
-    /* 影は輪郭に沿わせる。四角い影だと箱に見える */
     filter: drop-shadow(3px 3px 3px rgba(40, 35, 25, .14));
     transition: transform .18s ease;
 }
@@ -73,18 +102,6 @@
     transform: translateY(-4px);
 }
 
-/* 本の下に落ちる影 */
-.ws_shadow {
-    position: absolute;
-    top: 230px;
-    left: 12%;
-    right: 8%;
-    height: 5px;
-    border-radius: 50%;
-    background: rgba(70, 45, 25, 0.14);
-    filter: blur(3px);
-    pointer-events: none;
-}
 
 /*
  * 表紙の題名。
@@ -103,11 +120,15 @@
     letter-spacing: .04em;
 }
 
-/* 本の下の題名と作者 */
+/*
+ * 本の上の題名と作者。
+ *
+ * 本の下に置くと、板とのあいだに挟まって、
+ * 本が板に載っているように見えない。
+ */
 .ws_label {
     display: block;
     width: 100%;
-    /* 本の上に置く。板と本のあいだに挟まない */
     margin-bottom: 10px;
     text-align: center;
     text-decoration: none;
@@ -130,58 +151,8 @@
     color: var(--color-text-muted);
 }
 
-/*
- * 携帯。
- *
- * 1 冊を少し小さくして、横に 3 冊入るようにする。
- * 120px のままだと 2 冊で終わり、送る回数が増える。
- */
 @media (max-width: 1023px) {
-    /*
-     * 携帯。
-     *
-     * 5 冊のままだと 1 冊が 60px ほどになり、
-     * 表紙も題名も読めない。3 冊にする。
-     */
-    .ws {
-        gap: 26px;
-        padding: 14px 10px 20px;
-    }
-
-    /*
-     * ★ 携帯でも 5 冊のまま。
-     *
-     *   3 列にすると、5 冊の段が 2 行に折り返り、
-     *   板が段の途中に出てしまう。
-     *   板は段の下に 1 枚だけあるべきもの。
-     *
-     * 1 冊を細くして、5 冊を収める。
-     */
-    .ws_books {
-        gap: 6px;
-    }
-
-    .ws_book {
-        max-width: none;
-        height: auto;
-        aspect-ratio: 180 / 234;
-    }
-
-    .ws_book {
-        width: 100%;
-        max-width: 112px;
-        height: 146px;
-        margin: 0 auto;
-    }
-
-    .ws_shadow {
-        top: 142px;
-    }
-
-    .ws_title {
-        font-size: 11px;
-    }
-
+    .ws_title { font-size: 11px; }
     .ws_label-title { font-size: 11.5px; }
     .ws_label-author { font-size: 10.5px; }
 }
@@ -199,6 +170,7 @@
     overflow: hidden;
 }
 
+.ws-switch a,
 .ws-switch button {
     display: inline-flex;
     align-items: center;
@@ -209,32 +181,13 @@
     color: var(--color-text-muted);
     font-size: 12px;
     cursor: pointer;
+    text-decoration: none;
     -webkit-tap-highlight-color: transparent;
 }
 
+.ws-switch a.is-on,
 .ws-switch button.is-on {
     background: var(--color-brand);
     color: var(--base-color-1);
     font-weight: 700;
-}
-
-
-/*
- * ============================================================
- * 板
- *
- * ★ 自前で描かない。
- *   globals.css の .book-shelf-board をそのまま使う。
- *   執筆向けホームと同じもので、
- *   本体・奥へ寝た板・影の 3 層でできている。
- *
- *   前は段ごとに帯を敷いていたが、
- *   1 枚の板なので奥行きが無く、線に見えていた。
- * ============================================================
- */
-
-/* 板の左右のはみ出しを、この段の中に収める */
-.ws_row .book-shelf-board {
-    left: -10px;
-    right: -10px;
 }

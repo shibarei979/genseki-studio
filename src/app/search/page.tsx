@@ -443,17 +443,23 @@ export default async function SearchPage({ searchParams }: Props) {
    */
   const viewParam = (searchParams as Record<string, string | undefined>).view || ''
   /*
-   * ★ いまは運営だけに見せる。
+   * 本の形で見るか。
    *
-   *   本の形はまだ試している途中。
-   *   表紙のある作品が少なく、
-   *   題名の紙ばかりが並ぶ見た目になる。
-   *   表紙が増えてから、みんなに開く。
+   * ★ 何も選んでいない人には、文字を出す。
+   *
+   *   表紙のある作品はまだ少ない。
+   *   はじめから本の形にすると、
+   *   題名の紙ばかりが並んで、何が違うのか分からない。
+   *
+   *   自分で選んだ人にだけ、本の形を出す。
+   *
+   * 住所に付いていれば、それが勝つ。
+   * 付いていなければ、マイページで覚えたものを使う。
    */
   const shelfView =
-    isAdmin
-    && (viewParam === 'shelf'
-      || (viewParam === '' && (profile as { work_popup_style?: string } | null)?.work_popup_style === 'book'))
+    viewParam === 'shelf'
+    || (viewParam === ''
+        && (profile as { work_popup_style?: string } | null)?.work_popup_style === 'book')
 
   function buildUrl(params: Record<string, string>) {
     const base: Record<string, string> = {}
@@ -506,7 +512,6 @@ export default async function SearchPage({ searchParams }: Props) {
             *   選んだ形は、マイページの work_popup_style に
             *   覚えてある。次に来たときも同じ形で開く。
             */}
-          {isAdmin && (
           <div style={{display:'flex',justifyContent:'flex-end',marginBottom:10}}>
             <div className="ws-switch">
               <Link
@@ -529,7 +534,6 @@ export default async function SearchPage({ searchParams }: Props) {
               </Link>
             </div>
           </div>
-          )}
 
           {shelfView ? (
             <WorkShelf
