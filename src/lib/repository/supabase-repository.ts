@@ -803,6 +803,30 @@ export const supabaseRepository: Repository = {
         if (error) throw new Error(describeError(error.message));
 
         /*
+         * 話を公開したら、作品も公開にする。
+         *
+         * ★ 作者は「話を公開した＝読める」と思っている。
+         *
+         *   実際には、作品の公開設定が別にあり、
+         *   そちらが下書きのままだと誰にも読まれない。
+         *   39 話書いて 1 つも読まれていない作品があった。
+         *
+         *   話を公開した時点で、読ませる意思は明らかなので、
+         *   作品のほうも合わせる。
+         *
+         * ★ 逆はしない。
+         *   作品を下書きに戻しても、話は触らない。
+         *   作者が意図して隠したものを、勝手に出さないため。
+         */
+        if (patch.is_published === true && data?.novel_id) {
+            await db()
+                .from("novels")
+                .update({ published: true, visibility: "public" })
+                .eq("id", data.novel_id)
+                .eq("published", false);
+        }
+
+        /*
          * 返ってこないのは、その行に触れていないとき。
          * 消えたのか、権限が無いのかを分けて伝える。
          */

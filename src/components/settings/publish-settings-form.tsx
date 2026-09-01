@@ -30,10 +30,17 @@ import {
 
 interface Props {
     work: Work;
+    /**
+     * 公開されている話の数。
+     *
+     * 0 のとき、公開設定にしても誰にも読まれない。
+     * そこを知らせるために受け取る。
+     */
+    livePisodeCount?: number;
     settings: PublishSettings;
     onChange: (patch: Partial<Omit<PublishSettings, "work_id">>) => void;}
 
-export default function PublishSettingsForm({ work, settings, onChange }: Props) {
+export default function PublishSettingsForm({ work, settings, livePisodeCount = -1, onChange }: Props) {
 
 
     const [copied, setCopied] = useState(false);
@@ -49,6 +56,30 @@ export default function PublishSettingsForm({ work, settings, onChange }: Props)
 
     return (
         <div className="space-y-4">
+            {/*
+              * 話が 1 つも公開されていないときの知らせ。
+              *
+              * ★ 作品を公開しても、話が無ければ誰にも読まれない。
+              *
+              *   実際、39 話書いて 1 つも公開されていない作品があった。
+              *   作者は公開したつもりでいる。
+              *
+              * ★ -1 は「まだ数えていない」。そのときは出さない。
+              */}
+            {livePisodeCount === 0 && (
+                <div className="rounded-lg border border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_8%,transparent)] px-4 py-3.5">
+                    <p className="text-[13px] font-bold text-ink">
+                        話がまだ公開されていません
+                    </p>
+                    <p className="mt-2 text-[12px] leading-[1.9] text-muted">
+                        作品を公開にしても、公開された話が 1 つも無いと、
+                        読者には出てきません。
+                        <br />
+                        「投稿」の画面から、話を公開してください。
+                    </p>
+                </div>
+            )}
+
             <Card
                 title="作品の公開設定"
                 description="作品そのものを、誰が読めるようにするかを決めます。"

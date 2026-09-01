@@ -306,6 +306,10 @@ export default function SettingsClient({ workId }: Props) {
                         <PublishSettingsForm
                             work={work}
                             settings={publish}
+                            /* 公開されている話の数。0 なら知らせを出す */
+                            livePisodeCount={
+                                episodes.filter((one) => one.is_published).length
+                            }
                             onChange={(patch) => void handleChangePublish(patch)}
                         />
                     )}
