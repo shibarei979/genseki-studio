@@ -900,6 +900,9 @@ function PostForm({
             episode_summary: summary.trim() || null,
             afterword: afterword.trim() || null,
             chapter_id: chapterId || null,
+            /* 挿絵も一緒に保存する。別に押させると忘れられる */
+            illust_url: illustUrl || null,
+            illust_is_ai: illustIsAi,
         });
 
         /* 時刻が入っていれば予約 */
@@ -1021,9 +1024,7 @@ function PostForm({
                                     />
 
                                     <p className="mt-1.5 text-[11px] leading-[1.8] text-faint">
-                                        読む画面で、本文の前に出ます。
-                                        <br />
-                                        入れなくても構いません。
+                                        JPEG または PNG。読む画面で、本文の前に出ます。
                                     </p>
 
                                     {/*
@@ -1043,11 +1044,31 @@ function PostForm({
                                                 この挿絵は AI を使って作りました
                                                 <br />
                                                 <span className="text-faint">
-                                                    立てると、絵の隅に「AI」の印が出ます。
+                                                    立てると、読む画面で挿絵の右上に
+                                                    「AI」の印が出ます。
                                                 </span>
                                             </span>
                                         </label>
                                     )}
+
+                                    {/*
+                                      * 権利の注意。
+                                      *
+                                      * ★ 表紙と同じことを書く。
+                                      *   挿絵だけ緩いと思われては困る。
+                                      */}
+                                    <div className="mt-3 rounded-lg border border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_6%,transparent)] px-3.5 py-3">
+                                        <p className="text-[11.5px] font-bold text-ink">
+                                            ほかの人の絵を無断で使うことはできません。
+                                        </p>
+                                        <p className="mt-1.5 text-[11px] leading-[1.9] text-muted">
+                                            自分で描いた絵、権利者から許可を得た絵、
+                                            または自分で AI に作らせた絵だけを置いてください。
+                                            <br />
+                                            違反が見つかった場合は、画像の削除や作品の非公開などの
+                                            対応をとることがあります。
+                                        </p>
+                                    </div>
 
                                     {illustBusy && (
                                         <p className="mt-1 text-[11px] text-forest">
@@ -1398,6 +1419,9 @@ function PostForm({
                                 episode_summary: summary.trim() || null,
                                 afterword: afterword.trim() || null,
                                 chapter_id: chapterId || null,
+                                /* 挿絵も一緒に保存する */
+                                illust_url: illustUrl || null,
+                                illust_is_ai: illustIsAi,
                             })
                         }
                         className="rounded-md border border-line px-5 py-2.5 text-sm text-ink hover:border-forest-line hover:text-forest"
@@ -1428,6 +1452,9 @@ function PostForm({
                                 episode_summary: summary.trim() || null,
                                 afterword: afterword.trim() || null,
                                 chapter_id: chapterId || null,
+                                /* 挿絵も一緒に保存する */
+                                illust_url: illustUrl || null,
+                                illust_is_ai: illustIsAi,
                             })
                         }
                         disabled={!isDirty}
