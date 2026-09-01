@@ -275,12 +275,22 @@ class BookshelfLoop {
         /*
          * 字や絵が入ったあとに、もう一度測る。
          *
-         * 組み立てた時点では字がまだ届いておらず、
-         * 幅が変わることがある。
+         * ★ ただし、幅が変わったときだけ。
+         *
+         *   毎回やり直すと、そのたびに本が並び直り、
+         *   端から端へ動くのが見えてしまう。
+         *   幅が同じなら、並びも同じなので、やる意味が無い。
          */
-        window.addEventListener("load", this.updateLayout);
-        window.setTimeout(this.updateLayout, 300);
-        window.setTimeout(this.updateLayout, 1000);
+        const relayoutIfResized = () => {
+            const w = this.root?.clientWidth ?? 0;
+            if (w === 0 || w === this._lastWidth) return;
+            this._lastWidth = w;
+            this.updateLayout();
+        };
+
+        window.addEventListener("load", relayoutIfResized);
+        window.setTimeout(relayoutIfResized, 300);
+        window.setTimeout(relayoutIfResized, 1000);
 
         //------------------------------------------
         // Visibility
@@ -378,6 +388,8 @@ class BookshelfLoop {
         // Calculate
         //------------------------------------------
         this.layout = LayoutCalc.calculate(this.root);
+        /* 次に測り直すか判断するため、いまの幅を覚える */
+        this._lastWidth = this.root.clientWidth;
 
         //------------------------------------------
         // CSS Variables
