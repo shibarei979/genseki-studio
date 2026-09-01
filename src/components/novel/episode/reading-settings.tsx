@@ -1,14 +1,23 @@
 'use client'
+import { ILLUST_SIZE_LABEL } from '@/config/illust-size'
 import { useState, useEffect } from 'react'
 
 export interface Settings {
   font: 'serif' | 'sans' | 'rounded' | 'ud'
   fontSize: number
+  /**
+   * 挿絵の大きさ。
+   *
+   * ★ 読む人が決める。
+   *   絵をじっくり見たい人と、
+   *   本文を早く読みたい人がいる。
+   */
+  illustSize: 'small' | 'medium' | 'large'
   lineHeight: number
   writingMode: 'horizontal' | 'vertical'
 }
 
-const DEFAULTS: Settings = { font: 'serif', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
+const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'large', lineHeight: 2.1, writingMode: 'horizontal' }
 const STORAGE_KEY = 'reading_settings'
 
 const FONT_OPTIONS = [
@@ -212,6 +221,27 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                 ))}
               </div>
             </div>
+            {/*
+              * 挿絵の大きさ。
+              *
+              * ★ 読む人が決める。
+              *   絵をじっくり見たい人と、
+              *   本文を早く読みたい人がいる。
+              */}
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>
+                挿絵の大きさ
+              </div>
+              <div style={{display:'flex',gap:6}}>
+                {(['small','medium','large'] as const).map(key => (
+                  <button key={key} onClick={()=>update({illustSize:key})}
+                    style={btnBase(settings.illustSize === key)}>
+                    {ILLUST_SIZE_LABEL[key]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* 行間 */}
             <div>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>行間</div>

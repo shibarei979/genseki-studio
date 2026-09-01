@@ -1,4 +1,5 @@
 'use client'
+import { illustBox } from '@/config/illust-size'
 import { useState, useRef, useEffect } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby } from '@/lib/utils/ruby'
@@ -22,7 +23,7 @@ interface Props {
   illustIsAi?: boolean | null
 }
 
-const DEFAULTS: Settings = { font: 'serif', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
+const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
 
 function fontFamilyOf(font: Settings['font']): string {
   return font === 'serif'   ? "'Noto Serif JP', serif"
@@ -389,11 +390,15 @@ export default function MobileEpisodeBody({ illustUrl, illustIsAi, title, body, 
                 <div style={{display:'inline-block',verticalAlign:'top',marginLeft:'1.5em',writingMode:'horizontal-tb',position:'relative'}}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={illustUrl} alt="挿絵"
-                    style={{maxHeight:260,maxWidth:180,objectFit:'contain',borderRadius:8,display:'block'}}/>
+                    style={{maxHeight:illustBox('mobileVertical',settings.illustSize).maxHeight,
+                      maxWidth:illustBox('mobileVertical',settings.illustSize).maxWidth,
+                      objectFit:'contain',borderRadius:8,display:'block'}}/>
                   {illustIsAi && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
-                      style={{position:'absolute',top:-5,right:-5,width:34,height:34,
+                      style={{position:'absolute',top:-5,right:-5,
+                        width:illustBox('mobileVertical',settings.illustSize).stamp,
+                        height:illustBox('mobileVertical',settings.illustSize).stamp,
                         transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
                         filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
                   )}
@@ -452,11 +457,14 @@ export default function MobileEpisodeBody({ illustUrl, illustIsAi, title, body, 
           <div style={{position:'relative',display:'inline-block',marginBottom:14}}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={illustUrl} alt="挿絵"
-              style={{maxHeight:220,maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+              style={{maxHeight:illustBox('mobileHorizontal',settings.illustSize).maxHeight,
+                maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
             {illustIsAi && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
-                style={{position:'absolute',top:-5,right:-5,width:34,height:34,
+                style={{position:'absolute',top:-5,right:-5,
+                  width:illustBox('mobileHorizontal',settings.illustSize).stamp,
+                  height:illustBox('mobileHorizontal',settings.illustSize).stamp,
                   transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
                   filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
             )}

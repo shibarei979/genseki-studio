@@ -1,4 +1,5 @@
 'use client'
+import { illustBox } from '@/config/illust-size'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby, stripRuby } from '@/lib/utils/ruby'
@@ -25,9 +26,11 @@ interface Props {
   /** 話ごとの挿絵。縦書きの流れの中、題名の右に出る */
   illustUrl?: string | null
   illustIsAi?: boolean | null
+  /** 挿絵の大きさ。small / medium / large */
+  illustSize?: string | null
 }
 
-const DEFAULTS: Settings = { font: 'serif', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
+const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
 
 /**
  * 読む側の横書き用に、見た目だけ整える。
@@ -566,7 +569,7 @@ function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecti
   )
 }
 
-export default function EpisodeBody({ illustUrl, illustIsAi, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
+export default function EpisodeBody({ illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
   const { setQuotedText, selecting, setSelecting, commentAnchorRef } = useQuote()
   const handleQuote = onQuote || setQuotedText
 
@@ -627,7 +630,7 @@ export default function EpisodeBody({ illustUrl, illustIsAi, title, body, prefac
         </div>
 
         {vertical ? (
-          <VerticalBody illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword}
+          <VerticalBody illustUrl={illustUrl} illustIsAi={illustIsAi} illustSize={settings.illustSize} title={title} body={body} preface={preface} afterword={afterword}
             authorName={authorName} fontSize={settings.fontSize} fontFamily={fontFamily}
             selecting={selecting} onQuote={handleQuote} onAfterQuote={handleAfterQuote}/>
         ) : (
@@ -644,11 +647,14 @@ export default function EpisodeBody({ illustUrl, illustIsAi, title, body, prefac
                 <div style={{position:'relative',display:'inline-block',marginBottom:16}}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={illustUrl} alt="挿絵"
-                    style={{maxHeight:260,maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+                    style={{maxHeight:illustBox('desktopHorizontal',settings.illustSize).maxHeight,
+                      maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
                   {illustIsAi && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
-                      style={{position:'absolute',top:-5,right:-5,width:38,height:38,
+                      style={{position:'absolute',top:-5,right:-5,
+                        width:illustBox('desktopHorizontal',settings.illustSize).stamp,
+                        height:illustBox('desktopHorizontal',settings.illustSize).stamp,
                         transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
                         filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
                   )}
@@ -703,9 +709,11 @@ interface VerticalProps {
   /** 話ごとの挿絵。縦書きの流れの中、題名の右に出る */
   illustUrl?: string | null
   illustIsAi?: boolean | null
+  /** 挿絵の大きさ。small / medium / large */
+  illustSize?: string | null
 }
 
-function VerticalBody({ illustUrl, illustIsAi, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
+function VerticalBody({ illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   useEffect(() => {
@@ -815,11 +823,15 @@ function VerticalBody({ illustUrl, illustIsAi, title, body, preface, afterword, 
                    *   % は入れ物の高さが決まっていないと 0 になり、
                    *   絵がまったく出なかった。
                    */
-                  maxHeight:360,maxWidth:240,objectFit:'contain',borderRadius:8,display:'block'}}/>
+                  maxHeight:illustBox('desktopVertical',illustSize).maxHeight,
+                  maxWidth:illustBox('desktopVertical',illustSize).maxWidth,
+                  objectFit:'contain',borderRadius:8,display:'block'}}/>
               {illustIsAi && (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
-                  style={{position:'absolute',top:-5,right:-5,width:38,height:38,
+                  style={{position:'absolute',top:-5,right:-5,
+                    width:illustBox('desktopVertical',illustSize).stamp,
+                    height:illustBox('desktopVertical',illustSize).stamp,
                     transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
                     filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
               )}

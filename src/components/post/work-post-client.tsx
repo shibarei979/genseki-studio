@@ -820,6 +820,7 @@ function PostForm({
     const [illustUrl, setIllustUrl] = useState(episode.illust_url ?? "");
     /* この挿絵を AI で作ったか。表紙と同じ扱い */
     const [illustIsAi, setIllustIsAi] = useState(episode.illust_is_ai ?? false);
+
     const [illustBusy, setIllustBusy] = useState(false);
     const [illustError, setIllustError] = useState("");
 
