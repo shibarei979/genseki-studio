@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby } from '@/lib/utils/ruby'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
+import FullscreenReader from '@/components/novel/episode/fullscreen-reader'
 
 interface Props {
   title: string
@@ -217,6 +218,9 @@ function VerticalText({ text }: { text: string }) {
 export default function MobileEpisodeBody({ title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
   const [isVertical, setIsVertical] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
+
+  /* 全画面で読んでいるか */
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [containerHeight, setContainerHeight] = useState(600)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -288,10 +292,37 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
 
   // ===== 縦書き =====
   if (isVertical) {
+
+  /*
+   * 全画面で読む。
+   *
+   * ★ 携帯だけ。
+   *   画面が小さいので、まわりの飾りを消すと
+   *   読める場所がはっきり広がる。
+   *
+   * 左右を触ると頁を送る。
+   * 頁の分け方は PagedReader に任せる。
+   */
+  if (isFullscreen) {
+    return (
+      <FullscreenReader
+        settings={{
+          writing_mode: isVertical ? 'vertical' : 'horizontal',
+          font_size: settings.fontSize,
+          line_height: 'normal',
+          theme: 'paper',
+        } as never}
+        title={title}
+        text={body}
+        onClose={()=>setIsFullscreen(false)}
+      />
+    )
+  }
+
     return (
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
         <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-          <ReadingSettings onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
+          <ReadingSettings onFullscreen={()=>setIsFullscreen(true)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
         </div>
 
         {preface && (
@@ -369,7 +400,7 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
   return (
     <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
       <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-        <ReadingSettings onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
+        <ReadingSettings onFullscreen={()=>setIsFullscreen(true)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
       </div>
 
       <div style={{padding:'20px 16px 28px'}}>

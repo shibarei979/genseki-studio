@@ -5,7 +5,6 @@ import { splitRuby, stripRuby } from '@/lib/utils/ruby'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 import MobileEpisodeBody from '@/components/novel/episode/mobile-episode-body'
 import { useQuote } from '@/components/novel/episode/quote-context'
-import FullscreenReader from '@/components/novel/episode/fullscreen-reader'
 
 interface Props {
   title: string
@@ -565,9 +564,6 @@ function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecti
 }
 
 export default function EpisodeBody({ title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
-  /* 全画面で読んでいるか */
-  const [isFullscreen, setIsFullscreen] = useState(false)
-
   const { setQuotedText, selecting, setSelecting, commentAnchorRef } = useQuote()
   const handleQuote = onQuote || setQuotedText
 
@@ -624,28 +620,8 @@ export default function EpisodeBody({ title, body, preface, afterword, authorNam
            * どの押し具のことか分かりにくい。
            * すすめる向きの押し具そのものに印を重ねる。
            */}
-          <ReadingSettings onFullscreen={()=>setIsFullscreen(true)} onChange={setSettings} isMobile={false} showWritingMode={true} recommendedMode={recommendedMode}/>
+          <ReadingSettings onChange={setSettings} isMobile={false} showWritingMode={true} recommendedMode={recommendedMode}/>
         </div>
-
-        {/*
-          * 全画面で読む。
-          *
-          * 左右を触ると頁を送る。
-          * 頁の分け方は PagedReader に任せる。
-          */}
-        {isFullscreen && (
-          <FullscreenReader
-            settings={{
-              writing_mode: vertical ? 'vertical' : 'horizontal',
-              font_size: settings.fontSize,
-              line_height: 'normal',
-              theme: 'paper',
-            } as never}
-            title={title}
-            text={body}
-            onClose={()=>setIsFullscreen(false)}
-          />
-        )}
 
         {vertical ? (
           <VerticalBody title={title} body={body} preface={preface} afterword={afterword}
