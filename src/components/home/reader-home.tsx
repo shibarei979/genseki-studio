@@ -148,6 +148,42 @@ function toBook(
 // ============================================================
 // ページ本体
 // ============================================================
+/**
+ * 読者ホームを、開いたときに一度だけ読み込み直す。
+ *
+ * ★ 本棚が最初の組み立てで崩れることがある。
+ *
+ *   幅の取れ方が端末やタイミングで変わり、
+ *   本の大きさと位置が食い違ったまま固まる。
+ *   読み込み直すと直るので、それを自動でやる。
+ *
+ * ★ 一度だけ。
+ *   記録を残さないと、永遠に読み込み直し続ける。
+ *   sessionStorage に印を置き、
+ *   その窓を閉じるまでは二度としない。
+ */
+function ReloadOnce() {
+    return (
+        <script
+            dangerouslySetInnerHTML={{
+                __html: `
+(function () {
+  try {
+    var key = 'genseki:home-reloaded';
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    window.location.reload();
+  } catch (e) {
+    /* 記録できない環境では、読み込み直さない。
+       印が残せないと、繰り返しになるため */
+  }
+})();
+                `.trim(),
+            }}
+        />
+    );
+}
+
 export default async function ReaderHome() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -809,6 +845,12 @@ export default async function ReaderHome() {
   // ============================================================
   return (
     <div className="page-with-footer bg-canvas">
+    {/*
+      * 開いたときに一度だけ読み込み直す。
+      * 本棚が最初の組み立てで崩れることがあるため。
+      */}
+    <ReloadOnce />
+
     {/* ヘッダーは端から端まで */}
     <Header />
 

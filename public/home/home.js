@@ -13,44 +13,9 @@ class LayoutCalc {
     // Config
     //==================================================
 
-    /*
-     * 画面の幅に応じた縮尺。
-     *
-     * ★ 寸法を 1 か所でまとめて掛ける。
-     *
-     *   本の大きさだけを変えると、位置の計算と食い違って
-     *   本が散らばる。以前それで壊した。
-     *   ここで縮めれば、位置も余白も同じ割合でずれるので崩れない。
-     *
-     * 携帯では 0.55 倍。
-     * そのままだと 1 冊で画面の半分を占め、
-     * 両脇の本がほとんど見えない。
-     */
-    static get SIZE_SCALE() {
-        if (typeof window === "undefined") return 1;
-
-        /*
-         * ★ 名前を SCALE にしてはいけない。
-         *
-         *   下に static SCALE = 1 がある。
-         *   同じ名前だと、あとに書いたほうが勝ち、
-         *   この計算が丸ごと打ち消される。
-         *   実際、携帯でも 1 倍のままで、
-         *   本がパソコンの大きさ（220px）になっていた。
-         *
-         * ★ window.innerWidth をあてにしない。
-         *   組み立てる時点では、携帯でも広い値が返ることがある。
-         *   棚そのものの幅を見る。
-         */
-        const shelf = document.querySelector(".bookshelf-loop");
-        const w = shelf?.clientWidth || window.innerWidth;
-
-        return w < 1024 ? 0.55 : 1;
-    }
-
-    static get B_WIDTH() { return 245 * 0.9 * this.SIZE_SCALE; }
-    static get B_HEIGHT() { return 300 * 0.9 * this.SIZE_SCALE; }
-    static get B_DEPTH() { return 60 * 0.9 * this.SIZE_SCALE; }
+    static B_WIDTH = 245 * 0.9;
+    static B_HEIGHT = 300 * 0.9;
+    static B_DEPTH = 60 * 0.9;
 
     /*
      * 左右に並べる冊数。
@@ -89,34 +54,15 @@ class LayoutCalc {
      * 縮めたぶん 1 冊が細くなるので、10 のままだと
      * 帯が横に伸びすぎる。
      */
-    static get B_SIDE_COUNT() {
-        if (typeof window === "undefined") return 10;
-
-        /* 縮尺と同じ見方をする。ずれると本の数が合わない */
-        const shelf = document.querySelector(".bookshelf-loop");
-        const w = shelf?.clientWidth || window.innerWidth;
-
-        return w < 1024 ? 6 : 10;
-    }
+    static B_SIDE_COUNT = 10;
     static B_OVERFLOW_COUNT = 1.5;
 
     static SCALE = 1;
     static CENTER_MIN_SCALE = 1;
 
     /* 真ん中の本の左右に空ける幅。寸法と同じ割合で縮める */
-    static get CENTER_MARGIN() { return 200 * this.SIZE_SCALE; }
-    /*
-     * 帯の最小の幅。
-     *
-     * ★ 静的な値ではなく、呼ばれるたびに計算する。
-     *   寸法が画面の幅で変わるので、
-     *   一度きりの計算だと古い値のまま残る。
-     */
-    static get TRACK_MIN_WIDTH() {
-        return (this.B_DEPTH * this.B_SIDE_COUNT * 2)
-            + (this.B_WIDTH * this.CENTER_MIN_SCALE)
-            + (this.CENTER_MARGIN * 2);
-    }
+    static CENTER_MARGIN = 200;
+    static TRACK_MIN_WIDTH = (this.B_DEPTH * this.B_SIDE_COUNT * 2) + (this.B_WIDTH * this.CENTER_MIN_SCALE) + (this.CENTER_MARGIN * 2);
 
     //==================================================
     // Calculate
