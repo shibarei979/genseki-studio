@@ -216,7 +216,7 @@ export default async function EpisodePage({ params }: Props) {
       <Header />
 
       {/* ===== デスクトップレイアウト ===== */}
-      <div className="desktop-only" style={{maxWidth:1200,margin:'0 auto',padding:'20px 32px',display:'flex',gap:20,alignItems:'flex-start'}}>
+      <div className="desktop-only" style={{maxWidth:1560,margin:'0 auto',padding:'20px 28px',display:'flex',gap:20,alignItems:'flex-start'}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:12,color:'var(--color-text-muted)',marginBottom:14,display:'flex',alignItems:'center',gap:4,flexWrap:'wrap'}}>
             <Link href="/" style={{color:'var(--color-brand)',textDecoration:'none'}}>ホーム</Link>

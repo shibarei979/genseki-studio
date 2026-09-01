@@ -737,7 +737,16 @@ function VerticalBody({ title, body, preface, afterword, authorName, fontSize, f
         * 180 は、上の帯と道しるべと押し具のぶん。
         * 実測すると 120 で足りる。
         */}
-      <div ref={scrollRef} className="v-scroll" style={{overflowX:'scroll',overflowY:'hidden',height:'calc(100vh - 120px)',paddingBottom:4}}>
+      <div ref={scrollRef} className="v-scroll" style={{overflowX:'scroll',overflowY:'hidden',/*
+           * ★ 縦に広げる。
+           *
+           *   前は 120px 引いていた。
+           *   ヘッダー・道すじ・目次の押し具ぶんだが、
+           *   実際にはもう少し詰められる。
+           *   縦書きは高さが行数になるので、
+           *   高いほど 1 画面に入る量が増える。
+           */
+          height:'calc(100vh - 96px)',paddingBottom:4}}>
         <div style={{
           writingMode:'vertical-rl',
           /*
