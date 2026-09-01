@@ -4,6 +4,7 @@ import ReadingSettings, { Settings } from '@/components/novel/episode/reading-se
 import { splitRuby } from '@/lib/utils/ruby'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 import FullscreenReader from '@/components/novel/episode/fullscreen-reader'
+import { createPortal } from 'react-dom'
 
 interface Props {
   title: string
@@ -304,7 +305,18 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
    * 頁の分け方は PagedReader に任せる。
    */
   if (isFullscreen) {
-    return (
+    /*
+     * ★ 画面の外に出して描く。
+     *
+     *   position: fixed は、親に transform があると
+     *   その親を基準にしてしまう。
+     *   読む画面の中で描くと、
+     *   元の頁が残ったまま、本文だけ横にずれる。
+     *
+     *   createPortal で body の直下へ出せば、
+     *   親の指定に引きずられない。
+     */
+    return createPortal(
       <FullscreenReader
         settings={{
           writing_mode: isVertical ? 'vertical' : 'horizontal',
@@ -315,7 +327,8 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
         title={title}
         text={body}
         onClose={()=>setIsFullscreen(false)}
-      />
+      />,
+      document.body,
     )
   }
 

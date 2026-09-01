@@ -1441,12 +1441,27 @@ body {
     display: flex;
     flex-direction: column;
     background: var(--color-bg, #f4f5f3);
+
+    /*
+     * ★ 画面の高さぴったりに収める。
+     *
+     *   inset: 0 だけだと、中身が高いときに
+     *   下へはみ出して伸びる。
+     *   頁で区切って読む形なので、伸びては困る。
+     *
+     * dvh は、携帯の帯の出し入れに追随する高さ。
+     */
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
 }
 
 .fsr_body {
     position: relative;
     flex: 1;
+    /* これが無いと、中身の高さぶんまで伸びる */
     min-height: 0;
+    overflow: hidden;
 }
 
 /*
