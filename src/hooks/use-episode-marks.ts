@@ -71,7 +71,19 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
 
         if (error || !data) {
             setMarks(prev => prev.filter(one => one.id !== temp.id))
-            window.alert('付箋を付けられませんでした。')
+
+            /*
+             * ★ 理由をそのまま見せる。
+             *
+             *   「付けられませんでした」だけでは、
+             *   表が無いのか、決まりで弾かれたのか分からない。
+             *   直すときに、まずそこで詰まる。
+             */
+            console.error('付箋の保存に失敗:', error)
+            window.alert(
+                '付箋を付けられませんでした。\n\n'
+                + (error?.message ?? '理由が返ってきませんでした'),
+            )
             return
         }
 
