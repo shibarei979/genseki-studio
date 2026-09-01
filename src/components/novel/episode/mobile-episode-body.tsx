@@ -21,6 +21,12 @@ interface Props {
   /** 話ごとの挿絵。本文の前に出る */
   illustUrl?: string | null
   illustIsAi?: boolean | null
+  /* 付箋 */
+  marking?: boolean
+  onToggleMarking?: () => void
+  marks?: { id: string; sentence: number; text: string }[]
+  onMark?: (idx: number, raw: string) => void
+  onOpenMark?: (m: { id: string; sentence: number; text: string }) => void
 }
 
 const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -219,7 +225,28 @@ export function VerticalText({ text }: { text: string }) {
   )
 }
 
-export default function MobileEpisodeBody({ illustUrl, illustIsAi, title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
+/**
+ * 文の切れ目で分ける。
+ *
+ * 付箋の位置を「何文目か」で持つので、
+ * 読む側と付ける側で同じ分け方をする必要がある。
+ */
+function splitForMark(text: string): string[] {
+  const out: string[] = []
+  let buf = ''
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    buf += ch
+    const isEnd = ch === '。' || ch === '！' || ch === '？' || ch === '!' || ch === '?'
+    const next = text[i + 1]
+    if (ch === '\n') { out.push(buf); buf = ''; continue }
+    if (isEnd && next !== '」' && next !== '』') { out.push(buf); buf = '' }
+  }
+  if (buf) out.push(buf)
+  return out.filter(s => s.length > 0)
+}
+
+export default function MobileEpisodeBody({ marking, onToggleMarking, marks = [], onMark, onOpenMark, illustUrl, illustIsAi, title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
   const [isVertical, setIsVertical] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
 
@@ -318,7 +345,26 @@ export default function MobileEpisodeBody({ illustUrl, illustIsAi, title, body, 
     return (
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
         <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
+          <>
+          {onToggleMarking && (
+            <button type="button" onClick={onToggleMarking}
+              title="文に付箋を付けます"
+              style={{display:'flex',alignItems:'center',gap:4,marginRight:6,
+                padding:'5px 10px',borderRadius:999,
+                border:'1px solid var(--color-brand-border)',
+                background: marking ? 'var(--color-brand)' : 'var(--color-bg-card)',
+                color: marking ? 'var(--base-color-1)' : 'var(--color-text-muted)',
+                fontSize:11,cursor:'pointer'}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.8"
+                strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+              </svg>
+              {marking ? 'やめる' : '付箋'}
+            </button>
+          )}
           <ReadingSettings onFullscreen={()=>router.push(`${pathname}/read`)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
+          </>
         </div>
 
         {preface && (
@@ -424,7 +470,38 @@ export default function MobileEpisodeBody({ illustUrl, illustIsAi, title, body, 
             <span aria-hidden="true"
               style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
             <div style={{display:'inline-block', fontSize: settings.fontSize, lineHeight: settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', verticalAlign:'top', writingMode:'vertical-rl'}}>
-              <VerticalText text={body}/>
+              {marking ? (
+                /*
+                 * 付箋の状態のときだけ、文ごとに分ける。
+                 *
+                 * ★ ふだんは分けない。
+                 *   文ごとに包むと、その数だけ入れ物が増えて重い。
+                 */
+                splitForMark(body).map((raw, idx) => {
+                  const mark = marks.find(one => one.sentence === idx)
+                  if (raw === '\n') return <br key={idx}/>
+                  return (
+                    <span key={idx} data-sentence={idx}
+                      onClick={()=>onMark?.(idx, raw)}
+                      style={{cursor:'pointer',borderRadius:3,
+                        background: mark ? 'color-mix(in srgb, var(--color-amber, #e0a33e) 18%, transparent)' : 'transparent'}}>
+                      <VerticalText text={raw}/>
+                      {mark && (
+                        <span onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
+                          title="付箋"
+                          style={{display:'inline-block',cursor:'pointer',lineHeight:1}}>
+                          <svg width="11" height="11" viewBox="0 0 24 24"
+                            fill="var(--color-amber, #e0a33e)" stroke="none">
+                            <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                          </svg>
+                        </span>
+                      )}
+                    </span>
+                  )
+                })
+              ) : (
+                <VerticalText text={body}/>
+              )}
             </div>
           </div>
         </div>
@@ -442,7 +519,26 @@ export default function MobileEpisodeBody({ illustUrl, illustIsAi, title, body, 
   return (
     <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
       <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-        <ReadingSettings onFullscreen={()=>router.push(`${pathname}/read`)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
+        <>
+          {onToggleMarking && (
+            <button type="button" onClick={onToggleMarking}
+              title="文に付箋を付けます"
+              style={{display:'flex',alignItems:'center',gap:4,marginRight:6,
+                padding:'5px 10px',borderRadius:999,
+                border:'1px solid var(--color-brand-border)',
+                background: marking ? 'var(--color-brand)' : 'var(--color-bg-card)',
+                color: marking ? 'var(--base-color-1)' : 'var(--color-text-muted)',
+                fontSize:11,cursor:'pointer'}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.8"
+                strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+              </svg>
+              {marking ? 'やめる' : '付箋'}
+            </button>
+          )}
+          <ReadingSettings onFullscreen={()=>router.push(`${pathname}/read`)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
+          </>
       </div>
 
       <div style={{padding:'20px 16px 28px'}}>
@@ -479,10 +575,41 @@ export default function MobileEpisodeBody({ illustUrl, illustIsAi, title, body, 
             {preface}
           </div>
         )}
-        <div
-          style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all'}}
-          dangerouslySetInnerHTML={{__html: renderBody(body)}}
-        />
+        {marking ? (
+          /*
+           * 付箋の状態のときだけ、文ごとに分ける。
+           * ふだんは分けない。数だけ入れ物が増えて重い。
+           */
+          <div style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all'}}>
+            {splitForMark(body).map((raw, idx) => {
+              const mark = marks.find(one => one.sentence === idx)
+              if (raw === '\n') return <br key={idx}/>
+              return (
+                <span key={idx} data-sentence={idx}
+                  onClick={()=>onMark?.(idx, raw)}
+                  style={{cursor:'pointer',borderRadius:3,
+                    background: mark ? 'color-mix(in srgb, var(--color-amber, #e0a33e) 18%, transparent)' : 'transparent'}}>
+                  <span dangerouslySetInnerHTML={{__html: renderBody(raw)}}/>
+                  {mark && (
+                    <span onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
+                      title="付箋"
+                      style={{display:'inline-block',verticalAlign:'super',marginLeft:2,cursor:'pointer',lineHeight:1}}>
+                      <svg width="11" height="11" viewBox="0 0 24 24"
+                        fill="var(--color-amber, #e0a33e)" stroke="none">
+                        <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                      </svg>
+                    </span>
+                  )}
+                </span>
+              )
+            })}
+          </div>
+        ) : (
+          <div
+            style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all'}}
+            dangerouslySetInnerHTML={{__html: renderBody(body)}}
+          />
+        )}
       </div>
 
       {Afterword}

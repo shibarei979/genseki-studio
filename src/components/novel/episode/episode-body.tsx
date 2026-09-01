@@ -676,7 +676,56 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
     return (
       <>
         <SpeechPanel title={title} body={body} isMobile={true}/>
-        <MobileEpisodeBody illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword} authorName={authorName}/>
+        <MobileEpisodeBody
+          marking={marking}
+          onToggleMarking={()=>{ setMarking(v=>!v); setSelecting(false) }}
+          marks={marks}
+          onMark={handleMark}
+          onOpenMark={setAskingMark}
+          illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword} authorName={authorName}/>
+        {askingMark && (
+          <div
+            onClick={()=>setAskingMark(null)}
+            style={{position:'fixed',inset:0,zIndex:300,display:'flex',
+              alignItems:'center',justifyContent:'center',padding:24,
+              background:'rgba(0,0,0,.45)'}}
+          >
+            <div onClick={(e)=>e.stopPropagation()}
+              style={{width:'100%',maxWidth:380,padding:20,borderRadius:12,
+                background:'var(--color-bg-card)'}}>
+              <p style={{margin:0,fontSize:13,fontWeight:700,color:'var(--color-text)'}}>
+                付箋
+              </p>
+              <p style={{margin:'10px 0 0',maxHeight:110,overflowY:'auto',
+                padding:'9px 12px',borderRadius:8,background:'var(--color-bg)',
+                fontSize:12.5,lineHeight:1.85,color:'var(--color-text-muted)'}}>
+                {askingMark.text}
+              </p>
+              <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16}}>
+                <button type="button"
+                  onClick={()=>{ void removeMark(askingMark.id); setAskingMark(null) }}
+                  style={{padding:'8px 16px',border:'1px solid var(--color-brand-border)',
+                    borderRadius:8,background:'transparent',
+                    color:'var(--color-danger)',fontSize:12.5,cursor:'pointer'}}>
+                  外す
+                </button>
+                <button type="button"
+                  onClick={()=>{
+                    /* その文まで動かす */
+                    document.querySelector(`[data-sentence="${askingMark.sentence}"]`)
+                      ?.scrollIntoView({ behavior:'smooth', block:'center' })
+                    setAskingMark(null)
+                  }}
+                  style={{padding:'8px 18px',border:'none',borderRadius:8,
+                    background:'var(--color-brand)',color:'var(--base-color-1)',
+                    fontSize:12.5,cursor:'pointer'}}>
+                  ここへ飛ぶ
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </>
     )
   }
@@ -1030,15 +1079,21 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
             style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}
           />
           <div style={{display:'inline-block',fontSize,lineHeight:2.1,color:'var(--color-text)',fontFamily,wordBreak:'break-all',verticalAlign:'top'}}>
-            {selecting ? (
+            {(selecting || marking) ? (
               sentences.map((raw, idx) => {
                 if (raw === '\n') return <br key={idx}/>
                 const isHover = hoverIdx === idx
+                const mark = marks.find(one => one.sentence === idx)
                 return (
                   <span key={idx}
+                    data-sentence={idx}
                     onMouseEnter={()=>setHoverIdx(idx)}
                     onMouseLeave={()=>setHoverIdx(prev=>prev===idx?null:prev)}
-                    onClick={()=>handleClick(raw)}
+                    onClick={()=>{
+                      /* 付箋の状態なら付箋。そうでなければ引用 */
+                      if (marking) { onMark?.(idx, raw); return }
+                      handleClick(raw)
+                    }}
                     style={{
                       background: isHover ? 'color-mix(in srgb, var(--color-brand) 15%, transparent)' : 'transparent',
                       cursor: 'pointer',
@@ -1046,6 +1101,23 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
                       transition: 'background .15s ease',
                     }}>
                     <VerticalText text={raw}/>
+
+                    {/*
+                      * 付箋の印。
+                      * 押すと、飛ぶか外すかを聞く。
+                      */}
+                    {mark && (
+                      <span
+                        onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
+                        title="付箋"
+                        style={{display:'inline-block',cursor:'pointer',lineHeight:1}}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24"
+                          fill="var(--color-amber, #e0a33e)" stroke="none">
+                          <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                        </svg>
+                      </span>
+                    )}
                   </span>
                 )
               })
