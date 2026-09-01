@@ -677,7 +677,16 @@ export default async function ReaderHome() {
 
   const datedNotices: DatedNotice[] = (annRows || []).map((a: any) => ({
     id: `ann-${a.id}`,
-    href: a.link || `/announcements/${a.id}`,
+    /*
+     * ★ /announcements という頁は無い。
+     *
+     *   押しても「見つかりません」になっていた。
+     *   お知らせのまとめは /notices。
+     *
+     * link が入っていれば、そちらを優先する。
+     * 外の頁を指したいお知らせがあるため。
+     */
+    href: a.link || '/notices',
     image: a.image_url || NOTICE_FALLBACK_IMAGE,
     time: formatMonthDay(a.created_at),
     title: a.title,
@@ -777,7 +786,7 @@ export default async function ReaderHome() {
       .filter((a: any) => String(a.published_at).slice(0, 10) <= today)
       .map((a: any) => ({
         id: `adm-${a.id}`,
-        href: '/announcements',
+        href: '/notices',
         date: formatMonthDay(a.published_at),
         title: a.title as string,
         at: String(a.published_at),

@@ -271,7 +271,7 @@ export default function ReaderSidebar({
                         お知らせ
                     </h2>
                     <Link
-                        href="/announcements"
+                        href="/notices"
                         className="shrink-0 text-[11px] text-muted hover:text-forest"
                     >
                         すべて見る <span aria-hidden="true">›</span>

@@ -48,7 +48,7 @@ export default function NoticeSection({
                 <NoticeList items={contests} />
             </div>
             <button id="n_fold">さらに見る</button>
-            <a href="/announcements">さらに見る</a>
+            <a href="/notices">さらに見る</a>
         </section>
     );
 }
