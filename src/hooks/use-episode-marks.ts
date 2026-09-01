@@ -29,6 +29,24 @@ export interface EpisodeMark {
 }
 
 export function useEpisodeMarks(novelId: string, episodeId: string) {
+    /*
+     * 作品の id。
+     *
+     * ★ 渡された値をあてにしない。
+     *
+     *   渡し忘れると空の文字列になり、
+     *   uuid として使えず保存が落ちる。
+     *   実際、それで「付けられませんでした」が出た。
+     *
+     * 住所は /novel/{作品id}/episode/{話id} の形なので、
+     * そこから取れる。
+     */
+    const workId =
+        novelId
+        || (typeof window !== 'undefined'
+            ? (window.location.pathname.split('/')[2] ?? '')
+            : '')
+
     const [marks, setMarks] = useState<EpisodeMark[]>([])
     const [userId, setUserId] = useState<string | null>(null)
 
@@ -55,6 +73,10 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
             window.alert('付箋を使うには、ログインが要ります。')
             return
         }
+        if (!workId || !episodeId) {
+            window.alert('この画面では付箋を使えません。')
+            return
+        }
 
         /*
          * 先に画面へ出す。
@@ -65,7 +87,7 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
 
         const { data, error } = await createClient()
             .from('episode_marks')
-            .insert({ user_id: userId, novel_id: novelId, episode_id: episodeId, sentence, text })
+            .insert({ user_id: userId, novel_id: workId, episode_id: episodeId, sentence, text })
             .select('id, sentence, text')
             .single()
 
@@ -88,7 +110,7 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
         }
 
         setMarks(prev => prev.map(one => (one.id === temp.id ? (data as EpisodeMark) : one)))
-    }, [userId, novelId, episodeId])
+    }, [userId, workId, episodeId])
 
     const remove = useCallback(async (id: string) => {
         const before = marks
