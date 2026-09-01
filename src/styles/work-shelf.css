@@ -24,7 +24,18 @@
  */
 .ws_books {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    /*
+     * ★ 1fr にしない。
+     *
+     *   1fr は余った幅を配る。
+     *   3 冊しか入らない画面では、
+     *   その 3 冊が余りを吸って大きくなり、
+     *   狭い画面ほど本が大きいという逆のことが起きる。
+     *
+     *   幅を決め打ちにして、余りは間に流す。
+     */
+    grid-template-columns: repeat(auto-fill, 180px);
+    justify-content: center;
     /*
      * 段の間。
      * 板（18px）と、その影（12px）のぶんを空ける。
@@ -152,6 +163,44 @@
 }
 
 @media (max-width: 1023px) {
+    .ws {
+        padding: 14px 10px 20px;
+    }
+
+    /*
+     * 携帯。
+     *
+     * ★ 1 冊を小さくする。
+     *   180px のままだと 2 冊で終わる。
+     *
+     * ★ 幅は決め打ち。1fr を使わない。
+     *   1fr は余りを配るので、3 冊しか入らないと
+     *   その 3 冊が広がり、画面が狭いほど本が大きくなる。
+     */
+    .ws_books {
+        grid-template-columns: repeat(auto-fill, 100px);
+        gap: 38px 10px;
+    }
+
+    .ws_book {
+        width: 100px;
+        height: 130px;
+    }
+
+    .ws_slot::before {
+        left: -5px;
+        right: -5px;
+        bottom: -5px;
+        height: 8px;
+    }
+
+    .ws_slot::after {
+        left: -5px;
+        right: -5px;
+        bottom: -18px;
+        height: 13px;
+    }
+
     .ws_title { font-size: 11px; }
     .ws_label-title { font-size: 11.5px; }
     .ws_label-author { font-size: 10.5px; }
