@@ -75,6 +75,8 @@ export default function ReadFullPage({
     const bodyRef = useRef<HTMLDivElement>(null);
     const innerRef = useRef<HTMLDivElement>(null);
     const [pageCount, setPageCount] = useState(1);
+    /* 入れ物の幅。1 頁ぶんの動かす量になる */
+    const [boxWidth, setBoxWidth] = useState(0);
 
     /* 何頁ぶんあるかを測る */
     useEffect(() => {
@@ -92,6 +94,7 @@ export default function ReadFullPage({
              */
             const total = Math.max(1, Math.ceil(inner.scrollWidth / w));
             setPageCount(total);
+            setBoxWidth(w);
             setPage((p) => Math.min(p, total - 1));
         }
 
@@ -259,9 +262,29 @@ export default function ReadFullPage({
                          * ★ 横にずらして、見せる場所を変える。
                          *
                          *   縦書きは右から左へ流れる。
-                         *   次の頁へ進むには、右へずらす。
+                         *   先へ進むには、中身を左へ動かす。
+                         *   だから負の値。
+                         *
+                         * ★ % ではなく px で動かす。
+                         *
+                         *   % は中身の幅に対する割合。
+                         *   中身は何頁ぶんもあるので、
+                         *   1 頁ぶんではなく全体ぶん動いてしまう。
+                         *   実際、最後の 2 頁しか開けなかった。
                          */
-                        transform: `translateX(${page * 100}%)`,
+                        /*
+                         * ★ 右へずらす。
+                         *
+                         *   縦書きは右から左へ流れる。
+                         *   文の頭は右端にあり、続きは左に隠れている。
+                         *   中身を右へ動かせば、その続きが出てくる。
+                         *
+                         * ★ ずらす量は入れ物の幅ぶん。
+                         *   % だと中身の幅が基準になり、
+                         *   1 頁ぶんにならない。
+                         *   だから最後の頁とその手前しか出なかった。
+                         */
+                        transform: `translateX(${page * boxWidth}px)`,
                         transition: "transform .2s ease",
                     }}
                 >
