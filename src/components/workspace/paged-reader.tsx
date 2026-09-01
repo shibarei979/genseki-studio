@@ -26,10 +26,21 @@ interface Props {
     showPager?: boolean;
     /** ページが変わったときに呼ぶ。外側で進捗を出すために使う */
     onPageChange?: (pageIndex: number, pageCount: number) => void;
+    /**
+     * 左右を触ると頁を送る。
+     *
+     * 全画面で読むときに使う。
+     * ふだんの下読みでは、文字を選べなくなるので出さない。
+     */
+    tapToTurn?: boolean;
+    /** 真ん中を触ったとき。道具の出し入れに使う */
+    onTapCenter?: () => void;
 }
 
 export default function PagedReader({
     settings,
+    tapToTurn = false,
+    onTapCenter,
     text,
     density = "normal",
     showPager = true,
@@ -119,6 +130,53 @@ export default function PagedReader({
             role="application"
             aria-label="ページ送り表示"
         >
+            {/*
+              * 触る場所。
+              *
+              * ★ 左右 3 分の 1 ずつ。真ん中は空ける。
+              *   端まで送りにすると、文字を選べなくなる。
+              *
+              * ★ 縦書きは右から左へ進む。
+              *   左を触ると次、右を触ると前。本と同じ。
+              */}
+            {tapToTurn && (
+                <>
+                    <button
+                        type="button"
+                        aria-label="次の頁へ"
+                        onClick={() => turn("next")}
+                        style={{
+                            position: "absolute", inset: "0 auto 0 0",
+                            width: "33%", zIndex: 5,
+                            background: "transparent", border: "none", cursor: "pointer",
+                            WebkitTapHighlightColor: "transparent",
+                        }}
+                    />
+                    <button
+                        type="button"
+                        aria-label="道具を出す"
+                        onClick={() => onTapCenter?.()}
+                        style={{
+                            position: "absolute", inset: 0, left: "33%", right: "33%",
+                            zIndex: 5,
+                            background: "transparent", border: "none", cursor: "default",
+                            WebkitTapHighlightColor: "transparent",
+                        }}
+                    />
+                    <button
+                        type="button"
+                        aria-label="前の頁へ"
+                        onClick={() => turn("previous")}
+                        style={{
+                            position: "absolute", inset: "0 0 0 auto",
+                            width: "33%", zIndex: 5,
+                            background: "transparent", border: "none", cursor: "pointer",
+                            WebkitTapHighlightColor: "transparent",
+                        }}
+                    />
+                </>
+            )}
+
             <div ref={boxRef} className="relative min-h-0 flex-1 overflow-hidden">
                 <div
                     className="manuscript absolute inset-0 transition-all duration-150 ease-out"

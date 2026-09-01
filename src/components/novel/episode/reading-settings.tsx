@@ -35,6 +35,13 @@ interface Props {
   isMobile?: boolean
   showWritingMode?: boolean
   /**
+   * 全画面で読む。
+   *
+   * 渡されたときだけ、その押し具を出す。
+   * 読む画面以外では要らない。
+   */
+  onFullscreen?: () => void
+  /**
    * 作者がすすめる読む向き。
    *
    * その押し具の斜め上に、小さく「推奨」と出す。
@@ -44,7 +51,7 @@ interface Props {
   recommendedMode?: 'vertical' | 'horizontal' | null
 }
 
-export default function ReadingSettings({ onChange, isMobile = false, showWritingMode = false, recommendedMode = null }: Props) {
+export default function ReadingSettings({ onChange, isMobile = false, showWritingMode = false, recommendedMode = null, onFullscreen }: Props) {
   const [open, setOpen] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
 
@@ -102,6 +109,34 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
             padding:'16px', minWidth:'min(260px, 100%)', zIndex:99,
           }}>
             {/* 縦書き/横書き（モバイル または showWritingMode時） */}
+            {/*
+              * 全画面で読む。
+              *
+              * ★ いちばん上に置く。
+              *   細かい設定より先に、読み方を選ぶ道を見せる。
+              */}
+            {onFullscreen && (
+              <button
+                onClick={()=>{ setOpen(false); onFullscreen() }}
+                style={{
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+                  width:'100%', marginBottom:14, padding:'9px',
+                  border:'1px solid var(--color-brand-border)', borderRadius:8,
+                  background:'var(--color-bg)', color:'var(--color-brand)',
+                  fontSize:12.5, fontWeight:600, cursor:'pointer',
+                }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="1.9"
+                  strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                  <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                  <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+                  <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                </svg>
+                全画面で読む
+              </button>
+            )}
+
             {(isMobile || showWritingMode) && (
               <div style={{marginBottom:14}}>
                 <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>読み方向</div>
