@@ -13,9 +13,17 @@
      * 1 冊 120px。入るだけ並べる。
      * 幅を決め打ちにすると、画面ごとに余りが出る。
      */
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 28px 16px;
-    padding: 18px 16px 24px;
+    /*
+     * ★ 横に 5 冊。
+     *
+     *   前は入るだけ並べていて、広い画面では 8 冊になった。
+     *   1 冊が小さく、表紙も題名も読みにくかった。
+     *
+     *   数を決めれば、画面の幅に応じて 1 冊が伸びる。
+     */
+    grid-template-columns: repeat(5, 1fr);
+    gap: 34px 20px;
+    padding: 20px 18px 28px;
 }
 
 .ws_slot {
@@ -28,8 +36,9 @@
 .ws_book {
     position: relative;
     display: block;
-    width: 120px;
-    height: 156px;
+    /* 120 × 156 の 1.5 倍 */
+    width: 180px;
+    height: 234px;
     flex-shrink: 0;
     text-decoration: none;
 
@@ -45,7 +54,7 @@
 /* 本の下に落ちる影 */
 .ws_shadow {
     position: absolute;
-    top: 152px;
+    top: 230px;
     left: 12%;
     right: 8%;
     height: 5px;
@@ -67,8 +76,8 @@
     overflow: hidden;
     text-align: center;
     font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 11.5px;
-    line-height: 1.55;
+    font-size: 15px;
+    line-height: 1.6;
     letter-spacing: .04em;
 }
 
@@ -86,15 +95,15 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    font-size: 11.5px;
-    line-height: 1.6;
+    font-size: 13px;
+    line-height: 1.65;
     color: var(--color-text);
 }
 
 .ws_label-author {
     display: block;
     margin-top: 2px;
-    font-size: 10.5px;
+    font-size: 11.5px;
     color: var(--color-text-muted);
 }
 
@@ -105,24 +114,35 @@
  * 120px のままだと 2 冊で終わり、送る回数が増える。
  */
 @media (max-width: 1023px) {
+    /*
+     * 携帯。
+     *
+     * 5 冊のままだと 1 冊が 60px ほどになり、
+     * 表紙も題名も読めない。3 冊にする。
+     */
     .ws {
-        grid-template-columns: repeat(auto-fill, minmax(98px, 1fr));
-        gap: 22px 10px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px 10px;
         padding: 14px 10px 20px;
     }
 
     .ws_book {
-        width: 98px;
-        height: 128px;
+        width: 100%;
+        max-width: 112px;
+        height: 146px;
+        margin: 0 auto;
     }
 
     .ws_shadow {
-        top: 124px;
+        top: 142px;
     }
 
     .ws_title {
-        font-size: 10px;
+        font-size: 11px;
     }
+
+    .ws_label-title { font-size: 11.5px; }
+    .ws_label-author { font-size: 10.5px; }
 }
 
 /*

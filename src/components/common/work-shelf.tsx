@@ -14,7 +14,7 @@ import { COVERS, hashOf } from '@/components/home/home-work-table'
  * ★ 本の描き方は、執筆向けホームのものをそのまま使う。
  *   同じサイトで本の見た目が違うと、別の場所に見える。
  *
- *     大きさ    120 × 156px
+ *     大きさ    180 × 234px
  *     紙の端    右に 5px
  *     背の影    左に 7px
  *     題名      上から 22% の位置に、中央そろえで 3 行まで
@@ -26,10 +26,11 @@ import { COVERS, hashOf } from '@/components/home/home-work-table'
  * ============================================================
  */
 
-const BOOK_WIDTH = 120
-const BOOK_HEIGHT = 156
-const SPINE = 7
-const EDGE = 5
+/* CSS 側と同じ寸法にする。題名の位置の計算に使う */
+const BOOK_WIDTH = 180
+const BOOK_HEIGHT = 234
+const SPINE = 10
+const EDGE = 7
 
 export interface ShelfWork {
     id: string
