@@ -59,12 +59,12 @@ export default function ModeToggle({
         }
 
         /* 入っていない人は、この端末に覚えたものを使う */
-        try {
-            const saved = window.localStorage.getItem("genseki:home-mode");
-            setNow(saved === "write" ? "write" : "read");
-        } catch {
-            setNow("read");
-        }
+        const saved = document.cookie
+            .split("; ")
+            .find((one) => one.startsWith("genseki-home-mode="))
+            ?.split("=")[1];
+
+        setNow(saved === "write" ? "write" : "read");
     }, [mode]);
 
     /*
@@ -98,11 +98,18 @@ export default function ModeToggle({
          */
         if (!me) {
             setNow(next);
-            try {
-                window.localStorage.setItem("genseki:home-mode", next);
-            } catch {
-                /* 覚えられなくても、いまは切り替わる */
-            }
+            /*
+             * ★ クッキーに書く。
+             *
+             *   localStorage はブラウザの中だけのもので、
+             *   サーバー側からは読めない。
+             *   ホームはサーバー側で向きを決めるので、
+             *   そちらから読める場所に置く。
+             *
+             * 1 年で消える。Lax は、よそから来たときも読める設定。
+             */
+            document.cookie =
+                `genseki-home-mode=${next}; path=/; max-age=31536000; samesite=lax`;
             window.location.reload();
             return;
         }

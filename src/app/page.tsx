@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import HomeClient from "@/components/home/home-client";
-import GuestHome from "@/components/home/guest-home";
 import ReaderHome from "@/components/home/reader-home";
+import { cookies } from "next/headers";
 
 /**
  * ホーム。
@@ -49,5 +49,28 @@ export default async function HomePage() {
      *
      * ヘッダーの切り替えで、その場で執筆向きにも移れる。
      */
-    return <GuestHome />;
+    /*
+     * 入っていない人。
+     *
+     * ★ 端末に覚えた向きを、クッキーから読む。
+     *
+     *   前は 'use client' の部品で localStorage を読んでいたが、
+     *   ReaderHome はサーバー側の部品なので、
+     *   client の中からは呼べない（組み立てが失敗する）。
+     *
+     *   クッキーならサーバー側で読める。
+     */
+    const saved = cookies().get("genseki-home-mode")?.value;
+
+    if (saved === "write") return <HomeClient />;
+
+    /*
+     * 既定は読者向け。
+     *
+     * はじめて来た人は、まず読む人。
+     * 執筆向けは「書いた本」「執筆室」など、
+     * 入っていないと空の枠が多く、
+     * 何ができる場所か伝わらない。
+     */
+    return <ReaderHome />;
 }
