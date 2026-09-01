@@ -89,6 +89,23 @@ export default function ReadPanel({
                 </div>
             </div>
 
+            {/*
+              * 縦書きのときの送り方。
+              *
+              * ★ 縦書きは横に送る。
+              *   ふだん縦に送っている人には、
+              *   どう動かすのか分からない。
+              *
+              *   細い送り具だけでは気づけないので、
+              *   言葉でも伝える。
+              */}
+            {isVertical && shown.length > 0 && (
+                <p className="shrink-0 px-4 pb-1 text-[11px] text-faint">
+                    縦書きです。左右に動かして読み進めてください
+                    <span className="ml-1.5" aria-hidden="true">←</span>
+                </p>
+            )}
+
             {shown.length === 0 ? (
                 <p className="py-16 text-center text-[13px] text-faint">読む話がありません。</p>
             ) : (
@@ -134,6 +151,33 @@ export default function ReadPanel({
                     </div>
                 </div>
             )}
+            {/*
+              * 送りの押し具。
+              *
+              * ★ 縦書きのときだけ。
+              *   指やホイールで動かせない環境でも進める道が要る。
+              *
+              * 左が「先へ」。縦書きは右から左へ進む。
+              */}
+            {isVertical && shown.length > 0 && (
+                <div className="flex shrink-0 items-center justify-center gap-2 border-t border-line px-4 py-2">
+                    <button
+                        type="button"
+                        onClick={() => bodyRef.current?.scrollBy({ left: -600, behavior: "smooth" })}
+                        className="rounded-md border border-line px-4 py-1.5 text-[12px] text-muted hover:text-ink"
+                    >
+                        ← 先へ
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => bodyRef.current?.scrollBy({ left: 600, behavior: "smooth" })}
+                        className="rounded-md border border-line px-4 py-1.5 text-[12px] text-muted hover:text-ink"
+                    >
+                        戻る →
+                    </button>
+                </div>
+            )}
+
         </div>
     );
 }
