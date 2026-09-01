@@ -26,14 +26,31 @@ class LayoutCalc {
      * そのままだと 1 冊で画面の半分を占め、
      * 両脇の本がほとんど見えない。
      */
-    static get SCALE() {
+    static get SIZE_SCALE() {
         if (typeof window === "undefined") return 1;
-        return window.innerWidth < 1024 ? 0.55 : 1;
+
+        /*
+         * ★ 名前を SCALE にしてはいけない。
+         *
+         *   下に static SCALE = 1 がある。
+         *   同じ名前だと、あとに書いたほうが勝ち、
+         *   この計算が丸ごと打ち消される。
+         *   実際、携帯でも 1 倍のままで、
+         *   本がパソコンの大きさ（220px）になっていた。
+         *
+         * ★ window.innerWidth をあてにしない。
+         *   組み立てる時点では、携帯でも広い値が返ることがある。
+         *   棚そのものの幅を見る。
+         */
+        const shelf = document.querySelector(".bookshelf-loop");
+        const w = shelf?.clientWidth || window.innerWidth;
+
+        return w < 1024 ? 0.55 : 1;
     }
 
-    static get B_WIDTH() { return 245 * 0.9 * this.SCALE; }
-    static get B_HEIGHT() { return 300 * 0.9 * this.SCALE; }
-    static get B_DEPTH() { return 60 * 0.9 * this.SCALE; }
+    static get B_WIDTH() { return 245 * 0.9 * this.SIZE_SCALE; }
+    static get B_HEIGHT() { return 300 * 0.9 * this.SIZE_SCALE; }
+    static get B_DEPTH() { return 60 * 0.9 * this.SIZE_SCALE; }
 
     /*
      * 左右に並べる冊数。
@@ -87,7 +104,7 @@ class LayoutCalc {
     static CENTER_MIN_SCALE = 1;
 
     /* 真ん中の本の左右に空ける幅。寸法と同じ割合で縮める */
-    static get CENTER_MARGIN() { return 200 * this.SCALE; }
+    static get CENTER_MARGIN() { return 200 * this.SIZE_SCALE; }
     /*
      * 帯の最小の幅。
      *
