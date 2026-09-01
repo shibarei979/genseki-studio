@@ -185,9 +185,36 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                   * 題名の紙には、そもそも絵が無い。
                                   */}
                                 {work.cover_url && work.cover_is_ai && (
-                                    <span className="ws_ai" aria-label="AIで作った表紙">
-                                        AI
-                                    </span>
+                                    /*
+                                     * AI で作った表紙の印。
+                                     *
+                                     * ★ 作品ページと同じ絵を使う。
+                                     *   /images/ai-cover-stamp.png
+                                     *   別の形にすると、同じ意味の印が
+                                     *   2 通りあることになる。
+                                     *
+                                     * 本は小さいので、絵も小さくする。
+                                     * 薄くして、表紙の絵を隠しすぎない。
+                                     */
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                        src="/images/ai-cover-stamp.png"
+                                        alt="AIで作った表紙"
+                                        title="AIで作った表紙"
+                                        style={{
+                                            position: 'absolute',
+                                            top: -4,
+                                            right: -4,
+                                            zIndex: 3,
+                                            width: 40,
+                                            height: 40,
+                                            transform: 'rotate(-8deg)',
+                                            opacity: .55,
+                                            filter:
+                                                'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))',
+                                            pointerEvents: 'none',
+                                        }}
+                                    />
                                 )}
 
                                 {/* 上からの光 */}
