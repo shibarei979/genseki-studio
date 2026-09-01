@@ -633,6 +633,28 @@ export default function EpisodeBody({ illustUrl, illustIsAi, title, body, prefac
         ) : (
           <>
             <div style={{padding:'32px 48px 40px'}}>
+              {/*
+                * 横書きのときの挿絵。
+                *
+                * ★ 題名の前に置く。
+                *   横書きは上から下へ読むので、
+                *   絵を上に置けば本文の始まりの前に来る。
+                */}
+              {illustUrl && (
+                <div style={{position:'relative',display:'inline-block',marginBottom:16}}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={illustUrl} alt="挿絵"
+                    style={{maxHeight:260,maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+                  {illustIsAi && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+                      style={{position:'absolute',top:-5,right:-5,width:38,height:38,
+                        transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+                        filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
+                  )}
+                </div>
+              )}
+
               <h1 style={{fontFamily,fontSize:20,fontWeight:700,color:'var(--color-text)',textAlign:'center',marginBottom:28,lineHeight:1.6}}>
                 {title}
               </h1>
@@ -802,6 +824,19 @@ function VerticalBody({ illustUrl, illustIsAi, title, body, preface, afterword, 
                     filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
               )}
             </div>
+          )}
+
+          {/*
+            * 絵のあとにも仕切りを入れる。
+            *
+            * ★ 入れないと、絵の下に題名が入り込んで重なる。
+            *   縦書きは上から下へ流れるため。
+            */}
+          {illustUrl && (
+            <span
+              aria-hidden="true"
+              style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}
+            />
           )}
 
           <div style={{display:'inline-block',marginRight:'2em',verticalAlign:'top'}}>
