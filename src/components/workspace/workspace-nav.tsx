@@ -17,11 +17,19 @@ import { useState } from "react";
 interface Props {
     workId: string;
     current: "write" | "settings" | "resource" | "post";
+    /**
+     * 畳まずに、いつも開いておく。
+     *
+     * 話の一覧を開いたときに使う。
+     * そこは行き先を選ぶ場所なので、
+     * 畳んでいると二度押すことになる。
+     */
+    alwaysOpen?: boolean;
     /** 投稿へ渡す話。書いていた話をそのまま開くため */
     episodeId?: string | null;
 }
 
-export default function WorkspaceNav({ workId, current, episodeId }: Props) {
+export default function WorkspaceNav({ workId, current, episodeId, alwaysOpen = false }: Props) {
     /*
      * 携帯では畳む。
      *
@@ -39,26 +47,37 @@ export default function WorkspaceNav({ workId, current, episodeId }: Props) {
     return (
         <div className="space-y-2">
             {/* いま居る所。押すと残りが開く */}
-            <button
-                type="button"
-                onClick={() => setIsOpen((v) => !v)}
-                className="flex w-full items-center justify-between rounded-lg border border-forest bg-forest px-4 py-2.5 text-[13px] font-medium text-white lg:hidden"
-            >
-                <span>{label}</span>
-                <span
-                    aria-hidden="true"
-                    className="text-[11px]"
-                    style={{
-                        display: "inline-block",
-                        transform: isOpen ? "rotate(180deg)" : "none",
-                        transition: "transform .15s ease",
-                    }}
+            {!alwaysOpen && (
+                <button
+                    type="button"
+                    onClick={() => setIsOpen((v) => !v)}
+                    className="flex w-full items-center justify-between rounded-lg border border-forest bg-forest px-4 py-2.5 text-[13px] font-medium text-white lg:hidden"
                 >
-                    ⌄
-                </span>
-            </button>
+                    <span>{label}</span>
 
-            <div className={`${isOpen ? "" : "hidden"} space-y-2 lg:block`}>
+                    {/*
+                      * ★ 押せると分かる形にする。
+                      *
+                      *   矢印だけだと、飾りに見えて押されない。
+                      *   言葉を添えて、丸で囲む。
+                      */}
+                    <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[11px]">
+                        {isOpen ? "とじる" : "ほかを見る"}
+                        <span
+                            aria-hidden="true"
+                            style={{
+                                display: "inline-block",
+                                transform: isOpen ? "rotate(180deg)" : "none",
+                                transition: "transform .15s ease",
+                            }}
+                        >
+                            ⌄
+                        </span>
+                    </span>
+                </button>
+            )}
+
+            <div className={`${isOpen || alwaysOpen ? "" : "hidden"} space-y-2 lg:block`}>
             <div className="grid grid-cols-3 gap-2">
             <NavButton
                 href={`/workspace/${workId}`}

@@ -250,16 +250,24 @@ export default function SettingsClient({ workId }: Props) {
                             <span className="font-medium">
                                 {SECTIONS.find((one) => one.key === section)?.label}
                             </span>
-                            <span
-                                aria-hidden="true"
-                                className="text-[11px] text-muted"
-                                style={{
-                                    display: "inline-block",
-                                    transform: isNavOpen ? "rotate(180deg)" : "none",
-                                    transition: "transform .15s ease",
-                                }}
-                            >
-                                ⌄
+                            {/*
+                              * ★ 押せると分かる形にする。
+                              *
+                              *   矢印だけだと、飾りに見えて押されない。
+                              *   言葉を添えて、丸で囲む。
+                              */}
+                            <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-canvas px-2.5 py-1 text-[11px] text-muted">
+                                {isNavOpen ? "とじる" : "ほかの項目"}
+                                <span
+                                    aria-hidden="true"
+                                    style={{
+                                        display: "inline-block",
+                                        transform: isNavOpen ? "rotate(180deg)" : "none",
+                                        transition: "transform .15s ease",
+                                    }}
+                                >
+                                    ⌄
+                                </span>
                             </span>
                         </button>
 

@@ -438,7 +438,7 @@ export default function WorkspaceClient({ workId }: Props) {
                               : "hidden lg:flex",
                     ].join(" ")}
                 >
-                    <WorkspaceNav workId={workId} current="write" episodeId={selectedId} />
+                    <WorkspaceNav workId={workId} current="write" episodeId={selectedId} alwaysOpen />
 
                     {/* 一覧を閉じる。狭い画面だけ */}
                     <button
