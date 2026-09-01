@@ -22,6 +22,9 @@ interface Props {
    * それを伝える手立てが要る。
    */
   recommendedMode?: 'vertical' | 'horizontal' | null
+  /** 話ごとの挿絵。縦書きの流れの中、題名の右に出る */
+  illustUrl?: string | null
+  illustIsAi?: boolean | null
 }
 
 const DEFAULTS: Settings = { font: 'serif', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -563,7 +566,7 @@ function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecti
   )
 }
 
-export default function EpisodeBody({ title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
+export default function EpisodeBody({ illustUrl, illustIsAi, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
   const { setQuotedText, selecting, setSelecting, commentAnchorRef } = useQuote()
   const handleQuote = onQuote || setQuotedText
 
@@ -624,7 +627,7 @@ export default function EpisodeBody({ title, body, preface, afterword, authorNam
         </div>
 
         {vertical ? (
-          <VerticalBody title={title} body={body} preface={preface} afterword={afterword}
+          <VerticalBody illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword}
             authorName={authorName} fontSize={settings.fontSize} fontFamily={fontFamily}
             selecting={selecting} onQuote={handleQuote} onAfterQuote={handleAfterQuote}/>
         ) : (
@@ -675,9 +678,12 @@ interface VerticalProps {
   title: string; body: string; preface?: string|null; afterword?: string|null
   authorName?: string; fontSize: number; fontFamily: string
   selecting?: boolean; onQuote?: (text:string)=>void; onAfterQuote?: () => void
+  /** 話ごとの挿絵。縦書きの流れの中、題名の右に出る */
+  illustUrl?: string | null
+  illustIsAi?: boolean | null
 }
 
-function VerticalBody({ title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
+function VerticalBody({ illustUrl, illustIsAi, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   useEffect(() => {
@@ -763,6 +769,34 @@ function VerticalBody({ title, body, preface, afterword, authorName, fontSize, f
           height:'calc(100% - 10px)',
           boxSizing:'border-box',
         }}>
+          {/*
+            * 挿絵。
+            *
+            * ★ 本文の枠の中に置く。
+            *
+            *   外に置くと、絵を見終わってから
+            *   下へ送らないと本文が始まらない。
+            *   縦書きの流れの中に入れれば、
+            *   題名の右に並び、そのまま読み進められる。
+            *
+            * ★ 縦書きの中なので、writingMode を戻す。
+            *   戻さないと、絵の入れ物まで縦に伸びる。
+            */}
+          {illustUrl && (
+            <div style={{display:'inline-block',verticalAlign:'top',marginLeft:'1.5em',writingMode:'horizontal-tb',position:'relative'}}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={illustUrl} alt="挿絵"
+                style={{maxHeight:'70%',maxWidth:260,objectFit:'contain',borderRadius:8,display:'block'}}/>
+              {illustIsAi && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+                  style={{position:'absolute',top:-5,right:-5,width:38,height:38,
+                    transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+                    filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
+              )}
+            </div>
+          )}
+
           <div style={{display:'inline-block',marginRight:'2em',verticalAlign:'top'}}>
             <div style={{fontSize:fontSize+4,fontWeight:700,color:'var(--color-text)',fontFamily,lineHeight:1.8}}>
               {/* 題名にも英数字が入る。「(Pr. I)」など */}

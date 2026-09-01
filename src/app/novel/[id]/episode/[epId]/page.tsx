@@ -235,25 +235,7 @@ export default async function EpisodePage({ params }: Props) {
             <Link href={`/novel/${params.id}`} style={{...navBtn,color:'var(--color-text-muted)'}}>目次</Link>
             {nextEp ? <Link href={`/novel/${params.id}/episode/${nextEp.id}`} style={navBtn}>次の話 →</Link> : <div/>}
           </div>
-          {episode.illust_url && (
-            <div style={{position:'relative',display:'inline-block',textAlign:'center',marginBottom:12,float:'right',marginLeft:14}}>
-              <img src={episode.illust_url} alt="挿絵" style={{maxWidth:'100%',maxHeight:200,objectFit:'contain',borderRadius:8}}/>
-              {episode.illust_is_ai && (
-              /*
-               * AI で作った挿絵の印。
-               *
-               * ★ 表紙と同じ絵を使う。
-               *   同じ意味の印が 2 通りあると、
-               *   見た人が別のものだと思う。
-               */
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
-                style={{position:'absolute',top:-5,right:-5,width:38,height:38,
-                  transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
-                  filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}} />
-            )}
-            </div>
-          )}
+          {/* 挿絵は EpisodeBody の中で、縦書きの流れに沿って出す */}
           {/*
            * 音声で聴く。
            *
@@ -265,7 +247,7 @@ export default async function EpisodePage({ params }: Props) {
             <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
           )}
 
-          <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
+          <EpisodeBody illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
             <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
             {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
@@ -335,27 +317,9 @@ export default async function EpisodePage({ params }: Props) {
           }
         </div>
 
-        {episode.illust_url && (
-          <div style={{position:'relative',display:'inline-block',textAlign:'center',marginBottom:10,float:'right',marginLeft:12}}>
-            <img src={episode.illust_url} alt="挿絵" style={{maxWidth:'100%',maxHeight:180,objectFit:'contain',borderRadius:8}}/>
-            {episode.illust_is_ai && (
-              /*
-               * AI で作った挿絵の印。
-               *
-               * ★ 表紙と同じ絵を使う。
-               *   同じ意味の印が 2 通りあると、
-               *   見た人が別のものだと思う。
-               */
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
-                style={{position:'absolute',top:-5,right:-5,width:38,height:38,
-                  transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
-                  filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}} />
-            )}
-            </div>
-        )}
+        {/* 挿絵は EpisodeBody の中で、縦書きの流れに沿って出す */}
 
-        <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
+        <EpisodeBody illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
 
         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:14,flexWrap:'wrap'}}>
           <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
