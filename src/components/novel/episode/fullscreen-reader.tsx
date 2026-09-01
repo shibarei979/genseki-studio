@@ -153,7 +153,23 @@ export default function FullscreenReader({
                 </button>
             </div>
 
-            <div className="fsr_body">
+            <div
+                className="fsr_body"
+                /*
+                 * ★ 余白と上限を、ここで外す。
+                 *
+                 *   外側は 320px なのに、ここが 272px しか無かった。
+                 *   左右に 24px ずつ、どこかの CSS が当てている。
+                 *   全画面で読む所は、端まで使う。
+                 */
+                style={{
+                    width: "100%",
+                    maxWidth: "none",
+                    minWidth: 0,
+                    margin: 0,
+                    padding: 0,
+                }}
+            >
                 <PagedReader
                     settings={settings}
                     text={text}

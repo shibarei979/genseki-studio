@@ -1493,6 +1493,32 @@ body {
     /* これが無いと、中身の高さぶんまで伸びる */
     min-height: 0;
     overflow: hidden;
+
+    /*
+     * ★ 端まで使う。
+     *
+     *   外側は画面ぴったりなのに、
+     *   ここが 48px 狭くなっていた。
+     *   どこかの CSS が左右に余白を当てている。
+     */
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+/*
+ * 中の本文の器も、端まで広げる。
+ *
+ * manuscript-surface は読む画面でも使う部品で、
+ * そちらでは余白があるほうが読みやすい。
+ * 全画面のときだけ外す。
+ */
+.fsr .manuscript-surface {
+    width: 100%;
+    max-width: none;
+    margin: 0;
 }
 
 /*
