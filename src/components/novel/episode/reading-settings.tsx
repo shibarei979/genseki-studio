@@ -28,8 +28,15 @@ const FONT_OPTIONS = [
  *   小さいほど 1 行に入る文字が増える。
  */
 const SIZE_OPTIONS = [
-  { label: '豆',   value: 8 },
-  { label: '極小', value: 12 },
+  /*
+   * ★ horizontalOnly は横書きのときだけ出す。
+   *
+   *   縦書きは 1 行の高さが列の幅になる。
+   *   8 や 12 だと列が細くなりすぎ、
+   *   題名と本文が同じ列に入り込むなど崩れる。
+   */
+  { label: '豆',   value: 8,  horizontalOnly: true },
+  { label: '極小', value: 12, horizontalOnly: true },
   { label: '小',   value: 14 },
   { label: '中',   value: 16 },
   { label: '大',   value: 18 },
@@ -162,7 +169,18 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                   </span>
 
                   <span style={{position:'relative',display:'inline-block'}}>
-                    <button onClick={()=>update({writingMode:'vertical'})} style={btnBase(settings.writingMode==='vertical')}>
+                    <button onClick={()=>update({
+                      writingMode:'vertical',
+                      /*
+                       * ★ 縦書きにしたとき、小さすぎる大きさなら戻す。
+                       *
+                       *   豆（8）や極小（12）は縦書きでは列が細くなりすぎ、
+                       *   題名と本文が同じ列に入り込む。
+                       *   押し具を隠すだけだと、
+                       *   その大きさのまま縦書きになって崩れる。
+                       */
+                      ...(settings.fontSize < 14 ? { fontSize: 14 } : {}),
+                    })} style={btnBase(settings.writingMode==='vertical')}>
                       縦書き
                     </button>
                     {recommendedMode === 'vertical' && <RecommendMark/>}
@@ -185,7 +203,9 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
             <div style={{marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>文字サイズ</div>
               <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                {SIZE_OPTIONS.map(o => (
+                {SIZE_OPTIONS
+                  .filter(o => !o.horizontalOnly || settings.writingMode === 'horizontal')
+                  .map(o => (
                   <button key={o.value} onClick={()=>update({fontSize:o.value})} style={btnBase(settings.fontSize===o.value)}>
                     {o.label}
                   </button>
