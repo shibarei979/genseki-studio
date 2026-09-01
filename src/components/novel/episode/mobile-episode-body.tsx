@@ -17,6 +17,9 @@ interface Props {
    * 読む人の設定は変えない。印を出すだけ。
    */
   recommendedMode?: 'vertical' | 'horizontal' | null
+  /** 話ごとの挿絵。本文の前に出る */
+  illustUrl?: string | null
+  illustIsAi?: boolean | null
 }
 
 const DEFAULTS: Settings = { font: 'serif', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -215,7 +218,7 @@ export function VerticalText({ text }: { text: string }) {
   )
 }
 
-export default function MobileEpisodeBody({ title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
+export default function MobileEpisodeBody({ illustUrl, illustIsAi, title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
   const [isVertical, setIsVertical] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
 
@@ -396,6 +399,28 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
       </div>
 
       <div style={{padding:'20px 16px 28px'}}>
+        {/*
+          * 話ごとの挿絵。
+          *
+          * ★ 題名の前に置く。
+          *   携帯は上から下へ読むので、
+          *   ここが本文の始まりの前になる。
+          */}
+        {illustUrl && (
+          <div style={{position:'relative',display:'inline-block',marginBottom:14}}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={illustUrl} alt="挿絵"
+              style={{maxHeight:220,maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+            {illustIsAi && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+                style={{position:'absolute',top:-5,right:-5,width:34,height:34,
+                  transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+                  filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
+            )}
+          </div>
+        )}
+
         <h1 style={{fontFamily, fontSize:settings.fontSize+2, fontWeight:700, color:'var(--color-text)', textAlign:'center', marginBottom:20, lineHeight:1.6}}>
           {title}
         </h1>

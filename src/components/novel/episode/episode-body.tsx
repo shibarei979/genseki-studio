@@ -605,7 +605,7 @@ export default function EpisodeBody({ illustUrl, illustIsAi, title, body, prefac
     return (
       <>
         <SpeechPanel title={title} body={body} isMobile={true}/>
-        <MobileEpisodeBody title={title} body={body} preface={preface} afterword={afterword} authorName={authorName}/>
+        <MobileEpisodeBody illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword} authorName={authorName}/>
       </>
     )
   }
