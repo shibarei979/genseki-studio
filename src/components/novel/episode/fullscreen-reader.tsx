@@ -62,6 +62,26 @@ export default function FullscreenReader({
     return (
         <div
             className="fsr"
+            /*
+             * ★ CSS が届いていなくても効くよう、ここにも書く。
+             *
+             *   指定が 1 か所だけだと、
+             *   その 1 か所が古いときに何も効かない。
+             *   大事な指定は、部品の側にも持たせる。
+             */
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 300,
+                height: "100dvh",
+                maxHeight: "100dvh",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                margin: 0,
+                padding: 0,
+                background: "var(--color-bg, #f4f5f3)",
+            }}
             role="dialog"
             aria-modal="true"
             aria-label="全画面で読む"
