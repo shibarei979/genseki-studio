@@ -46,8 +46,18 @@ Book
     transform-style: preserve-3d;
     transform:
         translate(calc(var(--b-x)), calc(var(--b-y))) translateZ(var(--b-z)) rotateX(var(--b-rotate-x)) rotateY(var(--b-rotate-y)) rotateZ(var(--b-rotate-z)) scale(min(var(--b-scale), 2.5));
+    /*
+     * 本が動くときの速さ。
+     *
+     * ★ 1 秒は遅い。
+     *   本が滑っているあいだ、次の本が読めない。
+     *   0.65 秒にすると、動きは見えたまま待ちが減る。
+     *
+     * 曲線はそのまま。
+     * 速さだけ変えれば、動きの味は変わらない。
+     */
     transition:
-        transform 1s cubic-bezier(.7, 0, .7, 1);
+        transform .65s cubic-bezier(.7, 0, .7, 1);
     /* Safari のちらつき対策（コンテナ自体は透明のため見た目は不変） */
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
