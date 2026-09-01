@@ -284,7 +284,20 @@ export default function ReadFullPage({
                          *   1 頁ぶんにならない。
                          *   だから最後の頁とその手前しか出なかった。
                          */
-                        transform: `translateX(${page * boxWidth}px)`,
+                        /*
+                         * ★ 逆から数える。
+                         *
+                         *   縦書きは右から左へ流れる。
+                         *   中身の右端が 1 頁目、左端が最後の頁。
+                         *
+                         *   ずらし 0 のときは左端＝最後の頁が見える。
+                         *   1 頁目を出すには、中身の幅ぶん右へずらす。
+                         *
+                         *   前は page をそのまま掛けていたので、
+                         *   1 頁目を開くと最後の頁が出て、
+                         *   「次へ」で戻る動きになっていた。
+                         */
+                        transform: `translateX(${(pageCount - 1 - page) * boxWidth}px)`,
                         transition: "transform .2s ease",
                     }}
                 >
