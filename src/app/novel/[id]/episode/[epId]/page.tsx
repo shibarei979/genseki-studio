@@ -236,8 +236,22 @@ export default async function EpisodePage({ params }: Props) {
             {nextEp ? <Link href={`/novel/${params.id}/episode/${nextEp.id}`} style={navBtn}>次の話 →</Link> : <div/>}
           </div>
           {episode.illust_url && (
-            <div style={{textAlign:'center',marginBottom:12}}>
+            <div style={{position:'relative',display:'inline-block',textAlign:'center',marginBottom:12}}>
               <img src={episode.illust_url} alt="挿絵" style={{maxWidth:'100%',maxHeight:480,objectFit:'contain',borderRadius:8}}/>
+              {episode.illust_is_ai && (
+              /*
+               * AI で作った挿絵の印。
+               *
+               * ★ 表紙と同じ絵を使う。
+               *   同じ意味の印が 2 通りあると、
+               *   見た人が別のものだと思う。
+               */
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+                style={{position:'absolute',top:-6,right:-6,width:56,height:56,
+                  transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+                  filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}} />
+            )}
             </div>
           )}
           {/*
@@ -322,9 +336,23 @@ export default async function EpisodePage({ params }: Props) {
         </div>
 
         {episode.illust_url && (
-          <div style={{textAlign:'center',marginBottom:10}}>
+          <div style={{position:'relative',display:'inline-block',textAlign:'center',marginBottom:10}}>
             <img src={episode.illust_url} alt="挿絵" style={{maxWidth:'100%',maxHeight:300,objectFit:'contain',borderRadius:8}}/>
-          </div>
+            {episode.illust_is_ai && (
+              /*
+               * AI で作った挿絵の印。
+               *
+               * ★ 表紙と同じ絵を使う。
+               *   同じ意味の印が 2 通りあると、
+               *   見た人が別のものだと思う。
+               */
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+                style={{position:'absolute',top:-6,right:-6,width:56,height:56,
+                  transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+                  filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}} />
+            )}
+            </div>
         )}
 
         <EpisodeBody title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>

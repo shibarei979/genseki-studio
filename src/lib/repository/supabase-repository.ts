@@ -780,6 +780,7 @@ export const supabaseRepository: Repository = {
         if (patch.deleted_at !== undefined) next.deleted_at = patch.deleted_at;
         /* 話ごとの挿絵。読む画面の本文の前に出る */
         if (patch.illust_url !== undefined) next.illust_url = patch.illust_url;
+        if (patch.illust_is_ai !== undefined) next.illust_is_ai = patch.illust_is_ai;
 
         /*
          * 送るものが無ければ、いまの姿をそのまま返す。

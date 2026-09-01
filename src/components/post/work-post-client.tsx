@@ -818,6 +818,8 @@ function PostForm({
      * 読む画面で、本文の前に出る。
      */
     const [illustUrl, setIllustUrl] = useState(episode.illust_url ?? "");
+    /* この挿絵を AI で作ったか。表紙と同じ扱い */
+    const [illustIsAi, setIllustIsAi] = useState(episode.illust_is_ai ?? false);
     const [illustBusy, setIllustBusy] = useState(false);
     const [illustError, setIllustError] = useState("");
 
@@ -859,6 +861,7 @@ function PostForm({
     const isDirty =
         title !== episode.title ||
         illustUrl !== (episode.illust_url ?? "") ||
+        illustIsAi !== (episode.illust_is_ai ?? false) ||
         preface !== (episode.preface ?? "") ||
         summary !== (episode.episode_summary ?? "") ||
         afterword !== (episode.afterword ?? "") ||
@@ -922,7 +925,12 @@ function PostForm({
 
         setError("");
         /* 挿絵も一緒に保存する。別に押させると忘れられる */
-        onChange({ is_published: true, publish_at: null, illust_url: illustUrl || null });
+        onChange({
+            is_published: true,
+            publish_at: null,
+            illust_url: illustUrl || null,
+            illust_is_ai: illustIsAi,
+        });
         onPosted?.();
     }
 
@@ -1017,6 +1025,29 @@ function PostForm({
                                         <br />
                                         入れなくても構いません。
                                     </p>
+
+                                    {/*
+                                      * ★ 絵を入れたときだけ聞く。
+                                      *   入れていない人に、
+                                      *   答える必要のないことを見せない。
+                                      */}
+                                    {illustUrl && (
+                                        <label className="mt-2.5 flex items-start gap-2 text-[11.5px] leading-[1.8] text-muted">
+                                            <input
+                                                type="checkbox"
+                                                checked={illustIsAi}
+                                                onChange={(e) => setIllustIsAi(e.target.checked)}
+                                                className="mt-0.5 shrink-0"
+                                            />
+                                            <span>
+                                                この挿絵は AI を使って作りました
+                                                <br />
+                                                <span className="text-faint">
+                                                    立てると、絵の隅に「AI」の印が出ます。
+                                                </span>
+                                            </span>
+                                        </label>
+                                    )}
 
                                     {illustBusy && (
                                         <p className="mt-1 text-[11px] text-forest">

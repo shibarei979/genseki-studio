@@ -69,6 +69,13 @@ export interface Episode {
      * 読む画面で、本文の前に出る。
      */
     illust_url?: string | null;
+    /**
+     * 挿絵を AI で作ったか。
+     *
+     * 表紙の cover_is_ai と同じ扱い。
+     * 読む画面で、絵の隅に印を出す。
+     */
+    illust_is_ai?: boolean | null;
 }
 
 export interface EpisodeCreateInput {
