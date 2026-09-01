@@ -74,7 +74,12 @@ class LayoutCalc {
      */
     static get B_SIDE_COUNT() {
         if (typeof window === "undefined") return 10;
-        return window.innerWidth < 1024 ? 6 : 10;
+
+        /* 縮尺と同じ見方をする。ずれると本の数が合わない */
+        const shelf = document.querySelector(".bookshelf-loop");
+        const w = shelf?.clientWidth || window.innerWidth;
+
+        return w < 1024 ? 6 : 10;
     }
     static B_OVERFLOW_COUNT = 1.5;
 
