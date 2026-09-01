@@ -445,21 +445,19 @@ export default async function SearchPage({ searchParams }: Props) {
   /*
    * 本の形で見るか。
    *
-   * ★ 何も選んでいない人には、文字を出す。
+   * ★ 住所だけで決める。
    *
-   *   表紙のある作品はまだ少ない。
-   *   はじめから本の形にすると、
-   *   題名の紙ばかりが並んで、何が違うのか分からない。
+   *   前はマイページの「本／札」の設定も見ていた。
+   *   だが、それは作品を押したときに出る札の形の設定で、
+   *   一覧の並べ方とは別のもの。
    *
-   *   自分で選んだ人にだけ、本の形を出す。
+   *   そのため「文字」を選んで閉じ、開き直すと
+   *   設定のほうが勝って本に戻っていた。
    *
-   * 住所に付いていれば、それが勝つ。
-   * 付いていなければ、マイページで覚えたものを使う。
+   * ★ この形は、押し具の側で覚える。
+   *   住所に付けたものが、そのまま次も使われる。
    */
-  const shelfView =
-    viewParam === 'shelf'
-    || (viewParam === ''
-        && (profile as { work_popup_style?: string } | null)?.work_popup_style === 'book')
+  const shelfView = viewParam === 'shelf'
 
   function buildUrl(params: Record<string, string>) {
     const base: Record<string, string> = {}

@@ -31,7 +31,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
     // 候補プール取得（公開済み・全年齢のみ・直近300件）
     let poolQuery = supabase
       .from('novels')
-      .select('id, title, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at')
+      .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at')
       .eq('published', true).eq('is_r18', false).neq('genre', '官能').in('age_rating', ratings)
     if (aiMode === 'ai') poolQuery = (poolQuery as any).eq('ai_usage', 'full')
     else poolQuery = (poolQuery as any).neq('ai_usage', 'full')
@@ -135,7 +135,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
     const scoreMap = Object.fromEntries((risingData||[]).map((r:any) => [r.id, r.rising_score]))
     if (risingIds.length === 0) return { items: [], total: 0 }
     const { data: risingNovelData } = await supabase
-      .from('novels').select('id, title, genre, novel_type, is_serial, author_id, summary, catchcopy, tags')
+      .from('novels').select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags')
       .in('id', risingIds).eq('published', true)
     const risingItems = (risingNovelData || [])
       .sort((a:any, b:any) => (scoreMap[b.id]||0) - (scoreMap[a.id]||0))
@@ -179,7 +179,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
   if (likeIds.length === 0) return { items: [], total: 0 }
 
   let q = supabase.from('novels')
-    .select('id, title, genre, novel_type, is_serial, author_id, summary, tags, created_at')
+    .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at')
     .in('id', likeIds).eq('published', true).eq('is_r18', false).neq('genre', '官能').in('age_rating', ratings)
   // AI作品ランキングと人間作品ランキングを分離
   if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
@@ -246,8 +246,67 @@ async function computeRanking(period: string, novelType: string, serial: string,
       }
     }
 
+    /*
+     * 続けて読んだ人を数える。
+     *
+     * ★ 同じ人が、その作品の 2 話以上を読んだ数。
+     *
+     *   1 話だけ読んで離れた人と、
+     *   続きを読みに戻ってきた人は、意味が違う。
+     *   後者のほうが「面白かった」を強く表す。
+     *
+     * ★ 順番までは見ない。
+     *   1 話 → 2 話 → 3 話 と順に追うには、
+     *   人数 × 話数ぶん調べることになり、
+     *   開くたびの計算としては重すぎる。
+     */
+    const continuedMap: Record<string, number> = {}
+    {
+      const readByUser: Record<string, Set<string>> = {}
+
+      for (let i = 0; i < candidateIds.length; i += 200) {
+        const chunk = candidateIds.slice(i, i + 200)
+        const { data: reads } = await supabase
+          .from('read_episodes')
+          .select('novel_id, user_id, episode_id')
+          .in('novel_id', chunk)
+          .limit(20000)
+
+        reads?.forEach((r: any) => {
+          if (!r.user_id) return
+          const key = `${r.novel_id}|${r.user_id}`
+          if (!readByUser[key]) readByUser[key] = new Set()
+          readByUser[key].add(r.episode_id)
+        })
+      }
+
+      /* 2 話以上読んだ人だけ数える */
+      Object.entries(readByUser).forEach(([key, eps]) => {
+        if (eps.size < 2) return
+        const nId = key.split('|')[0]
+        continuedMap[nId] = (continuedMap[nId] || 0) + 1
+      })
+    }
+
     candidateIds.forEach((id: string) => {
-      pointMap[id] = (starSumMap[id]||0) * 1 + (likeCntMap[id]||0) * 2 + (bookmarkCntMap[id]||0) * 3 + Math.round((pvCntMap[id]||0) * 0.2)
+      /*
+       * 点の出し方。
+       *
+       *   評価（星）    × 1
+       *   いいね        × 2
+       *   保存          × 2     ← 3 から下げた
+       *   続けて読んだ   × 1.3   ← 足した
+       *   読まれた数     × 0.2
+       *
+       * 保存は「あとで読む」の印で、読んだ証しではない。
+       * 続けて読んだほうが、面白かったことを強く表す。
+       */
+      pointMap[id] =
+        (starSumMap[id] || 0) * 1
+        + (likeCntMap[id] || 0) * 2
+        + (bookmarkCntMap[id] || 0) * 2
+        + Math.round((continuedMap[id] || 0) * 1.3)
+        + Math.round((pvCntMap[id] || 0) * 0.2)
     })
   }
 
