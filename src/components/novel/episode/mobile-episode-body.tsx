@@ -370,12 +370,54 @@ export default function MobileEpisodeBody({ illustUrl, illustIsAi, title, body, 
               boxSizing: 'border-box',
             }}
           >
-            <div style={{display:'inline-block', marginRight:'2em', verticalAlign:'top', writingMode:'vertical-rl'}}>
+            {/*
+              * 挿絵。
+              *
+              * ★ 縦書きの流れの中、題名の右に置く。
+              *
+              *   縦書きは右から左へ流れる。
+              *   絵を右端に置けば、視線の始まりに来る。
+              *
+              * ★ 絵の入れ物だけ writingMode を戻す。
+              *   戻さないと、入れ物まで縦に伸びる。
+              *
+              * ★ そのあとに見えない仕切りを挟む。
+              *   挟まないと、絵の下に題名が入り込んで重なる。
+              */}
+            {illustUrl && (
+              <>
+                <div style={{display:'inline-block',verticalAlign:'top',marginLeft:'1.5em',writingMode:'horizontal-tb',position:'relative'}}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={illustUrl} alt="挿絵"
+                    style={{maxHeight:260,maxWidth:180,objectFit:'contain',borderRadius:8,display:'block'}}/>
+                  {illustIsAi && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+                      style={{position:'absolute',top:-5,right:-5,width:34,height:34,
+                        transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+                        filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
+                  )}
+                </div>
+                <span aria-hidden="true"
+                  style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
+              </>
+            )}
+
+                        <div style={{display:'inline-block', marginRight:'2em', verticalAlign:'top', writingMode:'vertical-rl'}}>
               <div style={{fontSize: settings.fontSize + 4, fontWeight:700, color:'var(--color-text)', fontFamily, lineHeight:1.8}}>
                 {/* 題名にも英数字が入る。「(Pr. I)」など */}
                 {withTateChuYoko(title, 'v-title')}
               </div>
             </div>
+
+            {/*
+              * 見えない仕切り。
+              *
+              * 題名が短いと、その下に本文が入り込んで同じ列に並ぶ。
+              * 列の残りを埋めて、本文を次の列から始める。
+              */}
+            <span aria-hidden="true"
+              style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
             <div style={{display:'inline-block', fontSize: settings.fontSize, lineHeight: settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', verticalAlign:'top', writingMode:'vertical-rl'}}>
               <VerticalText text={body}/>
             </div>
