@@ -31,8 +31,17 @@ function charsPerPage(w: number, h: number, fontSize: number) {
      * 余白を引いてから、字の大きさで割る。
      * 行の間は 1.9 倍で見ておく。
      */
-    const perLine = Math.max(8, Math.floor((h - 96) / fontSize));
-    const lines = Math.max(3, Math.floor((w - 48) / (fontSize * 1.9)));
+    /*
+     * ★ 余白を大きめに引く。
+     *
+     *   上下は帯（56px × 2）と余白。
+     *   左右は端に文字が触れないぶん。
+     *
+     *   引き足りないと、入りきらない文字が
+     *   画面の外へこぼれて読めなくなる。
+     */
+    const perLine = Math.max(6, Math.floor((h - 150) / fontSize));
+    const lines = Math.max(3, Math.floor((w - 60) / (fontSize * 1.9)));
     return perLine * lines;
 }
 
@@ -100,8 +109,9 @@ export default function ReadFullPage({
 
     const tapStyle = (side: "left" | "center" | "right"): React.CSSProperties => ({
         position: "absolute",
-        top: 0,
-        bottom: 0,
+        /* 帯を押せなくならないよう、そのぶん避ける */
+        top: 56,
+        bottom: 46,
         [side === "left" ? "left" : side === "right" ? "right" : "left"]:
             side === "center" ? "33%" : 0,
         width: side === "center" ? "34%" : "33%",
@@ -142,8 +152,17 @@ export default function ReadFullPage({
                     padding: "12px 16px",
                     background: "#fff",
                     borderBottom: "1px solid #e8e6e0",
-                    transform: isBarOpen ? "translateY(0)" : "translateY(-100%)",
-                    transition: "transform .18s ease",
+                    /*
+                     * ★ 隠すのは中身だけ。場所は取ったまま。
+                     *
+                     *   translateY で外へ逃がすと、
+                     *   出したときに本文の上へ重なる。
+                     *   本文はもう帯のぶんを空けているので、
+                     *   色を消すだけでよい。
+                     */
+                    opacity: isBarOpen ? 1 : 0,
+                    pointerEvents: isBarOpen ? "auto" : "none",
+                    transition: "opacity .18s ease",
                 }}
             >
                 <span
@@ -195,8 +214,22 @@ export default function ReadFullPage({
             <div
                 style={{
                     position: "absolute",
-                    inset: 0,
-                    padding: "24px",
+                    /*
+                     * ★ 帯のぶんを空ける。
+                     *
+                     *   帯は隠れているときも、
+                     *   出したときに本文の上に重なる。
+                     *   はじめから場所を空けておけば、
+                     *   出しても文字が隠れない。
+                     *
+                     *   左右も広めに取る。
+                     *   端に文字が触れると読みにくい。
+                     */
+                    top: 56,
+                    bottom: 46,
+                    left: 0,
+                    right: 0,
+                    padding: "10px 30px",
                     fontSize,
                     lineHeight: 1.9,
                     letterSpacing: ".03em",
@@ -252,8 +285,9 @@ export default function ReadFullPage({
                     color: "#8a8a8a",
                     background: "#fff",
                     borderTop: "1px solid #e8e6e0",
-                    transform: isBarOpen ? "translateY(0)" : "translateY(100%)",
-                    transition: "transform .18s ease",
+                    opacity: isBarOpen ? 1 : 0,
+                    pointerEvents: isBarOpen ? "auto" : "none",
+                    transition: "opacity .18s ease",
                 }}
             >
                 {page + 1} / {pages.length}
