@@ -40,12 +40,30 @@ export interface ShelfWork {
     cover_url?: string | null
 }
 
+/** 1 段に並べる冊数 */
+const PER_ROW = 5
+
 export default function WorkShelf({ works }: { works: ShelfWork[] }) {
     if (works.length === 0) return null
 
+    /*
+     * 5 冊ずつの段に分ける。
+     *
+     * ★ 板は段ごとに 1 枚。
+     *   本ごとに敷くと、3 冊しかない段で
+     *   板が途切れて見える。
+     */
+    const rows: ShelfWork[][] = []
+    for (let i = 0; i < works.length; i += PER_ROW) {
+        rows.push(works.slice(i, i + PER_ROW))
+    }
+
     return (
         <div className="ws">
-            {works.map((work) => {
+            {rows.map((row, rowIndex) => (
+        <div key={rowIndex} className="ws_row book-shelf-area">
+          <div className="ws_books">
+            {row.map((work) => {
                 const cover = COVERS[hashOf(work.title || work.id) % COVERS.length]
 
                 return (
@@ -162,6 +180,19 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                     </div>
                 )
             })}
+          </div>
+
+          {/*
+            * 板。
+            *
+            * ★ 執筆向けホームと同じものを使う。
+            *   globals.css の .book-shelf-board。
+            *   本体・奥へ寝た板・影の 3 層でできていて、
+            *   そのぶん奥行きが出る。
+            */}
+          <div className="book-shelf-board" aria-hidden="true" />
+        </div>
+      ))}
         </div>
     )
 }

@@ -8,22 +8,36 @@
  */
 
 .ws {
-    display: grid;
     /*
-     * 1 冊 120px。入るだけ並べる。
-     * 幅を決め打ちにすると、画面ごとに余りが出る。
+     * 段を縦に積む。
+     * 段の中で 5 冊を横に並べる。
      */
-    /*
-     * ★ 横に 5 冊。
-     *
-     *   前は入るだけ並べていて、広い画面では 8 冊になった。
-     *   1 冊が小さく、表紙も題名も読みにくかった。
-     *
-     *   数を決めれば、画面の幅に応じて 1 冊が伸びる。
-     */
-    grid-template-columns: repeat(5, 1fr);
-    gap: 34px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 34px;
     padding: 20px 18px 28px;
+}
+
+/*
+ * 1 段。
+ *
+ * ★ book-shelf-area を付けている。
+ *   板のぶんの余白（18px）が入り、
+ *   本の底が板の上端に着く。
+ */
+.ws_row {
+    position: relative;
+}
+
+.ws_books {
+    position: relative;
+    /* 板より前に置く。後ろだと本が板に埋まる */
+    z-index: 3;
+
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+    align-items: end;
 }
 
 .ws_slot {
@@ -130,9 +144,27 @@
      * 表紙も題名も読めない。3 冊にする。
      */
     .ws {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 24px 10px;
+        gap: 26px;
         padding: 14px 10px 20px;
+    }
+
+    /*
+     * ★ 携帯でも 5 冊のまま。
+     *
+     *   3 列にすると、5 冊の段が 2 行に折り返り、
+     *   板が段の途中に出てしまう。
+     *   板は段の下に 1 枚だけあるべきもの。
+     *
+     * 1 冊を細くして、5 冊を収める。
+     */
+    .ws_books {
+        gap: 6px;
+    }
+
+    .ws_book {
+        max-width: none;
+        height: auto;
+        aspect-ratio: 180 / 234;
     }
 
     .ws_book {
@@ -189,44 +221,20 @@
 
 /*
  * ============================================================
- * 木の板
+ * 板
  *
- * 段ごとに、本の下に敷く。
+ * ★ 自前で描かない。
+ *   globals.css の .book-shelf-board をそのまま使う。
+ *   執筆向けホームと同じもので、
+ *   本体・奥へ寝た板・影の 3 層でできている。
  *
- * ★ 本の背景として敷く。
- *   板を別の要素にすると、
- *   本の数が半端な段（3 冊しかない段など）で
- *   板だけが伸びて見える。
- *
- *   段の高さぶんの背景にすれば、
- *   本が何冊でも板は同じ幅で出る。
+ *   前は段ごとに帯を敷いていたが、
+ *   1 枚の板なので奥行きが無く、線に見えていた。
  * ============================================================
  */
 
-.ws_slot::after {
-    content: "";
-    position: absolute;
+/* 板の左右のはみ出しを、この段の中に収める */
+.ws_row .book-shelf-board {
     left: -10px;
     right: -10px;
-    bottom: -14px;
-    height: 14px;
-
-    /*
-     * 木の色。上が明るく、下が暗い。
-     * 1 色だと板というより帯に見える。
-     */
-    background:
-        linear-gradient(180deg, #e6c28f 0%, #d5a763 34%, #c98b47 100%);
-
-    /* 板の下に落ちる影 */
-    box-shadow: 0 3px 5px -2px rgba(90, 60, 25, .3);
-}
-
-@media (max-width: 1023px) {
-    .ws_slot::after {
-        left: -5px;
-        right: -5px;
-        bottom: -10px;
-        height: 10px;
-    }
 }
