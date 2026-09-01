@@ -810,6 +810,26 @@ function VerticalBody({ illustUrl, illustIsAi, title, body, preface, afterword, 
               {withTateChuYoko(title, 'v-title')}
             </div>
           </div>
+
+          {/*
+            * 見えない仕切り。
+            *
+            * ★ 縦書きは、上から下へ流れて列が変わる。
+            *
+            *   題名が短いと、その下に本文が入り込み、
+            *   同じ列に並んでしまう。
+            *   字を小さくするほど、そうなりやすい。
+            *
+            * ★ 高さいっぱいの幅ゼロの物を挟む。
+            *
+            *   列の残りを埋めるので、本文は次の列から始まる。
+            *   題名の箱そのものは触らないので、
+            *   題名の見え方は変わらない。
+            */}
+          <span
+            aria-hidden="true"
+            style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}
+          />
           <div style={{display:'inline-block',fontSize,lineHeight:2.1,color:'var(--color-text)',fontFamily,wordBreak:'break-all',verticalAlign:'top'}}>
             {selecting ? (
               sentences.map((raw, idx) => {
