@@ -26,6 +26,8 @@ export interface EpisodeMark {
     id: string
     sentence: number
     text: string
+    /** 栞の色。yellow / sakura / wakaba / sora / fuji */
+    color: string
 }
 
 export function useEpisodeMarks(novelId: string, episodeId: string) {
@@ -71,7 +73,7 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
 
             const { data } = await supabase
                 .from('episode_marks')
-                .select('id, sentence, text')
+                .select('id, sentence, text, color')
                 .eq('user_id', user.id)
                 .eq('episode_id', epId)
                 .order('sentence')
@@ -95,7 +97,7 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
         }
     }, [marks])
 
-    const add = useCallback(async (sentence: number, text: string) => {
+    const add = useCallback(async (sentence: number, text: string, color: string) => {
         if (!userId) {
             window.alert('栞を使うには、ログインが要ります。')
             return
@@ -125,13 +127,13 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
          * 先に画面へ出す。
          * 保存を待たせると、押しても反応が無いように見える。
          */
-        const temp: EpisodeMark = { id: `tmp-${sentence}`, sentence, text }
+        const temp: EpisodeMark = { id: `tmp-${sentence}`, sentence, text, color }
         setMarks(prev => [...prev, temp].sort((a, b) => a.sentence - b.sentence))
 
         const { data, error } = await createClient()
             .from('episode_marks')
-            .insert({ user_id: userId, novel_id: workId, episode_id: epId, sentence, text })
-            .select('id, sentence, text')
+            .insert({ user_id: userId, novel_id: workId, episode_id: epId, sentence, text, color })
+            .select('id, sentence, text, color')
             .single()
 
         if (error || !data) {

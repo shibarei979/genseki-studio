@@ -1,4 +1,5 @@
 'use client'
+import ShioriMark, { SHIORI_COLORS } from '@/components/common/shiori-mark'
 import { illustBox } from '@/config/illust-size'
 import { useState, useRef, useEffect } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
@@ -24,9 +25,12 @@ interface Props {
   /* 栞 */
   marking?: boolean
   onToggleMarking?: () => void
-  marks?: { id: string; sentence: number; text: string }[]
+  /** これからはさむ栞の色 */
+  markColor?: string
+  onPickColor?: (color: string) => void
+  marks?: { id: string; sentence: number; text: string; color: string }[]
   onMark?: (idx: number, raw: string) => void
-  onOpenMark?: (m: { id: string; sentence: number; text: string }) => void
+  onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
 }
 
 const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -246,7 +250,7 @@ function splitForMark(text: string): string[] {
   return out.filter(s => s.length > 0)
 }
 
-export default function MobileEpisodeBody({ marking, onToggleMarking, marks = [], onMark, onOpenMark, illustUrl, illustIsAi, title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
+export default function MobileEpisodeBody({ marking, onToggleMarking, markColor = 'yellow', onPickColor, marks = [], onMark, onOpenMark, illustUrl, illustIsAi, title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
   const [isVertical, setIsVertical] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
 
@@ -346,6 +350,21 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
         <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
           <>
+          {marking && onPickColor && (
+            <div style={{display:'flex',alignItems:'center',gap:3,marginRight:5}}>
+              {(Object.keys(SHIORI_COLORS) as (keyof typeof SHIORI_COLORS)[]).map(key => (
+                <button key={key} type="button"
+                  onClick={()=>onPickColor(key)}
+                  title={SHIORI_COLORS[key].label}
+                  aria-label={SHIORI_COLORS[key].label}
+                  style={{width:20,height:20,borderRadius:'50%',cursor:'pointer',
+                    background:SHIORI_COLORS[key].paper,
+                    border: markColor === key
+                      ? `2.5px solid ${SHIORI_COLORS[key].line}`
+                      : '1px solid var(--color-brand-border)'}}/>
+              ))}
+            </div>
+          )}
           {onToggleMarking && (
             <button type="button" onClick={onToggleMarking}
               title="文に栞をはさみます"
@@ -485,35 +504,23 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
                     <span key={idx} data-sentence={idx}
                       onClick={()=>{ if (marking) onMark?.(idx, raw) }}
                       style={{cursor: marking ? 'pointer' : 'auto',borderRadius:3,
-                        /* ★ 文の色は変えない。栞の絵だけを置く */
-                        position:'relative'}}>
+                        position:'relative',
+                        /*
+                         * ★ 栞をはさむ状態のときだけ色を付ける。
+                         *
+                         *   どこが押せるか分からないと、
+                         *   はさめることに気づけない。
+                         *   ふだんの読みでは色を付けない。
+                         */
+                        background: marking
+                          ? 'color-mix(in srgb, var(--color-brand) 8%, transparent)'
+                          : 'transparent'}}>
                       <VerticalText text={raw}/>
                       {mark && (
                         <span onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
                           title="栞"
                           style={{display:'inline-block',cursor:'pointer',lineHeight:1}}>
-                          <svg width="18" height="24" viewBox="0 0 18 24" fill="none"
-                          style={{filter:'drop-shadow(0 2px 3px rgba(0,0,0,.28))'}}>
-                          {/*
-                            * 紙の栞。
-                            *
-                            * 本の上から垂れ下がった形にする。
-                            * 上を明るく、下を濃くして厚みを出し、
-                            * 先を V 字に切る。
-                            */}
-                          <defs>
-                            <linearGradient id="shiori" x1="0" y1="0" x2="1" y2="1">
-                              <stop offset="0" stopColor="#f0c274"/>
-                              <stop offset=".55" stopColor="#d9973f"/>
-                              <stop offset="1" stopColor="#b06f27"/>
-                            </linearGradient>
-                          </defs>
-                          <path d="M2 0h14v24l-7-5.5L2 24z" fill="url(#shiori)"/>
-                          {/* 折り目。1 本入れると紙に見える */}
-                          <path d="M9 1v16.2" stroke="rgba(255,255,255,.28)" strokeWidth="1"/>
-                          {/* 上の縁の光 */}
-                          <path d="M2 0h14v2.2H2z" fill="rgba(255,255,255,.42)"/>
-                        </svg>
+                          <ShioriMark color={mark.color} size={18}/>
                         </span>
                       )}
                     </span>
@@ -540,6 +547,21 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
     <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
       <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
         <>
+          {marking && onPickColor && (
+            <div style={{display:'flex',alignItems:'center',gap:3,marginRight:5}}>
+              {(Object.keys(SHIORI_COLORS) as (keyof typeof SHIORI_COLORS)[]).map(key => (
+                <button key={key} type="button"
+                  onClick={()=>onPickColor(key)}
+                  title={SHIORI_COLORS[key].label}
+                  aria-label={SHIORI_COLORS[key].label}
+                  style={{width:20,height:20,borderRadius:'50%',cursor:'pointer',
+                    background:SHIORI_COLORS[key].paper,
+                    border: markColor === key
+                      ? `2.5px solid ${SHIORI_COLORS[key].line}`
+                      : '1px solid var(--color-brand-border)'}}/>
+              ))}
+            </div>
+          )}
           {onToggleMarking && (
             <button type="button" onClick={onToggleMarking}
               title="文に栞をはさみます"
@@ -609,35 +631,23 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
                 <span key={idx} data-sentence={idx}
                   onClick={()=>{ if (marking) onMark?.(idx, raw) }}
                   style={{cursor: marking ? 'pointer' : 'auto',borderRadius:3,
-                    /* ★ 文の色は変えない。栞の絵だけを置く */
-                        position:'relative'}}>
+                    position:'relative',
+                        /*
+                         * ★ 栞をはさむ状態のときだけ色を付ける。
+                         *
+                         *   どこが押せるか分からないと、
+                         *   はさめることに気づけない。
+                         *   ふだんの読みでは色を付けない。
+                         */
+                        background: marking
+                          ? 'color-mix(in srgb, var(--color-brand) 8%, transparent)'
+                          : 'transparent'}}>
                   <span dangerouslySetInnerHTML={{__html: renderBody(raw)}}/>
                   {mark && (
                     <span onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
                       title="栞"
                       style={{display:'inline-block',verticalAlign:'super',marginLeft:2,cursor:'pointer',lineHeight:1}}>
-                      <svg width="18" height="24" viewBox="0 0 18 24" fill="none"
-                          style={{filter:'drop-shadow(0 2px 3px rgba(0,0,0,.28))'}}>
-                          {/*
-                            * 紙の栞。
-                            *
-                            * 本の上から垂れ下がった形にする。
-                            * 上を明るく、下を濃くして厚みを出し、
-                            * 先を V 字に切る。
-                            */}
-                          <defs>
-                            <linearGradient id="shiori" x1="0" y1="0" x2="1" y2="1">
-                              <stop offset="0" stopColor="#f0c274"/>
-                              <stop offset=".55" stopColor="#d9973f"/>
-                              <stop offset="1" stopColor="#b06f27"/>
-                            </linearGradient>
-                          </defs>
-                          <path d="M2 0h14v24l-7-5.5L2 24z" fill="url(#shiori)"/>
-                          {/* 折り目。1 本入れると紙に見える */}
-                          <path d="M9 1v16.2" stroke="rgba(255,255,255,.28)" strokeWidth="1"/>
-                          {/* 上の縁の光 */}
-                          <path d="M2 0h14v2.2H2z" fill="rgba(255,255,255,.42)"/>
-                        </svg>
+                      <ShioriMark color={mark.color} size={18}/>
                     </span>
                   )}
                 </span>

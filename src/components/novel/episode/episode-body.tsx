@@ -1,4 +1,5 @@
 'use client'
+import ShioriMark, { SHIORI_COLORS } from '@/components/common/shiori-mark'
 import { useEpisodeMarks } from '@/hooks/use-episode-marks'
 import { illustBox } from '@/config/illust-size'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -33,9 +34,9 @@ interface Props {
   illustSize?: string | null
   /* 栞 */
   marking?: boolean
-  marks?: { id: string; sentence: number; text: string }[]
+  marks?: { id: string; sentence: number; text: string; color: string }[]
   onMark?: (idx: number, raw: string) => void
-  onOpenMark?: (m: { id: string; sentence: number; text: string }) => void
+  onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
 }
 
 const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -515,9 +516,9 @@ function splitIntoSentences(text: string): string[] {
 
 function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize, lineHeight, fontFamily, onQuote, selecting, onAfterQuote }: {
   marking?: boolean
-  marks?: { id: string; sentence: number; text: string }[]
+  marks?: { id: string; sentence: number; text: string; color: string }[]
   onMark?: (idx: number, raw: string) => void
-  onOpenMark?: (m: { id: string; sentence: number; text: string }) => void
+  onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
   body: string; fontSize: number; lineHeight: number; fontFamily: string
   onQuote?: (text:string)=>void; selecting?: boolean; onAfterQuote?: () => void
 }) {
@@ -585,20 +586,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize,
                   marginLeft:2,cursor:'pointer',lineHeight:1,
                 }}
               >
-                <svg width="15" height="20" viewBox="0 0 18 24" fill="none"
-                  style={{filter:'drop-shadow(0 2px 3px rgba(0,0,0,.28))'}}>
-                  {/* 紙の栞。上を明るく、下を濃くして厚みを出す */}
-                  <defs>
-                    <linearGradient id="shioriH" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0" stopColor="#f0c274"/>
-                      <stop offset=".55" stopColor="#d9973f"/>
-                      <stop offset="1" stopColor="#b06f27"/>
-                    </linearGradient>
-                  </defs>
-                  <path d="M2 0h14v24l-7-5.5L2 24z" fill="url(#shioriH)"/>
-                  <path d="M9 1v16.2" stroke="rgba(255,255,255,.28)" strokeWidth="1"/>
-                  <path d="M2 0h14v2.2H2z" fill="rgba(255,255,255,.42)"/>
-                </svg>
+                <ShioriMark color={mark.color} size={18}/>
               </span>
             )}
             {selecting && (
@@ -635,16 +623,25 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
    */
   const [marking, setMarking] = useState(false)
 
+  /*
+   * これからはさむ栞の色。
+   *
+   * ★ はさむときに選ぶ。
+   *   1 話にいくつも挟めるので、
+   *   色で意味を分けられるようにする。
+   */
+  const [markColor, setMarkColor] = useState<string>('yellow')
+
   const { marks, add: addMark, remove: removeMark } = useEpisodeMarks(novelId ?? '', episodeId ?? '')
 
   /* 押された栞。飛ぶか外すかを聞く */
-  const [askingMark, setAskingMark] = useState<{ id: string; sentence: number; text: string } | null>(null)
+  const [askingMark, setAskingMark] = useState<{ id: string; sentence: number; text: string; color: string } | null>(null)
 
   /** 文を押したとき。栞の状態なら付ける */
   function handleMark(idx: number, raw: string) {
     const clean = stripRuby(raw).replace(/\n/g, '').trim()
     if (!clean) return
-    void addMark(idx, clean)
+    void addMark(idx, clean, markColor)
   }
 
 
@@ -689,6 +686,8 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
         <MobileEpisodeBody
           marking={marking}
           onToggleMarking={()=>{ setMarking(v=>!v); setSelecting(false) }}
+          markColor={markColor}
+          onPickColor={setMarkColor}
           marks={marks}
           onMark={handleMark}
           onOpenMark={setAskingMark}
@@ -781,6 +780,30 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
             </svg>
             {marking ? '栞をやめる' : '栞'}
           </button>
+
+          {/*
+            * 栞の色。
+            *
+            * ★ はさむ状態のときだけ出す。
+            *   ふだんは要らないものを並べない。
+            */}
+          {marking && (
+            <div style={{display:'flex',alignItems:'center',gap:4,marginRight:4}}>
+              {(Object.keys(SHIORI_COLORS) as (keyof typeof SHIORI_COLORS)[]).map(key => (
+                <button key={key} type="button"
+                  onClick={()=>setMarkColor(key)}
+                  title={SHIORI_COLORS[key].label}
+                  aria-label={SHIORI_COLORS[key].label}
+                  style={{
+                    width:22,height:22,borderRadius:'50%',cursor:'pointer',
+                    background:SHIORI_COLORS[key].paper,
+                    border: markColor === key
+                      ? `2.5px solid ${SHIORI_COLORS[key].line}`
+                      : '1px solid var(--color-brand-border)',
+                  }}/>
+              ))}
+            </div>
+          )}
 
           <ReadingSettings onChange={setSettings} isMobile={false} showWritingMode={true} recommendedMode={recommendedMode}/>
         </div>
@@ -919,9 +942,9 @@ interface VerticalProps {
   illustSize?: string | null
   /* 栞 */
   marking?: boolean
-  marks?: { id: string; sentence: number; text: string }[]
+  marks?: { id: string; sentence: number; text: string; color: string }[]
   onMark?: (idx: number, raw: string) => void
-  onOpenMark?: (m: { id: string; sentence: number; text: string }) => void
+  onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
 }
 
 function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
@@ -1135,28 +1158,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
                         title="栞"
                         style={{display:'inline-block',cursor:'pointer',lineHeight:1}}
                       >
-                        <svg width="18" height="24" viewBox="0 0 18 24" fill="none"
-                          style={{filter:'drop-shadow(0 2px 3px rgba(0,0,0,.28))'}}>
-                          {/*
-                            * 紙の栞。
-                            *
-                            * 本の上から垂れ下がった形にする。
-                            * 上を明るく、下を濃くして厚みを出し、
-                            * 先を V 字に切る。
-                            */}
-                          <defs>
-                            <linearGradient id="shiori" x1="0" y1="0" x2="1" y2="1">
-                              <stop offset="0" stopColor="#f0c274"/>
-                              <stop offset=".55" stopColor="#d9973f"/>
-                              <stop offset="1" stopColor="#b06f27"/>
-                            </linearGradient>
-                          </defs>
-                          <path d="M2 0h14v24l-7-5.5L2 24z" fill="url(#shiori)"/>
-                          {/* 折り目。1 本入れると紙に見える */}
-                          <path d="M9 1v16.2" stroke="rgba(255,255,255,.28)" strokeWidth="1"/>
-                          {/* 上の縁の光 */}
-                          <path d="M2 0h14v2.2H2z" fill="rgba(255,255,255,.42)"/>
-                        </svg>
+                        <ShioriMark color={mark.color} size={18}/>
                       </span>
                     )}
                   </span>
