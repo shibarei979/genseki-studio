@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ============================================================
  * 原石航路 Studio
@@ -10,6 +12,7 @@
  */
 
 import Link from "next/link";
+import { useState } from "react";
 
 interface Props {
     workId: string;
@@ -19,8 +22,43 @@ interface Props {
 }
 
 export default function WorkspaceNav({ workId, current, episodeId }: Props) {
+    /*
+     * 携帯では畳む。
+     *
+     * ★ 4 つ縦に並ぶと、それだけで画面の半分を使う。
+     *   いま居る所だけ出し、押すと残りが開く。
+     */
+    const [isOpen, setIsOpen] = useState(false);
+
+    const label =
+        current === "write" ? "執筆"
+        : current === "settings" ? "設定"
+        : current === "resource" ? "資料"
+        : "投稿";
+
     return (
         <div className="space-y-2">
+            {/* いま居る所。押すと残りが開く */}
+            <button
+                type="button"
+                onClick={() => setIsOpen((v) => !v)}
+                className="flex w-full items-center justify-between rounded-lg border border-forest bg-forest px-4 py-2.5 text-[13px] font-medium text-white lg:hidden"
+            >
+                <span>{label}</span>
+                <span
+                    aria-hidden="true"
+                    className="text-[11px]"
+                    style={{
+                        display: "inline-block",
+                        transform: isOpen ? "rotate(180deg)" : "none",
+                        transition: "transform .15s ease",
+                    }}
+                >
+                    ⌄
+                </span>
+            </button>
+
+            <div className={`${isOpen ? "" : "hidden"} space-y-2 lg:block`}>
             <div className="grid grid-cols-3 gap-2">
             <NavButton
                 href={`/workspace/${workId}`}
@@ -52,6 +90,7 @@ export default function WorkspaceNav({ workId, current, episodeId }: Props) {
                 label="投稿"
                 isActive={current === "post"}
             />
+            </div>
         </div>
     );
 }

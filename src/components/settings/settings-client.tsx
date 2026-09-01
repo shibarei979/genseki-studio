@@ -48,6 +48,14 @@ interface Props {
 }
 
 export default function SettingsClient({ workId }: Props) {
+    /*
+     * 携帯で、項目の一覧を開いているか。
+     *
+     * 既定は畳む。選ぶと自動で畳まれ、
+     * すぐ下の中身が見える。
+     */
+    const [isNavOpen, setIsNavOpen] = useState(false);
+
     const [work, setWork] = useState<Work | null>(null);
     const [settings, setSettings] = useState<DisplaySettings | null>(null);
     const [publish, setPublish] = useState<PublishSettings | null>(null);
@@ -227,13 +235,41 @@ export default function SettingsClient({ workId }: Props) {
                             </p>
                         </div>
 
-                        <nav className="p-2">
+                        {/*
+                          * 携帯では、いま選んでいるものだけ出す。
+                          *
+                          * ★ 7 つ並ぶと、それだけで画面が埋まる。
+                          *   設定を触りに来た人は行き先が決まっているので、
+                          *   ふだんは畳んでおく。
+                          */}
+                        <button
+                            type="button"
+                            onClick={() => setIsNavOpen((v) => !v)}
+                            className="flex w-full items-center justify-between px-4 py-3 text-left text-[13px] text-ink lg:hidden"
+                        >
+                            <span className="font-medium">
+                                {SECTIONS.find((one) => one.key === section)?.label}
+                            </span>
+                            <span
+                                aria-hidden="true"
+                                className="text-[11px] text-muted"
+                                style={{
+                                    display: "inline-block",
+                                    transform: isNavOpen ? "rotate(180deg)" : "none",
+                                    transition: "transform .15s ease",
+                                }}
+                            >
+                                ⌄
+                            </span>
+                        </button>
+
+                        <nav className={`p-2 ${isNavOpen ? "" : "hidden"} lg:block`}>
                             {SECTIONS.map((item) => (
                                 <button
                                     key={item.key}
                                     type="button"
                                     disabled={!item.isReady}
-                                    onClick={() => setSection(item.key)}
+                                    onClick={() => { setSection(item.key); setIsNavOpen(false) }}
                                     className={[
                                         "flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm",
                                         section === item.key
