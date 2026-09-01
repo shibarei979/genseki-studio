@@ -78,6 +78,9 @@ export default function ReadFullPage({
     /* 入れ物の幅。1 頁ぶんの動かす量になる */
     const [boxWidth, setBoxWidth] = useState(0);
 
+    /* 中身の全部の幅。ずらす量の計算に使う */
+    const [contentWidth, setContentWidth] = useState(0);
+
     /* 何頁ぶんあるかを測る */
     useEffect(() => {
         function measure() {
@@ -285,19 +288,23 @@ export default function ReadFullPage({
                          *   だから最後の頁とその手前しか出なかった。
                          */
                         /*
-                         * ★ 逆から数える。
+                         * ★ 左へずらす。
                          *
-                         *   縦書きは右から左へ流れる。
-                         *   中身の右端が 1 頁目、左端が最後の頁。
+                         *   中身は 0 から右へ伸びている（測って確かめた）。
+                         *   縦書きなので、文の頭は中身の右端。
                          *
-                         *   ずらし 0 のときは左端＝最後の頁が見える。
-                         *   1 頁目を出すには、中身の幅ぶん右へずらす。
+                         *   1 頁目を見せるには、
+                         *   右端が窓に来るまで左へずらす。
+                         *   進むほど、ずらす量が減る。
                          *
-                         *   前は page をそのまま掛けていたので、
-                         *   1 頁目を開くと最後の頁が出て、
-                         *   「次へ」で戻る動きになっていた。
+                         * ★ 前は右へずらしていた。
+                         *   中身の外を見ていたので、
+                         *   どの頁も空に見えていた。
                          */
-                        transform: `translateX(${(pageCount - 1 - page) * boxWidth}px)`,
+                        transform: `translateX(${-Math.max(
+                            0,
+                            contentWidth - (page + 1) * boxWidth,
+                        )}px)`,
                         transition: "transform .2s ease",
                     }}
                 >
