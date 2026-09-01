@@ -272,6 +272,16 @@ class BookshelfLoop {
         //------------------------------------------
         window.addEventListener("resize", this.updateLayout);
 
+        /*
+         * 字や絵が入ったあとに、もう一度測る。
+         *
+         * 組み立てた時点では字がまだ届いておらず、
+         * 幅が変わることがある。
+         */
+        window.addEventListener("load", this.updateLayout);
+        window.setTimeout(this.updateLayout, 300);
+        window.setTimeout(this.updateLayout, 1000);
+
         //------------------------------------------
         // Visibility
         //------------------------------------------
@@ -343,6 +353,21 @@ class BookshelfLoop {
     //==================================================
 
     updateLayout() {
+        /*
+         * 幅が取れないうちは、組み立てない。
+         *
+         * ★ 0 のまま計算すると、本の大きさも位置も 0 になる。
+         *   一度そうなると、次に測り直す機会が無いまま固まる。
+         *   携帯で「たまに真っ白になり、治らない」のはこれ。
+         *
+         * 少し待って、もう一度試す。
+         */
+        if (!this.root || this.root.clientWidth === 0) {
+            window.clearTimeout(this._retryTimer);
+            this._retryTimer = window.setTimeout(() => this.updateLayout(), 120);
+            return;
+        }
+
         //------------------------------------------
         // Transition OFF
         //------------------------------------------
