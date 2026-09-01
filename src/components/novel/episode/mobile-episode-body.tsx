@@ -485,23 +485,35 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
                     <span key={idx} data-sentence={idx}
                       onClick={()=>{ if (marking) onMark?.(idx, raw) }}
                       style={{cursor: marking ? 'pointer' : 'auto',borderRadius:3,
-                        background: mark ? 'color-mix(in srgb, var(--color-amber, #e0a33e) 18%, transparent)' : 'transparent'}}>
+                        /* ★ 文の色は変えない。栞の絵だけを置く */
+                        position:'relative'}}>
                       <VerticalText text={raw}/>
                       {mark && (
                         <span onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
                           title="栞"
                           style={{display:'inline-block',cursor:'pointer',lineHeight:1}}>
-                          <svg width="13" height="16" viewBox="0 0 14 18" fill="none"
-                            style={{filter:'drop-shadow(0 1px 1.5px rgba(0,0,0,.22))'}}>
-                            <defs>
-                              <linearGradient id="mk2" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0" stopColor="#e8b45c"/>
-                                <stop offset="1" stopColor="#c8873a"/>
-                              </linearGradient>
-                            </defs>
-                            <path d="M1 1h12v16l-6-4.4L1 17z" fill="url(#mk2)"/>
-                            <path d="M1 1h12v2H1z" fill="rgba(255,255,255,.35)"/>
-                          </svg>
+                          <svg width="18" height="24" viewBox="0 0 18 24" fill="none"
+                          style={{filter:'drop-shadow(0 2px 3px rgba(0,0,0,.28))'}}>
+                          {/*
+                            * 紙の栞。
+                            *
+                            * 本の上から垂れ下がった形にする。
+                            * 上を明るく、下を濃くして厚みを出し、
+                            * 先を V 字に切る。
+                            */}
+                          <defs>
+                            <linearGradient id="shiori" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0" stopColor="#f0c274"/>
+                              <stop offset=".55" stopColor="#d9973f"/>
+                              <stop offset="1" stopColor="#b06f27"/>
+                            </linearGradient>
+                          </defs>
+                          <path d="M2 0h14v24l-7-5.5L2 24z" fill="url(#shiori)"/>
+                          {/* 折り目。1 本入れると紙に見える */}
+                          <path d="M9 1v16.2" stroke="rgba(255,255,255,.28)" strokeWidth="1"/>
+                          {/* 上の縁の光 */}
+                          <path d="M2 0h14v2.2H2z" fill="rgba(255,255,255,.42)"/>
+                        </svg>
                         </span>
                       )}
                     </span>
@@ -597,23 +609,35 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
                 <span key={idx} data-sentence={idx}
                   onClick={()=>{ if (marking) onMark?.(idx, raw) }}
                   style={{cursor: marking ? 'pointer' : 'auto',borderRadius:3,
-                    background: mark ? 'color-mix(in srgb, var(--color-amber, #e0a33e) 18%, transparent)' : 'transparent'}}>
+                    /* ★ 文の色は変えない。栞の絵だけを置く */
+                        position:'relative'}}>
                   <span dangerouslySetInnerHTML={{__html: renderBody(raw)}}/>
                   {mark && (
                     <span onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
                       title="栞"
                       style={{display:'inline-block',verticalAlign:'super',marginLeft:2,cursor:'pointer',lineHeight:1}}>
-                      <svg width="13" height="16" viewBox="0 0 14 18" fill="none"
-                        style={{filter:'drop-shadow(0 1px 1.5px rgba(0,0,0,.22))'}}>
-                        <defs>
-                          <linearGradient id="mk3" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0" stopColor="#e8b45c"/>
-                            <stop offset="1" stopColor="#c8873a"/>
-                          </linearGradient>
-                        </defs>
-                        <path d="M1 1h12v16l-6-4.4L1 17z" fill="url(#mk3)"/>
-                        <path d="M1 1h12v2H1z" fill="rgba(255,255,255,.35)"/>
-                      </svg>
+                      <svg width="18" height="24" viewBox="0 0 18 24" fill="none"
+                          style={{filter:'drop-shadow(0 2px 3px rgba(0,0,0,.28))'}}>
+                          {/*
+                            * 紙の栞。
+                            *
+                            * 本の上から垂れ下がった形にする。
+                            * 上を明るく、下を濃くして厚みを出し、
+                            * 先を V 字に切る。
+                            */}
+                          <defs>
+                            <linearGradient id="shiori" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0" stopColor="#f0c274"/>
+                              <stop offset=".55" stopColor="#d9973f"/>
+                              <stop offset="1" stopColor="#b06f27"/>
+                            </linearGradient>
+                          </defs>
+                          <path d="M2 0h14v24l-7-5.5L2 24z" fill="url(#shiori)"/>
+                          {/* 折り目。1 本入れると紙に見える */}
+                          <path d="M9 1v16.2" stroke="rgba(255,255,255,.28)" strokeWidth="1"/>
+                          {/* 上の縁の光 */}
+                          <path d="M2 0h14v2.2H2z" fill="rgba(255,255,255,.42)"/>
+                        </svg>
                     </span>
                   )}
                 </span>

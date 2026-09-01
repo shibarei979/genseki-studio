@@ -585,9 +585,19 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize,
                   marginLeft:2,cursor:'pointer',lineHeight:1,
                 }}
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--color-amber, #e0a33e)"
-                  stroke="none">
-                  <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                <svg width="15" height="20" viewBox="0 0 18 24" fill="none"
+                  style={{filter:'drop-shadow(0 2px 3px rgba(0,0,0,.28))'}}>
+                  {/* 紙の栞。上を明るく、下を濃くして厚みを出す */}
+                  <defs>
+                    <linearGradient id="shioriH" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stopColor="#f0c274"/>
+                      <stop offset=".55" stopColor="#d9973f"/>
+                      <stop offset="1" stopColor="#b06f27"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M2 0h14v24l-7-5.5L2 24z" fill="url(#shioriH)"/>
+                  <path d="M9 1v16.2" stroke="rgba(255,255,255,.28)" strokeWidth="1"/>
+                  <path d="M2 0h14v2.2H2z" fill="rgba(255,255,255,.42)"/>
                 </svg>
               </span>
             )}
@@ -1125,17 +1135,27 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
                         title="栞"
                         style={{display:'inline-block',cursor:'pointer',lineHeight:1}}
                       >
-                        <svg width="13" height="16" viewBox="0 0 14 18" fill="none"
-                          style={{filter:'drop-shadow(0 1px 1.5px rgba(0,0,0,.22))'}}>
-                          {/* 紙の栞。上を明るく、下を濃くして厚みを出す */}
+                        <svg width="18" height="24" viewBox="0 0 18 24" fill="none"
+                          style={{filter:'drop-shadow(0 2px 3px rgba(0,0,0,.28))'}}>
+                          {/*
+                            * 紙の栞。
+                            *
+                            * 本の上から垂れ下がった形にする。
+                            * 上を明るく、下を濃くして厚みを出し、
+                            * 先を V 字に切る。
+                            */}
                           <defs>
-                            <linearGradient id="mk" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0" stopColor="#e8b45c"/>
-                              <stop offset="1" stopColor="#c8873a"/>
+                            <linearGradient id="shiori" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0" stopColor="#f0c274"/>
+                              <stop offset=".55" stopColor="#d9973f"/>
+                              <stop offset="1" stopColor="#b06f27"/>
                             </linearGradient>
                           </defs>
-                          <path d="M1 1h12v16l-6-4.4L1 17z" fill="url(#mk)"/>
-                          <path d="M1 1h12v2H1z" fill="rgba(255,255,255,.35)"/>
+                          <path d="M2 0h14v24l-7-5.5L2 24z" fill="url(#shiori)"/>
+                          {/* 折り目。1 本入れると紙に見える */}
+                          <path d="M9 1v16.2" stroke="rgba(255,255,255,.28)" strokeWidth="1"/>
+                          {/* 上の縁の光 */}
+                          <path d="M2 0h14v2.2H2z" fill="rgba(255,255,255,.42)"/>
                         </svg>
                       </span>
                     )}
