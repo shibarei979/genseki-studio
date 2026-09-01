@@ -1,4 +1,5 @@
 'use client'
+import { useEpisodeMarks } from '@/hooks/use-episode-marks'
 import { illustBox } from '@/config/illust-size'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
@@ -14,6 +15,8 @@ interface Props {
   afterword?: string | null
   authorName?: string
   episodeId?: string
+  /** 付箋の保存に要る */
+  novelId?: string
   onQuote?: (text: string) => void
   /**
    * 作者がすすめる読む向き。
@@ -28,6 +31,11 @@ interface Props {
   illustIsAi?: boolean | null
   /** 挿絵の大きさ。small / medium / large */
   illustSize?: string | null
+  /* 付箋 */
+  marking?: boolean
+  marks?: { id: string; sentence: number; text: string }[]
+  onMark?: (idx: number, raw: string) => void
+  onOpenMark?: (m: { id: string; sentence: number; text: string }) => void
 }
 
 const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -505,7 +513,11 @@ function splitIntoSentences(text: string): string[] {
   return result.filter(s => s.length > 0)
 }
 
-function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecting, onAfterQuote }: {
+function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize, lineHeight, fontFamily, onQuote, selecting, onAfterQuote }: {
+  marking?: boolean
+  marks?: { id: string; sentence: number; text: string }[]
+  onMark?: (idx: number, raw: string) => void
+  onOpenMark?: (m: { id: string; sentence: number; text: string }) => void
   body: string; fontSize: number; lineHeight: number; fontFamily: string
   onQuote?: (text:string)=>void; selecting?: boolean; onAfterQuote?: () => void
 }) {
@@ -528,12 +540,17 @@ function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecti
       {sentences.map((raw, idx) => {
         const trimmedForDisplay = raw === '\n' ? '' : raw
         const htmlInner = renderBodyH(trimmedForDisplay)
-        const isHover = selecting && hoverIdx === idx
+        const isHover = (selecting || marking) && hoverIdx === idx
+
+        /* この文に付いている付箋 */
+        const mark = marks.find(one => one.sentence === idx)
+
         if (raw === '\n') return <br key={idx}/>
         return (
           <span
             key={idx}
-            onMouseEnter={()=> selecting && setHoverIdx(idx)}
+            data-sentence={idx}
+            onMouseEnter={()=> (selecting || marking) && setHoverIdx(idx)}
             onMouseLeave={()=> setHoverIdx(prev => prev===idx?null:prev)}
             style={{
               position:'relative',
@@ -542,9 +559,38 @@ function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecti
               transition:'background .15s ease',
               cursor: selecting ? 'pointer' : 'inherit',
             }}
-            onClick={()=>handleClick(raw, idx)}
+            onClick={()=>{
+              /*
+               * 付箋の状態なら、付箋を付ける。
+               * そうでなければ、これまでどおり引用。
+               */
+              if (marking) { onMark?.(idx, raw); return }
+              handleClick(raw, idx)
+            }}
           >
-            <span dangerouslySetInnerHTML={{__html: htmlInner}} style={{pointerEvents: selecting ? 'none' : 'auto'}}/>
+            <span dangerouslySetInnerHTML={{__html: htmlInner}} style={{pointerEvents: (selecting || marking) ? 'none' : 'auto'}}/>
+
+            {/*
+              * 付箋の印。
+              *
+              * ★ 押すと、飛ぶか外すかを聞く。
+              *   押しただけで消えると、間違いが起きる。
+              */}
+            {mark && (
+              <span
+                onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
+                title="付箋"
+                style={{
+                  display:'inline-block',verticalAlign:'super',
+                  marginLeft:2,cursor:'pointer',lineHeight:1,
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--color-amber, #e0a33e)"
+                  stroke="none">
+                  <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                </svg>
+              </span>
+            )}
             {selecting && (
               <span
                 aria-hidden="true"
@@ -569,7 +615,29 @@ function QuotableBody({ body, fontSize, lineHeight, fontFamily, onQuote, selecti
   )
 }
 
-export default function EpisodeBody({ illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
+export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
+  /*
+   * 付箋を置く状態か。
+   *
+   * ★ 引用と同時には使えない。
+   *   どちらも「文を押す」ので、
+   *   両方入っていると何が起きるか分からない。
+   */
+  const [marking, setMarking] = useState(false)
+
+  const { marks, add: addMark, remove: removeMark } = useEpisodeMarks(novelId ?? '', episodeId ?? '')
+
+  /* 押された付箋。飛ぶか外すかを聞く */
+  const [askingMark, setAskingMark] = useState<{ id: string; sentence: number; text: string } | null>(null)
+
+  /** 文を押したとき。付箋の状態なら付ける */
+  function handleMark(idx: number, raw: string) {
+    const clean = stripRuby(raw).replace(/\n/g, '').trim()
+    if (!clean) return
+    void addMark(idx, clean)
+  }
+
+
   const { setQuotedText, selecting, setSelecting, commentAnchorRef } = useQuote()
   const handleQuote = onQuote || setQuotedText
 
@@ -626,11 +694,90 @@ export default function EpisodeBody({ illustUrl, illustIsAi, illustSize, title, 
            * どの押し具のことか分かりにくい。
            * すすめる向きの押し具そのものに印を重ねる。
            */}
+          {/*
+            * 付箋。
+            *
+            * ★ 押すと「付箋を置く状態」になる。
+            *   そのまま文を押すと、そこに付箋が付く。
+            *
+            *   引用（selecting）と同じ仕組み。
+            *   同時に両方は使えないようにする。
+            */}
+          <button
+            type="button"
+            onClick={()=>{ setMarking(v=>!v); setSelecting(false) }}
+            title="文に付箋を付けます"
+            style={{
+              display:'flex',alignItems:'center',gap:5,
+              padding:'6px 12px',borderRadius:999,
+              border:'1px solid var(--color-brand-border)',
+              background: marking ? 'var(--color-brand)' : 'var(--color-bg-card)',
+              color: marking ? 'var(--base-color-1)' : 'var(--color-text-muted)',
+              fontSize:12,cursor:'pointer',
+            }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="1.8"
+              strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+            </svg>
+            {marking ? '付箋をやめる' : '付箋'}
+          </button>
+
           <ReadingSettings onChange={setSettings} isMobile={false} showWritingMode={true} recommendedMode={recommendedMode}/>
         </div>
 
+        {/*
+          * 付箋を押したとき。
+          *
+          * ★ 飛ぶか外すかを選ばせる。
+          *   押しただけで消えると、間違いが起きる。
+          *   押しただけで飛ぶと、外す道が無くなる。
+          */}
+        {askingMark && (
+          <div
+            onClick={()=>setAskingMark(null)}
+            style={{position:'fixed',inset:0,zIndex:300,display:'flex',
+              alignItems:'center',justifyContent:'center',padding:24,
+              background:'rgba(0,0,0,.45)'}}
+          >
+            <div onClick={(e)=>e.stopPropagation()}
+              style={{width:'100%',maxWidth:380,padding:20,borderRadius:12,
+                background:'var(--color-bg-card)'}}>
+              <p style={{margin:0,fontSize:13,fontWeight:700,color:'var(--color-text)'}}>
+                付箋
+              </p>
+              <p style={{margin:'10px 0 0',maxHeight:110,overflowY:'auto',
+                padding:'9px 12px',borderRadius:8,background:'var(--color-bg)',
+                fontSize:12.5,lineHeight:1.85,color:'var(--color-text-muted)'}}>
+                {askingMark.text}
+              </p>
+              <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:16}}>
+                <button type="button"
+                  onClick={()=>{ void removeMark(askingMark.id); setAskingMark(null) }}
+                  style={{padding:'8px 16px',border:'1px solid var(--color-brand-border)',
+                    borderRadius:8,background:'transparent',
+                    color:'var(--color-danger)',fontSize:12.5,cursor:'pointer'}}>
+                  外す
+                </button>
+                <button type="button"
+                  onClick={()=>{
+                    /* その文まで動かす */
+                    document.querySelector(`[data-sentence="${askingMark.sentence}"]`)
+                      ?.scrollIntoView({ behavior:'smooth', block:'center' })
+                    setAskingMark(null)
+                  }}
+                  style={{padding:'8px 18px',border:'none',borderRadius:8,
+                    background:'var(--color-brand)',color:'var(--base-color-1)',
+                    fontSize:12.5,cursor:'pointer'}}>
+                  ここへ飛ぶ
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {vertical ? (
-          <VerticalBody illustUrl={illustUrl} illustIsAi={illustIsAi} illustSize={settings.illustSize} title={title} body={body} preface={preface} afterword={afterword}
+          <VerticalBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} illustUrl={illustUrl} illustIsAi={illustIsAi} illustSize={settings.illustSize} title={title} body={body} preface={preface} afterword={afterword}
             authorName={authorName} fontSize={settings.fontSize} fontFamily={fontFamily}
             selecting={selecting} onQuote={handleQuote} onAfterQuote={handleAfterQuote}/>
         ) : (
@@ -681,7 +828,7 @@ export default function EpisodeBody({ illustUrl, illustIsAi, illustSize, title, 
                   引用したい文をクリックしてください
                 </div>
               )}
-              <QuotableBody body={body} fontSize={settings.fontSize} lineHeight={settings.lineHeight} fontFamily={fontFamily} onQuote={handleQuote} selecting={selecting} onAfterQuote={handleAfterQuote}/>
+              <QuotableBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} body={body} fontSize={settings.fontSize} lineHeight={settings.lineHeight} fontFamily={fontFamily} onQuote={handleQuote} selecting={selecting} onAfterQuote={handleAfterQuote}/>
             </div>
             {afterword && (
               <div style={{borderTop:'1px solid var(--color-brand-border)'}}>
@@ -711,9 +858,14 @@ interface VerticalProps {
   illustIsAi?: boolean | null
   /** 挿絵の大きさ。small / medium / large */
   illustSize?: string | null
+  /* 付箋 */
+  marking?: boolean
+  marks?: { id: string; sentence: number; text: string }[]
+  onMark?: (idx: number, raw: string) => void
+  onOpenMark?: (m: { id: string; sentence: number; text: string }) => void
 }
 
-function VerticalBody({ illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
+function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   useEffect(() => {
