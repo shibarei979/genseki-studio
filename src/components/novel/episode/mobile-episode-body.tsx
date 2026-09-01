@@ -3,8 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby } from '@/lib/utils/ruby'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
-import FullscreenReader from '@/components/novel/episode/fullscreen-reader'
-import { createPortal } from 'react-dom'
+import { usePathname, useRouter } from 'next/navigation'
 
 interface Props {
   title: string
@@ -220,8 +219,14 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
   const [isVertical, setIsVertical] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
 
-  /* 全画面で読んでいるか */
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  /*
+   * 全画面で読む頁への道。
+   *
+   * ★ 話の id は渡されていないので、いまの住所から作る。
+   *   /novel/…/episode/… の後ろに /read を足すだけ。
+   */
+  const router = useRouter()
+  const pathname = usePathname()
   const [containerHeight, setContainerHeight] = useState(600)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -304,38 +309,12 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
    * 左右を触ると頁を送る。
    * 頁の分け方は PagedReader に任せる。
    */
-  if (isFullscreen) {
-    /*
-     * ★ 画面の外に出して描く。
-     *
-     *   position: fixed は、親に transform があると
-     *   その親を基準にしてしまう。
-     *   読む画面の中で描くと、
-     *   元の頁が残ったまま、本文だけ横にずれる。
-     *
-     *   createPortal で body の直下へ出せば、
-     *   親の指定に引きずられない。
-     */
-    return createPortal(
-      <FullscreenReader
-        settings={{
-          writing_mode: isVertical ? 'vertical' : 'horizontal',
-          font_size: settings.fontSize,
-          line_height: 'normal',
-          theme: 'paper',
-        } as never}
-        title={title}
-        text={body}
-        onClose={()=>setIsFullscreen(false)}
-      />,
-      document.body,
-    )
-  }
+
 
     return (
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
         <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-          <ReadingSettings onFullscreen={()=>setIsFullscreen(true)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
+          <ReadingSettings onFullscreen={()=>router.push(`${pathname}/read`)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
         </div>
 
         {preface && (
@@ -413,7 +392,7 @@ export default function MobileEpisodeBody({ title, body, preface, afterword, aut
   return (
     <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
       <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-        <ReadingSettings onFullscreen={()=>setIsFullscreen(true)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
+        <ReadingSettings onFullscreen={()=>router.push(`${pathname}/read`)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
       </div>
 
       <div style={{padding:'20px 16px 28px'}}>
