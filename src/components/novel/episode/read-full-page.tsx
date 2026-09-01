@@ -93,7 +93,15 @@ export default function ReadFullPage({
              * 中身の幅 ÷ 入れ物の幅 が頁数。
              * 縦書きなので、横に伸びていく。
              */
-            const total = Math.max(1, Math.ceil(inner.scrollWidth / w));
+            /* 送る量と同じ数え方にする。ずれると最後まで行けない */
+            const step = isVertical
+                ? Math.max(1, Math.floor(w / (fontSize * 1.9))) * (fontSize * 1.9)
+                : w;
+
+            const total = Math.max(
+                1,
+                Math.ceil((inner.scrollWidth - w) / step) + 1,
+            );
             setPageCount(total);
             setPage((p) => Math.min(p, total - 1));
         }
@@ -119,9 +127,24 @@ export default function ReadFullPage({
         const box = bodyRef.current;
         if (!box) return;
 
+        /*
+         * ★ 1 画面ぶんではなく、行の幅の倍数で送る。
+         *
+         *   縦書きの 1 行の幅は、行の高さ（字の大きさ × 1.9）。
+         *   入れ物の幅がその倍数とは限らないので、
+         *   1 画面ずつ送ると、端の行が半分だけ出る。
+         *
+         *   入る行数を数えて、そのぶんだけ送れば、
+         *   いつも行の切れ目で止まる。
+         */
+        const step = isVertical
+            ? Math.max(1, Math.floor(box.clientWidth / (fontSize * 1.9)))
+                * (fontSize * 1.9)
+            : box.clientWidth;
+
         const max = box.scrollWidth - box.clientWidth;
         box.scrollTo({
-            left: Math.max(0, max - page * box.clientWidth),
+            left: Math.max(0, max - page * step),
             behavior: "smooth",
         });
     }, [page, pageCount, size, fontSize, isVertical]);
