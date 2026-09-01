@@ -277,7 +277,18 @@ export default function ReadFullPage({
                 <div
                     ref={innerRef}
                     style={{
-                        height: "100%",
+                        /*
+                         * ★ 入れ物より少し低くする。
+                         *
+                         *   100% だと、1 行の高さがぴったり収まらず、
+                         *   上下がわずかに切れる。
+                         *   行の高さは字の大きさの 1.9 倍なので、
+                         *   その半端が上下にこぼれる。
+                         *
+                         *   少し余らせて、切れないようにする。
+                         */
+                        height: "calc(100% - 8px)",
+                        paddingTop: 4,
                         fontSize,
                         lineHeight: 1.9,
                         letterSpacing: ".03em",
