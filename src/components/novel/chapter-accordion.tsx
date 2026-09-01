@@ -78,9 +78,7 @@ export default function ChapterAccordion({
     return (
       <Link href={`/novel/${novelId}/episode/${ep.id}`} style={{textDecoration:'none',display:'block'}}>
         <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderBottom:'1px solid var(--color-brand-light)',background: isReadEp ? '#e5e7eb' : 'var(--color-bg-card)'}}>
-          {ep.illust_url && (
-            <img src={ep.illust_url} alt="" style={{width:36,height:36,objectFit:'cover',borderRadius:4,flexShrink:0}}/>
-          )}
+          {/* 挿絵は読む画面の本文の前にだけ出す。目次には出さない */}
           <div style={{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:5}}>
             {isReadEp && <span style={{fontSize:10,color:'#10b981',fontWeight:700,flexShrink:0}}>✓</span>}
             <span style={{fontSize:13,fontWeight:500,color: isReadEp ? '#4b5563' : 'var(--color-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.title}</span>

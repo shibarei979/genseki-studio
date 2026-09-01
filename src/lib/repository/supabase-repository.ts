@@ -778,6 +778,8 @@ export const supabaseRepository: Repository = {
         }
         if (patch.afterword !== undefined) next.afterword = patch.afterword;
         if (patch.deleted_at !== undefined) next.deleted_at = patch.deleted_at;
+        /* 話ごとの挿絵。読む画面の本文の前に出る */
+        if (patch.illust_url !== undefined) next.illust_url = patch.illust_url;
 
         /*
          * 送るものが無ければ、いまの姿をそのまま返す。

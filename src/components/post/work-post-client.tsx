@@ -30,6 +30,8 @@ import type {
     Work,
     WorkFormat,
 } from "@/types";
+import { shrinkImage } from "@/lib/storage/image-store";
+import { uploadImage } from "@/lib/storage/remote-image";
 import {
     AI_USAGE_LABEL,
     WORK_FORMAT_DESCRIPTION,
@@ -807,6 +809,41 @@ function PostForm({
     const [afterword, setAfterword] = useState(episode.afterword ?? "");
     const [chapterId, setChapterId] = useState(episode.chapter_id ?? "");
 
+    /*
+     * 話ごとの挿絵。
+     *
+     * ★ 作品の表紙とは別のもの。
+     *   表紙は 1 作品に 1 枚、挿絵は話ごとに 1 枚。
+     *
+     * 読む画面で、本文の前に出る。
+     */
+    const [illustUrl, setIllustUrl] = useState(episode.illust_url ?? "");
+    const [illustBusy, setIllustBusy] = useState(false);
+    const [illustError, setIllustError] = useState("");
+
+    async function putIllust(file: File) {
+        setIllustBusy(true);
+        setIllustError("");
+
+        try {
+            /*
+             * 縮めてから上げる。
+             *
+             * そのままだと数 MB になり、
+             * 読む人の通信を無駄に使う。
+             */
+            const shrunk = await shrinkImage(file, true);
+            const url = await uploadImage(shrunk, "illust");
+            setIllustUrl(url);
+        } catch (caught) {
+            setIllustError(
+                caught instanceof Error ? caught.message : "上げられませんでした",
+            );
+        }
+
+        setIllustBusy(false);
+    }
+
     const [at, setAt] = useState(toLocalInput(episode.publish_at));
     const [error, setError] = useState("");
 
@@ -821,6 +858,7 @@ function PostForm({
      */
     const isDirty =
         title !== episode.title ||
+        illustUrl !== (episode.illust_url ?? "") ||
         preface !== (episode.preface ?? "") ||
         summary !== (episode.episode_summary ?? "") ||
         afterword !== (episode.afterword ?? "") ||
@@ -883,7 +921,8 @@ function PostForm({
         }
 
         setError("");
-        onChange({ is_published: true, publish_at: null });
+        /* 挿絵も一緒に保存する。別に押させると忘れられる */
+        onChange({ is_published: true, publish_at: null, illust_url: illustUrl || null });
         onPosted?.();
     }
 
@@ -925,6 +964,72 @@ function PostForm({
                                     </option>
                                 ))}
                             </select>
+                        </Field>
+
+                        {/*
+                          * 話ごとの挿絵。
+                          *
+                          * ★ 作品の表紙とは別のもの。
+                          *   表紙は 1 作品に 1 枚、挿絵は話ごとに 1 枚。
+                          *
+                          * 読む画面で、本文の前に出る。
+                          */}
+                        <Field label="挿絵（この話だけ）">
+                            <div className="flex items-start gap-3">
+                                {illustUrl ? (
+                                    <div className="relative shrink-0">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={illustUrl}
+                                            alt=""
+                                            className="h-24 w-24 rounded-lg border border-line object-cover"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setIllustUrl("")}
+                                            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-line bg-surface text-[11px] text-muted"
+                                            aria-label="挿絵を外す"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-line text-[11px] text-faint">
+                                        まだ無し
+                                    </div>
+                                )}
+
+                                <div className="min-w-0 flex-1">
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp"
+                                        disabled={illustBusy}
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) void putIllust(file);
+                                            e.target.value = "";
+                                        }}
+                                        className="w-full text-[12px] text-muted"
+                                    />
+
+                                    <p className="mt-1.5 text-[11px] leading-[1.8] text-faint">
+                                        読む画面で、本文の前に出ます。
+                                        <br />
+                                        入れなくても構いません。
+                                    </p>
+
+                                    {illustBusy && (
+                                        <p className="mt-1 text-[11px] text-forest">
+                                            上げています…
+                                        </p>
+                                    )}
+                                    {illustError && (
+                                        <p className="mt-1 text-[11px] text-[var(--color-danger)]">
+                                            {illustError}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </Field>
 
                         <Field label="冒頭プレビュー文（任意）">

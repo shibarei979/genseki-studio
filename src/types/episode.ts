@@ -62,6 +62,13 @@ export interface Episode {
     deleted_at: string | null;
     created_at: string;
     updated_at: string;
+    /**
+     * 話ごとの挿絵。
+     *
+     * 作品の表紙（novels.cover_url）とは別のもの。
+     * 読む画面で、本文の前に出る。
+     */
+    illust_url?: string | null;
 }
 
 export interface EpisodeCreateInput {
