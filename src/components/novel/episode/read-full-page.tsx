@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { VerticalText } from "@/components/novel/episode/mobile-episode-body";
 
 /**
  * ============================================================
@@ -327,7 +328,17 @@ export default function ReadFullPage({
 /* ずらしは入れ物の側で行う。ここでは何もしない */
                     }}
                 >
-                    {body}
+                    {/*
+                      * ★ そのまま出さない。
+                      *
+                      *   ルビ（｜漢字《かんじ》）や縦中横は、
+                      *   組み立てて初めて形になる。
+                      *   素のまま出すと、記号が見えてしまう。
+                      *
+                      *   携帯の読む画面と同じ部品を使う。
+                      *   同じものを二度作ると、片方だけ古くなる。
+                      */}
+                    <VerticalText text={body} />
                 </div>
             </div>
 

@@ -138,7 +138,7 @@ function normalizeForReading(text: string): string {
   return next
 }
 
-function VerticalText({ text }: { text: string }) {
+export function VerticalText({ text }: { text: string }) {
   /*
    * 整えるのは、ルビを切り出したあと。
    *
