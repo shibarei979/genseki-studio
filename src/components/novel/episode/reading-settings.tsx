@@ -17,10 +17,22 @@ const FONT_OPTIONS = [
   { label: '丸ゴシック', value: 'rounded' as const },
   { label: 'UD', value: 'ud' as const },
 ]
+/*
+ * 字の大きさ。
+ *
+ * ★ 12px を足した。
+ *
+ *   携帯では 14px でも大きく、
+ *   1 画面に入る量が少ないという声があった。
+ *   縦書きは高さが行数になるので、
+ *   小さいほど 1 行に入る文字が増える。
+ */
 const SIZE_OPTIONS = [
-  { label: '小', value: 14 },
-  { label: '中', value: 16 },
-  { label: '大', value: 18 },
+  { label: '豆',   value: 8 },
+  { label: '極小', value: 12 },
+  { label: '小',   value: 14 },
+  { label: '中',   value: 16 },
+  { label: '大',   value: 18 },
   { label: '特大', value: 21 },
 ]
 const LINE_OPTIONS = [
@@ -172,7 +184,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
             {/* 文字サイズ */}
             <div style={{marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>文字サイズ</div>
-              <div style={{display:'flex',gap:6}}>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                 {SIZE_OPTIONS.map(o => (
                   <button key={o.value} onClick={()=>update({fontSize:o.value})} style={btnBase(settings.fontSize===o.value)}>
                     {o.label}

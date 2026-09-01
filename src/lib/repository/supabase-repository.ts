@@ -222,6 +222,14 @@ function toEpisode(row: Record<string, unknown>): Episode {
         is_published: row.is_published === true,
         publish_at: (row.publish_at as string | null) ?? null,
         preface: (row.preface as string | null) ?? null,
+        /*
+         * ★ ここに書かないと、読み戻せない。
+         *
+         *   保存はできても、次に開いたとき空になる。
+         *   実際、挿絵が「消える」と言われたのはこれ。
+         */
+        illust_url: (row.illust_url as string | null) ?? null,
+        illust_is_ai: row.illust_is_ai === true,
         episode_summary: (row.episode_summary as string | null) ?? null,
         afterword: (row.afterword as string | null) ?? null,
         deleted_at: (row.deleted_at as string | null) ?? null,
