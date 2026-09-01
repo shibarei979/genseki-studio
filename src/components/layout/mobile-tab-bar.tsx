@@ -96,6 +96,9 @@ export default function MobileTabBar() {
     if (HIDE_ON.some((path) => pathname.startsWith(path))) return null
     if (HIDE_PATTERN.test(pathname)) return null
 
+    /* 全画面で読む頁でも出さない */
+    if (/\/read$/.test(pathname)) return null
+
     return (
         <nav className="mtb" aria-label="主な行き先">
             {TABS.map((tab) => {

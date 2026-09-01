@@ -73,7 +73,6 @@ export default async function ReadPage({
     return (
         <ReadFullPage
             title={episode.title || "無題"}
-            workTitle={novel.title || ""}
             body={episode.body || ""}
             backHref={`/novel/${params.id}/episode/${params.epId}`}
         />

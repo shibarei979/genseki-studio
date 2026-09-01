@@ -63,6 +63,12 @@ export default function MobileHeader() {
      */
     if (/^\/workspace\/[^/]+\/post/.test(pathname)) return null;
 
+    /*
+     * 全画面で読む頁でも出さない。
+     * 読むことだけの頁なので、飾りは要らない。
+     */
+    if (/\/read$/.test(pathname)) return null;
+
     return (
         <header className="mh">
             <Link href="/" className="mh_logo" aria-label="原石航路 ホームへ">

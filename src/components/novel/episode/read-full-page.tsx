@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * ============================================================
@@ -23,36 +23,27 @@ import { useEffect, useMemo, useState } from "react";
  * ============================================================
  */
 
-/** 1 頁に入れる文字数。画面の大きさから決める */
-function charsPerPage(w: number, h: number, fontSize: number) {
-    /*
-     * 縦書きは、高さが 1 行の文字数、幅が行数になる。
-     *
-     * 余白を引いてから、字の大きさで割る。
-     * 行の間は 1.9 倍で見ておく。
-     */
-    /*
-     * ★ 余白を大きめに引く。
-     *
-     *   上下は帯（56px × 2）と余白。
-     *   左右は端に文字が触れないぶん。
-     *
-     *   引き足りないと、入りきらない文字が
-     *   画面の外へこぼれて読めなくなる。
-     */
-    const perLine = Math.max(6, Math.floor((h - 150) / fontSize));
-    const lines = Math.max(3, Math.floor((w - 60) / (fontSize * 1.9)));
-    return perLine * lines;
-}
+/**
+ * ★ 文字数では切らない。
+ *
+ *   1 頁に何文字入るかを数えて切っていたが、
+ *   数え方と実際の入り方がずれる。
+ *   ずれたぶんが画面の外へこぼれ、
+ *   次の頁もずれた場所から始まるので、
+ *   あいだの文章が抜けて見えていた。
+ *
+ *   本文は切らずに 1 本のまま置き、
+ *   横にずらして見せる場所を変える。
+ *   ブラウザが折り返した通りに出るので、
+ *   何も抜けない。
+ */
 
 export default function ReadFullPage({
     title,
-    workTitle,
     body,
     backHref,
 }: {
     title: string;
-    workTitle: string;
     body: string;
     backHref: string;
 }) {
@@ -75,26 +66,47 @@ export default function ReadFullPage({
         };
     }, []);
 
-    /* 頁に分ける。大きさか字の大きさが変わったら分け直す */
-    const pages = useMemo(() => {
-        if (size.w === 0) return [body];
+    /*
+     * 本文の入れ物と、その中身。
+     *
+     * 中身は切らずに 1 本のまま。
+     * 入れ物からはみ出したぶんが、次の頁になる。
+     */
+    const bodyRef = useRef<HTMLDivElement>(null);
+    const innerRef = useRef<HTMLDivElement>(null);
+    const [pageCount, setPageCount] = useState(1);
 
-        const per = charsPerPage(size.w, size.h, fontSize);
-        const out: string[] = [];
-
-        for (let i = 0; i < body.length; i += per) {
-            out.push(body.slice(i, i + per));
-        }
-        return out.length > 0 ? out : [""];
-    }, [body, size, fontSize]);
-
-    /* 分け直したとき、行き過ぎていたら戻す */
+    /* 何頁ぶんあるかを測る */
     useEffect(() => {
-        setPage((p) => Math.min(p, pages.length - 1));
-    }, [pages.length]);
+        function measure() {
+            const box = bodyRef.current;
+            const inner = innerRef.current;
+            if (!box || !inner) return;
+
+            const w = box.clientWidth;
+            if (w === 0) return;
+
+            /*
+             * 中身の幅 ÷ 入れ物の幅 が頁数。
+             * 縦書きなので、横に伸びていく。
+             */
+            const total = Math.max(1, Math.ceil(inner.scrollWidth / w));
+            setPageCount(total);
+            setPage((p) => Math.min(p, total - 1));
+        }
+
+        /* 描いたあとに測る。すぐだと 0 が返る */
+        const timer = window.setTimeout(measure, 60);
+        window.addEventListener("resize", measure);
+
+        return () => {
+            window.clearTimeout(timer);
+            window.removeEventListener("resize", measure);
+        };
+    }, [body, size, fontSize, isVertical]);
 
     function turn(step: 1 | -1) {
-        setPage((p) => Math.min(Math.max(p + step, 0), pages.length - 1));
+        setPage((p) => Math.min(Math.max(p + step, 0), pageCount - 1));
     }
 
     useEffect(() => {
@@ -105,7 +117,7 @@ export default function ReadFullPage({
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pages.length]);
+    }, [pageCount]);
 
     const tapStyle = (side: "left" | "center" | "right"): React.CSSProperties => ({
         position: "absolute",
@@ -176,15 +188,20 @@ export default function ReadFullPage({
                         color: "#2b2b2b",
                     }}
                 >
-                    {workTitle && <span style={{ opacity: 0.5 }}>{workTitle}　</span>}
                     {title}
                 </span>
 
-                {/* 字の大きさ */}
+                {/*
+                  * 読書設定。
+                  *
+                  * ★ 出すのは、読むあいだに変えたくなるものだけ。
+                  *   字の大きさと、縦書き・横書き。
+                  */}
                 <button
                     type="button"
                     onClick={() => setFontSize((v) => Math.max(12, v - 2))}
                     style={barBtn}
+                    aria-label="字を小さく"
                 >
                     小
                 </button>
@@ -192,11 +209,10 @@ export default function ReadFullPage({
                     type="button"
                     onClick={() => setFontSize((v) => Math.min(26, v + 2))}
                     style={barBtn}
+                    aria-label="字を大きく"
                 >
                     大
                 </button>
-
-                {/* 縦書きと横書き */}
                 <button
                     type="button"
                     onClick={() => setIsVertical((v) => !v)}
@@ -212,36 +228,45 @@ export default function ReadFullPage({
 
             {/* 本文 */}
             <div
+                ref={bodyRef}
                 style={{
                     position: "absolute",
                     /*
-                     * ★ 帯のぶんを空ける。
-                     *
-                     *   帯は隠れているときも、
-                     *   出したときに本文の上に重なる。
-                     *   はじめから場所を空けておけば、
-                     *   出しても文字が隠れない。
-                     *
-                     *   左右も広めに取る。
-                     *   端に文字が触れると読みにくい。
+                     * 帯のぶんを空ける。
+                     * 帯を出しても、文字が隠れない。
                      */
                     top: 56,
                     bottom: 46,
-                    left: 0,
-                    right: 0,
-                    padding: "10px 30px",
-                    fontSize,
-                    lineHeight: 1.9,
-                    letterSpacing: ".03em",
-                    color: "#2b2b2b",
-                    fontFamily: "'Noto Serif JP', serif",
-                    writingMode: isVertical ? "vertical-rl" : "horizontal-tb",
-                    textOrientation: "mixed",
-                    whiteSpace: "pre-wrap",
+                    left: 30,
+                    right: 30,
                     overflow: "hidden",
                 }}
             >
-                {pages[page] ?? ""}
+                <div
+                    ref={innerRef}
+                    style={{
+                        height: "100%",
+                        fontSize,
+                        lineHeight: 1.9,
+                        letterSpacing: ".03em",
+                        color: "#2b2b2b",
+                        fontFamily: "'Noto Serif JP', serif",
+                        writingMode: isVertical ? "vertical-rl" : "horizontal-tb",
+                        textOrientation: "mixed",
+                        whiteSpace: "pre-wrap",
+
+                        /*
+                         * ★ 横にずらして、見せる場所を変える。
+                         *
+                         *   縦書きは右から左へ流れる。
+                         *   次の頁へ進むには、右へずらす。
+                         */
+                        transform: `translateX(${page * 100}%)`,
+                        transition: "transform .2s ease",
+                    }}
+                >
+                    {body}
+                </div>
             </div>
 
             {/*
@@ -290,7 +315,7 @@ export default function ReadFullPage({
                     transition: "opacity .18s ease",
                 }}
             >
-                {page + 1} / {pages.length}
+                {page + 1} / {pageCount}
             </div>
 
             {/*
@@ -313,7 +338,7 @@ export default function ReadFullPage({
                     style={{
                         display: "block",
                         height: "100%",
-                        width: `${((page + 1) / pages.length) * 100}%`,
+                        width: `${((page + 1) / pageCount) * 100}%`,
                         background: "#1f4e6b",
                         transition: "width .2s ease",
                     }}
