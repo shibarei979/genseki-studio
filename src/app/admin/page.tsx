@@ -30,6 +30,13 @@ interface Stat {
   /** 内訳の代わりに置く一行 */
   note?: string
   icon?: 'user' | 'book' | 'eye' | 'comment' | 'heart'
+  /**
+   * 押したときの行き先。
+   *
+   * 数だけ見せて中身が見られないと、
+   * 荒れているかどうかが分からない。
+   */
+  href?: string
 }
 
 /*
@@ -89,12 +96,13 @@ function StatIcon({ name }: { name: NonNullable<Stat['icon']> }) {
  * サイトが始まって日が浅いうちは、
  * 「+11,700%」のような数字にしかならない。
  */
-function StatCard({ label, value, prev, unit, breakdown, note, icon }: Stat) {
+function StatCard({ label, value, prev, unit, breakdown, note, icon, href }: Stat) {
   const diff = prev === undefined ? null : value - prev
   const canRate = prev !== undefined && prev >= 10
   const rate = canRate && prev ? Math.round((diff! / prev) * 1000) / 10 : null
 
-  return (
+  const inner = (
+
     <div style={{
       background:'var(--admin-bg-card)',
       border:'1px solid var(--admin-border)',
@@ -155,6 +163,18 @@ function StatCard({ label, value, prev, unit, breakdown, note, icon }: Stat) {
         </div>
       )}
     </div>
+  )
+
+  /*
+   * 行き先があるときは、押せるようにする。
+   * 無いときは、これまでどおりただの札。
+   */
+  if (!href) return inner
+
+  return (
+    <a href={href} style={{ display:'block', textDecoration:'none' }}>
+      {inner}
+    </a>
   )
 }
 
@@ -518,6 +538,8 @@ export default async function AdminPage({
     {
       label: '総コメント数', icon: 'comment',
       value: commentCount ?? 0, prev: prevCommentRes.count ?? 0,
+      /* 押すとコメントの一覧へ。中身を見て、目に余るものを消す */
+      href: '/admin/comments',
       breakdown: [
         { label: '作品への感想', value: `${(commentCount ?? 0).toLocaleString()} 件` },
         { label: '未対応の通報', value: `${(openReportRes.count ?? 0).toLocaleString()} 件` },
