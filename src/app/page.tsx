@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import HomeClient from "@/components/home/home-client";
+import GuestHome from "@/components/home/guest-home";
 import ReaderHome from "@/components/home/reader-home";
 
 /**
@@ -31,7 +32,22 @@ export default async function HomePage() {
             .maybeSingle();
 
         if (profile?.home_mode === "read") return <ReaderHome />;
+
+        return <HomeClient />;
     }
 
-    return <HomeClient />;
+    /*
+     * 入っていない人には、読者向けを出す。
+     *
+     * ★ はじめて来た人は、まず読む人。
+     *
+     *   執筆向けは「書いた本」「執筆室」など、
+     *   入っていないと何も出ない枠が多い。
+     *   空の棚を見せても、何ができる場所か伝わらない。
+     *
+     *   作品が並んでいるほうが、伝わる。
+     *
+     * ヘッダーの切り替えで、その場で執筆向きにも移れる。
+     */
+    return <GuestHome />;
 }

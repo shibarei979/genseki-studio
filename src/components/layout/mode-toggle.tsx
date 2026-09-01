@@ -53,20 +53,60 @@ export default function ModeToggle({
     }, [userId]);
 
     useEffect(() => {
-        setNow(mode === "read" ? "read" : "write");
+        if (mode) {
+            setNow(mode === "read" ? "read" : "write");
+            return;
+        }
+
+        /* 入っていない人は、この端末に覚えたものを使う */
+        try {
+            const saved = window.localStorage.getItem("genseki:home-mode");
+            setNow(saved === "write" ? "write" : "read");
+        } catch {
+            setNow("read");
+        }
     }, [mode]);
 
-    /* 集中しているときと、入っていないときは出さない */
-    if (!me || mode === "focus") return null;
+    /*
+     * 集中しているときは出さない。
+     *
+     * ★ 入っていない人にも出す。
+     *
+     *   はじめて来た人は読者向けから始まる。
+     *   そこから執筆向きを覗けないと、
+     *   何を書ける場所なのかが伝わらない。
+     *
+     *   入っていない人の向きは、この端末に覚える。
+     *   誰のものでもないので、表に書けない。
+     */
+    if (mode === "focus") return null;
 
     const isRead = now === "read";
 
     async function toggle() {
-        if (isBusy || !me) return;
+        if (isBusy) return;
 
         const next = isRead ? "write" : "read";
 
         setIsBusy(true);
+
+        /*
+         * 入っていない人。
+         *
+         * 表に書けないので、この端末に覚える。
+         * 次に来たときも、選んだ向きで開く。
+         */
+        if (!me) {
+            setNow(next);
+            try {
+                window.localStorage.setItem("genseki:home-mode", next);
+            } catch {
+                /* 覚えられなくても、いまは切り替わる */
+            }
+            window.location.reload();
+            return;
+        }
+
         /*
          * 見た目を先に動かす。
          * 保存を待たせると、押しても反応が無いように見える。

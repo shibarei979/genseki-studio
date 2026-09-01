@@ -10,8 +10,12 @@ import Link from 'next/link'
 import NovelPopup from '@/components/novel-popup'
 import SearchForm from '@/components/search/search-form'
 import { loadBlockedIds } from '@/lib/social/blocks'
+import WorkShelf from '@/components/common/work-shelf'
 
 const PAGE_SIZE = 50
+
+/* 検索していないときに出す数。まず量を見せる */
+const BROWSE_SIZE = 100
 
 interface Props {
   searchParams: {
@@ -100,7 +104,7 @@ export default async function SearchPage({ searchParams }: Props) {
   // いいね数・ブックマーク数・閲覧数・コメント数を後で集計するためnovel_idsを先に取得
   if (!hasSearch) {
     let q2 = supabase.from('novels')
-      .select('id, title, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
+      .select('id, title, cover_url, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
       .eq('published', true)
       .order('created_at', { ascending: false })
       .limit(200)
@@ -128,11 +132,18 @@ export default async function SearchPage({ searchParams }: Props) {
     }
     const { data: allData, count: allCount } = await q2
     const shuffled = [...(allData || [])].sort(() => Math.random() - 0.5)
-    results = shuffled.slice(0, PAGE_SIZE)
+    /*
+     * 検索していないときは、多めに出す。
+     *
+     * ★ 探しに来た人に、まず量を見せる。
+     *   30 件だと「これだけしか無いのか」に見える。
+     *   並べ替えていないので、送っても見終わらない。
+     */
+    results = shuffled.slice(0, BROWSE_SIZE)
     count = allCount || 0
   } else {
     let query = supabase.from('novels')
-      .select('id, title, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
+      .select('id, title, cover_url, summary, catchcopy, genre, tags, novel_type, is_serial, author_id, created_at, updated_at, is_r18, ai_usage', { count: 'exact' })
       .eq('published', true)
 
     if (!isAdmin) {
@@ -421,6 +432,29 @@ export default async function SearchPage({ searchParams }: Props) {
     return n.toString()
   }
 
+  /*
+   * 文字と本、どちらで見るか。
+   *
+   * ★ 住所に付ける。
+   *   このページはサーバー側で組み立てるので、
+   *   状態を持つ部品にすると作りが増える。
+   *
+   * 何も付いていないときは、設定で覚えたほうを使う。
+   */
+  const viewParam = (searchParams as Record<string, string | undefined>).view || ''
+  /*
+   * ★ いまは運営だけに見せる。
+   *
+   *   本の形はまだ試している途中。
+   *   表紙のある作品が少なく、
+   *   題名の紙ばかりが並ぶ見た目になる。
+   *   表紙が増えてから、みんなに開く。
+   */
+  const shelfView =
+    isAdmin
+    && (viewParam === 'shelf'
+      || (viewParam === '' && (profile as { work_popup_style?: string } | null)?.work_popup_style === 'book'))
+
   function buildUrl(params: Record<string, string>) {
     const base: Record<string, string> = {}
     if (q)       base.q = q
@@ -430,6 +464,7 @@ export default async function SearchPage({ searchParams }: Props) {
     if (serial)  base.serial = serial
     if (tagParam) base.tag = tagParam
     if (sort)    base.sort = sort
+    if (viewParam) base.view = viewParam
     Object.assign(base, params)
     const qs = Object.entries(base).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
     return `/search${qs ? '?' + qs : ''}`
@@ -460,6 +495,52 @@ export default async function SearchPage({ searchParams }: Props) {
               : <span style={{color:'var(--color-text-muted)'}}>ランダム表示中</span>
             }
           </div>
+
+          {/*
+            * 文字と本の切り替え。
+            *
+            * ★ 住所に付ける。
+            *   このページはサーバー側で組み立てるので、
+            *   状態を持つ部品にすると作りが増える。
+            *
+            *   選んだ形は、マイページの work_popup_style に
+            *   覚えてある。次に来たときも同じ形で開く。
+            */}
+          {isAdmin && (
+          <div style={{display:'flex',justifyContent:'flex-end',marginBottom:10}}>
+            <div className="ws-switch">
+              <Link
+                href={buildUrl({ view: 'text' })}
+                className={shelfView ? '' : 'is-on'}
+                style={{padding:'6px 13px',fontSize:12,textDecoration:'none',
+                  background:shelfView?'var(--color-bg-card)':'var(--color-brand)',
+                  color:shelfView?'var(--color-text-muted)':'var(--base-color-1)',
+                  fontWeight:shelfView?400:700}}>
+                文字
+              </Link>
+              <Link
+                href={buildUrl({ view: 'shelf' })}
+                className={shelfView ? 'is-on' : ''}
+                style={{padding:'6px 13px',fontSize:12,textDecoration:'none',
+                  background:shelfView?'var(--color-brand)':'var(--color-bg-card)',
+                  color:shelfView?'var(--base-color-1)':'var(--color-text-muted)',
+                  fontWeight:shelfView?700:400}}>
+                本
+              </Link>
+            </div>
+          </div>
+          )}
+
+          {shelfView ? (
+            <WorkShelf
+              works={results.map((n: any) => ({
+                id: n.id,
+                title: n.title,
+                author: authorMap[n.author_id],
+                cover_url: n.cover_url,
+              }))}
+            />
+          ) : (
 
           <div className="sp-list" style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden'}}>
             {novels.length === 0 ? (
@@ -502,6 +583,7 @@ export default async function SearchPage({ searchParams }: Props) {
               </NovelPopup>
             ))}
           </div>
+          )}
 
           {hasSearch && totalPages > 1 && (
             <div style={{display:'flex',justifyContent:'center',gap:8,marginTop:20}}>

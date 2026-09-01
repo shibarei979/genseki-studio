@@ -20,6 +20,7 @@ import "./globals.css";
 /* おすすめのページ。掲示板の見た目 */
 import "@/styles/recommend.css";
 /* 携帯の下の帯 */
+import "@/styles/work-shelf.css";
 import "@/styles/mobile-header.css";
 /* 携帯の作品ページ */
 import "@/styles/mobile-novel.css";
