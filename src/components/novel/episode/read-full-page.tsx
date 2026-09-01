@@ -370,11 +370,19 @@ export default function ReadFullPage({
                     background: "rgba(120,120,120,.12)",
                 }}
             >
+                {/*
+                  * ★ 右から左へ伸ばす。
+                  *
+                  *   縦書きは右から左へ読み進む。
+                  *   線が左から右へ伸びると、
+                  *   目の動きと逆になって落ち着かない。
+                  */}
                 <span
                     style={{
                         display: "block",
                         height: "100%",
                         width: `${((page + 1) / pageCount) * 100}%`,
+                        marginLeft: "auto",
                         background: "#1f4e6b",
                         transition: "width .2s ease",
                     }}
