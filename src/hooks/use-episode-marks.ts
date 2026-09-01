@@ -7,12 +7,12 @@ import { createClient } from '@/lib/supabase/client'
 /**
  * ============================================================
  * 原石航路 Studio
- * 付箋（話の中のしおり）
+ * 栞（話の中のしおり）
  *
  * ★ 文の番号で持つ。
  *
  *   本文は縦書きでも横書きでも、画面の幅で行が変わる。
- *   行で持つと、携帯で付けた付箋がパソコンで別の場所を指す。
+ *   行で持つと、携帯で付けた栞がパソコンで別の場所を指す。
  *   文なら、どこで見ても同じ場所になる。
  *
  * ★ そのときの文も一緒に持つ。
@@ -80,13 +80,44 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
         })()
     }, [epId])
 
+    const remove = useCallback(async (id: string) => {
+        const before = marks
+        setMarks(prev => prev.filter(one => one.id !== id))
+
+        const { error } = await createClient()
+            .from('episode_marks')
+            .delete()
+            .eq('id', id)
+
+        if (error) {
+            setMarks(before)
+            window.alert('外せませんでした。')
+        }
+    }, [marks])
+
     const add = useCallback(async (sentence: number, text: string) => {
         if (!userId) {
-            window.alert('付箋を使うには、ログインが要ります。')
+            window.alert('栞を使うには、ログインが要ります。')
             return
         }
         if (!workId || !epId) {
-            window.alert('この画面では付箋を使えません。')
+            window.alert('この画面では栞を使えません。')
+            return
+        }
+
+        /*
+         * ★ もう付いている文なら、外す。
+         *
+         *   同じ文に二度付けようとすると、
+         *   表の決まりで弾かれて
+         *   「duplicate key」と出ていた。
+         *
+         *   押した人は「付けたい」か「外したい」の
+         *   どちらかなので、入れ替える。
+         */
+        const already = marks.find(one => one.sentence === sentence)
+        if (already) {
+            await remove(already.id)
             return
         }
 
@@ -113,31 +144,18 @@ export function useEpisodeMarks(novelId: string, episodeId: string) {
              *   表が無いのか、決まりで弾かれたのか分からない。
              *   直すときに、まずそこで詰まる。
              */
-            console.error('付箋の保存に失敗:', error)
+            console.error('栞の保存に失敗:', error)
             window.alert(
-                '付箋を付けられませんでした。\n\n'
+                '栞を付けられませんでした。\n\n'
                 + (error?.message ?? '理由が返ってきませんでした'),
             )
             return
         }
 
         setMarks(prev => prev.map(one => (one.id === temp.id ? (data as EpisodeMark) : one)))
-    }, [userId, workId, epId])
+    }, [userId, workId, epId, marks, remove])
 
-    const remove = useCallback(async (id: string) => {
-        const before = marks
-        setMarks(prev => prev.filter(one => one.id !== id))
 
-        const { error } = await createClient()
-            .from('episode_marks')
-            .delete()
-            .eq('id', id)
-
-        if (error) {
-            setMarks(before)
-            window.alert('外せませんでした。')
-        }
-    }, [marks])
 
     return { marks, add, remove, canUse: Boolean(userId) }
 }

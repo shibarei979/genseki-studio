@@ -21,7 +21,7 @@ interface Props {
   /** 話ごとの挿絵。本文の前に出る */
   illustUrl?: string | null
   illustIsAi?: boolean | null
-  /* 付箋 */
+  /* 栞 */
   marking?: boolean
   onToggleMarking?: () => void
   marks?: { id: string; sentence: number; text: string }[]
@@ -228,7 +228,7 @@ export function VerticalText({ text }: { text: string }) {
 /**
  * 文の切れ目で分ける。
  *
- * 付箋の位置を「何文目か」で持つので、
+ * 栞の位置を「何文目か」で持つので、
  * 読む側と付ける側で同じ分け方をする必要がある。
  */
 function splitForMark(text: string): string[] {
@@ -348,7 +348,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
           <>
           {onToggleMarking && (
             <button type="button" onClick={onToggleMarking}
-              title="文に付箋を付けます"
+              title="文に栞をはさみます"
               style={{display:'flex',alignItems:'center',gap:4,marginRight:6,
                 padding:'5px 10px',borderRadius:999,
                 border:'1px solid var(--color-brand-border)',
@@ -360,7 +360,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
                 strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
               </svg>
-              {marking ? 'やめる' : '付箋'}
+              {marking ? 'やめる' : '栞'}
             </button>
           )}
           <ReadingSettings onFullscreen={()=>router.push(`${pathname}/read`)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
@@ -470,9 +470,10 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
             <span aria-hidden="true"
               style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
             <div style={{display:'inline-block', fontSize: settings.fontSize, lineHeight: settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', verticalAlign:'top', writingMode:'vertical-rl'}}>
-              {marking ? (
+              {/* 栞が付いていれば、ふだんでも文ごとに分ける */}
+              {(marking || marks.length > 0) ? (
                 /*
-                 * 付箋の状態のときだけ、文ごとに分ける。
+                 * 栞の状態のときだけ、文ごとに分ける。
                  *
                  * ★ ふだんは分けない。
                  *   文ごとに包むと、その数だけ入れ物が増えて重い。
@@ -482,17 +483,24 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
                   if (raw === '\n') return <br key={idx}/>
                   return (
                     <span key={idx} data-sentence={idx}
-                      onClick={()=>onMark?.(idx, raw)}
-                      style={{cursor:'pointer',borderRadius:3,
+                      onClick={()=>{ if (marking) onMark?.(idx, raw) }}
+                      style={{cursor: marking ? 'pointer' : 'auto',borderRadius:3,
                         background: mark ? 'color-mix(in srgb, var(--color-amber, #e0a33e) 18%, transparent)' : 'transparent'}}>
                       <VerticalText text={raw}/>
                       {mark && (
                         <span onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
-                          title="付箋"
+                          title="栞"
                           style={{display:'inline-block',cursor:'pointer',lineHeight:1}}>
-                          <svg width="11" height="11" viewBox="0 0 24 24"
-                            fill="var(--color-amber, #e0a33e)" stroke="none">
-                            <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                          <svg width="13" height="16" viewBox="0 0 14 18" fill="none"
+                            style={{filter:'drop-shadow(0 1px 1.5px rgba(0,0,0,.22))'}}>
+                            <defs>
+                              <linearGradient id="mk2" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0" stopColor="#e8b45c"/>
+                                <stop offset="1" stopColor="#c8873a"/>
+                              </linearGradient>
+                            </defs>
+                            <path d="M1 1h12v16l-6-4.4L1 17z" fill="url(#mk2)"/>
+                            <path d="M1 1h12v2H1z" fill="rgba(255,255,255,.35)"/>
                           </svg>
                         </span>
                       )}
@@ -522,7 +530,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
         <>
           {onToggleMarking && (
             <button type="button" onClick={onToggleMarking}
-              title="文に付箋を付けます"
+              title="文に栞をはさみます"
               style={{display:'flex',alignItems:'center',gap:4,marginRight:6,
                 padding:'5px 10px',borderRadius:999,
                 border:'1px solid var(--color-brand-border)',
@@ -534,7 +542,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
                 strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
               </svg>
-              {marking ? 'やめる' : '付箋'}
+              {marking ? 'やめる' : '栞'}
             </button>
           )}
           <ReadingSettings onFullscreen={()=>router.push(`${pathname}/read`)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
@@ -575,9 +583,10 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
             {preface}
           </div>
         )}
-        {marking ? (
+        {/* 栞が付いていれば、ふだんでも文ごとに分ける */}
+        {(marking || marks.length > 0) ? (
           /*
-           * 付箋の状態のときだけ、文ごとに分ける。
+           * 栞の状態のときだけ、文ごとに分ける。
            * ふだんは分けない。数だけ入れ物が増えて重い。
            */
           <div style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all'}}>
@@ -586,17 +595,24 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, marks = []
               if (raw === '\n') return <br key={idx}/>
               return (
                 <span key={idx} data-sentence={idx}
-                  onClick={()=>onMark?.(idx, raw)}
-                  style={{cursor:'pointer',borderRadius:3,
+                  onClick={()=>{ if (marking) onMark?.(idx, raw) }}
+                  style={{cursor: marking ? 'pointer' : 'auto',borderRadius:3,
                     background: mark ? 'color-mix(in srgb, var(--color-amber, #e0a33e) 18%, transparent)' : 'transparent'}}>
                   <span dangerouslySetInnerHTML={{__html: renderBody(raw)}}/>
                   {mark && (
                     <span onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
-                      title="付箋"
+                      title="栞"
                       style={{display:'inline-block',verticalAlign:'super',marginLeft:2,cursor:'pointer',lineHeight:1}}>
-                      <svg width="11" height="11" viewBox="0 0 24 24"
-                        fill="var(--color-amber, #e0a33e)" stroke="none">
-                        <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                      <svg width="13" height="16" viewBox="0 0 14 18" fill="none"
+                        style={{filter:'drop-shadow(0 1px 1.5px rgba(0,0,0,.22))'}}>
+                        <defs>
+                          <linearGradient id="mk3" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stopColor="#e8b45c"/>
+                            <stop offset="1" stopColor="#c8873a"/>
+                          </linearGradient>
+                        </defs>
+                        <path d="M1 1h12v16l-6-4.4L1 17z" fill="url(#mk3)"/>
+                        <path d="M1 1h12v2H1z" fill="rgba(255,255,255,.35)"/>
                       </svg>
                     </span>
                   )}

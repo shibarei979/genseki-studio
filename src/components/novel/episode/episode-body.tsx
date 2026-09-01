@@ -15,7 +15,7 @@ interface Props {
   afterword?: string | null
   authorName?: string
   episodeId?: string
-  /** 付箋の保存に要る */
+  /** 栞の保存に要る */
   novelId?: string
   onQuote?: (text: string) => void
   /**
@@ -31,7 +31,7 @@ interface Props {
   illustIsAi?: boolean | null
   /** 挿絵の大きさ。small / medium / large */
   illustSize?: string | null
-  /* 付箋 */
+  /* 栞 */
   marking?: boolean
   marks?: { id: string; sentence: number; text: string }[]
   onMark?: (idx: number, raw: string) => void
@@ -542,7 +542,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize,
         const htmlInner = renderBodyH(trimmedForDisplay)
         const isHover = (selecting || marking) && hoverIdx === idx
 
-        /* この文に付いている付箋 */
+        /* この文に付いている栞 */
         const mark = marks.find(one => one.sentence === idx)
 
         if (raw === '\n') return <br key={idx}/>
@@ -561,7 +561,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize,
             }}
             onClick={()=>{
               /*
-               * 付箋の状態なら、付箋を付ける。
+               * 栞の状態なら、栞を付ける。
                * そうでなければ、これまでどおり引用。
                */
               if (marking) { onMark?.(idx, raw); return }
@@ -571,7 +571,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize,
             <span dangerouslySetInnerHTML={{__html: htmlInner}} style={{pointerEvents: (selecting || marking) ? 'none' : 'auto'}}/>
 
             {/*
-              * 付箋の印。
+              * 栞の印。
               *
               * ★ 押すと、飛ぶか外すかを聞く。
               *   押しただけで消えると、間違いが起きる。
@@ -579,7 +579,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize,
             {mark && (
               <span
                 onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
-                title="付箋"
+                title="栞"
                 style={{
                   display:'inline-block',verticalAlign:'super',
                   marginLeft:2,cursor:'pointer',lineHeight:1,
@@ -617,7 +617,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize,
 
 export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
   /*
-   * 付箋を置く状態か。
+   * 栞を置く状態か。
    *
    * ★ 引用と同時には使えない。
    *   どちらも「文を押す」ので、
@@ -627,10 +627,10 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
 
   const { marks, add: addMark, remove: removeMark } = useEpisodeMarks(novelId ?? '', episodeId ?? '')
 
-  /* 押された付箋。飛ぶか外すかを聞く */
+  /* 押された栞。飛ぶか外すかを聞く */
   const [askingMark, setAskingMark] = useState<{ id: string; sentence: number; text: string } | null>(null)
 
-  /** 文を押したとき。付箋の状態なら付ける */
+  /** 文を押したとき。栞の状態なら付ける */
   function handleMark(idx: number, raw: string) {
     const clean = stripRuby(raw).replace(/\n/g, '').trim()
     if (!clean) return
@@ -694,7 +694,7 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
               style={{width:'100%',maxWidth:380,padding:20,borderRadius:12,
                 background:'var(--color-bg-card)'}}>
               <p style={{margin:0,fontSize:13,fontWeight:700,color:'var(--color-text)'}}>
-                付箋
+                栞
               </p>
               <p style={{margin:'10px 0 0',maxHeight:110,overflowY:'auto',
                 padding:'9px 12px',borderRadius:8,background:'var(--color-bg)',
@@ -744,10 +744,10 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
            * すすめる向きの押し具そのものに印を重ねる。
            */}
           {/*
-            * 付箋。
+            * 栞。
             *
-            * ★ 押すと「付箋を置く状態」になる。
-            *   そのまま文を押すと、そこに付箋が付く。
+            * ★ 押すと「栞を置く状態」になる。
+            *   そのまま文を押すと、そこに栞が付く。
             *
             *   引用（selecting）と同じ仕組み。
             *   同時に両方は使えないようにする。
@@ -755,7 +755,7 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
           <button
             type="button"
             onClick={()=>{ setMarking(v=>!v); setSelecting(false) }}
-            title="文に付箋を付けます"
+            title="文に栞をはさみます"
             style={{
               display:'flex',alignItems:'center',gap:5,
               padding:'6px 12px',borderRadius:999,
@@ -769,14 +769,14 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
               strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
             </svg>
-            {marking ? '付箋をやめる' : '付箋'}
+            {marking ? '栞をやめる' : '栞'}
           </button>
 
           <ReadingSettings onChange={setSettings} isMobile={false} showWritingMode={true} recommendedMode={recommendedMode}/>
         </div>
 
         {/*
-          * 付箋を押したとき。
+          * 栞を押したとき。
           *
           * ★ 飛ぶか外すかを選ばせる。
           *   押しただけで消えると、間違いが起きる。
@@ -793,7 +793,7 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
               style={{width:'100%',maxWidth:380,padding:20,borderRadius:12,
                 background:'var(--color-bg-card)'}}>
               <p style={{margin:0,fontSize:13,fontWeight:700,color:'var(--color-text)'}}>
-                付箋
+                栞
               </p>
               <p style={{margin:'10px 0 0',maxHeight:110,overflowY:'auto',
                 padding:'9px 12px',borderRadius:8,background:'var(--color-bg)',
@@ -907,7 +907,7 @@ interface VerticalProps {
   illustIsAi?: boolean | null
   /** 挿絵の大きさ。small / medium / large */
   illustSize?: string | null
-  /* 付箋 */
+  /* 栞 */
   marking?: boolean
   marks?: { id: string; sentence: number; text: string }[]
   onMark?: (idx: number, raw: string) => void
@@ -1079,7 +1079,16 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
             style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}
           />
           <div style={{display:'inline-block',fontSize,lineHeight:2.1,color:'var(--color-text)',fontFamily,wordBreak:'break-all',verticalAlign:'top'}}>
-            {(selecting || marking) ? (
+            {/*
+              * ★ 栞が付いていれば、ふだんでも文ごとに分ける。
+              *
+              *   分けないと栞の印を出す場所が無く、
+              *   栞の状態のときしか見えなかった。
+              *
+              * 栞が 1 つも無ければ分けない。
+              * 分けるだけ入れ物が増えて重くなる。
+              */}
+            {(selecting || marking || marks.length > 0) ? (
               sentences.map((raw, idx) => {
                 if (raw === '\n') return <br key={idx}/>
                 const isHover = hoverIdx === idx
@@ -1090,31 +1099,43 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
                     onMouseEnter={()=>setHoverIdx(idx)}
                     onMouseLeave={()=>setHoverIdx(prev=>prev===idx?null:prev)}
                     onClick={()=>{
-                      /* 付箋の状態なら付箋。そうでなければ引用 */
+                      /*
+                       * 栞の状態なら栞。
+                       * 引用の状態なら引用。
+                       * どちらでもなければ何もしない（ふだんの読み）。
+                       */
                       if (marking) { onMark?.(idx, raw); return }
-                      handleClick(raw)
+                      if (selecting) handleClick(raw)
                     }}
                     style={{
                       background: isHover ? 'color-mix(in srgb, var(--color-brand) 15%, transparent)' : 'transparent',
-                      cursor: 'pointer',
+                      cursor: (selecting || marking) ? 'pointer' : 'auto',
                       borderRadius: 3,
                       transition: 'background .15s ease',
                     }}>
                     <VerticalText text={raw}/>
 
                     {/*
-                      * 付箋の印。
+                      * 栞の印。
                       * 押すと、飛ぶか外すかを聞く。
                       */}
                     {mark && (
                       <span
                         onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
-                        title="付箋"
+                        title="栞"
                         style={{display:'inline-block',cursor:'pointer',lineHeight:1}}
                       >
-                        <svg width="11" height="11" viewBox="0 0 24 24"
-                          fill="var(--color-amber, #e0a33e)" stroke="none">
-                          <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+                        <svg width="13" height="16" viewBox="0 0 14 18" fill="none"
+                          style={{filter:'drop-shadow(0 1px 1.5px rgba(0,0,0,.22))'}}>
+                          {/* 紙の栞。上を明るく、下を濃くして厚みを出す */}
+                          <defs>
+                            <linearGradient id="mk" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0" stopColor="#e8b45c"/>
+                              <stop offset="1" stopColor="#c8873a"/>
+                            </linearGradient>
+                          </defs>
+                          <path d="M1 1h12v16l-6-4.4L1 17z" fill="url(#mk)"/>
+                          <path d="M1 1h12v2H1z" fill="rgba(255,255,255,.35)"/>
                         </svg>
                       </span>
                     )}
