@@ -100,9 +100,15 @@
     /* 板より前に置く。後ろだと本が板に埋まる */
     z-index: 2;
     display: block;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 180 / 234;
+    /*
+     * ★ 大きさは決め打ち。
+     *
+     *   100% にしていたが、札（NovelPopup）が本を
+     *   div で包むので、その中で幅が決まらず 0 になった。
+     *   本が消えて、題名と板だけが残っていた。
+     */
+    width: 180px;
+    height: 234px;
     text-decoration: none;
 
     filter: drop-shadow(3px 3px 3px rgba(40, 35, 25, .14));
@@ -261,4 +267,22 @@
     font-weight: 700;
     letter-spacing: .04em;
     line-height: 1.5;
+}
+
+
+/*
+ * 札（NovelPopup）の包み。
+ *
+ * 本を div で包むので、そこが幅を持たないと
+ * 中の本まで潰れる。本と同じ大きさにしておく。
+ */
+.ws_slot > div:has(> .ws_book) {
+    width: 180px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 1023px) {
+    .ws_slot > div:has(> .ws_book) {
+        width: 100px;
+    }
 }
