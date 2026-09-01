@@ -112,6 +112,20 @@ export default function FullscreenReader({
                 zIndex: 300,
                 width: size.w || "100vw",
                 height: size.h || "100vh",
+                /*
+                 * ★ 上限を外す。
+                 *
+                 *   どこかの CSS が max-width: 288px を当てていた。
+                 *   幅を 320px と書いても、上限のほうが勝つ。
+                 *   実際、画面 320px に対して 288px しか出ていなかった。
+                 *
+                 *   最小のほうも外す。
+                 *   同じ理由で縛られると、狭い端末で困る。
+                 */
+                maxWidth: "none",
+                minWidth: 0,
+                maxHeight: "none",
+                minHeight: 0,
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
