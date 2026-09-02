@@ -54,15 +54,60 @@ class LayoutCalc {
      * 縮めたぶん 1 冊が細くなるので、10 のままだと
      * 帯が横に伸びすぎる。
      */
-    static B_SIDE_COUNT = 10;
+    static get B_SIDE_COUNT() {
+        if (typeof window === "undefined") return 10;
+
+        /*
+         * ★ 携帯では 3 冊。
+         *
+         *   1 冊が 220px あるので、10 冊ぶんの厚み
+         *   （54 × 10 × 2 = 1080px）を並べると
+         *   帯が 1700px になり、両脇が画面の外へ出る。
+         *   実際、真ん中の 1 冊しか見えていなかった。
+         *
+         *   3 冊なら帯が 585px に収まり、
+         *   左右に 1 冊ずつ顔を出す。
+         *
+         * ★ 本棚の本の数（25）より、
+         *   3 × 2 + 1 = 7 冊しか要らないので足りる。
+         */
+        const shelf = document.querySelector(".bookshelf-loop");
+        const w = shelf?.clientWidth || window.innerWidth;
+
+        return w < 1024 ? 3 : 10;
+    }
     static B_OVERFLOW_COUNT = 1.5;
 
     static SCALE = 1;
     static CENTER_MIN_SCALE = 1;
 
     /* 真ん中の本の左右に空ける幅。寸法と同じ割合で縮める */
-    static CENTER_MARGIN = 200;
-    static TRACK_MIN_WIDTH = (this.B_DEPTH * this.B_SIDE_COUNT * 2) + (this.B_WIDTH * this.CENTER_MIN_SCALE) + (this.CENTER_MARGIN * 2);
+    static get CENTER_MARGIN() {
+        if (typeof window === "undefined") return 200;
+
+        /*
+         * 真ん中の本の左右に空ける幅。
+         *
+         * 携帯では詰める。200 のままだと、
+         * そのぶん両脇が外へ押し出される。
+         */
+        const shelf = document.querySelector(".bookshelf-loop");
+        const w = shelf?.clientWidth || window.innerWidth;
+
+        return w < 1024 ? 20 : 200;
+    }
+    /*
+     * 帯の最小の幅。
+     *
+     * ★ 一度きりの計算にしない。
+     *   冊数と余白が画面の幅で変わるので、
+     *   古い値のまま残ると帯だけ広いままになる。
+     */
+    static get TRACK_MIN_WIDTH() {
+        return (this.B_DEPTH * this.B_SIDE_COUNT * 2)
+            + (this.B_WIDTH * this.CENTER_MIN_SCALE)
+            + (this.CENTER_MARGIN * 2);
+    }
 
     //==================================================
     // Calculate
@@ -361,6 +406,15 @@ class BookshelfLoop {
         //------------------------------------------
         // Calculate
         //------------------------------------------
+        /*
+         * 位置の名前を作り直す。
+         *
+         * ★ 両脇の冊数が画面の幅で変わる。
+         *   組み立てた時の冊数で作った名前のままだと、
+         *   幅が変わったときに足りない・余る。
+         */
+        this.positionClasses = this.createPositionClasses();
+
         this.layout = LayoutCalc.calculate(this.root);
         /* 次に測り直すか判断するため、いまの幅を覚える */
         this._lastWidth = this.root.clientWidth;
