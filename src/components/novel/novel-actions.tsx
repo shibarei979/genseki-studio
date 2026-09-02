@@ -64,11 +64,9 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
     } else {
       await supabase.from('likes').insert({ novel_id: novelId, user_id: userId })
       setLiked(true); setLikes(c => c + 1)
-      if (authorId && userId !== authorId) {
-        fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ user_id: authorId, type:'like',
-            message: `${userDisplayName||'読者'}さんが「${novelTitle||'作品'}」にいいねしました`, link: `/novel/${novelId}` }) })
-      }
+      /* 作者に知らせる。宛先も文も受け口の側で組み立てる */
+      fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ like_novel_id: novelId }) }).catch(() => {})
     }
     setLoading(false)
   }

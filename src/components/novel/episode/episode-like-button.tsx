@@ -31,6 +31,9 @@ export default function EpisodeLikeButton({ episodeId, userId, initialLiked, ini
     } else {
       await supabase.from('episode_likes').insert({ episode_id: episodeId, user_id: userId })
       setLiked(true); setCount(c => c + 1)
+      /* 作者に知らせる。押した本人かどうかは受け口の側で確かめる */
+      fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ like_episode_id: episodeId }) }).catch(() => {})
     }
     setLoading(false)
   }

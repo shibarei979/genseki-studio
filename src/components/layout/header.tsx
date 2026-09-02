@@ -19,6 +19,7 @@ import EntryImage from "@/components/common/entry-image";
 import AccountMenu from "@/components/layout/account-menu";
 import ModeToggle from "@/components/layout/mode-toggle";
 import RoomPresenceBar from "@/components/room/room-presence-bar";
+import { useMyNotifications } from "@/hooks/use-my-notifications";
 import { getRepository } from "@/lib/repository";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/types";
@@ -186,6 +187,18 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
     >([]);
     const noticeRef = useRef<HTMLDivElement>(null);
 
+    /*
+     * 自分あての知らせ（感想・返信・いいね）。
+     *
+     * ★ 前はコミュニティーの中にしか出ていなかった。
+     *   届いたことに気づく場所はベルなので、ここに混ぜる。
+     */
+    const {
+        rows: alerts,
+        unreadCount: alertUnread,
+        markRead: markAlertRead,
+    } = useMyNotifications();
+
     useEffect(() => {
         void (async () => {
             const repository = getRepository();
@@ -295,8 +308,8 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                   kind: row.kind,
               }));
     const unread = shown.filter((notice) => !seenAt || notice.date > seenAt);
-    /* ベルの印。お知らせの未読と、届いた便りを合わせて数える */
-    const badgeCount = unread.length + letters.length;
+    /* ベルの印。お知らせの未読・届いた便り・自分あての知らせを合わせて数える */
+    const badgeCount = unread.length + letters.length + alertUnread;
 
     function handleOpenNotice() {
         const next = !isNoticeOpen;
@@ -437,11 +450,49 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                                 <div className="flex items-center justify-between border-b border-line px-4 py-3">
                                     <p className="text-sm font-semibold text-ink">お知らせ</p>
                                     <span className="text-xs text-faint">
-                                        {shown.length}件
+                                        {alerts.length + letters.length + shown.length}件
                                     </span>
                                 </div>
 
                                 <ul className="thin-scroll max-h-80 divide-y divide-line overflow-y-auto">
+                                    {/*
+                                     * 自分あての知らせを一番上に。
+                                     *
+                                     * 押すと、その感想が付いている話へ行く。
+                                     * 行き先が無いものは、押しても動かさない。
+                                     */}
+                                    {alerts.map((alert) => (
+                                        <li
+                                            key={`alert:${alert.id}`}
+                                            className={!alert.is_read ? "bg-forest-tint/40" : ""}
+                                        >
+                                            <Link
+                                                href={alert.link || "#"}
+                                                onClick={() => {
+                                                    markAlertRead(alert.id);
+                                                    setIsNoticeOpen(false);
+                                                }}
+                                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-canvas"
+                                            >
+                                                <span className="shrink-0 rounded-full bg-forest-tint px-1.5 py-0.5 text-[10px] text-forest">
+                                                    {alert.type === "reply"
+                                                        ? "返信"
+                                                        : alert.type === "like"
+                                                          ? "いいね"
+                                                          : alert.type === "comment"
+                                                            ? "感想"
+                                                            : "知らせ"}
+                                                </span>
+                                                <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                                                    {alert.message}
+                                                </span>
+                                                <span className="shrink-0 text-[11px] text-faint">
+                                                    {timeAgo(alert.created_at)}
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    ))}
+
                                     {/*
                                      * 自分あての便りを先に出す。
                                      * みんな向けのお知らせより、

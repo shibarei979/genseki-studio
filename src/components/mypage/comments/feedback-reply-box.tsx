@@ -13,7 +13,7 @@ interface Props {
 }
 
 // 感想・コメントページ用の返信ボックス
-export default function FeedbackReplyBox({ parentCommentId, novelId, episodeId, targetUserId, targetName, myUserId, myName }: Props) {
+export default function FeedbackReplyBox({ parentCommentId, novelId, episodeId, targetName, myUserId }: Props) {
   const supabase = createClient()
   const [open, setOpen] = useState(false)
   const [body, setBody] = useState('')
@@ -24,26 +24,25 @@ export default function FeedbackReplyBox({ parentCommentId, novelId, episodeId, 
     const trimmed = body.trim()
     if (!trimmed || posting) return
     setPosting(true)
-    const { error } = await supabase.from('comments').insert({
+    const { data, error } = await supabase.from('comments').insert({
       novel_id: novelId,
       episode_id: episodeId,
       user_id: myUserId,
       body: trimmed,
       parent_id: parentCommentId,
-    })
-    if (!error) {
-      // コメント主に返信通知
-      if (targetUserId && targetUserId !== myUserId) {
-        fetch('/api/notify', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: targetUserId,
-            type: 'reply',
-            message: `${myName || '作者'}さんがあなたのコメントに返信しました`,
-            link: episodeId ? `/novel/${novelId}/episode/${episodeId}` : `/novel/${novelId}`,
-          }),
-        }).catch(() => {})
-      }
+    }).select().single()
+    if (!error && data) {
+      /*
+       * コメント主に知らせる。
+       *
+       * ★ 渡すのは comment_id だけ。宛先も文も受け口の側で組み立てる。
+       *   前は宛先を画面から渡していたうえ、受け口そのものが無く、
+       *   作者が返信しても読者には何も届いていなかった。
+       */
+      fetch('/api/notify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment_id: data.id }),
+      }).catch(() => {})
       setDone(true)
       setBody('')
       setTimeout(() => { setOpen(false); setDone(false) }, 1500)

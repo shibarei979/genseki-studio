@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 
 import EntryImage from "@/components/common/entry-image";
 import Header from "@/components/layout/header";
+import { useMyNotifications } from "@/hooks/use-my-notifications";
 import { getRepository } from "@/lib/repository";
 import type { AdminNotice, NoticeType } from "@/types";
 import {
@@ -33,6 +34,7 @@ type Filter = "all" | NoticeType;
 export default function NoticesClient() {
     const [notices, setNotices] = useState<AdminNotice[] | null>(null);
     const [filter, setFilter] = useState<Filter>("all");
+    const { rows: alerts, markRead: markAlertRead } = useMyNotifications();
 
     useEffect(() => {
         void (async () => {
@@ -86,6 +88,50 @@ export default function NoticesClient() {
                 <h1 className="text-xl font-semibold tracking-wide text-ink">
                     お知らせ
                 </h1>
+
+                {/*
+                  * 自分あての知らせ。
+                  *
+                  * ★ 携帯はベルを押すとこの頁へ来る。
+                  *   ここに出さないと、携帯の人は感想が付いたことに気づけない。
+                  */}
+                {alerts.length > 0 && (
+                    <section className="mt-5">
+                        <h2 className="text-xs font-medium tracking-wide text-faint">
+                            自分あて
+                        </h2>
+
+                        <ul className="mt-3 space-y-2">
+                            {alerts.map((alert) => (
+                                <li key={alert.id}>
+                                    <Link
+                                        href={alert.link || "#"}
+                                        onClick={() => markAlertRead(alert.id)}
+                                        className={[
+                                            "flex items-center gap-3 rounded-xl border px-4 py-3 hover:bg-canvas",
+                                            alert.is_read
+                                                ? "border-line bg-surface"
+                                                : "border-forest-line bg-forest-tint/40",
+                                        ].join(" ")}
+                                    >
+                                        <span className="shrink-0 rounded-full bg-forest-tint px-1.5 py-0.5 text-[10px] text-forest">
+                                            {alert.type === "reply"
+                                                ? "返信"
+                                                : alert.type === "like"
+                                                  ? "いいね"
+                                                  : alert.type === "comment"
+                                                    ? "感想"
+                                                    : "知らせ"}
+                                        </span>
+                                        <span className="min-w-0 flex-1 text-[13px] text-ink">
+                                            {alert.message}
+                                        </span>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
 
                 {/* 絞り込み */}
                 <div className="mt-4 flex flex-wrap gap-1.5">
