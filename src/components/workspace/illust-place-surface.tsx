@@ -30,10 +30,13 @@ import { splitIntoSentences } from "@/lib/utils/sentences";
 
 export default function IllustPlaceSurface({
     body,
+    illustUrl,
     onPlace,
     onClose,
 }: {
     body: string;
+    /** いま置こうとしている絵。何を置くのか見えないまま押させない */
+    illustUrl?: string | null;
     /** 何文目の後ろに置くか（0 は本文の頭）と、その文を渡す */
     onPlace: (afterSentence: number, anchorText: string) => Promise<void>;
     onClose: () => void;
@@ -58,16 +61,20 @@ export default function IllustPlaceSurface({
 
     return (
         <div className="flex h-full min-h-0 flex-col bg-surface">
-            {/*
-              * 上の帯。何をしているかと、抜ける道を常に見せる。
-              *
-              * ★ 絵の見本は出さない。
-              *   本文を読みながら選ぶ場所なので、絵が邪魔になる。
-              */}
+            {/* 上の帯。何をしているかと、抜ける道を常に見せる */}
             <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 py-2.5">
+                {illustUrl && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                        src={illustUrl}
+                        alt=""
+                        className="h-8 w-8 shrink-0 rounded border border-line object-cover"
+                    />
+                )}
+
                 <span className="truncate text-[12px] text-forest">
                     この絵を入れる場所の
-                    <strong className="font-bold">前の文を選択してください</strong>
+                    <strong className="font-bold">文を押してください</strong>
                 </span>
 
                 <button
