@@ -369,17 +369,18 @@ export default function EpisodeList({
                   *   実際、題名が 1 文字ずつ折り返して読めなくなった。
                   *   隠すだけでは、場所は取ったまま。
                   *
-                  *   重ねれば幅を取らない。
-                  *   指を置いたときだけ出す。
+                  *   重ねれば幅を取らないので、いつも出しておける。
+                  *   指を置いたときだけ出す形だと、
+                  *   携帯では一度も出ない。
                   */}
                 {!isPicking && (
-                    <span className="absolute -left-0.5 top-1/2 z-10 flex -translate-y-1/2 flex-col rounded bg-surface/95 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                    <span className="absolute -left-0.5 top-1/2 z-10 flex -translate-y-1/2 flex-col rounded bg-surface/95 shadow-sm">
                         <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); moveBy(episode.id, -1) }}
                             title="1つ上へ"
                             aria-label="1つ上へ動かす"
-                            className="flex h-3 w-3 items-center justify-center text-[8px] leading-none text-faint hover:text-forest"
+                            className="flex h-3.5 w-3.5 items-center justify-center text-[9px] leading-none text-muted hover:text-forest"
                         >
                             ▲
                         </button>
@@ -388,7 +389,7 @@ export default function EpisodeList({
                             onClick={(e) => { e.stopPropagation(); moveBy(episode.id, 1) }}
                             title="1つ下へ"
                             aria-label="1つ下へ動かす"
-                            className="flex h-3 w-3 items-center justify-center text-[8px] leading-none text-faint hover:text-forest"
+                            className="flex h-3.5 w-3.5 items-center justify-center text-[9px] leading-none text-muted hover:text-forest"
                         >
                             ▼
                         </button>
