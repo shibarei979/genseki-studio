@@ -448,7 +448,13 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
           <div style={{fontSize:12,color:'var(--color-text-muted)',marginBottom:12,display:'flex',alignItems:'center',gap:4,flexWrap:'wrap'}}>
             <Link href="/" style={{color:'var(--color-brand)',textDecoration:'none'}}>ホーム</Link>
             <span>›</span>
-            <Link href={`/genre/${encodeURIComponent(novel.genre)}`} style={{color:'var(--color-brand)',textDecoration:'none'}}>{novel.genre}</Link>
+            {/*
+              * ★ 行き先は「作品を探す」。
+              *
+              *   前は /genre/◯◯ を指していたが、その頁は無い。
+              *   押すと、絞り込みだけ選ばれた空の画面に落ちていた。
+              */}
+            <Link href={`/search?genre=${encodeURIComponent(novel.genre)}`} style={{color:'var(--color-brand)',textDecoration:'none'}}>{novel.genre}</Link>
             <span>›</span>
             <span style={{color:'var(--color-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth: '60vw'}}>{novel.title}</span>
           </div>
