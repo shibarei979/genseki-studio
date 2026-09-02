@@ -46,6 +46,7 @@ export type {
     Chapter,
     Episode,
     EpisodeCreateInput,
+    EpisodeIllust,
     EpisodeStatus,
     EpisodeUpdateInput,
 } from "./episode";

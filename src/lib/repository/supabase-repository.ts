@@ -34,6 +34,7 @@ import type {
     ContestEntry,
     DisplaySettings,
     Episode,
+    EpisodeIllust,
     EpisodeVersion,
     FeatureFlag,
     NgWord,
@@ -1744,6 +1745,71 @@ export const supabaseRepository: Repository = {
      * 資料を開いたときに、その資料ぶんをまとめて読む。
      * 1 行ずつ問い合わせると、行数だけ往復することになる。
      */
+    /* ------------------------------------------------------------
+     * 話の中の挿絵
+     * ---------------------------------------------------------- */
+
+    async listEpisodeIllusts(episodeId: string): Promise<EpisodeIllust[]> {
+        const { data } = await db()
+            .from("episode_illusts")
+            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text")
+            .eq("episode_id", episodeId)
+            .order("after_sentence", { ascending: true });
+
+        return (data ?? []) as EpisodeIllust[];
+    },
+
+    async addEpisodeIllust(input: {
+        novelId: string;
+        episodeId: string;
+        url: string;
+        isAi: boolean;
+        afterSentence: number;
+        anchorText: string;
+    }): Promise<EpisodeIllust> {
+        const { data, error } = await db()
+            .from("episode_illusts")
+            .insert({
+                novel_id: input.novelId,
+                episode_id: input.episodeId,
+                url: input.url,
+                is_ai: input.isAi,
+                after_sentence: input.afterSentence,
+                anchor_text: input.anchorText,
+            })
+            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text")
+            .single();
+
+        if (error) throw error;
+        return data as EpisodeIllust;
+    },
+
+    async moveEpisodeIllust(
+        id: string,
+        afterSentence: number,
+        anchorText: string,
+    ): Promise<void> {
+        await db()
+            .from("episode_illusts")
+            .update({
+                after_sentence: afterSentence,
+                anchor_text: anchorText,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", id);
+    },
+
+    async setEpisodeIllustAi(id: string, isAi: boolean): Promise<void> {
+        await db()
+            .from("episode_illusts")
+            .update({ is_ai: isAi, updated_at: new Date().toISOString() })
+            .eq("id", id);
+    },
+
+    async deleteEpisodeIllust(id: string): Promise<void> {
+        await db().from("episode_illusts").delete().eq("id", id);
+    },
+
     async listLineMarks(entryId: string): Promise<{
         episode_id: string;
         line: number;

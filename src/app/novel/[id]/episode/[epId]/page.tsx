@@ -48,6 +48,23 @@ export default async function EpisodePage({ params }: Props) {
   const profile = profileRes.data
   const episode = episodeRes.data
   const novel = novelRes.data
+
+  /*
+   * 話の中の挿絵。
+   *
+   * ★ 1 話に何枚でも、好きな場所へ置ける。
+   *   置き場所は「何文目の後ろか」で持っている。
+   *
+   * ★ 古い列（episodes.illust_url）も残してある。
+   *   表に 1 枚も無いときだけ、そちらを本文の頭に出す。
+   */
+  const { data: illustRows } = await supabase
+    .from('episode_illusts')
+    .select('id, url, is_ai, after_sentence')
+    .eq('episode_id', params.epId)
+    .order('after_sentence', { ascending: true })
+
+  const illusts = (illustRows ?? []) as { id: string; url: string; is_ai: boolean; after_sentence: number }[]
   if (!episode) notFound()
   if (!novel) notFound()
 
@@ -247,7 +264,7 @@ export default async function EpisodePage({ params }: Props) {
             <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
           )}
 
-          <EpisodeBody novelId={params.id} episodeId={params.epId} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
+          <EpisodeBody novelId={params.id} episodeId={params.epId} illusts={illusts} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
             <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
             {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
@@ -319,7 +336,7 @@ export default async function EpisodePage({ params }: Props) {
 
         {/* 挿絵は EpisodeBody の中で、縦書きの流れに沿って出す */}
 
-        <EpisodeBody novelId={params.id} episodeId={params.epId} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
+        <EpisodeBody novelId={params.id} episodeId={params.epId} illusts={illusts} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
 
         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:14,flexWrap:'wrap'}}>
           <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>

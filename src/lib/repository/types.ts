@@ -26,6 +26,7 @@ import type {
     Chapter,
     Contest,
     ContestEntry,
+    EpisodeIllust,
     FeatureFlag,
     NgWord,
     Project,
@@ -311,6 +312,33 @@ export interface Repository {
      *   hidden  消した
      *   picked  自分で入れた（あとで作る）
      */
+    /* ------------------------------------------------------------
+     * 話の中の挿絵
+     *
+     * 1 話に何枚でも。場所は「何文目の後ろか」で持つ。
+     * ---------------------------------------------------------- */
+
+    listEpisodeIllusts(episodeId: string): Promise<EpisodeIllust[]>;
+
+    addEpisodeIllust(input: {
+        novelId: string;
+        episodeId: string;
+        url: string;
+        isAi: boolean;
+        afterSentence: number;
+        anchorText: string;
+    }): Promise<EpisodeIllust>;
+
+    moveEpisodeIllust(
+        id: string,
+        afterSentence: number,
+        anchorText: string,
+    ): Promise<void>;
+
+    setEpisodeIllustAi(id: string, isAi: boolean): Promise<void>;
+
+    deleteEpisodeIllust(id: string): Promise<void>;
+
     listLineMarks(entryId: string): Promise<{
         episode_id: string;
         line: number;

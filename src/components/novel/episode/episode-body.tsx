@@ -27,7 +27,14 @@ interface Props {
    * それを伝える手立てが要る。
    */
   recommendedMode?: 'vertical' | 'horizontal' | null
-  /** 話ごとの挿絵。縦書きの流れの中、題名の右に出る */
+  /**
+   * 話の中の挿絵。
+   *
+   * ★ 1 話に何枚でも、好きな場所に置ける。
+   *   after_sentence は「何文目の後ろか」。0 は本文の頭。
+   */
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[]
+  /** 古い持ち方の挿絵。表に 1 枚も無いときだけ、本文の頭に出す */
   illustUrl?: string | null
   illustIsAi?: boolean | null
   /** 挿絵の大きさ。small / medium / large */
@@ -522,7 +529,10 @@ function splitIntoSentences(text: string): string[] {
   return result.filter(s => s.length > 0)
 }
 
-function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize, lineHeight, fontFamily, onQuote, selecting, onAfterQuote }: {
+function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts = [], illustSize, fontSize, lineHeight, fontFamily, onQuote, selecting, onAfterQuote }: {
+  /** 話の中の挿絵。何文目の後ろに置くかを持っている */
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[]
+  illustSize?: string | null
   marking?: boolean
   marks?: { id: string; sentence: number; text: string; color: string }[]
   onMark?: (idx: number, raw: string) => void
@@ -555,7 +565,8 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize,
         const mark = marks.find(one => one.sentence === idx)
 
         if (raw === '\n') return <br key={idx}/>
-        return (
+
+        const sentence = (
           <span
             key={idx}
             data-sentence={idx}
@@ -616,12 +627,53 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, fontSize,
             )}
           </span>
         )
+
+        /*
+         * ★ その文の後ろに置かれた挿絵を、ここで出す。
+         *
+         *   置き場所は「何文目の後ろか」。
+         *   1 つの場所に何枚あっても、順に並べる。
+         */
+        const here = illusts.filter(one => one.after_sentence === idx + 1)
+        if (here.length === 0) return sentence
+
+        return (
+          <span key={idx}>
+            {sentence}
+            {here.map(one => (
+              <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+            ))}
+          </span>
+        )
       })}
     </div>
   )
 }
 
-export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
+/**
+ * 本文の中に置く挿絵。
+ *
+ * ★ 前後に余白を取る。
+ *   文にくっついていると、絵が本文の一部に見える。
+ */
+function IllustBlock({ url, isAi, size }: { url: string; isAi?: boolean; size?: string | null }) {
+  return (
+    <span style={{display:'block',margin:'20px 0',textAlign:'center'}}>
+      <span style={{position:'relative',display:'inline-block'}}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="挿絵"
+          style={{maxHeight:illustBox('desktopHorizontal',size).maxHeight,
+            maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+        {isAi && (
+          <span style={{position:'absolute',right:6,top:6,background:'rgba(0,0,0,.55)',
+            color:'#fff',fontSize:10,padding:'2px 6px',borderRadius:4}}>AI</span>
+        )}
+      </span>
+    </span>
+  )
+}
+
+export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
   /*
    * 栞を置く状態か。
    *
@@ -919,7 +971,17 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
                 *   横書きは上から下へ読むので、
                 *   絵を上に置けば本文の始まりの前に来る。
                 */}
-              {illustUrl && (
+              {/*
+                * ★ 本文の頭に置かれた絵（0 文目の後ろ）。
+                *
+                *   表に 1 枚も無いときだけ、古い列の絵を出す。
+                *   両方出すと、移し終えた作品で二重になる。
+                */}
+              {illusts.filter(one => one.after_sentence === 0).map(one => (
+                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+              ))}
+
+              {illusts.length === 0 && illustUrl && (
                 <div style={{position:'relative',display:'inline-block',marginBottom:16}}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={illustUrl} alt="挿絵"
@@ -957,7 +1019,7 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
                   引用したい文をクリックしてください
                 </div>
               )}
-              <QuotableBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} body={body} fontSize={settings.fontSize} lineHeight={settings.lineHeight} fontFamily={fontFamily} onQuote={handleQuote} selecting={selecting} onAfterQuote={handleAfterQuote}/>
+              <QuotableBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} body={body} illusts={illusts} illustSize={settings.illustSize} fontSize={settings.fontSize} lineHeight={settings.lineHeight} fontFamily={fontFamily} onQuote={handleQuote} selecting={selecting} onAfterQuote={handleAfterQuote}/>
             </div>
             {afterword && (
               <div style={{borderTop:'1px solid var(--color-brand-border)'}}>

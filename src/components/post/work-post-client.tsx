@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import EpisodeIllustManager from "@/components/post/episode-illust-manager";
 import Header from "@/components/layout/header";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
 import { getRepository } from "@/lib/repository";
@@ -30,8 +31,6 @@ import type {
     Work,
     WorkFormat,
 } from "@/types";
-import { shrinkImage } from "@/lib/storage/image-store";
-import { uploadImage } from "@/lib/storage/remote-image";
 import {
     AI_USAGE_LABEL,
     WORK_FORMAT_DESCRIPTION,
@@ -817,35 +816,16 @@ function PostForm({
      *
      * 読む画面で、本文の前に出る。
      */
-    const [illustUrl, setIllustUrl] = useState(episode.illust_url ?? "");
-    /* この挿絵を AI で作ったか。表紙と同じ扱い */
-    const [illustIsAi, setIllustIsAi] = useState(episode.illust_is_ai ?? false);
-
-    const [illustBusy, setIllustBusy] = useState(false);
-    const [illustError, setIllustError] = useState("");
-
-    async function putIllust(file: File) {
-        setIllustBusy(true);
-        setIllustError("");
-
-        try {
-            /*
-             * 縮めてから上げる。
-             *
-             * そのままだと数 MB になり、
-             * 読む人の通信を無駄に使う。
-             */
-            const shrunk = await shrinkImage(file, true);
-            const url = await uploadImage(shrunk, "illust");
-            setIllustUrl(url);
-        } catch (caught) {
-            setIllustError(
-                caught instanceof Error ? caught.message : "上げられませんでした",
-            );
-        }
-
-        setIllustBusy(false);
-    }
+    /*
+     * ★ 古い列を、そのまま持ち回すだけ。
+     *
+     *   挿絵は episode_illusts の表へ移した。
+     *   ここで書き換えることはもう無いが、
+     *   保存のたびに null で上書きしないよう、読んだ値を持っておく。
+     *   古い画面が残っているあいだの備え。
+     */
+    const [illustUrl] = useState(episode.illust_url ?? "");
+    const [illustIsAi] = useState(episode.illust_is_ai ?? false);
 
     const [at, setAt] = useState(toLocalInput(episode.publish_at));
     const [error, setError] = useState("");
@@ -986,102 +966,30 @@ function PostForm({
                           *
                           * 読む画面で、本文の前に出る。
                           */}
+                        {/*
+                          * 話の中の挿絵。
+                          *
+                          * ★ 1 話に何枚でも、好きな場所へ置ける。
+                          *   置き場所の選び方も含めて、別の部品にまとめてある。
+                          */}
                         <Field label="挿絵（この話だけ）">
-                            <div className="flex items-start gap-3">
-                                {illustUrl ? (
-                                    <div className="relative shrink-0">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
-                                            src={illustUrl}
-                                            alt=""
-                                            className="h-24 w-24 rounded-lg border border-line object-cover"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setIllustUrl("")}
-                                            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-line bg-surface text-[11px] text-muted"
-                                            aria-label="挿絵を外す"
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-line text-[11px] text-faint">
-                                        まだ無し
-                                    </div>
-                                )}
+                            <EpisodeIllustManager
+                                novelId={work.id}
+                                episodeId={episode.id}
+                                body={episode.body ?? ""}
+                            />
 
-                                <div className="min-w-0 flex-1">
-                                    <input
-                                        type="file"
-                                        accept="image/png,image/jpeg,image/webp"
-                                        disabled={illustBusy}
-                                        onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) void putIllust(file);
-                                            e.target.value = "";
-                                        }}
-                                        className="w-full text-[12px] text-muted"
-                                    />
-
-                                    <p className="mt-1.5 text-[11px] leading-[1.8] text-faint">
-                                        JPEG または PNG。読む画面で、本文の前に出ます。
-                                    </p>
-
-                                    {/*
-                                      * ★ 絵を入れたときだけ聞く。
-                                      *   入れていない人に、
-                                      *   答える必要のないことを見せない。
-                                      */}
-                                    {illustUrl && (
-                                        <label className="mt-2.5 flex items-start gap-2 text-[11.5px] leading-[1.8] text-muted">
-                                            <input
-                                                type="checkbox"
-                                                checked={illustIsAi}
-                                                onChange={(e) => setIllustIsAi(e.target.checked)}
-                                                className="mt-0.5 shrink-0"
-                                            />
-                                            <span>
-                                                この挿絵は AI を使って作りました
-                                                <br />
-                                                <span className="text-faint">
-                                                    立てると、読む画面で挿絵の右上に
-                                                    「AI」の印が出ます。
-                                                </span>
-                                            </span>
-                                        </label>
-                                    )}
-
-                                    {/*
-                                      * 権利の注意。
-                                      *
-                                      * ★ 表紙と同じことを書く。
-                                      *   挿絵だけ緩いと思われては困る。
-                                      */}
-                                    <div className="mt-3 rounded-lg border border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_6%,transparent)] px-3.5 py-3">
-                                        <p className="text-[11.5px] font-bold text-ink">
-                                            ほかの人の絵を無断で使うことはできません。
-                                        </p>
-                                        <p className="mt-1.5 text-[11px] leading-[1.9] text-muted">
-                                            自分で描いた絵、権利者から許可を得た絵、
-                                            または自分で AI に作らせた絵だけを置いてください。
-                                            <br />
-                                            違反が見つかった場合は、画像の削除や作品の非公開などの
-                                            対応をとることがあります。
-                                        </p>
-                                    </div>
-
-                                    {illustBusy && (
-                                        <p className="mt-1 text-[11px] text-forest">
-                                            上げています…
-                                        </p>
-                                    )}
-                                    {illustError && (
-                                        <p className="mt-1 text-[11px] text-[var(--color-danger)]">
-                                            {illustError}
-                                        </p>
-                                    )}
-                                </div>
+                            <div className="mt-3 rounded-lg border border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_6%,transparent)] px-3.5 py-3">
+                                <p className="text-[11.5px] font-bold text-ink">
+                                    ほかの人の絵を無断で使うことはできません。
+                                </p>
+                                <p className="mt-1.5 text-[11px] leading-[1.9] text-muted">
+                                    自分で描いた絵、権利者から許可を得た絵、
+                                    または自分で AI に作らせた絵だけを置いてください。
+                                    <br />
+                                    違反が見つかった場合は、画像の削除や作品の非公開などの
+                                    対応をとることがあります。
+                                </p>
                             </div>
                         </Field>
 

@@ -52,6 +52,7 @@ import type {
     AiSettings,
     DisplaySettings,
     Episode,
+    EpisodeIllust,
     EpisodeCreateInput,
     EpisodeVersion,
     PublishSettings,
@@ -1064,6 +1065,26 @@ export const localRepository: Repository = {
      * 手元だけの置き場では、覚え書きを持たない。
      * 資料の行を消す機能は、繋がっているときだけ使える。
      */
+    /*
+     * 話の中の挿絵。
+     *
+     * 手元だけの置き場では持たない。
+     * 絵は表と置き場が要るので、繋がっているときだけ使える。
+     */
+    async listEpisodeIllusts(): Promise<EpisodeIllust[]> {
+        return [];
+    },
+
+    async addEpisodeIllust(): Promise<EpisodeIllust> {
+        throw new Error("手元だけの置き場では、挿絵を置けません");
+    },
+
+    async moveEpisodeIllust(): Promise<void> {},
+
+    async setEpisodeIllustAi(): Promise<void> {},
+
+    async deleteEpisodeIllust(): Promise<void> {},
+
     async listLineMarks(): Promise<{
         episode_id: string;
         line: number;

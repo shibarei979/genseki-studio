@@ -215,3 +215,28 @@ function toKanji(value: number): string {
     const ones = value % 10;
     return `${tens > 1 ? digits[tens] : ""}十${digits[ones]}`;
 }
+
+/**
+ * 話の中の挿絵。
+ *
+ * ★ 1 話に何枚でも置ける。
+ *
+ *   前は 1 話に 1 枚、本文の頭に固定だった。
+ *   場面の変わり目に挟みたいという声があり、
+ *   置き場所を持たせた。
+ *
+ * ★ 場所は「何文目の後ろか」で数える。
+ *
+ *   行は画面の幅で変わる。文ならどこで見ても同じ場所を指す。
+ *   0 は本文の頭。これまでと同じ置き方。
+ */
+export interface EpisodeIllust {
+    id: string;
+    novel_id: string;
+    episode_id: string;
+    url: string;
+    is_ai: boolean;
+    after_sentence: number;
+    /** 置いたときの文。本文を直したとき、番号を付け直すのに使う */
+    anchor_text: string;
+}

@@ -1,0 +1,353 @@
+/**
+ * ============================================================
+ * 原石航路 Studio
+ * EpisodeIllustManager — 話の中の挿絵
+ *
+ * ★ 1 話に何枚でも置ける。
+ *
+ *   前は 1 枚だけ、本文の頭に固定だった。
+ *   場面の変わり目に挟みたいという声があった。
+ *
+ * ★ 置き場所は、本文を見ながら選ぶ。
+ *
+ *   文と文のあいだに指を置くと線が出る。押すとそこに入る。
+ *   蛍光ペンで資料に足すのと同じ触り心地にしてある。
+ *
+ * ★ 場所は「何文目の後ろか」で持つ。
+ *
+ *   行は画面の幅で変わる。文ならどこで見ても同じ場所を指す。
+ *   0 は本文の頭。
+ * ============================================================
+ */
+
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
+import { getRepository } from "@/lib/repository";
+import { shrinkImage } from "@/lib/storage/image-store";
+import { uploadImage } from "@/lib/storage/remote-image";
+import type { EpisodeIllust } from "@/types";
+
+interface Props {
+    novelId: string;
+    episodeId: string;
+    /** いまの本文。置き場所を選ぶのに使う */
+    body: string;
+}
+
+/**
+ * 本文を文で分ける。
+ *
+ * ★ 読む画面と同じ分け方にすること。
+ *   分け方が違うと、置いた場所と出る場所がずれる。
+ */
+export function splitIntoSentences(text: string): string[] {
+    const result: string[] = [];
+    let buf = "";
+
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        buf += ch;
+
+        const isEnder =
+            ch === "。" || ch === "！" || ch === "？" || ch === "」" || ch === "』";
+        const next = text[i + 1];
+
+        if (ch === "\n") {
+            result.push(buf);
+            buf = "";
+            continue;
+        }
+
+        if (isEnder && next !== "」" && next !== "』") {
+            result.push(buf);
+            buf = "";
+        }
+    }
+
+    if (buf) result.push(buf);
+    return result;
+}
+
+export default function EpisodeIllustManager({ novelId, episodeId, body }: Props) {
+    const [illusts, setIllusts] = useState<EpisodeIllust[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState("");
+
+    /** 置き場所を選んでいる絵。null なら選んでいない */
+    const [placing, setPlacing] = useState<EpisodeIllust | null>(null);
+    const [hoverAt, setHoverAt] = useState<number | null>(null);
+
+    const sentences = splitIntoSentences(body);
+
+    const reload = useCallback(async () => {
+        try {
+            setIllusts(await getRepository().listEpisodeIllusts(episodeId));
+        } catch {
+            /* 読めなくても、画面は出す */
+        }
+        setIsLoading(false);
+    }, [episodeId]);
+
+    useEffect(() => {
+        void reload();
+    }, [reload]);
+
+    async function handleUpload(file: File) {
+        setBusy(true);
+        setError("");
+
+        try {
+            /* 縮めてから上げる。そのままだと数 MB になる */
+            const shrunk = await shrinkImage(file, true);
+            const url = await uploadImage(shrunk, "illust");
+
+            await getRepository().addEpisodeIllust({
+                novelId,
+                episodeId,
+                url,
+                isAi: false,
+                /* はじめは本文の頭。置き場所はあとで選ぶ */
+                afterSentence: 0,
+                anchorText: "",
+            });
+
+            await reload();
+        } catch (caught) {
+            setError(
+                caught instanceof Error ? caught.message : "上げられませんでした",
+            );
+        }
+
+        setBusy(false);
+    }
+
+    async function handlePlace(at: number) {
+        if (!placing) return;
+
+        /*
+         * 控えるのは、その文そのもの。
+         * 本文を直したとき、この文を探し直して番号を付け替える。
+         */
+        const anchor = at === 0 ? "" : (sentences[at - 1] ?? "").trim();
+
+        await getRepository().moveEpisodeIllust(placing.id, at, anchor);
+        setPlacing(null);
+        setHoverAt(null);
+        await reload();
+    }
+
+    async function handleDelete(illust: EpisodeIllust) {
+        if (!window.confirm("この挿絵を外します。よろしいですか。")) return;
+        await getRepository().deleteEpisodeIllust(illust.id);
+        await reload();
+    }
+
+    async function handleAi(illust: EpisodeIllust, isAi: boolean) {
+        await getRepository().setEpisodeIllustAi(illust.id, isAi);
+        await reload();
+    }
+
+    /** その絵がいまどこに置かれているか、言葉にする */
+    function placeLabel(illust: EpisodeIllust) {
+        if (illust.after_sentence === 0) return "本文の頭";
+        const text = (sentences[illust.after_sentence - 1] ?? "").trim();
+        if (!text) return `${illust.after_sentence}文目の後ろ`;
+        return `「${text.slice(0, 14)}${text.length > 14 ? "…" : ""}」の後ろ`;
+    }
+
+    return (
+        <div>
+            {isLoading ? (
+                <p className="text-[11px] text-faint">読み込んでいます</p>
+            ) : (
+                <ul className="space-y-2">
+                    {illusts.map((illust) => (
+                        <li
+                            key={illust.id}
+                            className="flex items-start gap-3 rounded-lg border border-line p-2.5"
+                        >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={illust.url}
+                                alt=""
+                                className="h-20 w-20 shrink-0 rounded-md border border-line object-cover"
+                            />
+
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-[11.5px] text-ink">
+                                    {placeLabel(illust)}
+                                </p>
+
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPlacing(illust);
+                                            setHoverAt(null);
+                                        }}
+                                        className="rounded border border-line px-2 py-0.5 text-[10.5px] text-muted hover:border-forest-line hover:text-forest"
+                                    >
+                                        置く場所を選ぶ
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleDelete(illust)}
+                                        className="rounded border border-line px-2 py-0.5 text-[10.5px] text-[var(--color-danger)] hover:opacity-80"
+                                    >
+                                        外す
+                                    </button>
+                                </div>
+
+                                <label className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-muted">
+                                    <input
+                                        type="checkbox"
+                                        checked={illust.is_ai}
+                                        onChange={(event) =>
+                                            void handleAi(illust, event.target.checked)
+                                        }
+                                    />
+                                    AI を使って作った絵
+                                </label>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            <div className="mt-3">
+                <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={busy}
+                    onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void handleUpload(file);
+                        event.target.value = "";
+                    }}
+                    className="w-full text-[12px] text-muted"
+                />
+                <p className="mt-1.5 text-[11px] leading-[1.8] text-faint">
+                    JPEG または PNG。上げたあと「置く場所を選ぶ」で、
+                    本文のどこに入れるかを決められます。
+                </p>
+
+                {busy && <p className="mt-1 text-[11px] text-forest">上げています…</p>}
+                {error && (
+                    <p className="mt-1 text-[11px] text-[var(--color-danger)]">{error}</p>
+                )}
+            </div>
+
+            {/*
+              * 置き場所を選ぶ画面。
+              *
+              * 文と文のあいだに指を置くと線が出る。押すとそこに入る。
+              */}
+            {placing && (
+                <div
+                    onClick={() => setPlacing(null)}
+                    className="fixed inset-0 z-[400] flex items-center justify-center bg-black/45 p-4"
+                >
+                    <div
+                        onClick={(event) => event.stopPropagation()}
+                        className="flex max-h-[80vh] w-[min(680px,100%)] flex-col overflow-hidden rounded-xl border border-line bg-surface"
+                    >
+                        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+                            <p className="text-[12.5px] text-ink">
+                                入れたい場所の線を押してください
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setPlacing(null)}
+                                className="text-[12px] text-faint hover:text-ink"
+                            >
+                                やめる
+                            </button>
+                        </div>
+
+                        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                            <Gap
+                                at={0}
+                                hoverAt={hoverAt}
+                                onHover={setHoverAt}
+                                onPick={handlePlace}
+                                label="本文の頭"
+                            />
+
+                            {sentences.map((raw, idx) => (
+                                <div key={idx}>
+                                    {raw === "\n" ? (
+                                        <div className="h-3" />
+                                    ) : (
+                                        <p className="text-[13px] leading-[2] text-ink">
+                                            {raw}
+                                        </p>
+                                    )}
+
+                                    <Gap
+                                        at={idx + 1}
+                                        hoverAt={hoverAt}
+                                        onHover={setHoverAt}
+                                        onPick={handlePlace}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/**
+ * 文と文のあいだ。
+ *
+ * ふだんは何も見えない。指を置くと線が出る。
+ * 高さを取っておかないと、狙って押せない。
+ */
+function Gap({
+    at,
+    hoverAt,
+    onHover,
+    onPick,
+    label,
+}: {
+    at: number;
+    hoverAt: number | null;
+    onHover: (at: number | null) => void;
+    onPick: (at: number) => void;
+    label?: string;
+}) {
+    const isOn = hoverAt === at;
+
+    return (
+        <button
+            type="button"
+            onMouseEnter={() => onHover(at)}
+            onMouseLeave={() => onHover(null)}
+            onFocus={() => onHover(at)}
+            onClick={() => void onPick(at)}
+            className="flex w-full items-center gap-2 py-1"
+            aria-label={label ?? `${at}文目の後ろに入れる`}
+        >
+            <span
+                className={[
+                    "h-[2px] flex-1 rounded",
+                    isOn ? "bg-forest" : "bg-transparent",
+                ].join(" ")}
+            />
+            <span
+                className={[
+                    "shrink-0 text-[10px]",
+                    isOn ? "text-forest" : "text-transparent",
+                ].join(" ")}
+            >
+                {label ?? "ここに入れる"}
+            </span>
+        </button>
+    );
+}
