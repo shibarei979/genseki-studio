@@ -124,8 +124,19 @@ export const EPISODE_STATUS_LABEL: Record<EpisodeStatus, string> = {
  * 題名が空のときだけ、見分けが付くように番号で補う。
  */
 export function formatEpisodeLabel(episode: Pick<Episode, "ep_number" | "title">): string {
-    const title = episode.title.trim();
-    return title || `${episode.ep_number}話`;
+        const title = episode.title.trim();
+
+    /*
+     * ★ 題名が無いとき、「第◯話」と出さない。
+     *
+     *   話の順番を表す数字なので、
+     *   作者が付けた題名と見分けがつかない。
+     *   「第8話」という題名の話と、
+     *   8 番目の題名なし、が同じに見える。
+     *
+     * 「題名なし」と出せば、付け忘れに気づける。
+     */
+    return title || `（題名なし・${episode.ep_number}番目）`;
 }
 
 /** 次のステータスへ循環させる（一覧のマークをクリックしたとき） */
