@@ -38,7 +38,7 @@ const SECTIONS: { key: Section; label: string; isReady: boolean }[] = [
     { key: "publish", label: "公開・読者設定", isReady: true },
     { key: "display", label: "表示設定", isReady: true },
     { key: "chapters", label: "章の構成", isReady: true },
-    { key: "manuscript", label: "原稿・バックアップ", isReady: true },
+    { key: "manuscript", label: "インポート・バックアップ", isReady: true },
     { key: "log", label: "執筆ログ", isReady: true },
     { key: "ai", label: "AI補助", isReady: true },
 ];

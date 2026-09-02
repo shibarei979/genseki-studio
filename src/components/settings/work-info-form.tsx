@@ -708,7 +708,7 @@ export default function WorkInfoForm({
                                 </p>
                                 <p className="mt-1.5 text-xs leading-relaxed text-muted">
                                     残しておきたいものがあれば、
-                                    先に「原稿・バックアップ」から書き出してください。
+                                    先に「インポート・バックアップ」から書き出してください。
                                 </p>
 
                                 <div className="mt-3.5 flex gap-2">

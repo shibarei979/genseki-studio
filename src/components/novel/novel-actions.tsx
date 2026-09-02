@@ -81,11 +81,9 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
     } else {
       await supabase.from('bookmarks').insert({ novel_id: novelId, user_id: userId })
       setBookmarked(true); setBookmarks(c => c + 1)
-      if (authorId && userId !== authorId) {
-        fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ user_id: authorId, type:'bookmark',
-            message: `${userDisplayName||'読者'}さんが「${novelTitle||'作品'}」を保存しました`, link: `/novel/${novelId}` }) })
-      }
+      /* 作者に知らせる。宛先も文も受け口の側で組み立てる */
+      fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ bookmark_novel_id: novelId }) }).catch(() => {})
     }
     setLoading(false)
   }
@@ -147,11 +145,8 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
     if (isPending) {
       alert('コメントの内容を確認中です。審査通過後に公開されます。')
     } else {
-      if (authorId && userId !== authorId) {
-        fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ user_id: authorId, type:'discover',
-            message: `${userDisplayName||'読者'}さんが「${novelTitle||'作品'}」を発掘・拡散しました`, link: `/novel/${novelId}` }) })
-      }
+      fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ discover_novel_id: novelId }) }).catch(() => {})
     }
   }
 
@@ -176,11 +171,8 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
     setDiscovered(true)
     setDiscovers(c => c + 1)
     setShowComment(false); setComment(''); setSubmitting(false)
-    if (authorId && userId !== authorId) {
-      fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ user_id: authorId, type:'discover',
-          message: `${userDisplayName||'読者'}さんが「${novelTitle||'作品'}」を発掘・拡散しました`, link: `/novel/${novelId}` }) })
-    }
+    fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ discover_novel_id: novelId }) }).catch(() => {})
     // 帯エディタを開く（ObiBeltが受け取る）
     window.dispatchEvent(new CustomEvent('open-obi-editor'))
   }

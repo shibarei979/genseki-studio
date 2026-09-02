@@ -26,10 +26,9 @@ export default function FollowButton({ authorId, userId, initialFollowing, follo
     } else {
       await supabase.from('follows').insert({ follower_id: userId, following_id: authorId })
       setFollowing(true)
+      /* 相手に知らせる。誰がフォローしたかは受け口の側で組み立てる */
       fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ user_id: authorId, type:'follow',
-          message: `新しいフォロワーが増えました`,
-          link: `/author/${authorId}` }) })
+        body: JSON.stringify({ follow_user_id: authorId }) }).catch(() => {})
     }
     setLoading(false)
   }

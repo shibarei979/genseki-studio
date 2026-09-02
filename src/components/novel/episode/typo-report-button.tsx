@@ -36,19 +36,17 @@ export default function TypoReportButton({ novelId, episodeId, authorId, userId,
       note: note.trim() || null,
     })
     if (!error) {
-      // 作者に通知（内容の要約付き）
-      const summary = suggested.trim()
-        ? `「${original.trim().slice(0, 20)}${original.trim().length > 20 ? '…' : ''}」→「${suggested.trim().slice(0, 20)}${suggested.trim().length > 20 ? '…' : ''}」`
-        : `「${original.trim().slice(0, 30)}${original.trim().length > 30 ? '…' : ''}」`
+      /*
+       * 作者に知らせる。
+       *
+       * ★ 報告の中身は通知に載せない。
+       *   そのまま載せると、相手の通知欄へ好きな文を送れてしまう。
+       *   話へ行けば、報告の一覧で読める。
+       */
       fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: authorId,
-          type: 'typo',
-          message: `${userName || '読者'}さんから誤字報告：${summary}${episodeTitle ? `（${episodeTitle}）` : ''}`,
-          link: `/novel/${novelId}/episode/${episodeId}`,
-        }),
+        body: JSON.stringify({ typo_episode_id: episodeId }),
       }).catch(() => {})
       setDone(true)
       setTimeout(() => {

@@ -1,23 +1,37 @@
 /**
  * ============================================================
  * 原石航路 Studio
- * /api/notify — コメントの知らせを 1 人へ届ける
+ * /api/notify — 自分あての知らせを 1 人へ届ける
  *
- * ★ この道筋が丸ごと無かった。
+ * ★ この受け口が丸ごと無かった。
  *
- *   感想の画面からは前から呼んでいたが、受け口が存在せず、
- *   404 を .catch で捨てていた。
- *   そのため、感想も返信も、相手のベルには何も入っていなかった。
+ *   画面の側は前から呼んでいた。感想・返信・いいね・保存・
+ *   発掘・フォロー・誤字報告・つぶやきへの返信、どれもである。
+ *   受け口が無いので 404 が返り、それを .catch で捨てていた。
+ *   だから通知欄には何も入っていなかった。
  *
- * ★ 誰に届けるかは、送り手ではなくこちらで決める。
+ * ★ 宛先と文は、送り手ではなくこちらで決める。
  *
  *   画面から user_id と本文をそのまま受け取ると、
  *   誰でも他人の通知欄へ好きな文を入れられる。
- *   受け取るのは comment_id だけにして、
- *   宛先も文もこちらで組み立てる。
+ *   受け取るのは「何が起きたか」の id だけにして、
+ *   本当に起きたかを表で確かめてから入れる。
  *
- * ★ notifications は運営しか入れられない決まりになっている。
+ * ★ notifications は運営しか入れられない決まりなので、
  *   ここは運営用の繋ぎ口（service role）で入れる。SQL は要らない。
+ *
+ * 受け取る形（どれか 1 つ）
+ *
+ *   { comment_id }          感想・返信
+ *   { like_novel_id }       作品への いいね
+ *   { like_episode_id }     話への いいね
+ *   { bookmark_novel_id }   保存
+ *   { discover_novel_id }   発掘・拡散
+ *   { follow_user_id }      フォロー
+ *   { typo_episode_id }     誤字報告
+ *   { tweet_comment_id }    つぶやきへの返信
+ *   { like_tweet_id }       つぶやきへの いいね
+ *   { user_id, type, message, link }   運営だけ（個別の便り）
  * ============================================================
  */
 
@@ -26,19 +40,35 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+type Admin = ReturnType<typeof createAdminClient>;
+
+interface Notice {
+    targetId: string | null;
+    type: string;
+    message: string;
+    link: string;
+    /** 同じものが既にあれば出さない（付け外しの繰り返し対策） */
+    once?: boolean;
+}
+
+const none = NextResponse.json({ sent: 0 });
+
+/** 作品の作者を引く */
+async function authorOf(admin: Admin, novelId: string | null) {
+    if (!novelId) return null;
+
+    const { data } = await admin
+        .from("novels")
+        .select("author_id")
+        .eq("id", novelId)
+        .single();
+
+    return (data?.author_id as string | null) ?? null;
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const commentId: string | undefined = body.comment_id;
-        const likeNovelId: string | undefined = body.like_novel_id;
-        const likeEpisodeId: string | undefined = body.like_episode_id;
-
-        if (!commentId && !likeNovelId && !likeEpisodeId) {
-            return NextResponse.json(
-                { error: "何についての知らせか分かりません" },
-                { status: 400 },
-            );
-        }
 
         const supabase = await createClient();
         const {
@@ -56,165 +86,306 @@ export async function POST(request: Request) {
 
         const { data: profile } = await admin
             .from("profiles")
-            .select("display_name")
+            .select("display_name, is_admin")
             .eq("user_id", user.id)
             .single();
 
         const name = profile?.display_name || "名無し";
 
         /*
-         * いいね。
-         *
-         * ★ 押した本人かどうかを、表を見て確かめる。
-         *   画面から「押しました」と言われただけでは信じない。
-         *
-         * ★ 同じ相手・同じ行き先の知らせが既にあれば出さない。
-         *   付けたり外したりを繰り返すと、通知欄が埋まる。
+         * 運営が個別に送る便り。
+         * 宛先も文も自由に決められるので、運営のときだけ通す。
          */
-        if (likeNovelId || likeEpisodeId) {
-            let novelId: string | null = likeNovelId ?? null;
-            let link = "";
-
-            if (likeEpisodeId) {
-                const { data: like } = await admin
-                    .from("episode_likes")
-                    .select("episode_id")
-                    .eq("episode_id", likeEpisodeId)
-                    .eq("user_id", user.id)
-                    .maybeSingle();
-
-                if (!like) return NextResponse.json({ sent: 0 });
-
-                const { data: episode } = await admin
-                    .from("episodes")
-                    .select("novel_id")
-                    .eq("id", likeEpisodeId)
-                    .single();
-
-                novelId = episode?.novel_id ?? null;
-                link = novelId
-                    ? `/novel/${novelId}/episode/${likeEpisodeId}`
-                    : "";
-            } else {
-                const { data: like } = await admin
-                    .from("likes")
-                    .select("novel_id")
-                    .eq("novel_id", likeNovelId)
-                    .eq("user_id", user.id)
-                    .maybeSingle();
-
-                if (!like) return NextResponse.json({ sent: 0 });
-
-                link = `/novel/${likeNovelId}`;
+        if (body.user_id && body.message) {
+            if (!profile?.is_admin) {
+                return NextResponse.json(
+                    { error: "運営だけが送れます" },
+                    { status: 403 },
+                );
             }
 
-            if (!novelId || !link) return NextResponse.json({ sent: 0 });
+            const { error } = await admin.from("notifications").insert({
+                user_id: body.user_id,
+                type: body.type || "announcement",
+                message: body.message,
+                link: body.link || null,
+            });
 
-            const { data: novel } = await admin
-                .from("novels")
-                .select("author_id")
-                .eq("id", novelId)
-                .single();
-
-            const authorId = novel?.author_id ?? null;
-            if (!authorId || authorId === user.id) {
-                return NextResponse.json({ sent: 0 });
-            }
-
-            const { data: already } = await admin
-                .from("notifications")
-                .select("id")
-                .eq("user_id", authorId)
-                .eq("type", "like")
-                .eq("link", link)
-                .eq("message", `${name}さんがいいねしました`)
-                .limit(1);
-
-            if (already && already.length > 0) {
-                return NextResponse.json({ sent: 0 });
-            }
-
-            const { error: likeWriteError } = await admin
-                .from("notifications")
-                .insert({
-                    user_id: authorId,
-                    type: "like",
-                    message: `${name}さんがいいねしました`,
-                    link,
-                });
-
-            if (likeWriteError) throw likeWriteError;
-
+            if (error) throw error;
             return NextResponse.json({ sent: 1 });
         }
 
-        const { data: comment } = await admin
-            .from("comments")
-            .select("id, user_id, novel_id, episode_id, parent_id")
-            .eq("id", commentId)
-            .single();
+        let notice: Notice | null = null;
 
-        if (!comment) {
-            return NextResponse.json(
-                { error: "そのコメントがありません" },
-                { status: 404 },
-            );
-        }
-
-        /* 自分が書いたものについてだけ、知らせを出せる */
-        if (comment.user_id !== user.id) {
-            return NextResponse.json(
-                { error: "自分のコメントではありません" },
-                { status: 403 },
-            );
-        }
-
-        /*
-         * 宛先を決める。
-         *
-         * 返信      → 返された相手
-         * ふつう    → 作品の作者
-         */
-        let targetId: string | null = null;
-        let type = "comment";
-
-        if (comment.parent_id) {
-            const { data: parent } = await admin
+        /* ---------- 感想・返信 ---------- */
+        if (body.comment_id) {
+            const { data: comment } = await admin
                 .from("comments")
+                .select("id, user_id, novel_id, episode_id, parent_id")
+                .eq("id", body.comment_id)
+                .single();
+
+            /* 自分が書いたものについてだけ、知らせを出せる */
+            if (!comment || comment.user_id !== user.id) return none;
+
+            const link = comment.episode_id
+                ? `/novel/${comment.novel_id}/episode/${comment.episode_id}`
+                : `/novel/${comment.novel_id}`;
+
+            if (comment.parent_id) {
+                const { data: parent } = await admin
+                    .from("comments")
+                    .select("user_id")
+                    .eq("id", comment.parent_id)
+                    .single();
+
+                notice = {
+                    targetId: (parent?.user_id as string | null) ?? null,
+                    type: "reply",
+                    message: `${name}さんがあなたのコメントに返信しました`,
+                    link,
+                };
+            } else {
+                notice = {
+                    targetId: await authorOf(admin, comment.novel_id),
+                    type: "comment",
+                    message: `${name}さんがコメントしました`,
+                    link,
+                };
+            }
+        }
+
+        /* ---------- 作品への いいね ---------- */
+        if (body.like_novel_id) {
+            const { data: like } = await admin
+                .from("likes")
+                .select("novel_id")
+                .eq("novel_id", body.like_novel_id)
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (!like) return none;
+
+            notice = {
+                targetId: await authorOf(admin, body.like_novel_id),
+                type: "like",
+                message: `${name}さんが作品にいいねしました`,
+                link: `/novel/${body.like_novel_id}`,
+                once: true,
+            };
+        }
+
+        /* ---------- 話への いいね ---------- */
+        if (body.like_episode_id) {
+            const { data: like } = await admin
+                .from("episode_likes")
+                .select("episode_id")
+                .eq("episode_id", body.like_episode_id)
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (!like) return none;
+
+            const { data: episode } = await admin
+                .from("episodes")
+                .select("novel_id")
+                .eq("id", body.like_episode_id)
+                .single();
+
+            const novelId = (episode?.novel_id as string | null) ?? null;
+            if (!novelId) return none;
+
+            notice = {
+                targetId: await authorOf(admin, novelId),
+                type: "like",
+                message: `${name}さんが話にいいねしました`,
+                link: `/novel/${novelId}/episode/${body.like_episode_id}`,
+                once: true,
+            };
+        }
+
+        /* ---------- 保存 ---------- */
+        if (body.bookmark_novel_id) {
+            const { data: mark } = await admin
+                .from("bookmarks")
+                .select("novel_id")
+                .eq("novel_id", body.bookmark_novel_id)
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (!mark) return none;
+
+            notice = {
+                targetId: await authorOf(admin, body.bookmark_novel_id),
+                type: "bookmark",
+                message: `${name}さんが作品を保存しました`,
+                link: `/novel/${body.bookmark_novel_id}`,
+                once: true,
+            };
+        }
+
+        /* ---------- 発掘・拡散 ---------- */
+        if (body.discover_novel_id) {
+            const { data: found } = await admin
+                .from("discovers")
+                .select("novel_id")
+                .eq("novel_id", body.discover_novel_id)
+                .eq("user_id", user.id)
+                .limit(1);
+
+            if (!found || found.length === 0) return none;
+
+            notice = {
+                targetId: await authorOf(admin, body.discover_novel_id),
+                type: "discover",
+                message: `${name}さんが作品を発掘・拡散しました`,
+                link: `/novel/${body.discover_novel_id}`,
+                once: true,
+            };
+        }
+
+        /* ---------- フォロー ---------- */
+        if (body.follow_user_id) {
+            const { data: follow } = await admin
+                .from("follows")
+                .select("following_id")
+                .eq("follower_id", user.id)
+                .eq("following_id", body.follow_user_id)
+                .maybeSingle();
+
+            if (!follow) return none;
+
+            notice = {
+                targetId: body.follow_user_id,
+                type: "follow",
+                message: `${name}さんにフォローされました`,
+                link: `/author/${user.id}`,
+                once: true,
+            };
+        }
+
+        /* ---------- 誤字報告 ---------- */
+        if (body.typo_episode_id) {
+            const { data: report } = await admin
+                .from("typo_reports")
+                .select("novel_id, episode_id")
+                .eq("episode_id", body.typo_episode_id)
+                .eq("reporter_id", user.id)
+                .order("created_at", { ascending: false })
+                .limit(1);
+
+            const row = report?.[0];
+            if (!row) return none;
+
+            notice = {
+                targetId: await authorOf(admin, row.novel_id as string),
+                type: "typo",
+                /*
+                 * 中身は書かない。
+                 * 報告の文をそのまま通知に出すと、
+                 * 相手の通知欄へ好きな文を送れてしまう。
+                 * 話へ行けば、報告の一覧で読める。
+                 */
+                message: `${name}さんから誤字の知らせが届きました`,
+                link: `/novel/${row.novel_id}/episode/${row.episode_id}`,
+            };
+        }
+
+        /* ---------- つぶやきへの返信 ---------- */
+        if (body.tweet_comment_id) {
+            const { data: comment } = await admin
+                .from("tweet_comments")
+                .select("id, user_id, tweet_id, parent_id")
+                .eq("id", body.tweet_comment_id)
+                .single();
+
+            if (!comment || comment.user_id !== user.id) return none;
+
+            const { data: tweet } = await admin
+                .from("tweets")
                 .select("user_id")
-                .eq("id", comment.parent_id)
+                .eq("id", comment.tweet_id)
                 .single();
 
-            targetId = parent?.user_id ?? null;
-            type = "reply";
-        } else {
-            const { data: novel } = await admin
-                .from("novels")
-                .select("author_id")
-                .eq("id", comment.novel_id)
+            const ownerId = (tweet?.user_id as string | null) ?? null;
+            let targetId = ownerId;
+
+            /* 返信への返信は、その返信を書いた人へ */
+            if (comment.parent_id) {
+                const { data: parent } = await admin
+                    .from("tweet_comments")
+                    .select("user_id")
+                    .eq("id", comment.parent_id)
+                    .single();
+
+                targetId = (parent?.user_id as string | null) ?? ownerId;
+            }
+
+            notice = {
+                targetId,
+                type: "reply",
+                message: `${name}さんがあなたのつぶやきに返信しました`,
+                link: `/author/${ownerId ?? user.id}`,
+            };
+        }
+
+        /* ---------- つぶやきへの いいね ---------- */
+        if (body.like_tweet_id) {
+            const { data: like } = await admin
+                .from("tweet_likes")
+                .select("tweet_id")
+                .eq("tweet_id", body.like_tweet_id)
+                .eq("user_id", user.id)
+                .maybeSingle();
+
+            if (!like) return none;
+
+            const { data: tweet } = await admin
+                .from("tweets")
+                .select("user_id")
+                .eq("id", body.like_tweet_id)
                 .single();
 
-            targetId = novel?.author_id ?? null;
+            const ownerId = (tweet?.user_id as string | null) ?? null;
+
+            notice = {
+                targetId: ownerId,
+                type: "like",
+                message: `${name}さんがつぶやきにいいねしました`,
+                link: `/author/${ownerId ?? user.id}`,
+                once: true,
+            };
+        }
+
+        if (!notice) {
+            return NextResponse.json(
+                { error: "何についての知らせか分かりません" },
+                { status: 400 },
+            );
         }
 
         /* 自分あては出さない */
-        if (!targetId || targetId === user.id) {
-            return NextResponse.json({ sent: 0 });
+        if (!notice.targetId || notice.targetId === user.id) return none;
+
+        if (notice.once) {
+            const { data: already } = await admin
+                .from("notifications")
+                .select("id")
+                .eq("user_id", notice.targetId)
+                .eq("type", notice.type)
+                .eq("link", notice.link)
+                .eq("message", notice.message)
+                .limit(1);
+
+            if (already && already.length > 0) return none;
         }
 
-        const { error: writeError } = await admin
-            .from("notifications")
-            .insert({
-                user_id: targetId,
-                type,
-                message:
-                    type === "reply"
-                        ? `${name}さんがあなたのコメントに返信しました`
-                        : `${name}さんがコメントしました`,
-                link: comment.episode_id
-                    ? `/novel/${comment.novel_id}/episode/${comment.episode_id}`
-                    : `/novel/${comment.novel_id}`,
-            });
+        const { error: writeError } = await admin.from("notifications").insert({
+            user_id: notice.targetId,
+            type: notice.type,
+            message: notice.message,
+            link: notice.link,
+        });
 
         if (writeError) throw writeError;
 

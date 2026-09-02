@@ -752,6 +752,16 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
         : t
       ))
       window.alert(`いいねを保存できませんでした：${error.message}`)
+      return
+    }
+
+    /*
+     * つぶやきの持ち主に知らせる。
+     * 外したときは出さない。付け外しの繰り返しは受け口の側で止める。
+     */
+    if (!liked) {
+      fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ like_tweet_id: tweetId }) }).catch(() => {})
     }
   }
 
@@ -824,6 +834,10 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
       : t
     ))
     setCommentBody(prev => ({...prev, [tweetId]: ''}))
+
+    /* 返された相手に知らせる。宛先は受け口の側で引く */
+    fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ tweet_comment_id: data.id }) }).catch(() => {})
   }
 
   async function handleDelete(tweetId: string) {
