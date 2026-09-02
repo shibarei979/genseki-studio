@@ -49,15 +49,14 @@ Book
     /*
      * 本が動くときの速さ。
      *
-     * ★ 1 秒は遅い。
-     *   本が滑っているあいだ、次の本が読めない。
-     *   0.65 秒にすると、動きは見えたまま待ちが減る。
+     * ★ 1 秒は遅く、0.65 秒は速かった。
+     *   0.8 秒なら、動きが見えたまま慌ただしくない。
      *
      * 曲線はそのまま。
      * 速さだけ変えれば、動きの味は変わらない。
      */
     transition:
-        transform .65s cubic-bezier(.7, 0, .7, 1);
+        transform .8s cubic-bezier(.7, 0, .7, 1);
     /* Safari のちらつき対策（コンテナ自体は透明のため見た目は不変） */
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
