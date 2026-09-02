@@ -46,7 +46,17 @@ export default function PublishSettingsForm({ work, settings, livePisodeCount = 
     const [copied, setCopied] = useState(false);
 
     const scheduleError = validateSchedule(settings);
-    const publicUrl = `https://gensekikoro.jp/work/${work.id.slice(0, 8)}`;
+    /*
+     * 読者へ渡す公開 URL。
+     *
+     * ★ ここは必ず appConfig.siteUrl から組み立てる。
+     *
+     *   以前は https://gensekikoro.jp/work/<id の先頭8文字> を直に書いていた。
+     *   .jp は持っていない住所なので、押した人に証明書の警告が出て
+     *   サイトへ入れなかった。道筋も /work/ ではなく /novel/ で、
+     *   id を切ると当たらない。3つとも外れていた。
+     */
+    const publicUrl = `${appConfig.siteUrl}/novel/${work.id}`;
 
     async function handleCopyUrl() {
         await navigator.clipboard.writeText(publicUrl);
