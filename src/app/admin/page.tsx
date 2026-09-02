@@ -317,7 +317,7 @@ export default async function AdminPage({
     loginRes, mobileRes, desktopRes,
     prevUserRes, prevNovelRes, prevCommentRes, pv30Res, pvPrev30Res,
     homeModeRes, genreRes, openReportRes, likeRes, prevLikeRes,
-    mob30Res, guestPvRes, desk30Res, mob365Res, desk365Res, mobAllRes, deskAllRes,
+    mob30Res, desk30Res, mob365Res, desk365Res, mobAllRes, deskAllRes,
   ] = await Promise.all([
     supabase.from('profiles').select('created_at, home_mode').gte('created_at', startDate.toISOString()),
     supabase.from('novels').select('created_at').gte('created_at', startDate.toISOString()),
@@ -331,16 +331,6 @@ export default async function AdminPage({
      */
     Promise.resolve(adminSupabase.rpc('get_login_stats', { days: rangeDays })).catch(() => ({ data: null } as any)),
     Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'mobile').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
-    /*
-     * 入っていない人の閲覧数。
-     *
-     * ★ user_id が空なら、ログインしていない人。
-     *
-     *   総数だけ見ても、常連が何度も見ているのか、
-     *   通りすがりが多いのか分からない。
-     *   広め方を考えるときに、そこが要る。
-     */
-    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).is('user_id', null).gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
     Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'desktop').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
 
     /*
@@ -455,7 +445,7 @@ export default async function AdminPage({
 
   /* 作品数の多い順に5つ。ジャンルの無いものは数えない */
   const genreCount: Record<string, number> = {}
-  for (const row of (genreRes.data || []) as unknown as { genre: string | null }[]) {
+  for (const row of (genreRes.data || []) as { genre: string | null }[]) {
     if (!row.genre) continue
     genreCount[row.genre] = (genreCount[row.genre] ?? 0) + 1
   }
@@ -475,7 +465,6 @@ export default async function AdminPage({
     timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit',
   }).format(new Date())
 
-  const guestPv = guestPvRes.count ?? 0
   const pv30 = pv30Res.count || 0
   const pvPrev30 = pvPrev30Res.count || 0
   const deviceMobile = mobileRes.count || 0
@@ -544,19 +533,6 @@ export default async function AdminPage({
         { label: `直近${rangeLabel}`, value: pv30.toLocaleString() },
         /* 携帯の割合は、下の「サイト利用状況」で期間ごとに出す */
         { label: `直近${rangeLabel}の携帯`, value: deviceTotal > 0 ? `${mobilePct} %` : '—' },
-        /*
-         * 入っていない人の割合。
-         *
-         * ★ 数だけでは、常連が何度も見ているのか、
-         *   通りすがりが多いのか分からない。
-         *   広め方を考えるときに、そこが要る。
-         */
-        {
-          label: 'うちログインなし',
-          value: pv30 > 0
-            ? `${guestPv.toLocaleString()}（${Math.round((guestPv / pv30) * 100)} %）`
-            : '—',
-        },
       ],
     },
     {
