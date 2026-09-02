@@ -198,6 +198,42 @@ export default function EpisodeList({
         );
     }
 
+    /*
+     * 遠くへ移すときの相手。
+     *
+     * ★ ▲▼ だけでは足りない。
+     *
+     *   49 番目の話を 8 番目へ動かすには、
+     *   40 回ほど押すことになる。
+     *   あとから話を挿し込む場面では、
+     *   たいてい遠くへ動かす。
+     */
+    const [movingId, setMovingId] = useState<string | null>(null);
+
+    /** 選んだ話の後ろへ移す */
+    function moveAfter(targetId: string | null) {
+        if (!movingId) return;
+
+        const order = orderedEpisodeIds(chapters, episodes);
+        const from = order.indexOf(movingId);
+        if (from < 0) { setMovingId(null); return }
+
+        const next = [...order];
+        next.splice(from, 1);
+
+        if (targetId === null) {
+            /* いちばん先頭へ */
+            next.unshift(movingId);
+        } else {
+            const to = next.indexOf(targetId);
+            if (to < 0) { setMovingId(null); return }
+            next.splice(to + 1, 0, movingId);
+        }
+
+        onReorder(next);
+        setMovingId(null);
+    }
+
     /**
      * 1 つ上（または下）へ動かす。
      *
@@ -356,7 +392,21 @@ export default function EpisodeList({
                   * ★ 選んでいる間は出さない。
                   *   まとめて動かす作業と混ざる。
                   */}
-                {!isPicking && (
+                {/*
+                  * 移す先を選んでいる間は、
+                  * 「ここへ」の押し具に変える。
+                  */}
+                {movingId && movingId !== episode.id ? (
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); moveAfter(episode.id) }}
+                        className="shrink-0 rounded border border-forest px-2 py-0.5 text-[10px] text-forest"
+                    >
+                        この下へ
+                    </button>
+                ) : null}
+
+                {!isPicking && !movingId && (
                     <span className="flex shrink-0 flex-col">
                         <button
                             type="button"
@@ -375,6 +425,45 @@ export default function EpisodeList({
                             className="flex h-3.5 w-4 items-center justify-center text-[9px] leading-none text-faint hover:text-forest"
                         >
                             ▼
+                        </button>
+                    </span>
+                )}
+
+                {/*
+                  * 遠くへ移す。
+                  *
+                  * 押すと、ほかの話に「この下へ」が出る。
+                  * それを押すと、そこへ入る。
+                  */}
+                {!isPicking && !movingId && (
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setMovingId(episode.id) }}
+                        title="ほかの場所へ移します"
+                        className="shrink-0 text-[10px] text-faint opacity-0 transition-opacity hover:text-forest group-hover:opacity-100"
+                    >
+                        移す
+                    </button>
+                )}
+
+                {movingId === episode.id && (
+                    <span className="flex shrink-0 items-center gap-1.5">
+                        <span className="rounded bg-forest px-2 py-0.5 text-[10px] text-white">
+                            移す話
+                        </span>
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); moveAfter(null) }}
+                            className="rounded border border-line px-2 py-0.5 text-[10px] text-muted"
+                        >
+                            先頭へ
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setMovingId(null) }}
+                            className="rounded border border-line px-2 py-0.5 text-[10px] text-muted"
+                        >
+                            やめる
                         </button>
                     </span>
                 )}
