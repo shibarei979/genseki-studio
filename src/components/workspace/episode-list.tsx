@@ -27,6 +27,7 @@ import DeleteButton from "@/components/common/delete-button";
 import EpisodeStatusMark from "@/components/workspace/episode-status-mark";
 import { formatNumber } from "@/lib/utils/text";
 import type { Chapter, Episode } from "@/types";
+import { useAskText } from "@/hooks/use-ask-text";
 import { formatChapterLabel, formatEpisodeLabel } from "@/types";
 
 import {
@@ -79,6 +80,9 @@ export default function EpisodeList({
     onToggleStatus,
     onReorder,
 }: Props) {
+    /* 名前を尋ねる小窓。ブラウザの prompt は出ない機械がある */
+    const { ask, dialog: askDialog } = useAskText();
+
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [overId, setOverId] = useState<string | null>(null);
     /* ドラッグが乗っている章の見出し */
@@ -443,12 +447,14 @@ export default function EpisodeList({
                     <button
                         type="button"
                         onClick={() => {
-                            const next = window.prompt(
-                                `${episode.ep_number}話目の名前`,
-                                episode.title ?? "",
-                            );
-                            if (next === null) return;
-                            onRenameEpisode(episode.id, next.trim());
+                            void (async () => {
+                                const next = await ask(
+                                    `${episode.ep_number}話目の名前`,
+                                    episode.title ?? "",
+                                );
+                                if (next === null) return;
+                                onRenameEpisode(episode.id, next.trim());
+                            })();
                         }}
                         className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-faint opacity-0 hover:text-forest group-hover:opacity-100"
                     >
@@ -553,7 +559,16 @@ export default function EpisodeList({
                             話を選ぶ
                         </button>
                     ) : (
-                        <div className="rounded-md border border-line bg-canvas px-2.5 py-2">
+                        /*
+                         * ★ 帯の高さに上限を掛ける。
+                         *
+                         *   選ぶと、章の数だけ行き先の押し具が増える。
+                         *   携帯では帯が画面の大半を占め、
+                         *   肝心の話の一覧が数行しか見えなくなっていた。
+                         *
+                         *   帯は 4 割まで。あふれたら帯の中で送る。
+                         */
+                        <div className="thin-scroll max-h-[40vh] overflow-y-auto rounded-md border border-line bg-canvas px-2.5 py-2">
                             <div className="flex items-center justify-between gap-2">
                                 <span className="text-[11px] text-ink">
                                     {picked.length > 0
@@ -690,7 +705,12 @@ export default function EpisodeList({
                 </div>
             )}
 
-            <div className="thin-scroll flex-1 overflow-y-auto px-2 pb-2">
+            {/*
+              * ★ 一覧には必ず高さを残す。
+              *
+              *   上の帯が伸びると、ここが数行に潰れていた。
+              */}
+            <div className="thin-scroll min-h-[30vh] flex-1 overflow-y-auto px-2 pb-2">
                 {groups.map((group, groupAt) => {
                     const {
                         chapter,
@@ -925,7 +945,8 @@ export default function EpisodeList({
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            const next = window.prompt(
+                                            void (async () => {
+                                            const next = await ask(
                                                 "章の名前",
                                                 chapter.title ?? "",
                                             );
@@ -934,6 +955,7 @@ export default function EpisodeList({
                                                 chapter.id,
                                                 next.trim(),
                                             );
+                                            })();
                                         }}
                                         className="rounded border border-line px-1.5 py-0.5 text-[10px] text-faint hover:border-forest hover:text-forest"
                                     >
@@ -1153,6 +1175,8 @@ export default function EpisodeList({
                     {hasChapters && "・章の見出しへ入れられます"}
                 </p>
             )}
+
+            {askDialog}
         </div>
     );
 }

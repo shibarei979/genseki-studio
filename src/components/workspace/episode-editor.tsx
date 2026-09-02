@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useAskText } from "@/hooks/use-ask-text";
 import ManuscriptSurface from "@/components/workspace/manuscript-surface";
 import { VERSION_AUTO_INTERVAL_MS } from "@/config";
 import { useAutosave } from "@/hooks/use-autosave";
@@ -78,6 +79,9 @@ export default function EpisodeEditor({
     isFocusMode = false,
     onToggleFocus,
 }: Props) {
+    /* ルビ・置き換えの問い。ブラウザの prompt は出ない機械がある */
+    const { ask, dialog: askDialog } = useAskText();
+
     const [title, setTitle] = useState(episode.title);
     const [body, setBody] = useState(episode.body);
     /** 縦書き整形の直前の本文。取り消し用に 1 手ぶんだけ持つ */
@@ -203,14 +207,14 @@ export default function EpisodeEditor({
         onRegisterBody(body, setBody);
     }, [body, onRegisterBody]);
 
-    function handleRuby() {
+    async function handleRuby() {
         if (range.start === range.end) {
             setNotice("ルビを振る文字を選んでください");
             window.setTimeout(() => setNotice(""), 2500);
             return;
         }
         const base = body.slice(range.start, range.end);
-        const ruby = window.prompt(`「${base}」の読みを入れてください`, "");
+        const ruby = await ask(`「${base}」の読みを入れてください`, "");
         if (!ruby?.trim()) return;
         setBody(insertRuby(body, range.start, range.end, ruby.trim()));
     }
@@ -285,11 +289,11 @@ export default function EpisodeEditor({
      * 何を何に替えるかを 2 度尋ねる。
      * 一度にまとめて替えるので、数を伝える。
      */
-    function handleReplace() {
-        const from = window.prompt("置き換える文字を入れてください", "");
+    async function handleReplace() {
+        const from = await ask("置き換える文字を入れてください", "");
         if (!from) return;
 
-        const to = window.prompt(`「${from}」を何に替えますか`, "");
+        const to = await ask(`「${from}」を何に替えますか`, "");
         if (to === null) return;
 
         const count = body.split(from).length - 1;
@@ -566,7 +570,7 @@ export default function EpisodeEditor({
 
                 <button
                     type="button"
-                    onClick={handleRuby}
+                    onClick={() => void handleRuby()}
                     title="選んだ文字にルビを振ります（｜親文字《ルビ》）"
                     className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
                 >
@@ -623,7 +627,7 @@ export default function EpisodeEditor({
 
                 <button
                     type="button"
-                    onClick={handleReplace}
+                    onClick={() => void handleReplace()}
                     title="本文の中の文字を、まとめて置き換えます"
                     className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
                 >
@@ -750,6 +754,8 @@ export default function EpisodeEditor({
                     </p>
                 )}
             </div>
+
+            {askDialog}
         </div>
     );
 }

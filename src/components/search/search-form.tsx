@@ -446,7 +446,6 @@ export default function SearchForm({
                 <button onClick={()=>setType('')}    className={pillCls(!type)} style={pill(!type)}>すべて</button>
                 <button onClick={()=>setType(type==='長編'?'':'長編')} className={pillCls(type==='長編')} style={pill(type==='長編')}>長編</button>
                 <button onClick={()=>setType(type==='短編'?'':'短編')} className={pillCls(type==='短編')} style={pill(type==='短編')}>短編</button>
-                <button onClick={()=>setType(type==='WEBTOON'?'':'WEBTOON')} className={pillCls(type==='WEBTOON')} style={pill(type==='WEBTOON')}>WEBTOON</button>
               </div>
             </div>
             <div>

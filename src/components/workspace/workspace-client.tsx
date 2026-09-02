@@ -23,6 +23,7 @@ import ProofreadPanel from "@/components/workspace/proofread-panel";
 import ReadPanel from "@/components/workspace/read-panel";
 import VersionHistoryPanel from "@/components/workspace/version-history-panel";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
+import { useAskText } from "@/hooks/use-ask-text";
 import { useEpisodes } from "@/hooks/use-episodes";
 import {
     CANDIDATE_KIND_TO_PAGE,
@@ -42,6 +43,9 @@ interface Props {
 }
 
 export default function WorkspaceClient({ workId }: Props) {
+    /* 章の名前を尋ねる小窓。ブラウザの prompt は出ない機械がある */
+    const { ask, dialog: askDialog } = useAskText();
+
     /*
      * 住所の問い符から後ろ。
      *
@@ -599,7 +603,7 @@ export default function WorkspaceClient({ workId }: Props) {
                                          * ここで入れると「第2章 第二章」になる。
                                          * 聞くのは「出会い」のような題だけ。
                                          */
-                                        const title = window.prompt(
+                                        const title = await ask(
                                             `第${chapters.length + 1}章の名前を入れてください（例：出会い）\n空のままでも作れます`,
                                             "",
                                         );
@@ -841,6 +845,8 @@ export default function WorkspaceClient({ workId }: Props) {
                     )}
                 </main>
             </div>
+
+            {askDialog}
         </div>
     );
 }
