@@ -23,6 +23,7 @@ import {
 } from "@/lib/utils/vertical-text";
 import type { DisplaySettings, Episode } from "@/types";
 import { WRITING_MODE_LABEL } from "@/types";
+import IllustPlaceSurface from "@/components/workspace/illust-place-surface";
 import PickSurface from "@/components/workspace/pick-surface";
 import { useRouter } from "next/navigation";
 
@@ -33,6 +34,15 @@ interface Props {
      * 資料から来たとき、その資料の id が入る。
      */
     pickEntryId?: string | null;
+    /**
+     * 置き場所を選んでいる挿絵の id。
+     *
+     * ★ 入っているあいだ、本文は打てない。
+     *   蛍光ペンと同じ扱い。
+     */
+    illustPlacingId?: string | null;
+    /** その絵。何を置くのか見せるために渡す */
+    illustPlacingUrl?: string | null;
     /** 足す先の資料の名前。何に足しているかを見せる */
     pickEntryName?: string;
     settings: DisplaySettings;
@@ -60,6 +70,8 @@ interface Props {
 export default function EpisodeEditor({
     episode,
     pickEntryId = null,
+    illustPlacingId = null,
+    illustPlacingUrl = null,
     pickEntryName = "この資料",
     settings,
     onSave,
@@ -720,7 +732,25 @@ export default function EpisodeEditor({
                  * 広く書きたいとの声で外した。
                  */}
                 <div className="mx-auto flex h-full min-h-0 w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded">
-                {pickEntryId ? (
+                {illustPlacingId ? (
+                    /*
+                      * 挿絵の置き場所を選んでいるあいだも、打ち込む欄をやめる。
+                      * 蛍光ペンと同じ形にして、触り方を揃える。
+                      */
+                    <IllustPlaceSurface
+                        body={body}
+                        illustUrl={illustPlacingUrl}
+                        onPlace={async (afterSentence, anchorText) => {
+                            await getRepository().moveEpisodeIllust(
+                                illustPlacingId,
+                                afterSentence,
+                                anchorText,
+                            );
+                            router.back();
+                        }}
+                        onClose={() => router.back()}
+                    />
+                ) : pickEntryId ? (
                     /*
                       * 蛍光ペンのあいだは、打ち込む欄をやめる。
                       * 文ごとに押せる読む形に差し替える。

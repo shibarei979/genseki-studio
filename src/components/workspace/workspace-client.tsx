@@ -224,12 +224,26 @@ export default function WorkspaceClient({ workId }: Props) {
          * ep と line は、もう読み取ったので消してよい。
          * 残すと、読み込み直すたびにその話へ飛ぶ。
          */
+        /*
+         * ★ illust と illustUrl も残す。
+         *   挿絵の置き場所を選びに来たときの指定が入っている。
+         *   消すと、開いた瞬間にふつうの執筆画面へ戻ってしまう。
+         */
         const pickId = params.get("pick");
+        const illustId = params.get("illust");
+        const illustUrl = params.get("illustUrl");
+
+        const keep = new URLSearchParams();
+        if (pickId) keep.set("pick", pickId);
+        if (illustId) keep.set("illust", illustId);
+        if (illustUrl) keep.set("illustUrl", illustUrl);
+
+        const query = keep.toString();
         window.history.replaceState(
             {},
             "",
-            pickId
-                ? `${window.location.pathname}?pick=${pickId}`
+            query
+                ? `${window.location.pathname}?${query}`
                 : window.location.pathname,
         );
 
@@ -736,6 +750,12 @@ export default function WorkspaceClient({ workId }: Props) {
                         <EpisodeEditor
                             pickEntryId={searchParams.get("pick")}
                             pickEntryName={pickEntryName}
+                            /*
+                             * 挿絵の置き場所を選びに来たとき。
+                             * 投稿の画面から、絵の id と絵の場所を持って飛んでくる。
+                             */
+                            illustPlacingId={searchParams.get("illust")}
+                            illustPlacingUrl={searchParams.get("illustUrl")}
                             key={selected.id}
                             episode={selected}
                             settings={settings}
