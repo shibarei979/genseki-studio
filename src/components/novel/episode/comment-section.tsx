@@ -116,7 +116,15 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
 
   useEffect(() => {
     if (!userId) return guard('感想を書く', () => {})()
-    const commentIds = comments.map(c => c.id)
+    /*
+     * どれに いいね を付けているか。
+     *
+     * ★ 返信も数に入れる。
+     *
+     *   前は親のコメントだけを見ていた。
+     *   返信に いいね を付けても、開き直すと白い心のままだった。
+     */
+    const commentIds = comments.flatMap(c => [c.id, ...(c.replies || []).map(r => r.id)])
     if (commentIds.length === 0) return
     supabase.from('comment_likes').select('comment_id').eq('user_id', userId).in('comment_id', commentIds)
       .then(({ data }) => {
@@ -159,19 +167,17 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
       setRating(0)
       setQuotedText('')
 
-      // 作者に通知
-      if (authorId !== userId) {
-        fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: authorId,
-            type: 'comment',
-            message: `${userName || '名無し'}さんがコメントしました`,
-            link: `/novel/${novelId}/episode/${episodeId}`,
-          }),
-        }).catch(() => {})
-      }
+      /*
+       * 作者に知らせる。
+       *
+       * ★ 渡すのは comment_id だけ。
+       *   宛先も文も、受け口の側で組み立てる。
+       */
+      fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment_id: data.id }),
+      }).catch(() => {})
     }
     setPosting(false)
   }
@@ -206,25 +212,43 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
         c.id === replyTo.id ? { ...c, replies: [...(c.replies || []), newReply] } : c
       ))
 
-      // 親コメントの投稿者に返信通知（自分自身への返信は除く）
-      const parentComment = comments.find(c => c.id === replyTo.id)
-      if (parentComment && parentComment.user_id !== userId) {
-        fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: parentComment.user_id,
-            type: 'reply',
-            message: `${userName || '名無し'}さんがあなたのコメントに返信しました`,
-            link: `/novel/${novelId}/episode/${episodeId}`,
-          }),
-        }).catch(() => {})
-      }
+      /* 返された相手に知らせる。自分あては受け口の側で外す */
+      fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment_id: data.id }),
+      }).catch(() => {})
 
       setReplyBody('')
       setReplyTo(null)
     }
     setReplyPosting(false)
+  }
+
+  /*
+   * いいね の数を、親でも返信でも書き換える。
+   *
+   * ★ 返信は c.replies の中にいる。
+   *
+   *   前は親だけを見ていたので、返信の いいね は
+   *   表には入るのに、画面の数が動かなかった。
+   *   押しても何も起きないように見える。
+   */
+  function applyLikeCount(list: Comment[], commentId: string, diff: number): Comment[] {
+    return list.map(c => {
+      if (c.id === commentId) {
+        return { ...c, like_count: Math.max(0, c.like_count + diff) }
+      }
+      if (c.replies?.some(r => r.id === commentId)) {
+        return {
+          ...c,
+          replies: c.replies.map(r =>
+            r.id === commentId ? { ...r, like_count: Math.max(0, r.like_count + diff) } : r
+          ),
+        }
+      }
+      return c
+    })
   }
 
   async function toggleLike(commentId: string) {
@@ -233,11 +257,11 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
     if (isLiked) {
       await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId)
       setLikedComments(prev => { const s = new Set(prev); s.delete(commentId); return s })
-      setComments(prev => prev.map(c => c.id === commentId ? { ...c, like_count: Math.max(0, c.like_count - 1) } : c))
+      setComments(prev => applyLikeCount(prev, commentId, -1))
     } else {
       await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
       setLikedComments(prev => new Set(prev).add(commentId))
-      setComments(prev => prev.map(c => c.id === commentId ? { ...c, like_count: c.like_count + 1 } : c))
+      setComments(prev => applyLikeCount(prev, commentId, 1))
     }
   }
 
@@ -490,9 +514,23 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                             <span style={{ fontSize: 10, color: 'var(--color-text-faint)', marginLeft: 'auto' }}>{fmtDate(r.created_at)}</span>
                           </div>
                           <div style={{ fontSize: 13, color: 'var(--color-text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{r.body}</div>
-                          {(userId === r.user_id || userId === authorId || isAdmin) && (
-                            <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--color-danger)', padding: 0, marginTop: 4 }}>削除</button>
-                          )}
+                          {/*
+                            * 返信の いいね。
+                            *
+                            * ★ 親のコメントと同じ形にする。
+                            *
+                            *   返信にだけ押し具が無く、返された側は
+                            *   受け取ったことを返す手立てが無かった。
+                            */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                            <button onClick={() => toggleLike(r.id)} disabled={!userId}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: userId ? 'pointer' : 'default', fontSize: 11, color: likedComments.has(r.id) ? 'var(--color-danger)' : 'var(--color-text-muted)', padding: 0 }}>
+                              {likedComments.has(r.id) ? '♥' : '♡'} {r.like_count > 0 && r.like_count}
+                            </button>
+                            {(userId === r.user_id || userId === authorId || isAdmin) && (
+                              <button onClick={() => handleDelete(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--color-danger)', padding: 0 }}>削除</button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
