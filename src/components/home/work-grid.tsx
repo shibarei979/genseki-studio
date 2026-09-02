@@ -402,6 +402,18 @@ function WorkCard({
 
             {isMenuOpen && (
                 <div className="absolute right-3 top-11 z-20 w-40 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-lg">
+                    {/*
+                     * ★ 読者と同じ形で開く道を、ここにも置く。
+                     *   一覧からは執筆画面へしか行けなかった。
+                     */}
+                    <Link
+                        href={`/novel/${work.id}`}
+                        target="_blank"
+                        rel="noopener"
+                        className="block px-4 py-2 text-xs text-ink hover:bg-canvas"
+                    >
+                        読者の目で見る
+                    </Link>
                     <Link
                         href={`/workspace/${work.id}`}
                         className="block px-4 py-2 text-xs text-ink hover:bg-canvas"

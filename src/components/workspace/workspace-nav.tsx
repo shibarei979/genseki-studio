@@ -103,6 +103,23 @@ export default function WorkspaceNav({ workId, current, episodeId, alwaysOpen = 
                 label="投稿"
                 isActive={current === "post"}
             />
+
+            {/*
+             * 読者の目で見る。
+             *
+             * ★ 自分の作品を読者と同じ形で開く道が、執筆側に無かった。
+             *   作者は毎回「作品を探す」から自分の作品を掘り出していた。
+             *
+             * 別の頁で開く。書きかけの画面を閉じさせない。
+             */}
+            <Link
+                href={`/novel/${workId}`}
+                target="_blank"
+                rel="noopener"
+                className="block rounded-md border border-line px-3 py-2 text-center text-[13px] text-muted hover:bg-canvas"
+            >
+                読者の目で見る
+            </Link>
             </div>
         </div>
     );

@@ -864,7 +864,20 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
             selecting={selecting} onQuote={handleQuote} onAfterQuote={handleAfterQuote}/>
         ) : (
           <>
-            <div style={{padding:'32px 48px 40px'}}>
+            {/*
+              * 横書きの本文。
+              *
+              * ★ 1 行は 40 字ほどで折り返す。
+              *
+              *   画面いっぱいに広げていたので、大きい画面では
+              *   1 行が 70 字を超えていた。行の終わりから次の行の頭へ
+              *   目を戻すとき、どこを読んでいたか見失う。
+              *   紙の本は 40 字前後で組まれている。
+              *
+              *   1em ＝ 1 文字ぶんなので、40em に左右の余白を足して上限にする。
+              *   字を大きくすると幅も一緒に広がり、字数は 40 のまま保たれる。
+              */}
+            <div style={{padding:'32px 48px 40px',maxWidth:'calc(40em + 96px)',margin:'0 auto'}}>
               {/*
                 * 横書きのときの挿絵。
                 *
@@ -1177,7 +1190,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
             <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>あとがき</span>
             {authorName && <span style={{fontSize:11,color:'var(--color-text-muted)',marginLeft:'auto'}}>{authorName}</span>}
           </div>
-          <div style={{padding:'16px 20px',fontSize:14,color:'var(--color-text)',lineHeight:1.9,whiteSpace:'pre-wrap'}}>
+          <div style={{padding:'16px 20px',maxWidth:'calc(40em + 40px)',margin:'0 auto',fontSize:14,color:'var(--color-text)',lineHeight:1.9,whiteSpace:'pre-wrap'}}>
             {afterword}
           </div>
         </div>
