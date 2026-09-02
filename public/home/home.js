@@ -82,32 +82,9 @@ class LayoutCalc {
     static CENTER_MIN_SCALE = 1;
 
     /* 真ん中の本の左右に空ける幅。寸法と同じ割合で縮める */
-    static get CENTER_MARGIN() {
-        if (typeof window === "undefined") return 200;
-
-        /*
-         * 真ん中の本の左右に空ける幅。
-         *
-         * 携帯では詰める。200 のままだと、
-         * そのぶん両脇が外へ押し出される。
-         */
-        const shelf = document.querySelector(".bookshelf-loop");
-        const w = shelf?.clientWidth || window.innerWidth;
-
-        return w < 1024 ? 20 : 200;
-    }
-    /*
-     * 帯の最小の幅。
-     *
-     * ★ 一度きりの計算にしない。
-     *   冊数と余白が画面の幅で変わるので、
-     *   古い値のまま残ると帯だけ広いままになる。
-     */
-    static get TRACK_MIN_WIDTH() {
-        return (this.B_DEPTH * this.B_SIDE_COUNT * 2)
-            + (this.B_WIDTH * this.CENTER_MIN_SCALE)
-            + (this.CENTER_MARGIN * 2);
-    }
+    /* 真ん中の本の左右に空ける幅 */
+    static CENTER_MARGIN = 200;
+    static TRACK_MIN_WIDTH = (this.B_DEPTH * this.B_SIDE_COUNT * 2) + (this.B_WIDTH * this.CENTER_MIN_SCALE) + (this.CENTER_MARGIN * 2);
 
     //==================================================
     // Calculate
@@ -406,15 +383,6 @@ class BookshelfLoop {
         //------------------------------------------
         // Calculate
         //------------------------------------------
-        /*
-         * 位置の名前を作り直す。
-         *
-         * ★ 両脇の冊数が画面の幅で変わる。
-         *   組み立てた時の冊数で作った名前のままだと、
-         *   幅が変わったときに足りない・余る。
-         */
-        this.positionClasses = this.createPositionClasses();
-
         this.layout = LayoutCalc.calculate(this.root);
         /* 次に測り直すか判断するため、いまの幅を覚える */
         this._lastWidth = this.root.clientWidth;
