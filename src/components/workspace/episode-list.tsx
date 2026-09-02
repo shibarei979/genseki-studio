@@ -375,6 +375,8 @@ export default function EpisodeList({
                 onDrop={() => handleDrop(episode.id)}
                 className={[
                     "group relative mb-1 flex items-center gap-2 rounded-md px-2 py-2",
+                    /* 移す先を選んでいる間は、ほかを目立たせない */
+                    movingId && movingId !== episode.id ? "opacity-60" : "",
                     isSelected ? "bg-forest-tint" : "hover:bg-canvas",
                     isOver
                         ? "border-t-2 border-forest"
@@ -397,12 +399,18 @@ export default function EpisodeList({
                   * 「ここへ」の押し具に変える。
                   */}
                 {movingId && movingId !== episode.id ? (
+                    /*
+                     * ★ 行の上に重ねる。
+                     *
+                     *   横に並べると、その幅だけ題名の場所が減る。
+                     *   実際、題名が 1 文字ずつ折り返して読めなくなった。
+                     */
                     <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); moveAfter(episode.id) }}
-                        className="shrink-0 rounded border border-forest px-2 py-0.5 text-[10px] text-forest"
+                        className="absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded border border-forest bg-surface px-2 py-0.5 text-[10px] text-forest shadow-sm"
                     >
-                        この下へ
+                        ここへ
                     </button>
                 ) : null}
 
@@ -457,7 +465,8 @@ export default function EpisodeList({
                 )}
 
                 {movingId === episode.id && (
-                    <span className="flex shrink-0 items-center gap-1.5">
+                    /* 動かしている話。行の上に重ねて出す */
+                    <span className="absolute inset-x-1 top-1/2 z-10 flex -translate-y-1/2 items-center justify-between gap-1.5 rounded bg-forest-tint px-1.5 py-1">
                         <span className="rounded bg-forest px-2 py-0.5 text-[10px] text-white">
                             移す話
                         </span>
