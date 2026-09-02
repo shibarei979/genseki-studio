@@ -513,10 +513,15 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                *
                * 表紙だけ上に大きく出すと、あらすじまで指を送ることになる。
                * 絵と文が並んでいるほうが、どんな話か一目で掴める。
-               * 表紙が無いときは、1話目の挿絵を借りる。
                * 狭い画面では縦に積む。
+               *
+               * ★ 表紙が無いときに、1話目の挿絵を借りるのはやめた。
+               *
+               *   作者は表紙として登録していない絵が出るとは思っていない。
+               *   挿絵を本文の途中に置けるようになって、
+               *   なおさら「なぜこの絵が表紙に」と見える。
                */
-              const coverImg = novel.cover_url || (episodesRes.data || []).find((e: any) => e.is_published === true && e.illust_url)?.illust_url
+              const coverImg = novel.cover_url
               if (!coverImg && !novel.summary) return null
 
               return (

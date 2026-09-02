@@ -646,8 +646,14 @@ function IllustBlock({ url, isAi, size }: { url: string; isAi?: boolean; size?: 
           style={{maxHeight:illustBox('desktopHorizontal',size).maxHeight,
             maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
         {isAi && (
-          <span style={{position:'absolute',right:6,top:6,background:'rgba(0,0,0,.55)',
-            color:'#fff',fontSize:10,padding:'2px 6px',borderRadius:4}}>AI</span>
+          /* 表紙・挿絵と同じ印を使う。別の形にすると、何の印か伝わらない */
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+            style={{position:'absolute',top:-5,right:-5,
+              width:illustBox('desktopHorizontal',size).stamp,
+              height:illustBox('desktopHorizontal',size).stamp,
+              transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+              filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
         )}
       </span>
     </span>
