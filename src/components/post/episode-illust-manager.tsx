@@ -178,9 +178,7 @@ export default function EpisodeIllustManager({ novelId, episodeId, body }: Props
                                         type="button"
                                         onClick={() =>
                                             router.push(
-                                                `/workspace/${novelId}?ep=${episodeId}` +
-                                                    `&illust=${illust.id}` +
-                                                    `&illustUrl=${encodeURIComponent(illust.url)}`,
+                                                `/workspace/${novelId}?ep=${episodeId}&illust=${illust.id}`,
                                             )
                                         }
                                         className="rounded border border-line px-2 py-0.5 text-[10.5px] text-muted hover:border-forest-line hover:text-forest"

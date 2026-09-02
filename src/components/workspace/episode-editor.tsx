@@ -41,8 +41,6 @@ interface Props {
      *   蛍光ペンと同じ扱い。
      */
     illustPlacingId?: string | null;
-    /** その絵。何を置くのか見せるために渡す */
-    illustPlacingUrl?: string | null;
     /** 足す先の資料の名前。何に足しているかを見せる */
     pickEntryName?: string;
     settings: DisplaySettings;
@@ -71,7 +69,6 @@ export default function EpisodeEditor({
     episode,
     pickEntryId = null,
     illustPlacingId = null,
-    illustPlacingUrl = null,
     pickEntryName = "この資料",
     settings,
     onSave,
@@ -739,7 +736,6 @@ export default function EpisodeEditor({
                       */
                     <IllustPlaceSurface
                         body={body}
-                        illustUrl={illustPlacingUrl}
                         onPlace={async (afterSentence, anchorText) => {
                             await getRepository().moveEpisodeIllust(
                                 illustPlacingId,
