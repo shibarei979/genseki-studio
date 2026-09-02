@@ -128,6 +128,51 @@ export default function WorkspaceClient({ workId }: Props) {
      */
     const [isListOpen, setIsListOpen] = useState(false);
 
+    /**
+     * 章に入れて、その章の最後へ動かす。
+     *
+     * ★ 章に入れるだけでは、並びは変わらない。
+     *
+     *   並びを決めるのは話の番号だけ。
+     *   あとから作った話は番号が最後なので、
+     *   章に入れても離れた場所に残る。
+     *   その結果、同じ章の見出しが 2 回出て
+     *   分裂したように見えていた。
+     *
+     * ★ 章から出すときは動かさない。
+     *   どこへ置きたいかが分からないため。
+     */
+    async function assignChapterAndSort(
+        episodeId: string,
+        chapterId: string | null,
+    ) {
+        await updateEpisode(episodeId, { chapter_id: chapterId });
+
+        if (!chapterId) return;
+
+        /* その章の話（いま入れたものを除く） */
+        const inChapter = episodes.filter(
+            (one) => one.chapter_id === chapterId && one.id !== episodeId,
+        );
+        if (inChapter.length === 0) return;
+
+        /* 章の最後の話 */
+        const last = inChapter[inChapter.length - 1];
+
+        const order = episodes.map((one) => one.id);
+        const from = order.indexOf(episodeId);
+        if (from < 0) return;
+
+        const next = [...order];
+        next.splice(from, 1);
+
+        const to = next.indexOf(last.id);
+        if (to < 0) return;
+        next.splice(to + 1, 0, episodeId);
+
+        await reorderEpisodes(next);
+    }
+
     const {
         episodes,
         isLoading: isEpisodesLoading,
@@ -493,9 +538,7 @@ export default function WorkspaceClient({ workId }: Props) {
                                     void updateEpisode(episodeId, { title })
                                 }
                                 onAssignChapter={(episodeId, chapterId) =>
-                                    void updateEpisode(episodeId, {
-                                        chapter_id: chapterId,
-                                    })
+                                    void assignChapterAndSort(episodeId, chapterId)
                                 }
                                 onDeleteMany={(ids) => {
                                     void (async () => {
