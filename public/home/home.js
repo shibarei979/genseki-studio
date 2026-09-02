@@ -15,21 +15,16 @@ class LayoutCalc {
 
     static B_WIDTH = 245 * 0.9;
     static B_HEIGHT = 300 * 0.9;
-    static get B_DEPTH() {
-        if (typeof window === "undefined") return 60 * 0.9;
-
-        /*
-         * 背表紙の厚み。
-         *
-         * ★ 携帯では細くする。
-         *   54px あると、両脇の 2 冊で画面の 3 割を占める。
-         *   真ん中の本が窮屈に見える。
-         */
-        const shelf = document.querySelector(".bookshelf-loop");
-        const w = shelf?.clientWidth || window.innerWidth;
-
-        return w < 1024 ? 32 : 60 * 0.9;
-    }
+    /*
+     * 背表紙の厚み。
+     *
+     * ★ 触らないこと。
+     *
+     *   携帯だけ細くしたら、本が重なって散らばった。
+     *   位置の計算がこの値から出ているので、
+     *   ここを変えると並びが食い違う。
+     */
+    static B_DEPTH = 60 * 0.9;
 
     /*
      * 左右に並べる冊数。
