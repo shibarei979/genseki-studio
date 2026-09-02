@@ -191,10 +191,19 @@ export function defaultChapter(id: string, workId: string, order: number): Chapt
     };
 }
 
-/** 「第一章」のような見出し。番号は漢数字で出す */
+/**
+ * 章の見出し。
+ *
+ * ★ 名前が付いていれば、名前だけを出す。
+ *
+ *   前は「第一章　序章」と番号を頭に足していた。
+ *   作者が「序章」と名付けたのに「第一章」が消えず、
+ *   直したつもりが変わらないように見えていた。
+ *
+ *   名前が無いときだけ、番号で代わりを務める。
+ */
 export function formatChapterLabel(chapter: Chapter, index: number): string {
-    const number = toKanji(index + 1);
-    return chapter.title ? `第${number}章　${chapter.title}` : `第${number}章`;
+    return chapter.title || `第${toKanji(index + 1)}章`;
 }
 
 /** 1〜99 を漢数字に。章立てでこれ以上は使わない */

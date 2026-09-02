@@ -33,7 +33,6 @@ import {
     buildChapterGroups,
     formatChapterNumber,
     formatPartNumber,
-    hasOwnNumber,
     orderedEpisodeIds,
 } from "./chapter-tree";
 
@@ -858,11 +857,13 @@ export default function EpisodeList({
                                 {/*
                                  * 番号の札。
                                  *
-                                 * 作者が名前に番号を入れているときは出さない。
-                                 * 「第二章」という名前に「第一章」の札が付き、
-                                 * 二重に見えていた。
+                                 * ★ 名前が付いたら出さない。
+                                 *
+                                 *   「序章」と名付けても「第一章」の札が残り、
+                                 *   名前を直したのに変わっていないように見えた。
+                                 *   名前が無い章だけ、番号で場所を示す。
                                  */}
-                                {chapter && !hasOwnNumber(chapter.title) && (
+                                {chapter && !chapter.title?.trim() && (
                                     <span
                                         className={[
                                             "shrink-0 rounded px-1 py-0.5 text-[9px] leading-none",
