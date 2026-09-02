@@ -743,7 +743,20 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
   return (
     <>
       <SpeechPanel title={title} body={body} isMobile={false}/>
-      <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
+      {/*
+        * 本文の枠。
+        *
+        * ★ 幅の上限は、枠そのものに掛ける。
+        *
+        *   前は中の文字だけを 40 字で折り返していた。
+        *   枠は画面いっぱいのままなので、左右に白い余りが出て
+        *   文章が真ん中に浮いて見えた。
+        *
+        *   字の大きさ × 40 字 ＋ 左右の余白。
+        *   読む人が字を大きくすると枠も広がり、字数は 40 のまま保たれる。
+        */}
+      <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16,
+        maxWidth: settings.fontSize * 40 + 96, marginLeft:'auto', marginRight:'auto'}}>
         <div style={{padding:'8px 16px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
           {/*
            * 作者のすすめは、設定の中で出す。
@@ -877,7 +890,7 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
               *   1em ＝ 1 文字ぶんなので、40em に左右の余白を足して上限にする。
               *   字を大きくすると幅も一緒に広がり、字数は 40 のまま保たれる。
               */}
-            <div style={{padding:'32px 48px 40px',maxWidth:'calc(40em + 96px)',margin:'0 auto'}}>
+            <div style={{padding:'32px 48px 40px'}}>
               {/*
                 * 横書きのときの挿絵。
                 *
@@ -1137,7 +1150,14 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
             {(selecting || marking || marks.length > 0) ? (
               sentences.map((raw, idx) => {
                 if (raw === '\n') return <br key={idx}/>
-                const isHover = hoverIdx === idx
+                /*
+                 * ★ 何もしていないときは色を変えない。
+                 *
+                 *   栞が 1 つでもあると文ごとに分けているので、
+                 *   ふだん読んでいるだけでも文が光っていた。
+                 *   押しても何も起きないのに、押せるように見える。
+                 */
+                const isHover = (selecting || marking) && hoverIdx === idx
                 const mark = marks.find(one => one.sentence === idx)
                 return (
                   <span key={idx}
@@ -1190,7 +1210,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
             <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>あとがき</span>
             {authorName && <span style={{fontSize:11,color:'var(--color-text-muted)',marginLeft:'auto'}}>{authorName}</span>}
           </div>
-          <div style={{padding:'16px 20px',maxWidth:'calc(40em + 40px)',margin:'0 auto',fontSize:14,color:'var(--color-text)',lineHeight:1.9,whiteSpace:'pre-wrap'}}>
+          <div style={{padding:'16px 20px',fontSize:14,color:'var(--color-text)',lineHeight:1.9,whiteSpace:'pre-wrap'}}>
             {afterword}
           </div>
         </div>
