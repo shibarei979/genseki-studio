@@ -16,7 +16,18 @@
  */
 
 /** 輪の色。意味のある2色だけに絞る */
-const DONUT_COLORS = ['var(--admin-stat-blue)', 'var(--admin-stat-amber)']
+/*
+ * 輪の色。
+ *
+ * ★ 上の「登録者数・投稿数の推移」と同じにする。
+ *
+ *   あちらは 読者＝青、作者＝橙。
+ *   ここは並びが [作家, 読者] なので、
+ *   橙・青の順に置かないと逆になる。
+ *
+ *   実際、同じ画面で色が逆になっていた。
+ */
+const DONUT_COLORS = ['var(--admin-stat-amber)', 'var(--admin-stat-blue)']
 
 export function UserDonut({
     authorCount,

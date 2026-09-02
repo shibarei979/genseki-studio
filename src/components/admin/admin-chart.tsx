@@ -156,14 +156,14 @@ export default function AdminChart({ data30, data180, data365, data1825, initial
                 * 並べると「登録がいくつあったか」を
                 * 2 本足して読むことになる。
                 */}
-              <Bar dataKey="readers" name="readers" stackId="join" fill="#3b82f6" radius={[0,0,0,0]}/>
-              <Bar dataKey="authors" name="authors" stackId="join" fill="#f59e0b" radius={[2,2,0,0]}/>
+              <Bar dataKey="readers" name="readers" stackId="join" fill="#2563eb" radius={[0,0,0,0]}/>
+              <Bar dataKey="authors" name="authors" stackId="join" fill="#d97706" radius={[2,2,0,0]}/>
               <Bar dataKey="novels"  name="novels"  fill="#10b981" radius={[2,2,0,0]}/>
             </>
           ) : (
             <>
-              <Line dataKey="readers" name="readers" stroke="#3b82f6" strokeWidth={2} dot={false}/>
-              <Line dataKey="authors" name="authors" stroke="#f59e0b" strokeWidth={2} dot={false}/>
+              <Line dataKey="readers" name="readers" stroke="#2563eb" strokeWidth={2} dot={false}/>
+              <Line dataKey="authors" name="authors" stroke="#d97706" strokeWidth={2} dot={false}/>
               <Line dataKey="novels"  name="novels"  stroke="#10b981" strokeWidth={2} dot={false}/>
             </>
           )}
