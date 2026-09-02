@@ -198,42 +198,6 @@ export default function EpisodeList({
         );
     }
 
-    /*
-     * 遠くへ移すときの相手。
-     *
-     * ★ ▲▼ だけでは足りない。
-     *
-     *   49 番目の話を 8 番目へ動かすには、
-     *   40 回ほど押すことになる。
-     *   あとから話を挿し込む場面では、
-     *   たいてい遠くへ動かす。
-     */
-    const [movingId, setMovingId] = useState<string | null>(null);
-
-    /** 選んだ話の後ろへ移す */
-    function moveAfter(targetId: string | null) {
-        if (!movingId) return;
-
-        const order = orderedEpisodeIds(chapters, episodes);
-        const from = order.indexOf(movingId);
-        if (from < 0) { setMovingId(null); return }
-
-        const next = [...order];
-        next.splice(from, 1);
-
-        if (targetId === null) {
-            /* いちばん先頭へ */
-            next.unshift(movingId);
-        } else {
-            const to = next.indexOf(targetId);
-            if (to < 0) { setMovingId(null); return }
-            next.splice(to + 1, 0, movingId);
-        }
-
-        onReorder(next);
-        setMovingId(null);
-    }
-
     /**
      * 1 つ上（または下）へ動かす。
      *
@@ -376,7 +340,6 @@ export default function EpisodeList({
                 className={[
                     "group relative mb-1 flex items-center gap-2 rounded-md px-2 py-2",
                     /* 移す先を選んでいる間は、ほかを目立たせない */
-                    movingId && movingId !== episode.id ? "opacity-60" : "",
                     isSelected ? "bg-forest-tint" : "hover:bg-canvas",
                     isOver
                         ? "border-t-2 border-forest"
@@ -398,21 +361,6 @@ export default function EpisodeList({
                   * 移す先を選んでいる間は、
                   * 「ここへ」の押し具に変える。
                   */}
-                {movingId && movingId !== episode.id ? (
-                    /*
-                     * ★ 行の上に重ねる。
-                     *
-                     *   横に並べると、その幅だけ題名の場所が減る。
-                     *   実際、題名が 1 文字ずつ折り返して読めなくなった。
-                     */
-                    <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); moveAfter(episode.id) }}
-                        className="absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded border border-forest bg-surface px-2 py-0.5 text-[10px] text-forest shadow-sm"
-                    >
-                        ここへ
-                    </button>
-                ) : null}
 
                 {/*
                   * ★ 行の上に重ねて置く。
@@ -424,7 +372,7 @@ export default function EpisodeList({
                   *   重ねれば幅を取らない。
                   *   指を置いたときだけ出す。
                   */}
-                {!isPicking && !movingId && (
+                {!isPicking && (
                     <span className="absolute -left-0.5 top-1/2 z-10 flex -translate-y-1/2 flex-col rounded bg-surface/95 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                         <button
                             type="button"
@@ -447,45 +395,7 @@ export default function EpisodeList({
                     </span>
                 )}
 
-                {/*
-                  * 遠くへ移す。
-                  *
-                  * 押すと、ほかの話に「この下へ」が出る。
-                  * それを押すと、そこへ入る。
-                  */}
-                {!isPicking && !movingId && (
-                    <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setMovingId(episode.id) }}
-                        title="ほかの場所へ移します"
-                        className="absolute -right-0.5 top-1/2 z-10 -translate-y-1/2 rounded bg-surface/95 px-1.5 py-0.5 text-[10px] text-faint opacity-0 shadow-sm transition-opacity hover:text-forest group-hover:opacity-100"
-                    >
-                        移す
-                    </button>
-                )}
 
-                {movingId === episode.id && (
-                    /* 動かしている話。行の上に重ねて出す */
-                    <span className="absolute inset-x-1 top-1/2 z-10 flex -translate-y-1/2 items-center justify-between gap-1.5 rounded bg-forest-tint px-1.5 py-1">
-                        <span className="rounded bg-forest px-2 py-0.5 text-[10px] text-white">
-                            移す話
-                        </span>
-                        <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); moveAfter(null) }}
-                            className="rounded border border-line px-2 py-0.5 text-[10px] text-muted"
-                        >
-                            先頭へ
-                        </button>
-                        <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setMovingId(null) }}
-                            className="rounded border border-line px-2 py-0.5 text-[10px] text-muted"
-                        >
-                            やめる
-                        </button>
-                    </span>
-                )}
 
                 {/* 選んでいる間は、つまみの代わりに丸を出す */}
                 {isPicking ? (
