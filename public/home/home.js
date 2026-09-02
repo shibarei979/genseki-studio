@@ -15,7 +15,21 @@ class LayoutCalc {
 
     static B_WIDTH = 245 * 0.9;
     static B_HEIGHT = 300 * 0.9;
-    static B_DEPTH = 60 * 0.9;
+    static get B_DEPTH() {
+        if (typeof window === "undefined") return 60 * 0.9;
+
+        /*
+         * 背表紙の厚み。
+         *
+         * ★ 携帯では細くする。
+         *   54px あると、両脇の 2 冊で画面の 3 割を占める。
+         *   真ん中の本が窮屈に見える。
+         */
+        const shelf = document.querySelector(".bookshelf-loop");
+        const w = shelf?.clientWidth || window.innerWidth;
+
+        return w < 1024 ? 32 : 60 * 0.9;
+    }
 
     /*
      * 左右に並べる冊数。
@@ -54,28 +68,19 @@ class LayoutCalc {
      * 縮めたぶん 1 冊が細くなるので、10 のままだと
      * 帯が横に伸びすぎる。
      */
-    static get B_SIDE_COUNT() {
-        if (typeof window === "undefined") return 10;
-
-        /*
-         * ★ 携帯では 3 冊。
-         *
-         *   1 冊が 220px あるので、10 冊ぶんの厚み
-         *   （54 × 10 × 2 = 1080px）を並べると
-         *   帯が 1700px になり、両脇が画面の外へ出る。
-         *   実際、真ん中の 1 冊しか見えていなかった。
-         *
-         *   3 冊なら帯が 585px に収まり、
-         *   左右に 1 冊ずつ顔を出す。
-         *
-         * ★ 本棚の本の数（25）より、
-         *   3 × 2 + 1 = 7 冊しか要らないので足りる。
-         */
-        const shelf = document.querySelector(".bookshelf-loop");
-        const w = shelf?.clientWidth || window.innerWidth;
-
-        return w < 1024 ? 3 : 10;
-    }
+    /*
+     * 両脇に並べる冊数。
+     *
+     * ★ 減らしてはいけない。
+     *
+     *   3 にしたら、入れ替わるたびに本が端から端まで動き、
+     *   たくさんの本が前を通るようになった。
+     *   冊数が少ないほど、1 回の動きが大きくなる。
+     *
+     *   両脇が画面に入るかどうかは、
+     *   冊数ではなく CENTER_MARGIN で決まる。
+     */
+    static B_SIDE_COUNT = 10;
     static B_OVERFLOW_COUNT = 1.5;
 
     static SCALE = 1;
