@@ -79,6 +79,8 @@ export default function EpisodeIllustManager({ novelId, episodeId, body }: Props
     /** 置き場所を選んでいる絵。null なら選んでいない */
     const [placing, setPlacing] = useState<EpisodeIllust | null>(null);
     const [hoverAt, setHoverAt] = useState<number | null>(null);
+    /** 押して、確かめ待ちの場所。携帯には指を置く動きが無いので要る */
+    const [askAt, setAskAt] = useState<number | null>(null);
 
     const sentences = splitIntoSentences(body);
 
@@ -136,6 +138,7 @@ export default function EpisodeIllustManager({ novelId, episodeId, body }: Props
         await getRepository().moveEpisodeIllust(placing.id, at, anchor);
         setPlacing(null);
         setHoverAt(null);
+        setAskAt(null);
         await reload();
     }
 
@@ -187,6 +190,7 @@ export default function EpisodeIllustManager({ novelId, episodeId, body }: Props
                                         onClick={() => {
                                             setPlacing(illust);
                                             setHoverAt(null);
+                                            setAskAt(null);
                                         }}
                                         className="rounded border border-line px-2 py-0.5 text-[10.5px] text-muted hover:border-forest-line hover:text-forest"
                                     >
@@ -272,7 +276,9 @@ export default function EpisodeIllustManager({ novelId, episodeId, body }: Props
                             <Gap
                                 at={0}
                                 hoverAt={hoverAt}
+                                askAt={askAt}
                                 onHover={setHoverAt}
+                                onAsk={setAskAt}
                                 onPick={handlePlace}
                                 label="本文の頭"
                             />
@@ -290,7 +296,9 @@ export default function EpisodeIllustManager({ novelId, episodeId, body }: Props
                                     <Gap
                                         at={idx + 1}
                                         hoverAt={hoverAt}
+                                        askAt={askAt}
                                         onHover={setHoverAt}
+                                        onAsk={setAskAt}
                                         onPick={handlePlace}
                                     />
                                 </div>
@@ -306,23 +314,60 @@ export default function EpisodeIllustManager({ novelId, episodeId, body }: Props
 /**
  * 文と文のあいだ。
  *
- * ふだんは何も見えない。指を置くと線が出る。
- * 高さを取っておかないと、狙って押せない。
+ * ★ 線はいつも薄く出しておく。
+ *
+ *   指を置いたときだけ出す形にしていたが、
+ *   携帯には「指を置く」動きが無い。
+ *   どこを押せばよいのか分からなかった。
+ *
+ * ★ 押したら、その場で確かめる。
+ *
+ *   狭い画面では狙いが外れやすい。
+ *   1 つ下の線に入ってしまっても、決める前なら選び直せる。
  */
 function Gap({
     at,
     hoverAt,
+    askAt,
     onHover,
+    onAsk,
     onPick,
     label,
 }: {
     at: number;
     hoverAt: number | null;
+    askAt: number | null;
     onHover: (at: number | null) => void;
+    onAsk: (at: number | null) => void;
     onPick: (at: number) => void;
     label?: string;
 }) {
     const isOn = hoverAt === at;
+    const isAsking = askAt === at;
+
+    if (isAsking) {
+        return (
+            <div className="my-1 flex items-center gap-2 rounded-md border border-forest bg-forest-tint/40 px-2.5 py-2">
+                <span className="min-w-0 flex-1 text-[11.5px] text-ink">
+                    {label ? "本文の頭に入れますか" : "ここに入れますか"}
+                </span>
+                <button
+                    type="button"
+                    onClick={() => onAsk(null)}
+                    className="shrink-0 rounded border border-line bg-surface px-2.5 py-1 text-[11px] text-muted"
+                >
+                    やめる
+                </button>
+                <button
+                    type="button"
+                    onClick={() => void onPick(at)}
+                    className="shrink-0 rounded bg-forest px-3 py-1 text-[11px] text-white"
+                >
+                    ここにする
+                </button>
+            </div>
+        );
+    }
 
     return (
         <button
@@ -330,20 +375,20 @@ function Gap({
             onMouseEnter={() => onHover(at)}
             onMouseLeave={() => onHover(null)}
             onFocus={() => onHover(at)}
-            onClick={() => void onPick(at)}
-            className="flex w-full items-center gap-2 py-1"
+            onClick={() => onAsk(at)}
+            className="flex w-full items-center gap-2 py-1.5"
             aria-label={label ?? `${at}文目の後ろに入れる`}
         >
             <span
                 className={[
                     "h-[2px] flex-1 rounded",
-                    isOn ? "bg-forest" : "bg-transparent",
+                    isOn ? "bg-forest" : "bg-line",
                 ].join(" ")}
             />
             <span
                 className={[
                     "shrink-0 text-[10px]",
-                    isOn ? "text-forest" : "text-transparent",
+                    isOn ? "text-forest" : "text-faint",
                 ].join(" ")}
             >
                 {label ?? "ここに入れる"}
