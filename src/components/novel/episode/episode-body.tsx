@@ -42,6 +42,14 @@ interface Props {
 const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
 
 /**
+ * 横書きの本文の枠の幅。
+ *
+ * 一番大きい字（特大 21px）で 40 字ぶん ＋ 左右の余白。
+ * 字を小さくしても、この幅のまま据え置く。
+ */
+const FRAME_WIDTH = 21 * 40 + 96
+
+/**
  * 読む側の横書き用に、見た目だけ整える。
  *
  * 縦書きで書かれた原稿は、英数字が全角だったり
@@ -752,11 +760,24 @@ export default function EpisodeBody({ novelId, illustUrl, illustIsAi, illustSize
         *   枠は画面いっぱいのままなので、左右に白い余りが出て
         *   文章が真ん中に浮いて見えた。
         *
-        *   字の大きさ × 40 字 ＋ 左右の余白。
-        *   読む人が字を大きくすると枠も広がり、字数は 40 のまま保たれる。
+        *   幅は「特大（21px）× 40 字」で固定する。
+        *
+        * ★ 字を小さくしても枠は縮めない。
+        *
+        *   枠が伸び縮みすると、字の大きさを変えるたびに
+        *   頁ごと形が変わって落ち着かない。
+        *   枠は据え置き、中の文は左から並べる。
+        *
+        * ★ 縦書きには掛けない。
+        *
+        *   縦書きは右から左へ行が進むので、幅を狭めると
+        *   読める行数が減り、横へ送る回数が増える。
+        *   1 行の長さを決めるのは、縦書きでは高さのほう。
         */}
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16,
-        maxWidth: settings.fontSize * 40 + 96, marginLeft:'auto', marginRight:'auto'}}>
+        maxWidth: vertical ? undefined : FRAME_WIDTH,
+        marginLeft: vertical ? undefined : 'auto',
+        marginRight: vertical ? undefined : 'auto'}}>
         <div style={{padding:'8px 16px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
           {/*
            * 作者のすすめは、設定の中で出す。
