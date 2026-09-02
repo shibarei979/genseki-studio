@@ -5,6 +5,7 @@ import { illustBox } from '@/config/illust-size'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby, stripRuby } from '@/lib/utils/ruby'
+import { splitIntoSentences } from '@/lib/utils/sentences'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 import MobileEpisodeBody from '@/components/novel/episode/mobile-episode-body'
 import { useQuote } from '@/components/novel/episode/quote-context'
@@ -507,27 +508,7 @@ function SpeechPanel({ title, body, isMobile }: { title: string; body: string; i
 }
 
 // ===== 文単位コメント機能 =====
-function splitIntoSentences(text: string): string[] {
-  const result: string[] = []
-  let buf = ''
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]
-    buf += ch
-    const isEnder = ch === '。' || ch === '！' || ch === '？' || ch === '」' || ch === '』'
-    const next = text[i+1]
-    if (ch === '\n') {
-      result.push(buf)
-      buf = ''
-      continue
-    }
-    if (isEnder && next !== '」' && next !== '』') {
-      result.push(buf)
-      buf = ''
-    }
-  }
-  if (buf) result.push(buf)
-  return result.filter(s => s.length > 0)
-}
+/* 分け方は @/lib/utils/sentences に 1 か所だけ置いている */
 
 function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts = [], illustSize, fontSize, lineHeight, fontFamily, onQuote, selecting, onAfterQuote }: {
   /** 話の中の挿絵。何文目の後ろに置くかを持っている */

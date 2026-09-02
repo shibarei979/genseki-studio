@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { stripRuby } from "@/lib/utils/ruby";
+import { splitIntoSentences } from "@/lib/utils/sentences";
 
 /**
  * ============================================================
@@ -26,34 +27,6 @@ import { stripRuby } from "@/lib/utils/ruby";
  * ============================================================
  */
 
-/** 文の切れ目で分ける。蛍光ペン・引用と同じ決まり */
-function splitIntoSentences(text: string): string[] {
-    const result: string[] = [];
-    let buf = "";
-
-    for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        buf += ch;
-
-        const isEnder =
-            ch === "。" || ch === "！" || ch === "？" || ch === "!" || ch === "?";
-        const next = text[i + 1];
-
-        if (ch === "\n") {
-            result.push(buf);
-            buf = "";
-            continue;
-        }
-
-        if (isEnder && next !== "」" && next !== "』") {
-            result.push(buf);
-            buf = "";
-        }
-    }
-
-    if (buf) result.push(buf);
-    return result.filter((s) => s.length > 0);
-}
 
 export default function IllustPlaceSurface({
     body,

@@ -28,6 +28,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getRepository } from "@/lib/repository";
 import { shrinkImage } from "@/lib/storage/image-store";
 import { uploadImage } from "@/lib/storage/remote-image";
+import { splitIntoSentences } from "@/lib/utils/sentences";
 import type { EpisodeIllust } from "@/types";
 
 interface Props {
@@ -37,39 +38,6 @@ interface Props {
     body: string;
 }
 
-/**
- * 本文を文で分ける。
- *
- * ★ 読む画面と同じ分け方にすること。
- *   分け方が違うと、置いた場所と出る場所がずれる。
- */
-export function splitIntoSentences(text: string): string[] {
-    const result: string[] = [];
-    let buf = "";
-
-    for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        buf += ch;
-
-        const isEnder =
-            ch === "。" || ch === "！" || ch === "？" || ch === "」" || ch === "』";
-        const next = text[i + 1];
-
-        if (ch === "\n") {
-            result.push(buf);
-            buf = "";
-            continue;
-        }
-
-        if (isEnder && next !== "」" && next !== "』") {
-            result.push(buf);
-            buf = "";
-        }
-    }
-
-    if (buf) result.push(buf);
-    return result;
-}
 
 export default function EpisodeIllustManager({ novelId, episodeId, body }: Props) {
     const router = useRouter();
