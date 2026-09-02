@@ -198,6 +198,36 @@ export default function EpisodeList({
         );
     }
 
+    /**
+     * 1 つ上（または下）へ動かす。
+     *
+     * ★ つまんで動かす操作は、携帯でできない。
+     *   指では別の動き（画面を送る）になってしまう。
+     *
+     * ★ パソコンでも気づかれにくい。
+     *   実際、並べ替えが無いと思われていた。
+     *
+     * 押し具なら、どこでも同じように使える。
+     */
+    function moveBy(episodeId: string, step: -1 | 1) {
+        /*
+         * 画面に見えている順で数える。
+         *
+         * 章を作ると、見えている順は章ごとに束ねた順になり、
+         * 配列の順（ep_number 順）とずれる。
+         */
+        const order = orderedEpisodeIds(chapters, episodes);
+        const from = order.indexOf(episodeId);
+        if (from < 0) return;
+
+        const to = from + step;
+        if (to < 0 || to >= order.length) return;
+
+        const next = [...order];
+        [next[from], next[to]] = [next[to], next[from]];
+        onReorder(next);
+    }
+
     function handleDrop(targetId: string) {
         if (!draggingId || draggingId === targetId) {
             setDraggingId(null);
@@ -316,6 +346,39 @@ export default function EpisodeList({
                     draggingId === episode.id ? "opacity-40" : "",
                 ].join(" ")}
             >
+                {/*
+                  * 上下へ動かす押し具。
+                  *
+                  * ★ つまんで動かす操作は、携帯でできない。
+                  *   指では画面を送る動きになってしまう。
+                  *   パソコンでも気づかれにくい。
+                  *
+                  * ★ 選んでいる間は出さない。
+                  *   まとめて動かす作業と混ざる。
+                  */}
+                {!isPicking && (
+                    <span className="flex shrink-0 flex-col">
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); moveBy(episode.id, -1) }}
+                            title="1つ上へ"
+                            aria-label="1つ上へ動かす"
+                            className="flex h-3.5 w-4 items-center justify-center text-[9px] leading-none text-faint hover:text-forest"
+                        >
+                            ▲
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); moveBy(episode.id, 1) }}
+                            title="1つ下へ"
+                            aria-label="1つ下へ動かす"
+                            className="flex h-3.5 w-4 items-center justify-center text-[9px] leading-none text-faint hover:text-forest"
+                        >
+                            ▼
+                        </button>
+                    </span>
+                )}
+
                 {/* 選んでいる間は、つまみの代わりに丸を出す */}
                 {isPicking ? (
                     <button
