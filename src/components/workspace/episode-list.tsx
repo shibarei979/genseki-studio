@@ -374,7 +374,7 @@ export default function EpisodeList({
                 }}
                 onDrop={() => handleDrop(episode.id)}
                 className={[
-                    "group mb-1 flex items-center gap-2 rounded-md px-2 py-2",
+                    "group relative mb-1 flex items-center gap-2 rounded-md px-2 py-2",
                     isSelected ? "bg-forest-tint" : "hover:bg-canvas",
                     isOver
                         ? "border-t-2 border-forest"
@@ -406,14 +406,24 @@ export default function EpisodeList({
                     </button>
                 ) : null}
 
+                {/*
+                  * ★ 行の上に重ねて置く。
+                  *
+                  *   並べて置くと、その幅だけ題名の場所が減る。
+                  *   実際、題名が 1 文字ずつ折り返して読めなくなった。
+                  *   隠すだけでは、場所は取ったまま。
+                  *
+                  *   重ねれば幅を取らない。
+                  *   指を置いたときだけ出す。
+                  */}
                 {!isPicking && !movingId && (
-                    <span className="flex shrink-0 flex-col">
+                    <span className="absolute -left-0.5 top-1/2 z-10 flex -translate-y-1/2 flex-col rounded bg-surface/95 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                         <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); moveBy(episode.id, -1) }}
                             title="1つ上へ"
                             aria-label="1つ上へ動かす"
-                            className="flex h-3.5 w-4 items-center justify-center text-[9px] leading-none text-faint hover:text-forest"
+                            className="flex h-3 w-3 items-center justify-center text-[8px] leading-none text-faint hover:text-forest"
                         >
                             ▲
                         </button>
@@ -422,7 +432,7 @@ export default function EpisodeList({
                             onClick={(e) => { e.stopPropagation(); moveBy(episode.id, 1) }}
                             title="1つ下へ"
                             aria-label="1つ下へ動かす"
-                            className="flex h-3.5 w-4 items-center justify-center text-[9px] leading-none text-faint hover:text-forest"
+                            className="flex h-3 w-3 items-center justify-center text-[8px] leading-none text-faint hover:text-forest"
                         >
                             ▼
                         </button>
@@ -440,7 +450,7 @@ export default function EpisodeList({
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setMovingId(episode.id) }}
                         title="ほかの場所へ移します"
-                        className="shrink-0 text-[10px] text-faint opacity-0 transition-opacity hover:text-forest group-hover:opacity-100"
+                        className="absolute -right-0.5 top-1/2 z-10 -translate-y-1/2 rounded bg-surface/95 px-1.5 py-0.5 text-[10px] text-faint opacity-0 shadow-sm transition-opacity hover:text-forest group-hover:opacity-100"
                     >
                         移す
                     </button>
