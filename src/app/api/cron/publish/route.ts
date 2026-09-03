@@ -95,6 +95,8 @@ export async function GET(request: Request) {
                 published: true,
                 scheduled_at: null,
                 publish_at: null,
+                /* 予約から出したぶんも、投稿した日時を残す */
+                posted_at: new Date().toISOString(),
             })
             .in(
                 "id",

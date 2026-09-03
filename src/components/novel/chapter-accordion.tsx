@@ -8,6 +8,10 @@ interface Episode {
   title: string
   ep_number: number
   created_at: string
+  /** 読めるようになった日。無ければ作った日で代える */
+  posted_at?: string | null
+  /** 最後に本文を直した日 */
+  updated_at?: string | null
   illust_url: string | null
   chapter_id: string | null
 }
@@ -95,7 +99,14 @@ export default function ChapterAccordion({
           <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
             {epLikeCounts[ep.id] > 0 && <span style={{fontSize:10,color:'var(--color-text-muted)'}}>♡ {fmtNum(epLikeCounts[ep.id])}</span>}
             {epCommentCounts[ep.id] > 0 && <span style={{fontSize:10,color:'var(--color-text-muted)'}}>💬 {fmtNum(epCommentCounts[ep.id])}</span>}
-            <span style={{fontSize:10,color:'var(--color-text-faint)'}}>{fmtDate(ep.created_at)}</span>
+            {/* 投稿した日。1日以上あけて直していれば、改稿の日も出す */}
+            <span style={{fontSize:10,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>
+              {fmtDate(ep.posted_at || ep.created_at)}
+              {ep.updated_at &&
+                new Date(ep.updated_at).getTime() - new Date(ep.posted_at || ep.created_at).getTime() > 86400000 && (
+                  <span style={{marginLeft:4,color:'var(--color-text-muted)'}}>改稿 {fmtDate(ep.updated_at)}</span>
+                )}
+            </span>
           </div>
         </div>
       </Link>

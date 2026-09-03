@@ -148,7 +148,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const [authorRes, seriesNovelRes, episodesRes] = await Promise.all([
     supabase.from('public_profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('series_novels').select('series_id').eq('novel_id', params.id).maybeSingle(),
-    supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, illust_url, chapter_id, published, is_published, scheduled_at')
+    supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, posted_at, illust_url, chapter_id, published, is_published, scheduled_at')
       /* 上限を上げる。既定 1,000 件だと目次の後ろが消える */
       .eq('novel_id', params.id).order('ep_number', { ascending: true }).limit(5000),
   ])
@@ -243,7 +243,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
    */
   const lastUpdatedAt = (episodes || [])
     .filter(ep => ep.is_published === true)
-    .map(ep => ep.created_at)
+    .map(ep => ep.posted_at || ep.created_at)
     .sort()
     .slice(-1)[0] || null
 
@@ -428,9 +428,23 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                 {fmtNum(epCommentCounts[ep.id])}
               </span>
             )}
-            <span style={{fontSize:10,color:'var(--color-text-faint)'}}>
-              {fmtDate(ep.updated_at || ep.created_at)}
-              {ep.updated_at && new Date(ep.updated_at).getTime() - new Date(ep.created_at).getTime() > 60000 && '（済）'}
+            {/*
+              * ★ 日付は 2 つ出す。
+              *
+              *   前は 1 つだけで、そこに（済）と付けていた。
+              *   何の印か伝わらず、出た日も分からなかった。
+              *
+              *   投稿   読めるようになった日
+              *   改稿   そのあと本文を直した日（1日以上あいたときだけ）
+              */}
+            <span style={{fontSize:10,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>
+              {fmtDate(ep.posted_at || ep.created_at)}
+              {ep.updated_at &&
+                new Date(ep.updated_at).getTime() - new Date(ep.posted_at || ep.created_at).getTime() > 86400000 && (
+                  <span style={{marginLeft:4,color:'var(--color-text-muted)'}}>
+                    改稿 {fmtDate(ep.updated_at)}
+                  </span>
+                )}
             </span>
           </div>
         </div>

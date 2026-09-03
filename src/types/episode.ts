@@ -44,6 +44,13 @@ export interface Episode {
      * 決めておくと、その時刻に公開になる。
      */
     publish_at?: string | null;
+    /**
+     * 読めるようになった日時。
+     *
+     * created_at（作った日）とは別。
+     * 下書きで置いてから出した話は、この 2 つが離れる。
+     */
+    posted_at?: string | null;
     title: string;
     body: string;
     status: EpisodeStatus;

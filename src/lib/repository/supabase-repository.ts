@@ -222,6 +222,8 @@ function toEpisode(row: Record<string, unknown>): Episode {
         chapter_id: (row.chapter_id as string | null) ?? null,
         is_published: row.is_published === true,
         publish_at: (row.publish_at as string | null) ?? null,
+        /* 読めるようになった日時。作った日とは別に持つ */
+        posted_at: (row.posted_at as string | null) ?? null,
         preface: (row.preface as string | null) ?? null,
         /*
          * ★ ここに書かないと、読み戻せない。
@@ -767,6 +769,17 @@ export const supabaseRepository: Repository = {
         if (patch.is_published !== undefined) {
             next.is_published = patch.is_published;
             next.published = patch.is_published;
+
+            /*
+             * ★ 投稿した日時を残す。
+             *
+             *   作った日とは別。下書きで置いてから出した話は、
+             *   読者にとっては「出た日」が読めるようになった日。
+             *   下げたときは消す。次に出したときの日時が入る。
+             */
+            next.posted_at = patch.is_published
+                ? new Date().toISOString()
+                : null;
         }
 
         /*
