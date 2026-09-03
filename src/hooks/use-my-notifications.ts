@@ -33,6 +33,38 @@ export interface MyNotification {
 /** 一度に読む数 */
 const LIMIT = 30;
 
+/**
+ * 並びを整える。
+ *
+ * ★ 運営のお知らせは外す。
+ *
+ *   全員あてのお知らせは、この表にも入れている。
+ *   ベルには「お知らせ」の一覧も並んでいるので、
+ *   同じものが 2 行に出ていた。
+ *
+ * ★ 同じ中身は 1 行にまとめる。
+ *
+ *   送り直したぶんだけ行が増える。
+ *   受け取る人には、同じ知らせが何度も届く理由が分からない。
+ *   新しいほうを残す。
+ */
+function tidy(rows: MyNotification[]): MyNotification[] {
+    const seen = new Set<string>();
+    const result: MyNotification[] = [];
+
+    for (const row of rows) {
+        if (row.type === "announcement") continue;
+
+        const key = `${row.type}\u0000${row.message}\u0000${row.link ?? ""}`;
+        if (seen.has(key)) continue;
+
+        seen.add(key);
+        result.push(row);
+    }
+
+    return result;
+}
+
 export function useMyNotifications() {
     const [rows, setRows] = useState<MyNotification[]>([]);
 
@@ -53,7 +85,7 @@ export function useMyNotifications() {
                     .order("created_at", { ascending: false })
                     .limit(LIMIT);
 
-                setRows((data ?? []) as MyNotification[]);
+                setRows(tidy((data ?? []) as MyNotification[]));
             } catch {
                 /* 読めなくても、運営のお知らせだけは出す */
             }
