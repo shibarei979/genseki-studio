@@ -96,14 +96,25 @@ export default function IllustPlaceSurface({
                     本文の頭に入れる
                 </button>
 
-                <div className="text-[15px] leading-[2.1] text-ink">
+                {/*
+                  * ★ 1 文ずつ、行を分けて中央へ寄せる。
+                  *
+                  *   前は本文と同じように文を続けて並べていた。
+                  *   どこからどこまでが 1 文なのか分からず、
+                  *   狙った文を押しにくかった。
+                  *
+                  *   ここは読む場所ではなく、選ぶ場所。
+                  *   1 文 1 行にして、間を空ける。
+                  */}
+                <div className="text-center text-[15px] leading-[2.1] text-ink">
                     {sentences.map((raw, idx) => {
-                        if (raw === "\n") return <br key={idx} />;
+                        /* 元の空行は、間だけ置く */
+                        if (raw === "\n") return <div key={idx} className="h-3" />;
 
                         const isHover = hoverIdx === idx;
 
                         return (
-                            <span
+                            <div
                                 key={idx}
                                 onMouseEnter={() => setHoverIdx(idx)}
                                 onMouseLeave={() =>
@@ -116,7 +127,11 @@ export default function IllustPlaceSurface({
                                     })
                                 }
                                 style={{
-                                    borderRadius: 3,
+                                    display: "inline-block",
+                                    maxWidth: "100%",
+                                    margin: "6px 0",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
                                     cursor: "pointer",
                                     transition: "background .15s ease",
                                     background: isHover
@@ -129,7 +144,7 @@ export default function IllustPlaceSurface({
                                 }}
                             >
                                 {stripRuby(raw)}
-                            </span>
+                            </div>
                         );
                     })}
                 </div>
