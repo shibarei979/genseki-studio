@@ -232,6 +232,33 @@ body {
     caret-color: var(--manuscript-fg);
 }
 
+/*
+ * ------------------------------------------------------------
+ * 縦書きのときの、書き位置の印
+ * ------------------------------------------------------------
+ *
+ * ★ 縦書きでは印が横に寝る。
+ *
+ *   本文と同じ色にすると、字の並びに紛れて見つからない。
+ *   探すために目を凝らすことになる、という声が届いた。
+ *
+ *   青緑にする。色を変えるだけなので、本文の見た目は何も動かない。
+ *   （印の太さと点滅の速さは、こちらでは決められない）
+ */
+.manuscript-vertical,
+.manuscript-surface .manuscript-vertical {
+    caret-color: var(--color-forest);
+}
+
+/*
+ * 暗い紙のときは、青緑では沈む。
+ * 明るいほうへ寄せる。
+ */
+[data-manuscript-theme="night"] .manuscript-vertical,
+[data-manuscript-theme="black"] .manuscript-vertical {
+    caret-color: #7fd0c4;
+}
+
 [data-manuscript-theme="white"] {
     --manuscript-bg: #ffffff;
     --manuscript-fg: #1f2723;

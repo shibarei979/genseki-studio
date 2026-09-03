@@ -244,7 +244,12 @@ export default function ManuscriptSurface({
                      * 細い線だと気づかれず、掴みにくい。
                      */
                     isVertical
-                        ? "page-scroll overflow-x-auto overflow-y-hidden px-6 py-8"
+                        ? /*
+                           * manuscript-vertical は、書き位置の印の色を
+                           * 本文と分けるためにも使っている（globals.css）。
+                           * 縦書きでは印が横に寝るので、同じ色だと見つからない。
+                           */
+                          "manuscript-vertical page-scroll overflow-x-auto overflow-y-hidden px-6 py-8"
                         : "thin-scroll overflow-y-auto overflow-x-hidden px-8 py-6",
                     // 目盛りを出すときは、そのぶん本文側の余白を詰める
                     showLineNumbers ? (isVertical ? "pt-2" : "pl-3") : "",
