@@ -15,6 +15,7 @@ import { VERSION_AUTO_INTERVAL_MS } from "@/config";
 import { useAutosave } from "@/hooks/use-autosave";
 import { insertEmphasis, insertRuby } from "@/lib/manuscript/notation";
 import { scrollToLine } from "@/lib/manuscript/scroll-to-line";
+import { realignIllusts } from "@/lib/illust/realign";
 import { getRepository } from "@/lib/repository";
 import { countChars, formatNumber, formatTime } from "@/lib/utils/text";
 import {
@@ -169,6 +170,17 @@ export default function EpisodeEditor({
             const parsed = JSON.parse(serialized) as { title: string; body: string };
             await onSave(parsed);
             await maybeCreateVersion();
+
+            /*
+             * 挿絵の場所を、本文の直しに追いかけさせる。
+             *
+             * ★ 場所は「何文目の後ろか」で持っている。
+             *   前のほうに文を足すと、後ろの番号がずれる。
+             *   置いたときの文を探し直して、番号を付け直す。
+             *
+             * 失敗しても本文の保存には触らない。
+             */
+            void realignIllusts(episode.id, parsed.body).catch(() => {});
         },
     });
 

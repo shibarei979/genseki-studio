@@ -70,10 +70,18 @@ export default async function ReadPage({
     if (novel.deleted_at) notFound();
     if (!novel.published || novel.visibility !== "public") notFound();
 
+    /* 話の中の挿絵。置き場所の順に読む */
+    const { data: illustRows } = await supabase
+        .from("episode_illusts")
+        .select("id, url, is_ai, after_sentence")
+        .eq("episode_id", params.epId)
+        .order("after_sentence", { ascending: true });
+
     return (
         <ReadFullPage
             title={episode.title || "無題"}
             body={episode.body || ""}
+            illusts={(illustRows ?? []) as { id: string; url: string; is_ai: boolean; after_sentence: number }[]}
             backHref={`/novel/${params.id}/episode/${params.epId}`}
         />
     );

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { VerticalText } from "@/components/novel/episode/mobile-episode-body";
+import { illustBox } from "@/config/illust-size";
+import { splitIntoSentences } from "@/lib/utils/sentences";
 
 /**
  * ============================================================
@@ -39,13 +41,47 @@ import { VerticalText } from "@/components/novel/episode/mobile-episode-body";
  *   何も抜けない。
  */
 
+/**
+ * 全画面で読むときの挿絵。
+ *
+ * ★ 縦書きの流れの中なので writingMode を戻し、
+ *   そのあとに高さいっぱい・幅 0 の仕切りを挟む。
+ *   挟まないと、絵の下に本文が入り込んで重なる。
+ */
+function FullscreenIllust({ url, isAi }: { url: string; isAi?: boolean }) {
+    return (
+        <>
+            <span style={{ display: "inline-block", verticalAlign: "top", margin: "0 1em", writingMode: "horizontal-tb", position: "relative" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="挿絵"
+                    style={{ maxHeight: illustBox("mobileVertical", "large").maxHeight,
+                        maxWidth: illustBox("mobileVertical", "large").maxWidth,
+                        objectFit: "contain", borderRadius: 8, display: "block" }} />
+                {isAi && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+                        style={{ position: "absolute", top: -5, right: -5,
+                            width: illustBox("mobileVertical", "large").stamp,
+                            height: illustBox("mobileVertical", "large").stamp,
+                            transform: "rotate(-8deg)", opacity: 0.55, pointerEvents: "none",
+                            filter: "drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))" }} />
+                )}
+            </span>
+            <span aria-hidden="true" style={{ display: "inline-block", height: "100%", width: 0, verticalAlign: "top" }} />
+        </>
+    );
+}
+
 export default function ReadFullPage({
     title,
     body,
+    illusts = [],
     backHref,
 }: {
     title: string;
     body: string;
+    /** 話の中の挿絵。after_sentence は「何文目の後ろか」。0 は本文の頭 */
+    illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[];
     backHref: string;
 }) {
     const [size, setSize] = useState({ w: 0, h: 0 });
@@ -361,7 +397,38 @@ export default function ReadFullPage({
                       *   携帯の読む画面と同じ部品を使う。
                       *   同じものを二度作ると、片方だけ古くなる。
                       */}
-                    <VerticalText text={body} />
+                    {/*
+                      * ★ 挿絵があるときだけ、文ごとに分けて挟む。
+                      *
+                      *   分けるだけ入れ物が増えるので、無いときは
+                      *   これまでどおり本文をひと続きで出す。
+                      */}
+                    {illusts.length > 0 ? (
+                        <>
+                            {illusts
+                                .filter((one) => one.after_sentence === 0)
+                                .map((one) => (
+                                    <FullscreenIllust key={one.id} url={one.url} isAi={one.is_ai} />
+                                ))}
+
+                            {splitIntoSentences(body).map((raw, idx) => {
+                                const here = illusts.filter(
+                                    (one) => one.after_sentence === idx + 1,
+                                );
+
+                                return (
+                                    <span key={idx}>
+                                        <VerticalText text={raw} />
+                                        {here.map((one) => (
+                                            <FullscreenIllust key={one.id} url={one.url} isAi={one.is_ai} />
+                                        ))}
+                                    </span>
+                                );
+                            })}
+                        </>
+                    ) : (
+                        <VerticalText text={body} />
+                    )}
                 </div>
             </div>
 

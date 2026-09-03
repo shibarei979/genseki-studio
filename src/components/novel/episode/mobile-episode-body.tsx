@@ -1,6 +1,7 @@
 'use client'
 import ShioriMark, { SHIORI_COLORS } from '@/components/common/shiori-mark'
 import { illustBox } from '@/config/illust-size'
+import { splitIntoSentences } from '@/lib/utils/sentences'
 import { useState, useRef, useEffect } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby } from '@/lib/utils/ruby'
@@ -20,6 +21,8 @@ interface Props {
    */
   recommendedMode?: 'vertical' | 'horizontal' | null
   /** 話ごとの挿絵。本文の前に出る */
+  /** 話の中の挿絵。after_sentence は「何文目の後ろか」。0 は本文の頭 */
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[]
   illustUrl?: string | null
   illustIsAi?: boolean | null
   /* 栞 */
@@ -235,22 +238,76 @@ export function VerticalText({ text }: { text: string }) {
  * 栞の位置を「何文目か」で持つので、
  * 読む側と付ける側で同じ分け方をする必要がある。
  */
-function splitForMark(text: string): string[] {
-  const out: string[] = []
-  let buf = ''
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]
-    buf += ch
-    const isEnd = ch === '。' || ch === '！' || ch === '？' || ch === '!' || ch === '?'
-    const next = text[i + 1]
-    if (ch === '\n') { out.push(buf); buf = ''; continue }
-    if (isEnd && next !== '」' && next !== '』') { out.push(buf); buf = '' }
-  }
-  if (buf) out.push(buf)
-  return out.filter(s => s.length > 0)
+/*
+ * 文の分け方は @/lib/utils/sentences に 1 か所だけ置いている。
+ *
+ * ★ ここで別に書いていたので、切れ目の決まりが少し違っていた。
+ *   同じ本文でも「何文目」がずれるので、
+ *   携帯で挟んだ栞が、パソコンでは別の文に付いて見えていた。
+ */
+const splitForMark = splitIntoSentences
+
+/**
+ * 本文の中に置く挿絵（携帯・横書き）。
+ *
+ * 前後に余白を取る。文にくっついていると本文の一部に見える。
+ */
+function MobileIllust({ url, isAi, size }: { url: string; isAi?: boolean; size?: string | null }) {
+  return (
+    <span style={{display:'block',margin:'16px 0',textAlign:'center'}}>
+      <span style={{position:'relative',display:'inline-block'}}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="挿絵"
+          style={{maxHeight:illustBox('mobileHorizontal',size).maxHeight,
+            maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+        {isAi && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+            style={{position:'absolute',top:-5,right:-5,
+              width:illustBox('mobileHorizontal',size).stamp,
+              height:illustBox('mobileHorizontal',size).stamp,
+              transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+              filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
+        )}
+      </span>
+    </span>
+  )
 }
 
-export default function MobileEpisodeBody({ marking, onToggleMarking, markColor = 'yellow', onPickColor, marks = [], onMark, onOpenMark, illustUrl, illustIsAi, title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
+/**
+ * 本文の中に置く挿絵（携帯・縦書き）。
+ *
+ * ★ 絵の入れ物だけ writingMode を戻す。
+ *   戻さないと、入れ物まで縦に伸びる。
+ *
+ * ★ そのあとに、高さいっぱい・幅 0 の見えない仕切りを挟む。
+ *   挟まないと、絵の下に本文が入り込んで重なる。
+ */
+function MobileIllustVertical({ url, isAi, size }: { url: string; isAi?: boolean; size?: string | null }) {
+  return (
+    <>
+      <span style={{display:'inline-block',verticalAlign:'top',margin:'0 1em',writingMode:'horizontal-tb',position:'relative'}}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="挿絵"
+          style={{maxHeight:illustBox('mobileVertical',size).maxHeight,
+            maxWidth:illustBox('mobileVertical',size).maxWidth,
+            objectFit:'contain',borderRadius:8,display:'block'}}/>
+        {isAi && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+            style={{position:'absolute',top:-5,right:-5,
+              width:illustBox('mobileVertical',size).stamp,
+              height:illustBox('mobileVertical',size).stamp,
+              transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+              filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
+        )}
+      </span>
+      <span aria-hidden="true" style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
+    </>
+  )
+}
+
+export default function MobileEpisodeBody({ marking, onToggleMarking, markColor = 'yellow', onPickColor, marks = [], onMark, onOpenMark, illusts = [], illustUrl, illustIsAi, title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
   const [isVertical, setIsVertical] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
 
@@ -450,7 +507,12 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
               * ★ そのあとに見えない仕切りを挟む。
               *   挟まないと、絵の下に題名が入り込んで重なる。
               */}
-            {illustUrl && (
+            {/* 本文の頭に置かれた絵。表にあるときは、そちらを使う */}
+            {illusts.filter(one => one.after_sentence === 0).map(one => (
+              <MobileIllustVertical key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+            ))}
+
+            {illusts.length === 0 && illustUrl && (
               <>
                 <div style={{display:'inline-block',verticalAlign:'top',marginLeft:'1.5em',writingMode:'horizontal-tb',position:'relative'}}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -490,9 +552,9 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
               style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
             <div style={{display:'inline-block', fontSize: settings.fontSize, lineHeight: settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', verticalAlign:'top', writingMode:'vertical-rl'}}>
               {/* 栞が付いていれば、ふだんでも文ごとに分ける */}
-              {(marking || marks.length > 0) ? (
+              {(marking || marks.length > 0 || illusts.length > 0) ? (
                 /*
-                 * 栞の状態のときだけ、文ごとに分ける。
+                 * 栞の状態か、本文の中に挿絵があるときだけ、文ごとに分ける。
                  *
                  * ★ ふだんは分けない。
                  *   文ごとに包むと、その数だけ入れ物が増えて重い。
@@ -500,7 +562,8 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                 splitForMark(body).map((raw, idx) => {
                   const mark = marks.find(one => one.sentence === idx)
                   if (raw === '\n') return <br key={idx}/>
-                  return (
+
+                  const sentence = (
                     <span key={idx} data-sentence={idx}
                       onClick={()=>{ if (marking) onMark?.(idx, raw) }}
                       style={{cursor: marking ? 'pointer' : 'auto',borderRadius:3,
@@ -523,6 +586,19 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                           <ShioriMark color={mark.color} size={18}/>
                         </span>
                       )}
+                    </span>
+                  )
+
+                  /* この文の後ろに置かれた挿絵 */
+                  const here = illusts.filter(one => one.after_sentence === idx + 1)
+                  if (here.length === 0) return sentence
+
+                  return (
+                    <span key={idx}>
+                      {sentence}
+                      {here.map(one => (
+                        <MobileIllustVertical key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+                      ))}
                     </span>
                   )
                 })
@@ -591,7 +667,12 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
           *   携帯は上から下へ読むので、
           *   ここが本文の始まりの前になる。
           */}
-        {illustUrl && (
+        {/* 本文の頭に置かれた絵。表にあるときは、そちらを使う */}
+        {illusts.filter(one => one.after_sentence === 0).map(one => (
+          <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+        ))}
+
+        {illusts.length === 0 && illustUrl && (
           <div style={{position:'relative',display:'inline-block',marginBottom:14}}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={illustUrl} alt="挿絵"
@@ -618,16 +699,17 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
           </div>
         )}
         {/* 栞が付いていれば、ふだんでも文ごとに分ける */}
-        {(marking || marks.length > 0) ? (
+        {(marking || marks.length > 0 || illusts.length > 0) ? (
           /*
-           * 栞の状態のときだけ、文ごとに分ける。
+           * 栞の状態か、本文の中に挿絵があるときだけ、文ごとに分ける。
            * ふだんは分けない。数だけ入れ物が増えて重い。
            */
           <div style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all'}}>
             {splitForMark(body).map((raw, idx) => {
               const mark = marks.find(one => one.sentence === idx)
               if (raw === '\n') return <br key={idx}/>
-              return (
+
+              const sentence = (
                 <span key={idx} data-sentence={idx}
                   onClick={()=>{ if (marking) onMark?.(idx, raw) }}
                   style={{cursor: marking ? 'pointer' : 'auto',borderRadius:3,
@@ -650,6 +732,19 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                       <ShioriMark color={mark.color} size={18}/>
                     </span>
                   )}
+                </span>
+              )
+
+              /* この文の後ろに置かれた挿絵 */
+              const here = illusts.filter(one => one.after_sentence === idx + 1)
+              if (here.length === 0) return sentence
+
+              return (
+                <span key={idx}>
+                  {sentence}
+                  {here.map(one => (
+                    <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+                  ))}
                 </span>
               )
             })}

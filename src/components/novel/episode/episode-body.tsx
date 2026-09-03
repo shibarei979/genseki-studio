@@ -660,6 +660,37 @@ function IllustBlock({ url, isAi, size }: { url: string; isAi?: boolean; size?: 
   )
 }
 
+/**
+ * 縦書きの流れの中に置く挿絵。
+ *
+ * ★ 絵の入れ物だけ writingMode を戻す。戻さないと縦に伸びる。
+ * ★ そのあとに、高さいっぱい・幅 0 の見えない仕切りを挟む。
+ *   挟まないと、絵の下に本文が入り込んで重なる。
+ */
+function VerticalIllust({ url, isAi, size }: { url: string; isAi?: boolean; size?: string | null }) {
+  return (
+    <>
+      <span style={{display:'inline-block',verticalAlign:'top',margin:'0 1em',writingMode:'horizontal-tb',position:'relative'}}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="挿絵"
+          style={{maxHeight:illustBox('desktopVertical',size).maxHeight,
+            maxWidth:illustBox('desktopVertical',size).maxWidth,
+            objectFit:'contain',borderRadius:8,display:'block'}}/>
+        {isAi && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
+            style={{position:'absolute',top:-5,right:-5,
+              width:illustBox('desktopVertical',size).stamp,
+              height:illustBox('desktopVertical',size).stamp,
+              transform:'rotate(-8deg)',opacity:.55,pointerEvents:'none',
+              filter:'drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))'}}/>
+        )}
+      </span>
+      <span aria-hidden="true" style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
+    </>
+  )
+}
+
 export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
   /*
    * 栞を置く状態か。
@@ -738,7 +769,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
           marks={marks}
           onMark={handleMark}
           onOpenMark={setAskingMark}
-          illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword} authorName={authorName}/>
+          illusts={illusts} illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword} authorName={authorName}/>
         {askingMark && (
           <div
             onClick={()=>setAskingMark(null)}
@@ -932,7 +963,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
         )}
 
         {vertical ? (
-          <VerticalBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} illustUrl={illustUrl} illustIsAi={illustIsAi} illustSize={settings.illustSize} title={title} body={body} preface={preface} afterword={afterword}
+          <VerticalBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} illusts={illusts} illustUrl={illustUrl} illustIsAi={illustIsAi} illustSize={settings.illustSize} title={title} body={body} preface={preface} afterword={afterword}
             authorName={authorName} fontSize={settings.fontSize} fontFamily={fontFamily}
             selecting={selecting} onQuote={handleQuote} onAfterQuote={handleAfterQuote}/>
         ) : (
@@ -1031,7 +1062,9 @@ interface VerticalProps {
   title: string; body: string; preface?: string|null; afterword?: string|null
   authorName?: string; fontSize: number; fontFamily: string
   selecting?: boolean; onQuote?: (text:string)=>void; onAfterQuote?: () => void
-  /** 話ごとの挿絵。縦書きの流れの中、題名の右に出る */
+  /** 話の中の挿絵。after_sentence は「何文目の後ろか」。0 は本文の頭 */
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[]
+  /** 古い持ち方の挿絵。表に 1 枚も無いときだけ、題名の右に出る */
   illustUrl?: string | null
   illustIsAi?: boolean | null
   /** 挿絵の大きさ。small / medium / large */
@@ -1043,7 +1076,7 @@ interface VerticalProps {
   onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
 }
 
-function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
+function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   useEffect(() => {
@@ -1142,7 +1175,12 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
             * ★ 縦書きの中なので、writingMode を戻す。
             *   戻さないと、絵の入れ物まで縦に伸びる。
             */}
-          {illustUrl && (
+          {/* 本文の頭に置かれた絵。表にあるときは、そちらを使う */}
+          {illusts.filter(one => one.after_sentence === 0).map(one => (
+            <VerticalIllust key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+          ))}
+
+          {illusts.length === 0 && illustUrl && (
             <div style={{display:'inline-block',verticalAlign:'top',marginLeft:'1.5em',writingMode:'horizontal-tb',position:'relative'}}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={illustUrl} alt="挿絵"
@@ -1174,7 +1212,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
             * ★ 入れないと、絵の下に題名が入り込んで重なる。
             *   縦書きは上から下へ流れるため。
             */}
-          {illustUrl && (
+          {illusts.length === 0 && illustUrl && (
             <span
               aria-hidden="true"
               style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}
@@ -1217,7 +1255,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
               * 栞が 1 つも無ければ分けない。
               * 分けるだけ入れ物が増えて重くなる。
               */}
-            {(selecting || marking || marks.length > 0) ? (
+            {(selecting || marking || marks.length > 0 || illusts.length > 0) ? (
               sentences.map((raw, idx) => {
                 if (raw === '\n') return <br key={idx}/>
                 /*
@@ -1229,7 +1267,8 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
                  */
                 const isHover = (selecting || marking) && hoverIdx === idx
                 const mark = marks.find(one => one.sentence === idx)
-                return (
+
+                const sentence = (
                   <span key={idx}
                     data-sentence={idx}
                     onMouseEnter={()=>setHoverIdx(idx)}
@@ -1264,6 +1303,19 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illustUrl, illu
                         <ShioriMark color={mark.color} size={18}/>
                       </span>
                     )}
+                  </span>
+                )
+
+                /* この文の後ろに置かれた挿絵 */
+                const here = illusts.filter(one => one.after_sentence === idx + 1)
+                if (here.length === 0) return sentence
+
+                return (
+                  <span key={idx}>
+                    {sentence}
+                    {here.map(one => (
+                      <VerticalIllust key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+                    ))}
                   </span>
                 )
               })
