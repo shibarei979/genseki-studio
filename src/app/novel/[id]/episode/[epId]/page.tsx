@@ -184,6 +184,24 @@ export default async function EpisodePage({ params }: Props) {
   const prevEp = currentIdx > 0 ? visibleEps[currentIdx - 1] : null
   const nextEp = currentIdx >= 0 && currentIdx < visibleEps.length - 1 ? visibleEps[currentIdx + 1] : null
 
+  /*
+   * 次に出る話の予定。
+   *
+   * ★ 読み終えた人に見せる。
+   *
+   *   作品ページの上にも予告は出しているが、
+   *   最新話を読み終えた人は、そこまで戻らない。
+   *   「次はいつ」を知りたいのは、この場所。
+   *
+   * まだ投稿されていない話のうち、いちばん早い時刻のものを出す。
+   */
+  const upcomingEp = (allEps || [])
+    .filter(e => e.is_published !== true && e.scheduled_at && new Date(e.scheduled_at).getTime() > Date.now())
+    .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0] || null
+
+  /* 次の話がまだ無いときだけ出す。続きがあるなら、そちらを読んでもらう */
+  const showUpcoming = !nextEp && upcomingEp
+
   try {
     // デバイス判定（user-agentから）
     const ua = (await headers()).get('user-agent') || ''
@@ -253,6 +271,11 @@ export default async function EpisodePage({ params }: Props) {
             <Link href={`/novel/${params.id}`} style={{...navBtn,color:'var(--color-text-muted)'}}>目次</Link>
             {nextEp ? <Link href={`/novel/${params.id}/episode/${nextEp.id}`} style={navBtn}>次の話 →</Link> : <div/>}
           </div>
+          {showUpcoming && (
+            <div style={{background:'var(--color-info-bg)',border:'1px solid var(--color-info-border)',borderRadius:8,padding:'8px 14px',marginBottom:16,fontSize:12,color:'var(--color-info)',textAlign:'center'}}>
+              次の話は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃の予定です
+            </div>
+          )}
           {/* 挿絵は EpisodeBody の中で、縦書きの流れに沿って出す */}
           {/*
            * 音声で聴く。
@@ -295,7 +318,14 @@ export default async function EpisodePage({ params }: Props) {
             ) : (
               <div style={{flex:1,textAlign:'center',fontSize:13,color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'10px',borderRadius:10,background:'var(--color-bg-card)'}}>
                 最新話です<br/>
-                <Link href={`/novel/${params.id}`} style={{fontSize:11,color:'var(--color-brand)',textDecoration:'none'}}>目次に戻る</Link>
+                {/* 次の予定があるなら、目次に戻る前にそれを見せる */}
+                {showUpcoming ? (
+                  <span style={{fontSize:11,color:'var(--color-info)'}}>
+                    次は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃
+                  </span>
+                ) : (
+                  <Link href={`/novel/${params.id}`} style={{fontSize:11,color:'var(--color-brand)',textDecoration:'none'}}>目次に戻る</Link>
+                )}
               </div>
             )}
           </div>
