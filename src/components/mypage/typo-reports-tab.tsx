@@ -190,8 +190,10 @@ export default function TypoReportsTab() {
                 <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)" }}>
                     誤字報告
                 </div>
-                <div style={{ marginTop: 4, fontSize: 12, color: "var(--color-text-muted)" }}>
-                    読者から届いた指摘です。読めるのは、あなたと報告した人と運営だけです。
+                <div style={{ marginTop: 4, fontSize: 12, color: "var(--color-text-muted)", lineHeight: 1.9 }}>
+                    読んだ人が見つけた誤字が届きます。ここに出るのは、あなたの作品ぶんだけです。
+                    <br />
+                    ほかの読者には見えません。直すかどうかは、あなたが決めてください。
                 </div>
             </div>
 
@@ -200,8 +202,10 @@ export default function TypoReportsTab() {
             )}
 
             {rows.length === 0 && !error && (
-                <p style={{ fontSize: 13, color: "var(--color-text-faint)" }}>
-                    まだ届いていません。
+                <p style={{ fontSize: 13, color: "var(--color-text-faint)", lineHeight: 1.9 }}>
+                    いまは届いていません。
+                    <br />
+                    読んだ人が誤字を見つけたときだけ、ここに並びます。
                 </p>
             )}
 
