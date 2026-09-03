@@ -110,6 +110,57 @@ export function normalizeVerticalForms(text: string): string {
     );
 }
 
+
+/**
+ * 行の切れ目を作り直す。
+ *
+ * ★ PDF は「どこで改行していたか」を持っていない。
+ *
+ *   文字と、その位置しか入っていない。
+ *   そのまま取り出すと、1 話ぶんが 1 行に繋がってしまう。
+ *   切れ目の提案も、行の頭を見ているので何も見つけられない。
+ *
+ * ★ 日本語の小説は、句点と閉じ括弧で行が変わる。
+ *
+ *   そこで切ると、元の原稿にかなり近い形へ戻る。
+ *   完全ではないので、取り込んだあとの手直しは前提にする。
+ *
+ * ★ 見出しは、前後で行を分ける。
+ *
+ *   「・プロローグここは……」のように、
+ *   見出しと本文が繋がってしまうため。
+ */
+const HEADING_WORDS =
+    "プロローグ|エピローグ|エンドロール|オープニング|エンディング|序章|終章|終幕|幕間|間章|閑話|外伝|番外編|番外|後日談|前日譚|あとがき|後書き|まえがき|前書き";
+
+export function restoreLineBreaks(text: string): string {
+    let out = text;
+
+    /* 句点・感嘆符のあと。閉じ括弧が続くときは切らない */
+    out = out.replace(/([。！？])(?![」』）\)】〉》。！？、])/g, "$1\n");
+
+    /* 閉じ括弧のあと。句読点や別の閉じ括弧が続くときは切らない */
+    out = out.replace(/([」』])(?![。、！？」』）\)】〉》])/g, "$1\n");
+
+    /* 見出しは前後で分ける。「第◯章『題』」は題まで含めて 1 行に */
+    out = out.replace(
+        new RegExp(
+            `[・◆◇■□●○]?\\s*(第?[0-9０-９一二三四五六七八九十百千]+\\s*[話章節部幕](?:\\s*[『「][^』」]{0,40}[』」])?|${HEADING_WORDS})`,
+            "g",
+        ),
+        "\n\n$1\n",
+    );
+
+    /* 空行は 2 つまで。無駄に間延びさせない */
+    out = out.replace(/\n{3,}/g, "\n\n");
+
+    return out
+        .split("\n")
+        .map((line) => line.trim())
+        .join("\n")
+        .trim();
+}
+
 export async function readPdfFile(file: File): Promise<ImportedText> {
     // 初期表示に不要な重いライブラリなので、PDF を選んだ人にだけ読み込ませる
     // @ts-ignore -- npm install 前でも型チェックが通るようにする
@@ -145,8 +196,11 @@ export async function readPdfFile(file: File): Promise<ImportedText> {
     // ページの切れ目は段落の切れ目とは限らないので、空行 2 つで繋ぐ
     const joined = pages.filter((page) => page.length > 0).join("\n\n");
 
-    /* 縦書き用の字を、ふつうの字へ戻してから渡す */
-    return { text: normalizeVerticalForms(joined) };
+    /*
+     * 縦書き用の字を戻し、行の切れ目を作り直してから渡す。
+     * PDF は改行を持っていないので、ここで組み立てる。
+     */
+    return { text: restoreLineBreaks(normalizeVerticalForms(joined)) };
 }
 
 /** 拡張子から読み方を選ぶ */
