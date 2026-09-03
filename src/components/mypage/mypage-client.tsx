@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import IconCropper from '@/components/mypage/icon-cropper'
 import { useRouter } from 'next/navigation'
+import TypoReportsTab from '@/components/mypage/typo-reports-tab'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ROOT_ADMIN_EMAIL } from '@/types'
@@ -92,7 +93,7 @@ const ALL_BADGES = [
   { id:'_slot2',      name:'？？？',                  color:'#94a3b8' },
 ]
 
-type Tab = 'mypage' | 'works' | 'bookmarks' | 'history' | 'tweet' | 'mission' | 'settings' | 'series'
+type Tab = 'mypage' | 'works' | 'typos' | 'bookmarks' | 'history' | 'tweet' | 'mission' | 'settings' | 'series'
 const TAB_ICONS: Record<string, React.ReactNode> = {
   mypage:    <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
   works:     <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>,
@@ -107,6 +108,8 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
 const TABS: { id: Tab; label: string; hideInFocus?: boolean }[] = [
   { id:'mypage',    label:'マイページ' },
   { id:'works',     label:'作品管理' },
+  /* 読者から届いた誤字の指摘。作者と報告者と運営だけが読める */
+  { id:'typos',     label:'誤字報告' },
   { id:'series',    label:'シリーズ' },
   { id:'bookmarks', label:'保存済み' },
   { id:'history',   label:'閲覧履歴' },
@@ -191,7 +194,7 @@ export default function MypageClient({
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '') as Tab
-      const valid: Tab[] = ['mypage','works','bookmarks','history','tweet','mission','settings','series']
+      const valid: Tab[] = ['mypage','works','typos','bookmarks','history','tweet','mission','settings','series']
       if (valid.includes(hash)) return hash
     }
     return 'mypage'
@@ -208,7 +211,7 @@ export default function MypageClient({
   useEffect(() => {
     function onHashChange() {
       const hash = window.location.hash.replace('#', '') as Tab
-      const valid: Tab[] = ['mypage','works','bookmarks','history','tweet','mission','settings','series']
+      const valid: Tab[] = ['mypage','works','typos','bookmarks','history','tweet','mission','settings','series']
       if (valid.includes(hash)) setActiveTab(hash)
     }
     window.addEventListener('hashchange', onHashChange)
@@ -1835,6 +1838,7 @@ export default function MypageClient({
             <div style={{padding:'14px 14px 80px'}}>
               {activeTab==='mypage' && <MypageTab/>}
               {activeTab==='works' && <WorksTab/>}
+              {activeTab==='typos' && <TypoReportsTab/>}
               {activeTab==='bookmarks' && <BookmarksTab/>}
               {activeTab==='history' && <HistoryTab/>}
               {activeTab==='mission' && <MissionTab/>}
@@ -1908,6 +1912,7 @@ export default function MypageClient({
             <div style={{flex:1,minWidth:0,padding:'32px 48px',background:'var(--color-bg-card)'}}>
               {activeTab==='mypage' && <MypageTab/>}
               {activeTab==='works' && <WorksTab/>}
+              {activeTab==='typos' && <TypoReportsTab/>}
               {activeTab==='bookmarks' && <BookmarksTab/>}
               {activeTab==='history' && <HistoryTab/>}
               {activeTab==='mission' && <MissionTab/>}
