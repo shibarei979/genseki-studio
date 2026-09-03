@@ -562,7 +562,20 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                  */
                 splitForMark(body).map((raw, idx) => {
                   const mark = marks.find(one => one.sentence === idx)
-                  if (raw === '\n') return <br key={idx}/>
+
+                  /* 改行の所に置かれた絵も出す（縦書き） */
+                  if (raw === '\n') {
+                    const atBreak = illusts.filter(one => one.after_sentence === idx + 1)
+                    if (atBreak.length === 0) return <br key={idx}/>
+                    return (
+                      <span key={idx}>
+                        <br/>
+                        {atBreak.map(one => (
+                          <MobileIllustVertical key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+                        ))}
+                      </span>
+                    )
+                  }
 
                   const sentence = (
                     <span key={idx} data-sentence={idx}
@@ -708,7 +721,20 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
           <div style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all'}}>
             {splitForMark(body).map((raw, idx) => {
               const mark = marks.find(one => one.sentence === idx)
-              if (raw === '\n') return <br key={idx}/>
+
+              /* 改行の所に置かれた絵も出す */
+              if (raw === '\n') {
+                const atBreak = illusts.filter(one => one.after_sentence === idx + 1)
+                if (atBreak.length === 0) return <br key={idx}/>
+                return (
+                  <span key={idx}>
+                    <br/>
+                    {atBreak.map(one => (
+                      <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+                    ))}
+                  </span>
+                )
+              }
 
               const sentence = (
                 <span key={idx} data-sentence={idx}

@@ -545,7 +545,24 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
         /* この文に付いている栞 */
         const mark = marks.find(one => one.sentence === idx)
 
-        if (raw === '\n') return <br key={idx}/>
+        /*
+         * ★ 改行の所に置かれた絵も出す。
+         *
+         *   前は改行を見つけた時点で切り上げていたので、
+         *   段落の切れ目に置いた絵が出なかった。
+         */
+        if (raw === '\n') {
+          const atBreak = illusts.filter(one => one.after_sentence === idx + 1)
+          if (atBreak.length === 0) return <br key={idx}/>
+          return (
+            <span key={idx}>
+              <br/>
+              {atBreak.map(one => (
+                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+              ))}
+            </span>
+          )
+        }
 
         const sentence = (
           <span
@@ -1266,7 +1283,19 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], i
               */}
             {(selecting || marking || marks.length > 0 || illusts.length > 0) ? (
               sentences.map((raw, idx) => {
-                if (raw === '\n') return <br key={idx}/>
+                /* 改行の所に置かれた絵も出す（縦書き） */
+                if (raw === '\n') {
+                  const atBreak = illusts.filter(one => one.after_sentence === idx + 1)
+                  if (atBreak.length === 0) return <br key={idx}/>
+                  return (
+                    <span key={idx}>
+                      <br/>
+                      {atBreak.map(one => (
+                        <VerticalIllust key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+                      ))}
+                    </span>
+                  )
+                }
                 /*
                  * ★ 何もしていないときは色を変えない。
                  *

@@ -47,20 +47,28 @@ function toBlocks(body: string): Block[] {
     const blocks: Block[] = [];
 
     let buf = "";
+    /*
+     * ★ 指すのは「その段落の最後の文」。
+     *
+     *   改行そのものを指すと、読む画面が改行を先に描いて
+     *   その場で切り上げてしまい、絵が出なかった。
+     */
+    let lastTextAt = 0;
 
     sentences.forEach((raw, idx) => {
         if (raw === "\n") {
             /* 段落の終わり。空行はそのまま捨てる */
-            if (buf.trim()) blocks.push({ text: buf.trim(), endsAt: idx + 1 });
+            if (buf.trim()) blocks.push({ text: buf.trim(), endsAt: lastTextAt });
             buf = "";
             return;
         }
 
         buf += raw;
+        lastTextAt = idx + 1;
 
         /* 最後の文で終わっているときも、ひと束にする */
         if (idx === sentences.length - 1 && buf.trim()) {
-            blocks.push({ text: buf.trim(), endsAt: idx + 1 });
+            blocks.push({ text: buf.trim(), endsAt: lastTextAt });
             buf = "";
         }
     });
