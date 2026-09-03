@@ -42,11 +42,6 @@ function fmtNum(n: number): string {
   return n.toString()
 }
 
-/** 日付と時刻。同じ日に何話も出す作品でも順が分かる */
-function fmtDateTime(d: string) {
-  const dt = new Date(d)
-  return `${dt.getFullYear()}/${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
-}
 
 function fmtDate(d: string) {
   const dt = new Date(d)
@@ -107,11 +102,11 @@ export default function ChapterAccordion({
             {epCommentCounts[ep.id] > 0 && <span style={{fontSize:10,color:'var(--color-text-muted)'}}>💬 {fmtNum(epCommentCounts[ep.id])}</span>}
             {/* 投稿した日。1日以上あけて直していれば、改稿の日も出す */}
             <span style={{fontSize:10,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>
-              {fmtDateTime(ep.posted_at || ep.created_at)}
-              {/* ★ 少しでも直していれば、改稿として出す */}
+              {/* 日付だけ。改稿は日が変わったときだけ出す */}
+              {fmtDate(ep.posted_at || ep.created_at)}
               {ep.updated_at &&
-                new Date(ep.updated_at).getTime() > new Date(ep.posted_at || ep.created_at).getTime() + 60000 && (
-                  <span style={{marginLeft:4,color:'var(--color-text-muted)'}}>改稿 {fmtDateTime(ep.updated_at)}</span>
+                fmtDate(ep.updated_at) !== fmtDate(ep.posted_at || ep.created_at) && (
+                  <span style={{marginLeft:5,color:'var(--color-text-muted)'}}>改稿 {fmtDate(ep.updated_at)}</span>
                 )}
             </span>
           </div>
