@@ -117,7 +117,14 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                 ? '生年月日を設定すると読めます。年齢の確認にだけ使い、ほかの人には見えません。'
                 : `${label} の作品は、対象の年齢の方だけが読めます。`}
           </p>
-          <Link href={!user ? '/login' : '/mypage?tab=settings'}
+          {/*
+            * ★ 入ったあと、この作品へ戻す。
+            *
+            *   前は行き先を渡していなかったので、
+            *   入ったあとホームに落ちていた。
+            *   読みに来た人が、もう一度探し直すことになる。
+            */}
+          <Link href={!user ? `/login?next=${encodeURIComponent(`/novel/${params.id}`)}` : '/mypage?tab=settings'}
             style={{display:'inline-block',padding:'9px 22px',borderRadius:8,
               background:'var(--color-brand)',color:'#fff',fontSize:13,
               fontWeight:600,textDecoration:'none'}}>

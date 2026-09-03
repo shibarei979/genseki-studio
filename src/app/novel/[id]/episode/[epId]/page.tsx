@@ -97,7 +97,8 @@ export default async function EpisodePage({ params }: Props) {
                 ? '生年月日を設定すると読めます。年齢の確認にだけ使い、ほかの人には見えません。'
                 : `${label} の作品は、対象の年齢の方だけが読めます。`}
           </p>
-          <Link href={!user ? '/login' : '/mypage?tab=settings'}
+          {/* 入ったあと、この話へ戻す */}
+          <Link href={!user ? `/login?next=${encodeURIComponent(`/novel/${params.id}/episode/${params.epId}`)}` : '/mypage?tab=settings'}
             style={{display:'inline-block',padding:'9px 22px',borderRadius:8,
               background:'var(--color-brand)',color:'#fff',fontSize:13,
               fontWeight:600,textDecoration:'none'}}>

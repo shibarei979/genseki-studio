@@ -404,7 +404,8 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
         </div>
       ) : (
         <div style={{ padding: '20px 16px', textAlign: 'center', borderBottom: '1px solid var(--color-brand-light)' }}>
-          <Link href="/login" style={{ fontSize: 13, color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 600 }}>ログインしてコメントする</Link>
+          {/* 入ったあと、いま読んでいる話へ戻す */}
+          <Link href={`/login?next=${encodeURIComponent(`/novel/${novelId}/episode/${episodeId}`)}`} style={{ fontSize: 13, color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 600 }}>ログインしてコメントする</Link>
         </div>
       )}
 

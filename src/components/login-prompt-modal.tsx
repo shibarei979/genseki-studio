@@ -50,7 +50,8 @@ export default function LoginPromptModal({ show, onClose, message = 'この機�
             新規登録
           </Link>
         </div>
-        <Link href="/login"
+        {/* 入ったあと、いま見ていた頁へ戻す */}
+        <Link href={typeof window !== 'undefined' ? `/login?next=${encodeURIComponent(window.location.pathname)}` : '/login'}
           style={{display:'block',marginTop:10,fontSize:12,color:'var(--color-brand)',textDecoration:'none'}}>
           すでにアカウントをお持ちの方はこちら
         </Link>
