@@ -151,8 +151,15 @@ export const WORK_FORMAT_DESCRIPTION: Record<WorkFormat, string> = {
  * 隠すためではなく、はじめから示せるようにするため。
  *
  *   none      … 使っていない
- *   assist    … 資料整理や調べもので使った。本文は自分で書いた
+ *   assist    … 調べもの・推敲・誤字直しなどに使った。本文を書いたのは自分
  *   generated … 本文の一部または全部を AI が書いた
+ *
+ * ★ assist は「本文を書いたのは誰か」で分ける。
+ *
+ *   前は「資料の整理や調べもの」としか書いていなかった。
+ *   推敲や誤字直しに使う人が、どちらを選べばよいか迷い、
+ *   生成のほうを選んでしまうことがあった。
+ *   自分の文を直してもらうのは、生成ではない。
  */
 export type AiUsage = "none" | "assist" | "generated";
 
@@ -164,7 +171,8 @@ export const AI_USAGE_LABEL: Record<AiUsage, string> = {
 
 export const AI_USAGE_DESCRIPTION: Record<AiUsage, string> = {
     none: "AIは一切使っていません。",
-    assist: "資料の整理や調べものに使い、本文は自分で書きました。",
+    assist:
+        "調べもの・資料の整理・推敲・誤字直しなどに使いました。本文を書いたのは自分です。",
     generated: "本文の一部、または全部をAIが書きました。",
 };
 
