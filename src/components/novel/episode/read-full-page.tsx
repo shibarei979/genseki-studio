@@ -61,7 +61,7 @@ function FullscreenIllust({ url, isAi }: { url: string; isAi?: boolean }) {
         *   前にも挟むと、絵は次の列の頭から始まる。
         */}
       <span aria-hidden="true" style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
-            <span style={{ display: "inline-block", verticalAlign: "top", margin: "0 1em", writingMode: "horizontal-tb", position: "relative" }}>
+            <span style={{ display: "inline-block", verticalAlign: "top", margin: "0 1em", marginTop: "2.5em", writingMode: "horizontal-tb", position: "relative" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={url} alt="挿絵"
                     style={{ maxHeight: illustBox("mobileVertical", "large").maxHeight,
