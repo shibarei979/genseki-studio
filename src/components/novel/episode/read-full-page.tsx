@@ -51,6 +51,16 @@ import { splitIntoSentences } from "@/lib/utils/sentences";
 function FullscreenIllust({ url, isAi }: { url: string; isAi?: boolean }) {
     return (
         <>
+      {/*
+        * ★ 絵の前にも、高さいっぱい・幅 0 の仕切りを挟む。
+        *
+        *   前は後ろにしか入れていなかったので、
+        *   絵は直前の本文が終わった所から始まっていた。
+        *   縦書きでは列の途中、下のほうに沈んで見える。
+        *
+        *   前にも挟むと、絵は次の列の頭から始まる。
+        */}
+      <span aria-hidden="true" style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
             <span style={{ display: "inline-block", verticalAlign: "top", margin: "0 1em", writingMode: "horizontal-tb", position: "relative" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={url} alt="挿絵"
