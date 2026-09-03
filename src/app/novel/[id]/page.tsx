@@ -370,6 +370,17 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
     return n.toString()
   }
 
+  /**
+   * 日付と時刻。
+   *
+   * ★ 何時に出たかまで見せる。
+   *   同じ日に何話も出す作品では、日付だけだと順が分からない。
+   */
+  function fmtDateTime(d: string) {
+    const dt = new Date(d)
+    return `${dt.getFullYear()}/${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
+  }
+
   function fmtDate(d: string) {
     const dt = new Date(d)
     return `${dt.getFullYear()}/${dt.getMonth()+1}/${dt.getDate()}`
@@ -438,11 +449,12 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
               *   改稿   そのあと本文を直した日（1日以上あいたときだけ）
               */}
             <span style={{fontSize:10,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>
-              {fmtDate(ep.posted_at || ep.created_at)}
+              {fmtDateTime(ep.posted_at || ep.created_at)}
+              {/* ★ 少しでも直していれば、改稿として出す */}
               {ep.updated_at &&
-                new Date(ep.updated_at).getTime() - new Date(ep.posted_at || ep.created_at).getTime() > 86400000 && (
+                new Date(ep.updated_at).getTime() > new Date(ep.posted_at || ep.created_at).getTime() + 60000 && (
                   <span style={{marginLeft:4,color:'var(--color-text-muted)'}}>
-                    改稿 {fmtDate(ep.updated_at)}
+                    改稿 {fmtDateTime(ep.updated_at)}
                   </span>
                 )}
             </span>
