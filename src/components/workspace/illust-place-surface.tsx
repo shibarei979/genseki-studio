@@ -10,23 +10,63 @@ import { splitIntoSentences } from "@/lib/utils/sentences";
  * 原石航路 Studio
  * IllustPlaceSurface — 本文の中に挿絵を置く場所を選ぶ
  *
- * ★ 蛍光ペンと同じ触り心地にする。
+ * ★ 選ぶ単位は「段落」。
  *
- *   小窓の中に本文を写して選ばせていたが、
- *   本文とは別物に見えて分かりにくかった。
- *   執筆画面の本文そのものへ行き、そこで押す。
+ *   前は 1 文ずつ選ばせていた。
+ *   だが挿絵は、文の途中ではなく段落の切れ目に入る。
+ *   文の数だけ選び所があると、狙いが定まらない。
  *
- * ★ 押すのは「文」。
+ *   段落と段落のあいだに線を出し、そこを押してもらう。
  *
- *   文と文のあいだの細い線は、携帯では狙えない。
- *   文を押したら「この文の後ろに入れますか」と聞く。
- *   触れているあいだは、入る場所に線が出る。
+ * ★ 持ち方は変えない。
+ *
+ *   表には「何文目の後ろか」で入れている。
+ *   段落を選んだら、その段落の終わりが何文目かを数えて渡す。
+ *   読む画面は今までどおりで動く。
  *
  * ★ そのあいだ、本文は打てない。
  *   置き場所を選びに来ているので、困らない。
  * ============================================================
  */
 
+interface Block {
+    /** 表示する本文 */
+    text: string;
+    /** この段落の終わりが、何文目にあたるか（1 から数える） */
+    endsAt: number;
+}
+
+/**
+ * 本文を段落に分ける。
+ *
+ * 文に分けたものを、改行のところで束ね直す。
+ * 「何文目か」の数え方は、読む画面と同じものを使う。
+ */
+function toBlocks(body: string): Block[] {
+    const sentences = splitIntoSentences(body);
+    const blocks: Block[] = [];
+
+    let buf = "";
+
+    sentences.forEach((raw, idx) => {
+        if (raw === "\n") {
+            /* 段落の終わり。空行はそのまま捨てる */
+            if (buf.trim()) blocks.push({ text: buf.trim(), endsAt: idx + 1 });
+            buf = "";
+            return;
+        }
+
+        buf += raw;
+
+        /* 最後の文で終わっているときも、ひと束にする */
+        if (idx === sentences.length - 1 && buf.trim()) {
+            blocks.push({ text: buf.trim(), endsAt: idx + 1 });
+            buf = "";
+        }
+    });
+
+    return blocks;
+}
 
 export default function IllustPlaceSurface({
     body,
@@ -41,9 +81,13 @@ export default function IllustPlaceSurface({
     onPlace: (afterSentence: number, anchorText: string) => Promise<void>;
     onClose: () => void;
 }) {
-    const sentences = splitIntoSentences(body);
-    const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-    const [asking, setAsking] = useState<{ at: number; text: string } | null>(null);
+    const blocks = toBlocks(body);
+
+    const [asking, setAsking] = useState<{
+        at: number;
+        anchor: string;
+        label: string;
+    } | null>(null);
     const [isBusy, setIsBusy] = useState(false);
 
     async function confirm() {
@@ -51,7 +95,7 @@ export default function IllustPlaceSurface({
 
         setIsBusy(true);
         try {
-            await onPlace(asking.at, asking.text);
+            await onPlace(asking.at, asking.anchor);
             setAsking(null);
         } catch {
             window.alert("置けませんでした。時間をおいて試してください。");
@@ -73,8 +117,8 @@ export default function IllustPlaceSurface({
                 )}
 
                 <span className="truncate text-[12px] text-forest">
-                    この絵を入れる場所の
-                    <strong className="font-bold">文を押してください</strong>
+                    この絵を入れる
+                    <strong className="font-bold">段落の切れ目を押してください</strong>
                 </span>
 
                 <button
@@ -86,75 +130,46 @@ export default function IllustPlaceSurface({
                 </button>
             </div>
 
-            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5">
-                {/* 本文の頭に入れる */}
-                <button
-                    type="button"
-                    onClick={() => setAsking({ at: 0, text: "" })}
-                    className="mb-4 flex w-full items-center gap-2 rounded-md border border-dashed border-line px-3 py-2 text-[11.5px] text-muted hover:border-forest hover:text-forest"
-                >
-                    本文の頭に入れる
-                </button>
-
-                {/*
-                  * ★ 1 文ずつ、行を分けて中央へ寄せる。
-                  *
-                  *   前は本文と同じように文を続けて並べていた。
-                  *   どこからどこまでが 1 文なのか分からず、
-                  *   狙った文を押しにくかった。
-                  *
-                  *   ここは読む場所ではなく、選ぶ場所。
-                  *   1 文 1 行にして、間を空ける。
-                  */}
-                <div className="text-center text-[15px] leading-[2.1] text-ink">
-                    {sentences.map((raw, idx) => {
-                        /* 元の空行は、間だけ置く */
-                        if (raw === "\n") return <div key={idx} className="h-3" />;
-
-                        const isHover = hoverIdx === idx;
-
-                        return (
-                            <div
-                                key={idx}
-                                onMouseEnter={() => setHoverIdx(idx)}
-                                onMouseLeave={() =>
-                                    setHoverIdx((prev) => (prev === idx ? null : prev))
-                                }
-                                onClick={() =>
-                                    setAsking({
-                                        at: idx + 1,
-                                        text: stripRuby(raw).replace(/\n/g, "").trim(),
-                                    })
-                                }
-                                style={{
-                                    display: "inline-block",
-                                    maxWidth: "100%",
-                                    margin: "6px 0",
-                                    padding: "2px 8px",
-                                    borderRadius: 6,
-                                    cursor: "pointer",
-                                    transition: "background .15s ease",
-                                    background: isHover
-                                        ? "color-mix(in srgb, var(--color-brand) 12%, transparent)"
-                                        : "transparent",
-                                    /* 触れているあいだ、絵が入る場所に線を出す */
-                                    boxShadow: isHover
-                                        ? "0 2px 0 0 var(--color-forest)"
-                                        : "none",
-                                }}
-                            >
-                                {stripRuby(raw)}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {sentences.length === 0 && (
+            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                {blocks.length === 0 ? (
                     <p className="rounded-md border border-line bg-canvas px-3 py-2.5 text-[11.5px] leading-relaxed text-muted">
                         この話には、まだ本文がありません。
                         <br />
                         本文を書いて保存すると、置く場所を選べます。
                     </p>
+                ) : (
+                    <>
+                        {/* 本文の頭 */}
+                        <Gap
+                            label="本文の頭に入れる"
+                            onPick={() =>
+                                setAsking({ at: 0, anchor: "", label: "本文の頭" })
+                            }
+                        />
+
+                        {blocks.map((block, idx) => (
+                            <div key={idx}>
+                                {/*
+                                  * ★ 本文はいつもどおり左から。
+                                  *   中央に寄せると行の頭が揃わず、読みにくい。
+                                  */}
+                                <p className="whitespace-pre-wrap text-[15px] leading-[2] text-ink">
+                                    {stripRuby(block.text)}
+                                </p>
+
+                                <Gap
+                                    label="ここに入れる"
+                                    onPick={() =>
+                                        setAsking({
+                                            at: block.endsAt,
+                                            anchor: lastSentenceOf(block.text),
+                                            label: shorten(block.text),
+                                        })
+                                    }
+                                />
+                            </div>
+                        ))}
+                    </>
                 )}
             </div>
 
@@ -166,17 +181,17 @@ export default function IllustPlaceSurface({
                 >
                     <div
                         onClick={(event) => event.stopPropagation()}
-                        className="w-full max-w-[400px] rounded-xl bg-surface p-5 shadow-xl"
+                        className="w-full max-w-[420px] rounded-xl bg-surface p-5 shadow-xl"
                     >
                         <p className="text-[13px] font-bold text-ink">
                             {asking.at === 0
                                 ? "本文の頭に入れますか"
-                                : "この文の後ろに入れますか"}
+                                : "この段落の後ろに入れますか"}
                         </p>
 
                         {asking.at > 0 && (
                             <p className="mt-3 max-h-32 overflow-y-auto rounded-lg bg-canvas px-3.5 py-3 text-[12.5px] leading-[1.9] text-muted">
-                                {asking.text}
+                                {asking.label}
                             </p>
                         )}
 
@@ -201,5 +216,40 @@ export default function IllustPlaceSurface({
                 </div>
             )}
         </div>
+    );
+}
+
+/** その段落の最後の文。本文を直したとき、場所を追いかけるのに使う */
+function lastSentenceOf(text: string): string {
+    const parts = splitIntoSentences(text).filter((one) => one !== "\n");
+    const last = parts[parts.length - 1] ?? text;
+    return stripRuby(last).replace(/\n/g, "").trim();
+}
+
+/** 小窓に出すための、短い見出し */
+function shorten(text: string): string {
+    const clean = stripRuby(text).replace(/\n/g, "");
+    return clean.length > 60 ? `${clean.slice(0, 60)}…` : clean;
+}
+
+/**
+ * 段落と段落のあいだ。
+ *
+ * ★ 線はいつも薄く出しておく。
+ *   触れたときだけ出す形にすると、携帯ではどこを押せばよいか分からない。
+ */
+function Gap({ label, onPick }: { label: string; onPick: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onPick}
+            className="group my-2 flex w-full items-center gap-3 py-2"
+        >
+            <span className="h-[2px] flex-1 rounded bg-line group-hover:bg-forest" />
+            <span className="shrink-0 rounded-full border border-line px-3 py-1 text-[11px] text-faint group-hover:border-forest group-hover:text-forest">
+                {label}
+            </span>
+            <span className="h-[2px] flex-1 rounded bg-line group-hover:bg-forest" />
+        </button>
     );
 }

@@ -639,8 +639,17 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
  */
 function IllustBlock({ url, isAi, size }: { url: string; isAi?: boolean; size?: string | null }) {
   return (
-    <span style={{display:'block',margin:'20px 0',textAlign:'center'}}>
-      <span style={{position:'relative',display:'inline-block'}}>
+    /*
+     * ★ 挿絵は、本文とは別の塊として置く。
+     *
+     *   上下に余白を取り、中央へ寄せる。
+     *   本文の文字の並びは触らない。
+     *
+     * ★ 幅は本文の 7 割まで、いちばん広くて 640px。
+     *   画面いっぱいに広げると圧迫感が出る。
+     */
+    <span style={{display:'block',margin:'32px auto',textAlign:'center',maxWidth:'min(75%, 640px)'}}>
+      <span style={{position:'relative',display:'inline-block',maxWidth:'100%'}}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="挿絵"
           style={{maxHeight:illustBox('desktopHorizontal',size).maxHeight,

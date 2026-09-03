@@ -254,8 +254,9 @@ const splitForMark = splitIntoSentences
  */
 function MobileIllust({ url, isAi, size }: { url: string; isAi?: boolean; size?: string | null }) {
   return (
-    <span style={{display:'block',margin:'16px 0',textAlign:'center'}}>
-      <span style={{position:'relative',display:'inline-block'}}>
+    /* 携帯も同じ考え。上下に余白を取り、幅は 9 割まで */
+    <span style={{display:'block',margin:'24px auto',textAlign:'center',maxWidth:'90%'}}>
+      <span style={{position:'relative',display:'inline-block',maxWidth:'100%'}}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="挿絵"
           style={{maxHeight:illustBox('mobileHorizontal',size).maxHeight,
