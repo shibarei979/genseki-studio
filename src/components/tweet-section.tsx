@@ -303,70 +303,27 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
      *   bookmarks      … 控えたもの
      *   それ以外        … 全員ぶん
      */
-    let query = supabase
-      .from('tweets')
-      .select('id, user_id, body, image_url, created_at, edited_at, topic, hidden_by_admin')
-      .order('created_at', { ascending: false })
-      .limit(authorId ? 20 : 50)
-
-    if (authorId) {
-      query = query.eq('user_id', authorId)
-    } else if (scope === 'following' && currentUserId) {
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', currentUserId)
-
-      /*
-       * 自分は入れない。
-       *
-       * 「友達のつぶやき」は、追っている人の様子を見る場所。
-       * 自分の書き込みが混ざると、
-       * 誰の言葉を読んでいるのか分からなくなる。
-       */
-      const ids = (follows || [])
-        .map((f: any) => f.following_id)
-        .filter((id: string) => Boolean(id) && id !== currentUserId)
-
-      if (ids.length === 0) { setTweets([]); setLoading(false); return }
-
-      /*
-       * 追っている人だけに絞り、そのうえで自分を外す。
-       *
-       * 自分をフォローしている行が残っていることがあるので、
-       * id を選ぶときと、引くときの両方で外す。
-       */
-      query = query.in('user_id', ids).neq('user_id', currentUserId)
-    } else if (scope === 'bookmarks' && currentUserId) {
-      const { data: marks } = await supabase
-        .from('tweet_bookmarks')
-        .select('tweet_id')
-        .eq('user_id', currentUserId)
-
-      const ids = (marks || []).map((m: any) => m.tweet_id).filter(Boolean)
-      if (ids.length === 0) { setTweets([]); setLoading(false); return }
-      query = query.in('id', ids)
-    }
-
-    if (topic) query = query.eq('topic', topic)
-
-    let { data: tweetsData, error: listError } = await query
-
     /*
-     * topic の列がまだ無い環境では、上の読み込みが失敗する。
-     * その場合は列を外して読み直す。
+     * ★ 本文は受け口（/api/tweets）から受け取る。
+     *
+     *   前は表を直に呼んでいた。鍵は誰でも持っているので、
+     *   自分の投稿の id を入れて呼び直せば、
+     *   隠されたかどうかを外から確かめられてしまう。
+     *
+     *   絞り込み（誰の・話題・追っている人・栞）も向こうで行う。
      */
-    if (listError) {
-      let plain = supabase
-        .from('tweets')
-        .select('id, user_id, body, image_url, created_at')
-        .order('created_at', { ascending: false })
-        .limit(authorId ? 20 : 50)
+    let tweetsData: any[] = []
 
-      if (authorId) plain = plain.eq('user_id', authorId)
-
-      const retry = await plain
-      tweetsData = (retry.data ?? []).map((row: any) => ({ ...row, topic: null, edited_at: null }))
+    try {
+      const response = await fetch('/api/tweets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authorId, scope, topic, sortBy }),
+      })
+      const payload = await response.json()
+      tweetsData = payload?.tweets ?? []
+    } catch {
+      tweetsData = []
     }
 
     /*
