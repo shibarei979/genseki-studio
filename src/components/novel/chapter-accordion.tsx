@@ -47,6 +47,15 @@ export default function ChapterAccordion({
   novelId, chapterGroups, unassignedEpisodes,
   readEpisodeIds, epLikeCounts, epCommentCounts,
 }: Props) {
+  /*
+   * 中身のある章が 1 つでもあるか。
+   *
+   * ★ 空の章しか無いときは、章の作りを使っていないのと同じ。
+   *   全話が「その他」に入り、畳まれた見出しの下へ隠れてしまう。
+   *   そのときは見出しを出さず、話をそのまま並べる。
+   */
+  const hasUsedChapter = chapterGroups.some((group) => group.episodes.length > 0)
+
   // デフォルトで全て開いた状態にする
   const [openIds, setOpenIds] = useState<Set<string>>(
     new Set([...chapterGroups.map(g => g.chapter.id), 'unassigned'])
@@ -139,7 +148,13 @@ export default function ChapterAccordion({
 
   return (
     <>
-      {bigGroups.map((group) => {
+      {/*
+        * ★ 章を使っていない作品では、章の枠を出さない。
+        *
+        *   空の章だけが作ってある作品で、
+        *   見出しばかりが並んでいた。
+        */}
+      {hasUsedChapter && bigGroups.map((group) => {
         const children = childrenOf(group.chapter.id)
 
         /*
@@ -185,7 +200,28 @@ export default function ChapterAccordion({
         )
       })}
 
-      {unassignedEpisodes.length > 0 && (
+      {/*
+        * 章に入れていない話。
+        *
+        * ★ 章が 1 つも無いときは、見出しを出さない。
+        *
+        *   全部が「その他」になるので、束ねる意味がない。
+        *   畳まれた見出しの下に全話が隠れて、
+        *   読む人は一度開かないと目次が見えなかった。
+        */}
+      {unassignedEpisodes.length > 0 && !hasUsedChapter && (
+        unassignedEpisodes.length > CHUNK_THRESHOLD ? (
+          <EpisodeChunks
+            episodes={unassignedEpisodes}
+            renderRow={(ep: any) => <EpisodeRow key={ep.id} ep={ep} />}
+          />
+        ) : (
+          unassignedEpisodes.map((ep) => <EpisodeRow key={ep.id} ep={ep} />)
+        )
+      )}
+
+      {/* 章があるときだけ、残りを「その他」としてまとめる */}
+      {unassignedEpisodes.length > 0 && hasUsedChapter && (
         <div>
           <button
             onClick={() => toggle('unassigned')}
