@@ -22,6 +22,13 @@ interface Tweet {
   comment_count: number
   liked: boolean
   topic: string | null
+  /**
+   * 運営が、ほかの人から隠している印。
+   *
+   * 書いた本人と運営には、これまでどおり見える。
+   * ほかの人には、表の決まりで届かない。
+   */
+  hidden_by_admin?: boolean
   bookmarked: boolean
   /** アンケート。無ければ空 */
   poll: PollOption[]
@@ -164,6 +171,35 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
    */
   const { guard, prompt, isLoggedIn } = useLoginRequired(currentUserId)
 
+  /*
+   * 運営かどうか。
+   *
+   * ★ 隠す押し具は運営にだけ出す。
+   *   ここで隠しても、書いた本人には今までどおり見える。
+   *   気づかせないための作りなので、印も本人には出さない。
+   */
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    if (!currentUserId) { setIsAdmin(false); return }
+    void (async () => {
+      const { data } = await supabase
+        .from('profiles').select('is_admin').eq('user_id', currentUserId).maybeSingle()
+      setIsAdmin(data?.is_admin === true)
+    })()
+  }, [currentUserId])
+
+  /** 運営が、ほかの人から隠す・隠すのをやめる */
+  async function toggleHidden(tweetId: string, next: boolean) {
+    const { error } = await supabase
+      .from('tweets').update({ hidden_by_admin: next }).eq('id', tweetId)
+
+    if (error) { window.alert(`変えられませんでした：${error.message}`); return }
+
+    setTweets(prev => prev.map(one =>
+      one.id === tweetId ? { ...one, hidden_by_admin: next } : one))
+  }
+
   const supabase = createClient()
   const [tweets, setTweets] = useState<Tweet[]>([])
   const [loading, setLoading] = useState(true)
@@ -269,7 +305,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
      */
     let query = supabase
       .from('tweets')
-      .select('id, user_id, body, image_url, created_at, edited_at, topic')
+      .select('id, user_id, body, image_url, created_at, edited_at, topic, hidden_by_admin')
       .order('created_at', { ascending: false })
       .limit(authorId ? 20 : 50)
 
@@ -552,7 +588,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     let { data, error } = await supabase
       .from('tweets')
       .insert({ user_id: currentUserId, body: body.trim(), image_url: imageUrl, topic: chosen })
-      .select('id, user_id, body, image_url, created_at, edited_at, topic')
+      .select('id, user_id, body, image_url, created_at, edited_at, topic, hidden_by_admin')
       .single()
 
     if (error) {
@@ -1177,6 +1213,16 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                 quotedBody={tweet.body}
                 userId={currentUserId}
               />
+
+              {/* 運営だけに出す。書いた本人には何も出さない */}
+              {isAdmin && tweet.user_id !== currentUserId && (
+                <button onClick={()=>void toggleHidden(tweet.id, !tweet.hidden_by_admin)}
+                  title={tweet.hidden_by_admin ? '本人以外にも出す' : '本人には見えたまま、ほかの人から隠す'}
+                  style={{fontSize:12,background:'none',border:'none',cursor:'pointer',padding:'4px 8px',
+                    color: tweet.hidden_by_admin ? 'var(--color-danger)' : 'var(--color-text-faint)'}}>
+                  {tweet.hidden_by_admin ? '隠している' : '隠す'}
+                </button>
+              )}
 
               {currentUserId && tweet.user_id === currentUserId && (
                 <>
