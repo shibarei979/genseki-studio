@@ -235,8 +235,27 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
    */
   if (!isOwner && (episodes || []).length === 0) notFound()
 
+  /*
+   * いちばん新しい更新の日時。
+   *
+   * 投稿された話の中から、いちばん新しいものを取る。
+   * 直しただけの話は数えない。読者が知りたいのは「次の話が出た日」。
+   */
+  const lastUpdatedAt = (episodes || [])
+    .filter(ep => ep.is_published === true)
+    .map(ep => ep.created_at)
+    .sort()
+    .slice(-1)[0] || null
+
   /* 予告も読者と同じ。読者に出ないものは作者にも出さない */
-  const upcomingEpisode = (episodes || [])
+  /*
+   * ★ 元の一覧（rawEpisodes）から探す。
+   *
+   *   episodes は「投稿された話」だけに絞ったあとのもの。
+   *   そこから「まだ投稿されていない話」を探しても、
+   *   1 件も見つからない。予告が一度も出なかったのはこれ。
+   */
+  const upcomingEpisode = (rawEpisodes || [])
     .filter(ep => ep.is_published !== true && ep.scheduled_at && new Date(ep.scheduled_at).getTime() > nowMs)
     .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())[0] || null
 
@@ -714,10 +733,29 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                   {user && totalCount > 0 && (
                     <span style={{fontSize:11,color:'var(--color-success)',fontWeight:600}}>✓ {fmtNum(readCount)}/{fmtNum(totalCount)}話 既読</span>
                   )}
-                  <span style={{fontSize:11,color:'var(--color-text-muted)'}}>最終更新：{episodes?.length ? fmtDate(episodes[episodes.length-1].created_at) : '—'}</span>
+                  {/*
+                    * ★ 最終更新は、いちばん新しい話の日時を見る。
+                    *
+                    *   前は目次の最後の話の「作った日」を見ていた。
+                    *   話の並び順は作者が決めるので、最後の話が
+                    *   いちばん新しいとは限らない。
+                    */}
+                  <span style={{fontSize:11,color:'var(--color-text-muted)'}}>最終更新：{lastUpdatedAt ? fmtDate(lastUpdatedAt) : '—'}</span>
                 </div>
               </div>
             </div>
+
+            {/*
+              * 次に出る話の予定。
+              *
+              * ★ 目次にも出す。
+              *   「次はいつか」を見に来る人は、まず目次を開く。
+              */}
+            {upcomingEpisode && (
+              <div style={{padding:'8px 14px',borderBottom:'1px solid var(--color-brand-border)',background:'var(--color-info-bg)',fontSize:12,color:'var(--color-info)',textAlign:'center'}}>
+                次の話は {new Date(upcomingEpisode.scheduled_at!).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃の予定です
+              </div>
+            )}
 
             {!episodes || episodes.length === 0 ? (
               <div style={{padding:'32px',textAlign:'center',color:'var(--color-text-faint)',fontSize:13}}>まだ話がありません</div>
