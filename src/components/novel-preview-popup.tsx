@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 interface Props {
@@ -38,6 +38,17 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
+  /*
+   * 札（タグ）が 1 行に入りきったか。
+   *
+   * ★ 入らないときは、折り返さずに「…」で止める。
+   *
+   *   前は折り返していたので、狭い画面では札が 2 段 3 段になり、
+   *   題名やあらすじが下へ押し出されていた。
+   */
+  const tagsRef = useRef<HTMLDivElement>(null)
+  const [tagsCut, setTagsCut] = useState(false)
+
   /* 画面の高さ。原稿用紙の行数をここから決める */
   const [viewH, setViewH] = useState(900)
 
@@ -51,6 +62,18 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  /*
+   * 札が入りきったかを測る。
+   *
+   * 幅は画面の大きさと縮め具合で変わるので、
+   * 開いたときと、大きさが変わったときに測り直す。
+   */
+  useEffect(() => {
+    const el = tagsRef.current
+    if (!el) { setTagsCut(false); return }
+    setTagsCut(el.scrollWidth > el.clientWidth + 2)
+  }, [show, mounted, viewH, isMobile, novel.tags])
 
   const rawText = novel.catchcopy || novel.summary || ''
 
@@ -154,10 +177,15 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
             </div>
           )}
           {(novel.tags||[]).length > 0 && (
-            <div style={{display:'flex',gap:4,flexWrap:'wrap',marginTop:4}}>
-              {(novel.tags||[]).slice(0,5).map((t:string) => (
-                <span key={t} style={{fontSize:9,background:'var(--color-bg)',color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'1px 5px',borderRadius:3}}>#{t}</span>
-              ))}
+            <div style={{display:'flex',alignItems:'center',gap:4,marginTop:4,minWidth:0}}>
+              <div ref={tagsRef} style={{display:'flex',gap:4,flexWrap:'nowrap',overflow:'hidden',minWidth:0}}>
+                {(novel.tags||[]).slice(0,5).map((t:string) => (
+                  <span key={t} style={{flexShrink:0,whiteSpace:'nowrap',fontSize:sz(9),background:'var(--color-bg)',color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'1px 5px',borderRadius:3}}>#{t}</span>
+                ))}
+              </div>
+              {tagsCut && (
+                <span style={{flexShrink:0,fontSize:sz(9),color:'var(--color-text-faint)'}}>…</span>
+              )}
             </div>
           )}
         </div>
