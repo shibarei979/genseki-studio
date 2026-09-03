@@ -842,13 +842,30 @@ export const supabaseRepository: Repository = {
          * ★ 逆はしない。
          *   作品を下書きに戻しても、話は触らない。
          *   作者が意図して隠したものを、勝手に出さないため。
+         *
+         * ★ 限定公開は、そのままにする。
+         *
+         *   前はここで visibility を public に書き換えていた。
+         *   限定公開にしてから話を投稿すると、
+         *   作者の知らないうちに全体公開へ戻り、検索に出ていた。
+         *
+         *   限定公開も「読ませる意思はある」状態なので、
+         *   下書きのときだけ引き上げればよい。
          */
         if (patch.is_published === true && data?.novel_id) {
             await db()
                 .from("novels")
                 .update({ published: true, visibility: "public" })
                 .eq("id", data.novel_id)
-                .eq("published", false);
+                .eq("published", false)
+                .eq("visibility", "draft");
+
+            /* 限定公開のままの作品は、印だけ立てる */
+            await db()
+                .from("novels")
+                .update({ published: false })
+                .eq("id", data.novel_id)
+                .eq("visibility", "limited");
         }
 
         /*
