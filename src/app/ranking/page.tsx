@@ -32,7 +32,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
     let poolQuery = supabase
       .from('novels')
       .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at')
-      .eq('published', true).eq('is_r18', false).neq('genre', '官能').in('age_rating', ratings)
+      .eq('published', true).eq('is_r18', false).not('genre', 'in', '("官能","官能 R18","BL R18","GL R18")').in('age_rating', ratings)
     if (aiMode === 'ai') poolQuery = (poolQuery as any).eq('ai_usage', 'full')
     else poolQuery = (poolQuery as any).neq('ai_usage', 'full')
     const { data: poolNovels } = await poolQuery
@@ -180,7 +180,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
 
   let q = supabase.from('novels')
     .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at')
-    .in('id', likeIds).eq('published', true).eq('is_r18', false).neq('genre', '官能').in('age_rating', ratings)
+    .in('id', likeIds).eq('published', true).eq('is_r18', false).not('genre', 'in', '("官能","官能 R18","BL R18","GL R18")').in('age_rating', ratings)
   // AI作品ランキングと人間作品ランキングを分離
   if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
   else q = (q as any).neq('ai_usage', 'full')

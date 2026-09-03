@@ -81,11 +81,16 @@ export default function SearchForm({
 }: Props) {
   const router = useRouter()
   /*
-   * BL・GL と官能は、年齢を確かめた人にだけ出す。
-   * 作品の側でも R18 のときしか選べないので、
-   * 見せても選べる作品が無い。
+   * ★ BL・GL は誰にでも出す。
+   *
+   *   関係の書き方であって、中身が大人向けとは限らない。
+   *   作品の側でも、どの年齢区分でも選べるようにした。
+   *
+   * ★ 後ろに R18 が付いた棚だけ、年齢を確かめた人に出す。
    */
-  const GENRES = ageVerified ? [...GENRES_BASE, 'BL', 'GL', '官能'] : GENRES_BASE
+  const GENRES = ageVerified
+    ? [...GENRES_BASE, 'BL', 'GL', 'BL R18', 'GL R18', '官能 R18']
+    : [...GENRES_BASE, 'BL', 'GL']
 
   /* 題名と作者名をまとめて探す枠。いちばん上に置く */
   /*

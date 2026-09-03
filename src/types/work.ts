@@ -220,14 +220,27 @@ export const GENRES = [
     "文芸",
 
     /*
-     * BL・GL は R18 の作品でだけ選べる。
+     * BL・GL は、どの年齢区分でも選べる。
      *
-     * 全年齢の棚にこの 2 つを並べると、
-     * 探している人にも探していない人にも
-     * 意図と違う出方をする。
+     * ★ 前は R18 の作品でしか選べなかった。
+     *
+     *   BL・GL は関係の書き方であって、
+     *   その中身が大人向けとは限らない。
+     *   選べないと、書いた人は別の棚へ入れるしかなかった。
      */
     "BL",
     "GL",
+
+    /*
+     * 下の 3 つは R18 の作品でだけ選べる。
+     *
+     * 同じ BL でも、全年齢のものと並べると
+     * 探している人にも探していない人にも意図と違う出方をする。
+     * 棚を分ける。
+     */
+    "BL R18",
+    "GL R18",
+    "官能 R18",
 
     "その他",
 
@@ -243,20 +256,20 @@ export const GENRES = [
 ] as const;
 
 /** 新しく選べるジャンル。昔のものは出さない */
-export const GENRES_SELECTABLE = GENRES.slice(0, 16);
+export const GENRES_SELECTABLE = GENRES.slice(0, 19);
 
 /**
  * R18 の作品でだけ選べるジャンル。
  *
  * 年齢の区分を R18 から下げたときは、
  * このジャンルを外して選び直してもらう。
- * 残したままだと、全年齢の棚に BL・GL が並ぶ。
+ * 残したままだと、全年齢の棚に R18 用の棚が並ぶ。
  *
  * こちらで別のジャンルへ移し替えることはしない。
  * どこへ入れるかは作者が決めるものなので、
  * 空にして選び直してもらう。
  */
-export const GENRES_R18_ONLY: string[] = ["BL", "GL"];
+export const GENRES_R18_ONLY: string[] = ["BL R18", "GL R18", "官能 R18"];
 
 /** その年齢区分で選べるジャンル */
 export function selectableGenres(ageRating: AgeRating): string[] {
@@ -317,6 +330,10 @@ export const GENRE_COLOR: Record<string, string> = {
     /* 文芸は落ち着いた藍鼠。派手な色だと棚の中で浮く */
     文芸: "#5a6b7d",
     BL: "#4a90d9",
+    /* R18 用の棚。元の色をそのまま使い、並びで見分ける */
+    "BL R18": "#4a90d9",
+    "GL R18": "#d96fa8",
+    "官能 R18": "#b03a5b",
     GL: "#e07aa8",
     その他: "#8a8f93",
 

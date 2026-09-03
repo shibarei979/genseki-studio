@@ -37,7 +37,7 @@ async function computeRecommendScores(): Promise<ScoredNovel[]> {
   const { data: novels } = await supabase
     .from('novels')
     .select('id, title, genre, novel_type, author_id, summary, catchcopy, tags, created_at, originality_score, ai_usage, is_serial, completed_at, age_rating')
-    .eq('published', true).eq('is_r18', false).neq('genre', '官能')
+    .eq('published', true).eq('is_r18', false).not('genre', 'in', '("官能","官能 R18","BL R18","GL R18")')
     .order('created_at', { ascending: false }).limit(300)
   if (!novels || novels.length === 0) return []
   const novelIds = novels.map((n: any) => n.id)
