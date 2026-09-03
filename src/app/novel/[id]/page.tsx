@@ -446,11 +446,12 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
               *   同じ日なら、読者にとっては同じ「出た日」。
               */}
             <span style={{fontSize:10,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>
-              {fmtDate(ep.posted_at || ep.created_at)}
+              {/* ★ 何の日付か分かるように「投稿」と添える */}
+              {fmtDate(ep.posted_at || ep.created_at)} 投稿
               {ep.updated_at &&
                 fmtDate(ep.updated_at) !== fmtDate(ep.posted_at || ep.created_at) && (
                   <span style={{marginLeft:5,color:'var(--color-text-muted)'}}>
-                    改稿 {fmtDate(ep.updated_at)}
+                    ・{fmtDate(ep.updated_at)} 改稿
                   </span>
                 )}
             </span>

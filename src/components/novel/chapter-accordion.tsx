@@ -103,10 +103,10 @@ export default function ChapterAccordion({
             {/* 投稿した日。1日以上あけて直していれば、改稿の日も出す */}
             <span style={{fontSize:10,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>
               {/* 日付だけ。改稿は日が変わったときだけ出す */}
-              {fmtDate(ep.posted_at || ep.created_at)}
+              {fmtDate(ep.posted_at || ep.created_at)} 投稿
               {ep.updated_at &&
                 fmtDate(ep.updated_at) !== fmtDate(ep.posted_at || ep.created_at) && (
-                  <span style={{marginLeft:5,color:'var(--color-text-muted)'}}>改稿 {fmtDate(ep.updated_at)}</span>
+                  <span style={{marginLeft:5,color:'var(--color-text-muted)'}}>・{fmtDate(ep.updated_at)} 改稿</span>
                 )}
             </span>
           </div>
