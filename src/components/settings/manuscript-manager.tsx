@@ -390,6 +390,13 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         if (!window.confirm(message)) return;
 
         setIsImporting(true);
+
+        /*
+         * ★ 失敗を黙って捨てない。
+         *   取り込めなかったのに何も出ないと、
+         *   入ったつもりで執筆へ行くことになる。
+         */
+        try {
         await onImport(
             confirmedChunks.map((chunk) => ({
                 title: chunk.title,
@@ -400,6 +407,13 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         );
         setRaw("");
         setEdited(null);
+        } catch (caught) {
+            window.alert(
+                caught instanceof Error
+                    ? `取り込めませんでした（${caught.message}）`
+                    : "取り込めませんでした",
+            );
+        }
         setIsImporting(false);
     }
 
@@ -1218,6 +1232,35 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                         </div>
                                     </div>
                                 )}
+
+                                {/*
+                                  * ★ 取り込む押し具。
+                                  *
+                                  *   これが画面に出ていなかった。
+                                  *   確定まで進んで「提案はすべて確定しました」を見た人が、
+                                  *   取り込んだつもりで執筆へ行き、
+                                  *   1 話も入っていない、という声が届いた。
+                                  *
+                                  *   確定した数を押し具に書く。何が入るのかを最後に見せる。
+                                  */}
+                                <button
+                                    type="button"
+                                    onClick={() => void handleImport()}
+                                    disabled={confirmedChunks.length === 0 || isImporting}
+                                    className="mt-3 w-full rounded-md bg-forest px-4 py-3 text-[13px] font-medium text-white hover:bg-forest-dark disabled:opacity-40"
+                                >
+                                    {isImporting
+                                        ? "取り込んでいます…"
+                                        : confirmedChunks.length === 0
+                                          ? "確定した話がありません"
+                                          : mode === "replace"
+                                            ? `${confirmedChunks.length}話に入れ替える`
+                                            : `${confirmedChunks.length}話を取り込む`}
+                                </button>
+
+                                <p className="mt-1.5 text-center text-[11px] text-faint">
+                                    ここを押すまで、執筆には入りません。
+                                </p>
                             </>
                         )}
                     </div>
