@@ -50,11 +50,21 @@ export default function TypoReportsTab() {
 
             const list = (data ?? []) as Row[];
 
-            /* 作品名と話名を足す。無くても一覧は出す */
-            const novelIds = [...new Set(list.map((one) => one.novel_id))];
-            const episodeIds = [
-                ...new Set(list.map((one) => one.episode_id).filter(Boolean)),
-            ] as string[];
+            /*
+             * 作品名と話名を足す。無くても一覧は出す。
+             *
+             * ★ Set を展開しない。
+             *   この作りの型の設定（target）では展開が使えず、
+             *   送るときに止まる。同じ id を落とすだけなので filter でよい。
+             */
+            const novelIds = list
+                .map((one) => one.novel_id)
+                .filter((id, at, all) => all.indexOf(id) === at);
+
+            const episodeIds = list
+                .map((one) => one.episode_id)
+                .filter((id): id is string => !!id)
+                .filter((id, at, all) => all.indexOf(id) === at);
 
             const [novels, episodes] = await Promise.all([
                 novelIds.length
@@ -65,25 +75,26 @@ export default function TypoReportsTab() {
                     : Promise.resolve({ data: [] }),
             ]);
 
-            const novelName = new Map(
-                (novels.data ?? []).map((one: { id: string; title: string }) => [
-                    one.id,
-                    one.title,
-                ]),
-            );
-            const episodeName = new Map(
-                (episodes.data ?? []).map((one: { id: string; title: string }) => [
-                    one.id,
-                    one.title,
-                ]),
-            );
+            /*
+             * ★ Map も使わない。
+             *   古い型の設定では扱いが渋いので、ただの入れ物にする。
+             */
+            const novelName: Record<string, string> = {};
+            for (const one of (novels.data ?? []) as { id: string; title: string }[]) {
+                novelName[one.id] = one.title;
+            }
+
+            const episodeName: Record<string, string> = {};
+            for (const one of (episodes.data ?? []) as { id: string; title: string }[]) {
+                episodeName[one.id] = one.title;
+            }
 
             setRows(
                 list.map((one) => ({
                     ...one,
-                    novel_title: novelName.get(one.novel_id) ?? null,
+                    novel_title: novelName[one.novel_id] ?? null,
                     episode_title: one.episode_id
-                        ? (episodeName.get(one.episode_id) ?? null)
+                        ? (episodeName[one.episode_id] ?? null)
                         : null,
                 })),
             );
