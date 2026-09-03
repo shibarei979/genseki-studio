@@ -40,9 +40,39 @@ export default function TypoReportsTab() {
         try {
             const supabase = createClient();
 
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+
+            if (!user) {
+                setRows([]);
+                return;
+            }
+
+            /*
+             * ★ 自分の作品ぶんだけを読む。
+             *
+             *   表の決まりでは、運営はすべての報告を読める。
+             *   そのため運営が開くと、他人の作品の報告まで並んでいた。
+             *   ここは「作者が自分あての指摘を見る場所」なので、
+             *   自分の作品の id で必ず絞る。
+             */
+            const { data: mine } = await supabase
+                .from("novels")
+                .select("id")
+                .eq("author_id", user.id);
+
+            const myNovelIds = (mine ?? []).map((one: { id: string }) => one.id);
+
+            if (myNovelIds.length === 0) {
+                setRows([]);
+                return;
+            }
+
             const { data, error: readError } = await supabase
                 .from("typo_reports")
                 .select("id, novel_id, episode_id, original_text, suggested_text, note, created_at")
+                .in("novel_id", myNovelIds)
                 .order("created_at", { ascending: false })
                 .limit(200);
 
