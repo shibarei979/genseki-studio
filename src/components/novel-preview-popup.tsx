@@ -38,9 +38,15 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
+  /* 画面の高さ。原稿用紙の行数をここから決める */
+  const [viewH, setViewH] = useState(900)
+
   useEffect(() => {
     setMounted(true)
-    const check = () => setIsMobile(window.innerWidth <= 768)
+    const check = () => {
+      setIsMobile(window.innerWidth <= 768)
+      setViewH(window.innerHeight)
+    }
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
@@ -62,7 +68,21 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
 
   const ROWS      = isMobile ? 17 : 20
   const TEXT_COLS = 5
-  const CELL      = isMobile ? 18 : 27
+  /*
+   * ますの大きさ。
+   *
+   * ★ 入りきらないときは、ますを小さくする。
+   *
+   *   前は 18px・27px で決め打ちだった。
+   *   正方形に近い画面（iPad など）では枠が入りきらず、
+   *   あらすじの所だけが送り出しになっていた。
+   *
+   *   行数は変えない。字数が減ると、あらすじが途中で切れる。
+   *   小窓は画面の 85%まで。頭と足に 210px ほど取られる。
+   *   残りを行数で割った大きさに縮める。小さくても 12px は保つ。
+   */
+  const CELL      = Math.max(12, Math.min(isMobile ? 18 : 27,
+                      Math.floor((viewH * 0.85 - 210) / ROWS)))
 
   const lines = rawText.split('\n').map(toVertical)
   const processedChars: (string | null)[] = []
@@ -166,7 +186,8 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
                               width:CELL,height:CELL,
                               borderBottom:row<ROWS-1?'1px solid var(--color-brand-border)':'none',
                               display:'flex',alignItems:'center',justifyContent:'center',
-                              fontSize: isMobile ? 11 : 15,
+                              /* 字はますに合わせる。ますだけ縮めると、はみ出す */
+                              fontSize: Math.max(9, Math.round(CELL * (isMobile ? 0.61 : 0.556))),
                               color: char ? 'var(--color-text)' : 'transparent',
                               fontFamily:"'Noto Serif JP',serif",
                               lineHeight:1,flexShrink:0,
