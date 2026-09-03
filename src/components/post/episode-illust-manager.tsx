@@ -36,10 +36,18 @@ interface Props {
     episodeId: string;
     /** いまの本文。置き場所を選ぶのに使う */
     body: string;
+    /**
+     * 本文の画面へ移る直前に呼ぶ。
+     *
+     * ★ 書きかけの設定を、先に控えてもらう。
+     *   予約の日時などは押すまで表に入っていないので、
+     *   そのまま移ると消えてしまう。
+     */
+    onBeforeLeave?: () => void;
 }
 
 
-export default function EpisodeIllustManager({ novelId, episodeId, body }: Props) {
+export default function EpisodeIllustManager({ novelId, episodeId, body, onBeforeLeave }: Props) {
     const router = useRouter();
 
     const [illusts, setIllusts] = useState<EpisodeIllust[]>([]);
@@ -144,13 +152,14 @@ export default function EpisodeIllustManager({ novelId, episodeId, body }: Props
                                       */}
                                     <button
                                         type="button"
-                                        onClick={() =>
+                                        onClick={() => {
+                                            onBeforeLeave?.();
                                             router.push(
                                                 `/workspace/${novelId}?ep=${episodeId}` +
                                                     `&illust=${illust.id}` +
                                                     `&illustUrl=${encodeURIComponent(illust.url)}`,
-                                            )
-                                        }
+                                            );
+                                        }}
                                         className="rounded border border-line px-2 py-0.5 text-[10.5px] text-muted hover:border-forest-line hover:text-forest"
                                     >
                                         置く場所を選ぶ

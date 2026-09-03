@@ -841,6 +841,8 @@ function PostForm({
      */
     const isDirty =
         title !== episode.title ||
+        /* 予約の日時も、書き換えたうちに入れる */
+        at !== toLocalInput(episode.publish_at) ||
         illustUrl !== (episode.illust_url ?? "") ||
         illustIsAi !== (episode.illust_is_ai ?? false) ||
         preface !== (episode.preface ?? "") ||
@@ -977,6 +979,33 @@ function PostForm({
                                 novelId={work.id}
                                 episodeId={episode.id}
                                 body={episode.body ?? ""}
+                                /*
+                                 * ★ 本文へ移る前に、書きかけの設定を保存する。
+                                 *
+                                 *   予約の日時などは、押すまで表にも入っていない。
+                                 *   置き場所を選びに行って戻ると、
+                                 *   入れたはずの予約が消えていた。
+                                 */
+                                onBeforeLeave={() => {
+                                    const patch: Record<string, unknown> = {
+                                        title,
+                                        preface: preface || null,
+                                        episode_summary: summary || null,
+                                        afterword: afterword || null,
+                                        chapter_id: chapterId || null,
+                                    };
+
+                                    /* 予約の日時が入っていて、まだ入れていなければ控える */
+                                    if (at) {
+                                        const target = new Date(at);
+                                        if (!Number.isNaN(target.getTime()) && target.getTime() > Date.now()) {
+                                            patch.is_published = false;
+                                            patch.publish_at = floorTo5Min(target).toISOString();
+                                        }
+                                    }
+
+                                    onChange(patch);
+                                }}
                             />
 
                             <div className="mt-3 rounded-lg border border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_6%,transparent)] px-3.5 py-3">
