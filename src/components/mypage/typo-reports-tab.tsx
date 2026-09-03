@@ -32,6 +32,33 @@ interface Row {
     episode_title?: string | null;
 }
 
+
+/**
+ * 誤字の印。
+ *
+ * ★ 赤い字だけだと、何の行なのか分かりにくい。
+ *   字の横に小さな筆の絵を置いて、指摘だと一目で分かるようにする。
+ */
+function PenMark() {
+    return (
+        <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--color-danger)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            style={{ flexShrink: 0, marginTop: 5 }}
+        >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+        </svg>
+    );
+}
+
 export default function TypoReportsTab() {
     const [rows, setRows] = useState<Row[] | null>(null);
     const [error, setError] = useState("");
@@ -194,7 +221,9 @@ export default function TypoReportsTab() {
                             {row.episode_title ? ` ／ ${row.episode_title}` : ""}
                         </div>
 
-                        <div style={{ marginTop: 8, fontSize: 13, color: "var(--color-text)", lineHeight: 1.8 }}>
+                        <div style={{ marginTop: 8, display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "var(--color-text)", lineHeight: 1.8 }}>
+                            {/* 指摘だと一目で分かるように、字の横に印を置く */}
+                            <PenMark />
                             <span style={{ color: "var(--color-danger)" }}>{row.original_text}</span>
                             {row.suggested_text && (
                                 <>
