@@ -194,17 +194,10 @@ export default function CommunityClient() {
         void (async () => {
             const supabase = createClient();
 
-            const [{ data: rows }, { count }] = await Promise.all([
-                supabase
-                    .from("tweet_topics")
-                    .select("key, label, sort_order")
-                    .order("sort_order"),
-                supabase
-                    .from("tweets")
-                    .select("id", { count: "exact", head: true }),
-            ]);
-
-            setTotal(count ?? 0);
+            const { data: rows } = await supabase
+                .from("tweet_topics")
+                .select("key, label, sort_order")
+                .order("sort_order");
 
             /*
              * 表がまだ無ければ、決め打ちの一覧を使う。
@@ -228,25 +221,42 @@ export default function CommunityClient() {
              * 1 回で取れると速いが、その書き方は集計の設定が要る。
              * テーマは 10 個ほどなので、並べて数えても支障はない。
              */
-            const counted = await Promise.all(
-                list.map(async (row: { key: string; label: string }) => {
-                    const { count: n } = await supabase
-                        .from("tweets")
-                        .select("id", { count: "exact", head: true })
-                        .eq("topic", row.key);
-                    return { key: row.key, label: row.label, count: n ?? 0 };
-                }),
+            /*
+             * ★ 数とお知らせは、受け口から受け取る。
+             *
+             *   数えるだけでも表に触れる道が残ると、
+             *   権限を丸ごと外せない。
+             *   隠したつぶやきは、数からも外してある。
+             */
+            let counts: { key: string; count: number }[] = [];
+            let notices: { id: string; body: string }[] = [];
+
+            try {
+                const response = await fetch("/api/tweets/summary", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        keys: list.map((row: { key: string }) => row.key),
+                    }),
+                });
+                const payload = await response.json();
+                setTotal(payload?.total ?? 0);
+                counts = payload?.counts ?? [];
+                notices = payload?.notices ?? [];
+            } catch {
+                setTotal(0);
+            }
+
+            const countBy: Record<string, number> = {};
+            for (const one of counts) countBy[one.key] = one.count;
+
+            setTopics(
+                list.map((row: { key: string; label: string }) => ({
+                    key: row.key,
+                    label: row.label,
+                    count: countBy[row.key] ?? 0,
+                })),
             );
-
-            setTopics(counted);
-
-            /* 公式からのお知らせ */
-            const { data: notices } = await supabase
-                .from("tweets")
-                .select("id, body")
-                .eq("topic", "notice")
-                .order("created_at", { ascending: false })
-                .limit(3);
 
             setOfficial(notices ?? []);
         })();

@@ -191,10 +191,18 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
 
   /** 運営が、ほかの人から隠す・隠すのをやめる */
   async function toggleHidden(tweetId: string, next: boolean) {
-    const { error } = await supabase
-      .from('tweets').update({ hidden_by_admin: next }).eq('id', tweetId)
-
-    if (error) { window.alert(`変えられませんでした：${error.message}`); return }
+    try {
+      const response = await fetch('/api/tweets/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'hide', tweetId, hidden: next }),
+      })
+      const payload = await response.json()
+      if (payload?.error) { window.alert(`変えられませんでした：${payload.error}`); return }
+    } catch {
+      window.alert('変えられませんでした')
+      return
+    }
 
     setTweets(prev => prev.map(one =>
       one.id === tweetId ? { ...one, hidden_by_admin: next } : one))
@@ -542,31 +550,24 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
      * この列を送った時点で丸ごと失敗する。
      * 一度試して駄目なら、列を外してもう一度送る。
      */
-    let { data, error } = await supabase
-      .from('tweets')
-      .insert({ user_id: currentUserId, body: body.trim(), image_url: imageUrl, topic: chosen })
-      .select('id, user_id, body, image_url, created_at, edited_at, topic, hidden_by_admin')
-      .single()
+    /*
+     * ★ 書き込みも受け口を通す。
+     *   誰の名で入れるかは、向こうで決める。
+     */
+    let data: any = null
+    let error: { message: string } | null = null
 
-    if (error) {
-      const retry = await supabase
-        .from('tweets')
-        .insert({ user_id: currentUserId, body: body.trim(), image_url: imageUrl })
-        .select('id, user_id, body, image_url, created_at')
-        .single()
-
-      if (!retry.error && retry.data) {
-        /*
-         * topic の列が無い環境。
-         *
-         * 保存はできないが、いま画面に出すぶんには
-         * 選んだテーマを覚えておく。
-         * null にすると、投稿した直後だけ札が消えて、
-         * 選んだことが無かったように見える。
-         */
-        data = { ...retry.data, topic: chosen }
-        error = null
-      }
+    try {
+      const response = await fetch('/api/tweets/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', body: body.trim(), imageUrl, topic: chosen }),
+      })
+      const payload = await response.json()
+      if (payload?.error) error = { message: payload.error }
+      else data = payload?.tweet ?? null
+    } catch (caught) {
+      error = { message: caught instanceof Error ? caught.message : '送れませんでした' }
     }
 
     setPosting(false)
@@ -840,8 +841,19 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
 
     if (!confirm('このつぶやきを削除しますか？')) return
 
-    const { error } = await supabase
-      .from('tweets').delete().eq('id', tweetId).eq('user_id', currentUserId)
+    /* 消すのも受け口を通す */
+    let error: { message: string } | null = null
+    try {
+      const response = await fetch('/api/tweets/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', tweetId }),
+      })
+      const payload = await response.json()
+      if (payload?.error) error = { message: payload.error }
+    } catch (caught) {
+      error = { message: caught instanceof Error ? caught.message : '送れませんでした' }
+    }
 
     /*
      * 消えなかったら、消えたことにしない。
@@ -874,11 +886,19 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     setSavingEdit(true)
     const now = new Date().toISOString()
 
-    const { error } = await createClient()
-      .from('tweets')
-      .update({ body: next, edited_at: now })
-      .eq('id', tweetId)
-      .eq('user_id', currentUserId)
+    /* 直すのも受け口を通す */
+    let error: { message: string } | null = null
+    try {
+      const response = await fetch('/api/tweets/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update', tweetId, body: next }),
+      })
+      const payload = await response.json()
+      if (payload?.error) error = { message: payload.error }
+    } catch (caught) {
+      error = { message: caught instanceof Error ? caught.message : '送れませんでした' }
+    }
 
     setSavingEdit(false)
 
