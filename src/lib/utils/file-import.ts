@@ -73,6 +73,43 @@ interface PdfjsModule {
  * 段落や改行が原稿どおりに戻るとは限らない。
  * 取り込んだあとに手直しが要ることを利用者に伝えること。
  */
+
+/**
+ * 縦書き用の字を、ふつうの字へ戻す。
+ *
+ * ★ 縦書きで作られた PDF は、括弧や句読点が
+ *   「縦書き用の別の字」で埋め込まれている。
+ *
+ *   ﹁白書の魔女﹂水瀬透  ← 取り込んだまま
+ *   「白書の魔女」水瀬透  ← 直したあと
+ *
+ *   見た目が似ているので気づきにくいが、別の字なので
+ *   置き換えも検索も効かず、横書きで読むと形が崩れる。
+ */
+const VERTICAL_FORMS: Record<string, string> = {
+    "\uFE41": "「", "\uFE42": "」",
+    "\uFE43": "『", "\uFE44": "』",
+    "\uFE10": "、", "\uFE12": "。",
+    "\uFE11": "、",
+    "\uFE35": "（", "\uFE36": "）",
+    "\uFE37": "｛", "\uFE38": "｝",
+    "\uFE39": "〔", "\uFE3A": "〕",
+    "\uFE3B": "【", "\uFE3C": "】",
+    "\uFE3D": "《", "\uFE3E": "》",
+    "\uFE3F": "〈", "\uFE40": "〉",
+    "\uFE47": "［", "\uFE48": "］",
+    "\uFE19": "…",
+    "\uFE31": "―", "\uFE32": "―",
+    "\uFE30": "…",
+};
+
+export function normalizeVerticalForms(text: string): string {
+    return text.replace(
+        /[\uFE10-\uFE19\uFE30-\uFE48]/g,
+        (ch) => VERTICAL_FORMS[ch] ?? ch,
+    );
+}
+
 export async function readPdfFile(file: File): Promise<ImportedText> {
     // 初期表示に不要な重いライブラリなので、PDF を選んだ人にだけ読み込ませる
     // @ts-ignore -- npm install 前でも型チェックが通るようにする
@@ -106,7 +143,10 @@ export async function readPdfFile(file: File): Promise<ImportedText> {
     }
 
     // ページの切れ目は段落の切れ目とは限らないので、空行 2 つで繋ぐ
-    return { text: pages.filter((page) => page.length > 0).join("\n\n") };
+    const joined = pages.filter((page) => page.length > 0).join("\n\n");
+
+    /* 縦書き用の字を、ふつうの字へ戻してから渡す */
+    return { text: normalizeVerticalForms(joined) };
 }
 
 /** 拡張子から読み方を選ぶ */
