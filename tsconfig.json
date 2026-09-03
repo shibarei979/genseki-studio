@@ -1,5 +1,15 @@
 {
     "compilerOptions": {
+        /*
+         * 型を見るときの、言葉の古さ。
+         *
+         * ★ 指定が無いと一番古い形（ES5）として見られる。
+         *   Set や Map を [...] で展開しただけで送りが止まっていた。
+         *
+         * 送り出す形そのものは Next が別に決めているので、
+         * ここを変えても動きは変わらない。
+         */
+        "target": "es2017",
         "lib": ["dom", "dom.iterable", "esnext"],
         "allowJs": true,
         "skipLibCheck": true,
