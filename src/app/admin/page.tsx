@@ -1,3 +1,4 @@
+import LivePresence from "@/components/admin/live-presence"
 import AdminShell from '@/components/admin/admin-shell'
 import UserJoinPetals from '@/components/admin/user-join-petals'
 import { createClient } from '@/lib/supabase/server'
@@ -621,6 +622,17 @@ export default async function AdminPage({
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             サイトへ戻る
           </Link>
+        </div>
+
+        {/*
+          * いま開いている人。
+          *
+          * ★ 上の Promise.all の並びには足さない。
+          *   1 つ足すと、そのあとの値が全部ずれる。
+          *   この部品が自分で数を取りに行く。
+          */}
+        <div style={{marginBottom:16,maxWidth:280}}>
+          <LivePresence />
         </div>
 
         {/*

@@ -1,5 +1,6 @@
 import AuthGate from "@/components/auth/auth-gate";
 import BookInfoHost from "@/components/book-info-host";
+import PresencePing from "@/components/common/presence-ping";
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
 import Script from "next/script";
@@ -183,6 +184,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                  * ここに 1 つだけ置く。
                  */}
                 <BookInfoHost />
+
+                {/*
+                  * いま開いている人を数えるための合図。
+                  *
+                  * 画面には何も出さない。
+                  * 30 秒ごとに 1 回だけ送る。
+                  */}
+                <PresencePing />
             </body>
         </html>
     );
