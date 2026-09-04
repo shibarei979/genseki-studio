@@ -184,38 +184,6 @@ function normalizeForReading(text: string): string {
 }
 
 
-/**
- * 続いた棒（——、――、────）を 1 本の線として描く。
- *
- * ★ 縦書きでは、棒の字を並べても繋がらない。
- *
- *   字と字のあいだに隙間が入り、「ー ー ー」に見える。
- *   ダッシュは「1 本の長い線」のつもりで書かれるので、
- *   切れて出ると意味が変わってしまう。
- *
- *   2 つ以上続いているところだけ、線に置き換える。
- *   1 つだけのときは字のまま出す（音引きと区別できないため）。
- */
-function renderDashRuns(line: string, keyPrefix: string) {
-  const parts = line.split(/([—―─‒–]{2,})/)
-
-  return parts.map((part, i) => {
-    if (!part) return null
-
-    if (/^[—―─‒–]{2,}$/.test(part)) {
-      return (
-        <span key={`${keyPrefix}-dash-${i}`}
-          style={{display:'inline-block',verticalAlign:'top',writingMode:'horizontal-tb',
-            height:`${part.length}em`,width:'1em'}}>
-          <span style={{display:'block',width:'0.08em',minWidth:1,height:'100%',
-            margin:'0 auto',background:'currentColor'}}/>
-        </span>
-      )
-    }
-
-    return withTateChuYoko(part, `${keyPrefix}-${i}`)
-  })
-}
 
 function VerticalText({ text }: { text: string }) {
   /*
@@ -281,7 +249,7 @@ function VerticalText({ text }: { text: string }) {
             * 英数字は縦中横で立てる。
             * そのままだと「35歳」の 35 も (Pr. I) も寝たまま出る。
             */
-          renderDashRuns(line, `${keyPrefix}-${i}`)
+          withTateChuYoko(line, `${keyPrefix}-${i}`)
         )}
         {i < all.length - 1 ? <br/> : null}
       </span>
@@ -834,11 +802,23 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
 
   const vertical = settings.writingMode === 'vertical'
 
+  /*
+   * ★ 明朝は、執筆画面と同じ指定にする。
+   *
+   *   前は 'Noto Serif JP' と名前で書いていた。
+   *   この作りでは書体を next/font で読み込んでおり、
+   *   本当の名前は別のものになっている。
+   *   名前で書くと当たらず、機械にある明朝で描かれていた。
+   *
+   *   そのため「——」が執筆画面では繋がり、
+   *   読む画面では切れる、という食い違いが出ていた。
+   *   var(--font-serif) が、執筆画面が使っているものと同じ。
+   */
   const fontFamily =
-    settings.font === 'serif'   ? "'Noto Serif JP', serif" :
+    settings.font === 'serif'   ? "var(--font-serif), 'Noto Serif JP', serif" :
     settings.font === 'rounded' ? "'Zen Maru Gothic', 'Noto Sans JP', sans-serif" :
-    settings.font === 'ud'      ? "'BIZ UDPGothic', 'Noto Sans JP', sans-serif" :
-                                  "'Noto Sans JP', sans-serif"
+    settings.font === 'ud'      ? "'BIZ UDPGothic', var(--font-sans), 'Noto Sans JP', sans-serif" :
+                                  "var(--font-sans), 'Noto Sans JP', sans-serif"
 
   // ===== モバイル =====
   if (isMobile) {

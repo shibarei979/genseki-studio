@@ -363,7 +363,8 @@ export default function ReadFullPage({
                         lineHeight: 1.9,
                         letterSpacing: ".03em",
                         color: "#2b2b2b",
-                        fontFamily: "'Noto Serif JP', serif",
+                        /* 執筆画面と同じ指定 */
+                        fontFamily: "var(--font-serif), 'Noto Serif JP', serif",
                         writingMode: isVertical ? "vertical-rl" : "horizontal-tb",
                         textOrientation: "mixed",
                         whiteSpace: "pre-wrap",
