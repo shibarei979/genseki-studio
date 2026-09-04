@@ -598,7 +598,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
             <span key={idx}>
               <br/>
               {atBreak.map(one => (
-                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize} rec={useRec(one, settingsForRec)}/>
+                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize} rec={recOf(one, settingsForRec)}/>
               ))}
             </span>
           )
@@ -679,7 +679,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
           <span key={idx}>
             {sentence}
             {here.map(one => (
-              <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize} rec={useRec(one, settingsForRec)}/>
+              <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize} rec={recOf(one, settingsForRec)}/>
             ))}
           </span>
         )
@@ -697,10 +697,14 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
 /**
  * その絵に、作者のすすめる見せ方を使うか。
  *
+ * ★ 名前を use で始めない。
+ *   React はその名を「仕掛け（Hook）」とみなし、
+ *   繰り返しの中で呼ぶと送りが止まる。
+ *
  * ★ 決めていない絵には効かない。
  * ★ 読む人が「自分の設定」を選んでいれば効かない。
  */
-function useRec(
+function recOf(
   one: { rec_width?: number | null; rec_align?: number | null },
   enabled: boolean,
 ): { width: number; align: number } | null {
@@ -1109,7 +1113,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
                 *   両方出すと、移し終えた作品で二重になる。
                 */}
               {illusts.filter(one => one.after_sentence === 0).map(one => (
-                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize} rec={useRec(one, settings.useRecommend !== false)}/>
+                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize} rec={recOf(one, settings.useRecommend !== false)}/>
               ))}
 
               {illusts.length === 0 && illustUrl && (
