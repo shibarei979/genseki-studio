@@ -25,6 +25,8 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import IconCropper from "@/components/mypage/icon-cropper";
+import { ILLUST_SIZE_LABEL } from "@/config/illust-size";
 import { getRepository } from "@/lib/repository";
 import { shrinkImage } from "@/lib/storage/image-store";
 import { uploadImage } from "@/lib/storage/remote-image";
@@ -53,6 +55,14 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
     const [illusts, setIllusts] = useState<EpisodeIllust[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [busy, setBusy] = useState(false);
+    /*
+     * 切り抜き待ちの絵。
+     *
+     * ★ 表紙と同じ道にする。
+     *   上げる前に、出したい所だけを切り出せる。
+     *   周りの白が広い絵は、それだけで小さく見える。
+     */
+    const [cropTarget, setCropTarget] = useState<File | null>(null);
     const [error, setError] = useState("");
 
 
@@ -71,13 +81,13 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
         void reload();
     }, [reload]);
 
-    async function handleUpload(file: File) {
+    async function handleUpload(file: Blob) {
         setBusy(true);
         setError("");
 
         try {
             /* 縮めてから上げる。そのままだと数 MB になる */
-            const shrunk = await shrinkImage(file, true);
+            const shrunk = await shrinkImage(file as File, true);
             const url = await uploadImage(shrunk, "illust");
 
             await getRepository().addEpisodeIllust({
@@ -103,6 +113,15 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
     async function handleDelete(illust: EpisodeIllust) {
         if (!window.confirm("この挿絵を外します。よろしいですか。")) return;
         await getRepository().deleteEpisodeIllust(illust.id);
+        await reload();
+    }
+
+    /** 絵ごとの大きさを決める。空にすると読む人の設定に従う */
+    async function handleSize(
+        illust: EpisodeIllust,
+        size: "small" | "medium" | "large" | null,
+    ) {
+        await getRepository().setEpisodeIllustSize(illust.id, size);
         await reload();
     }
 
@@ -174,6 +193,29 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
                                     </button>
                                 </div>
 
+                                {/*
+                                  * 大きさ。空なら読む人の設定に従う。
+                                  * 見開きで見せたい絵と、合間に置く絵を分けられる。
+                                  */}
+                                <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                                    <span className="text-[10.5px] text-faint">大きさ</span>
+                                    {([null, "small", "medium", "large"] as const).map((key) => (
+                                        <button
+                                            key={key ?? "auto"}
+                                            type="button"
+                                            onClick={() => void handleSize(illust, key)}
+                                            className={[
+                                                "rounded border px-2 py-0.5 text-[10.5px]",
+                                                (illust.size ?? null) === key
+                                                    ? "border-forest bg-forest-tint text-forest"
+                                                    : "border-line text-muted hover:border-forest-line",
+                                            ].join(" ")}
+                                        >
+                                            {key ? ILLUST_SIZE_LABEL[key] : "おまかせ"}
+                                        </button>
+                                    ))}
+                                </div>
+
                                 <label className="mt-1.5 flex items-center gap-1.5 text-[10.5px] text-muted">
                                     <input
                                         type="checkbox"
@@ -197,7 +239,8 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
                     disabled={busy}
                     onChange={(event) => {
                         const file = event.target.files?.[0];
-                        if (file) void handleUpload(file);
+                        /* そのまま上げず、切り抜きへ */
+                        if (file) setCropTarget(file);
                         event.target.value = "";
                     }}
                     className="w-full text-[12px] text-muted"
@@ -213,6 +256,20 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
                 )}
             </div>
 
+            {cropTarget && (
+                <IconCropper
+                    file={cropTarget}
+                    shape="rect"
+                    title="挿絵を切り抜く"
+                    /* はじめは横長。窓の中で縦長・正方形にも変えられる */
+                    aspect={1.6}
+                    onCancel={() => setCropTarget(null)}
+                    onDone={(blob) => {
+                        setCropTarget(null);
+                        void handleUpload(blob);
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -22,7 +22,7 @@ interface Props {
   recommendedMode?: 'vertical' | 'horizontal' | null
   /** 話ごとの挿絵。本文の前に出る */
   /** 話の中の挿絵。after_sentence は「何文目の後ろか」。0 は本文の頭 */
-  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[]
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]
   illustUrl?: string | null
   illustIsAi?: boolean | null
   /* 栞 */
@@ -578,7 +578,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
               */}
             {/* 本文の頭に置かれた絵。表にあるときは、そちらを使う */}
             {illusts.filter(one => one.after_sentence === 0).map(one => (
-              <MobileIllustVertical key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+              <MobileIllustVertical key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
             ))}
 
             {illusts.length === 0 && illustUrl && (
@@ -639,7 +639,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                       <span key={idx}>
                         <br/>
                         {atBreak.map(one => (
-                          <MobileIllustVertical key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+                          <MobileIllustVertical key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
                         ))}
                       </span>
                     )
@@ -679,7 +679,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                     <span key={idx}>
                       {sentence}
                       {here.map(one => (
-                        <MobileIllustVertical key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+                        <MobileIllustVertical key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
                       ))}
                     </span>
                   )
@@ -751,7 +751,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
           */}
         {/* 本文の頭に置かれた絵。表にあるときは、そちらを使う */}
         {illusts.filter(one => one.after_sentence === 0).map(one => (
-          <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+          <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
         ))}
 
         {illusts.length === 0 && illustUrl && (
@@ -798,7 +798,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                   <span key={idx}>
                     <br/>
                     {atBreak.map(one => (
-                      <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+                      <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
                     ))}
                   </span>
                 )
@@ -838,7 +838,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                 <span key={idx}>
                   {sentence}
                   {here.map(one => (
-                    <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+                    <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
                   ))}
                 </span>
               )

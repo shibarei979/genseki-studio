@@ -1081,6 +1081,8 @@ export const localRepository: Repository = {
 
     async moveEpisodeIllust(): Promise<void> {},
 
+    async setEpisodeIllustSize(): Promise<void> {},
+
     async setEpisodeIllustAi(): Promise<void> {},
 
     async deleteEpisodeIllust(): Promise<void> {},

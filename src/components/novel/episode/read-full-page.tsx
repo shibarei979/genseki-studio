@@ -48,7 +48,7 @@ import { splitIntoSentences } from "@/lib/utils/sentences";
  *   そのあとに高さいっぱい・幅 0 の仕切りを挟む。
  *   挟まないと、絵の下に本文が入り込んで重なる。
  */
-function FullscreenIllust({ url, isAi }: { url: string; isAi?: boolean }) {
+function FullscreenIllust({ url, isAi, size }: { url: string; isAi?: boolean; size?: string | null }) {
     return (
         <>
       {/*
@@ -64,15 +64,15 @@ function FullscreenIllust({ url, isAi }: { url: string; isAi?: boolean }) {
             <span style={{ display: "inline-block", verticalAlign: "top", margin: "0 1em", marginTop: "4.5em", writingMode: "horizontal-tb", position: "relative" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={url} alt="挿絵"
-                    style={{ maxHeight: illustBox("mobileVertical", "large").maxHeight,
-                        maxWidth: illustBox("mobileVertical", "large").maxWidth,
+                    style={{ maxHeight: illustBox("mobileVertical", size || "large").maxHeight,
+                        maxWidth: illustBox("mobileVertical", size || "large").maxWidth,
                         objectFit: "contain", borderRadius: 8, display: "block" }} />
                 {isAi && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
                         style={{ position: "absolute", top: -5, right: -5,
-                            width: illustBox("mobileVertical", "large").stamp,
-                            height: illustBox("mobileVertical", "large").stamp,
+                            width: illustBox("mobileVertical", size || "large").stamp,
+                            height: illustBox("mobileVertical", size || "large").stamp,
                             transform: "rotate(-8deg)", opacity: 0.55, pointerEvents: "none",
                             filter: "drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,0,0,.25))" }} />
                 )}
@@ -91,7 +91,7 @@ export default function ReadFullPage({
     title: string;
     body: string;
     /** 話の中の挿絵。after_sentence は「何文目の後ろか」。0 は本文の頭 */
-    illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[];
+    illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[];
     backHref: string;
 }) {
     const [size, setSize] = useState({ w: 0, h: 0 });
@@ -419,7 +419,7 @@ export default function ReadFullPage({
                             {illusts
                                 .filter((one) => one.after_sentence === 0)
                                 .map((one) => (
-                                    <FullscreenIllust key={one.id} url={one.url} isAi={one.is_ai} />
+                                    <FullscreenIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size} />
                                 ))}
 
                             {splitIntoSentences(body).map((raw, idx) => {
@@ -431,7 +431,7 @@ export default function ReadFullPage({
                                     <span key={idx}>
                                         <VerticalText text={raw} />
                                         {here.map((one) => (
-                                            <FullscreenIllust key={one.id} url={one.url} isAi={one.is_ai} />
+                                            <FullscreenIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size} />
                                         ))}
                                     </span>
                                 );

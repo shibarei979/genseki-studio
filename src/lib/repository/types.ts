@@ -335,6 +335,11 @@ export interface Repository {
         anchorText: string,
     ): Promise<void>;
 
+    setEpisodeIllustSize(
+        id: string,
+        size: "small" | "medium" | "large" | null,
+    ): Promise<void>;
+
     setEpisodeIllustAi(id: string, isAi: boolean): Promise<void>;
 
     deleteEpisodeIllust(id: string): Promise<void>;

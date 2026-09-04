@@ -246,4 +246,11 @@ export interface EpisodeIllust {
     after_sentence: number;
     /** 置いたときの文。本文を直したとき、番号を付け直すのに使う */
     anchor_text: string;
+    /**
+     * 絵ごとの大きさ。small / medium / large。
+     *
+     * 空のときは、読む人の設定に従う。
+     * 置いた人が決めたいときだけ入る。
+     */
+    size?: "small" | "medium" | "large" | null;
 }

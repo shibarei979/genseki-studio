@@ -1782,7 +1782,7 @@ export const supabaseRepository: Repository = {
     async listEpisodeIllusts(episodeId: string): Promise<EpisodeIllust[]> {
         const { data } = await db()
             .from("episode_illusts")
-            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text")
+            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text, size")
             .eq("episode_id", episodeId)
             .order("after_sentence", { ascending: true });
 
@@ -1807,7 +1807,7 @@ export const supabaseRepository: Repository = {
                 after_sentence: input.afterSentence,
                 anchor_text: input.anchorText,
             })
-            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text")
+            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text, size")
             .single();
 
         if (error) throw error;
@@ -1826,6 +1826,16 @@ export const supabaseRepository: Repository = {
                 anchor_text: anchorText,
                 updated_at: new Date().toISOString(),
             })
+            .eq("id", id);
+    },
+
+    async setEpisodeIllustSize(
+        id: string,
+        size: "small" | "medium" | "large" | null,
+    ): Promise<void> {
+        await db()
+            .from("episode_illusts")
+            .update({ size, updated_at: new Date().toISOString() })
             .eq("id", id);
     },
 

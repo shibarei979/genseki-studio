@@ -73,7 +73,7 @@ export default async function ReadPage({
     /* 話の中の挿絵。置き場所の順に読む */
     const { data: illustRows } = await supabase
         .from("episode_illusts")
-        .select("id, url, is_ai, after_sentence")
+        .select("id, url, is_ai, after_sentence, size")
         .eq("episode_id", params.epId)
         .order("after_sentence", { ascending: true });
 
@@ -81,7 +81,7 @@ export default async function ReadPage({
         <ReadFullPage
             title={episode.title || "無題"}
             body={episode.body || ""}
-            illusts={(illustRows ?? []) as { id: string; url: string; is_ai: boolean; after_sentence: number }[]}
+            illusts={(illustRows ?? []) as { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]}
             backHref={`/novel/${params.id}/episode/${params.epId}`}
         />
     );

@@ -35,7 +35,7 @@ interface Props {
    * ★ 1 話に何枚でも、好きな場所に置ける。
    *   after_sentence は「何文目の後ろか」。0 は本文の頭。
    */
-  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[]
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]
   /** 古い持ち方の挿絵。表に 1 枚も無いときだけ、本文の頭に出す */
   illustUrl?: string | null
   illustIsAi?: boolean | null
@@ -550,7 +550,7 @@ function SpeechPanel({ title, body, isMobile }: { title: string; body: string; i
 
 function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts = [], illustSize, fontSize, lineHeight, fontFamily, onQuote, selecting, onAfterQuote }: {
   /** 話の中の挿絵。何文目の後ろに置くかを持っている */
-  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[]
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]
   illustSize?: string | null
   marking?: boolean
   marks?: { id: string; sentence: number; text: string; color: string }[]
@@ -596,7 +596,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
             <span key={idx}>
               <br/>
               {atBreak.map(one => (
-                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize}/>
               ))}
             </span>
           )
@@ -677,7 +677,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
           <span key={idx}>
             {sentence}
             {here.map(one => (
-              <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+              <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize}/>
             ))}
           </span>
         )
@@ -1082,7 +1082,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
                 *   両方出すと、移し終えた作品で二重になる。
                 */}
               {illusts.filter(one => one.after_sentence === 0).map(one => (
-                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={settings.illustSize}/>
+                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
               ))}
 
               {illusts.length === 0 && illustUrl && (
@@ -1149,7 +1149,7 @@ interface VerticalProps {
   authorName?: string; fontSize: number; fontFamily: string
   selecting?: boolean; onQuote?: (text:string)=>void; onAfterQuote?: () => void
   /** 話の中の挿絵。after_sentence は「何文目の後ろか」。0 は本文の頭 */
-  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number }[]
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]
   /** 古い持ち方の挿絵。表に 1 枚も無いときだけ、題名の右に出る */
   illustUrl?: string | null
   illustIsAi?: boolean | null
@@ -1263,7 +1263,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], i
             */}
           {/* 本文の頭に置かれた絵。表にあるときは、そちらを使う */}
           {illusts.filter(one => one.after_sentence === 0).map(one => (
-            <VerticalIllust key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+            <VerticalIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize}/>
           ))}
 
           {illusts.length === 0 && illustUrl && (
@@ -1351,7 +1351,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], i
                     <span key={idx}>
                       <br/>
                       {atBreak.map(one => (
-                        <VerticalIllust key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+                        <VerticalIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize}/>
                       ))}
                     </span>
                   )
@@ -1412,7 +1412,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], i
                   <span key={idx}>
                     {sentence}
                     {here.map(one => (
-                      <VerticalIllust key={one.id} url={one.url} isAi={one.is_ai} size={illustSize}/>
+                      <VerticalIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize}/>
                     ))}
                   </span>
                 )
