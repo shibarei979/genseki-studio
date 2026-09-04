@@ -36,7 +36,7 @@ interface Props {
   onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
 }
 
-const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
+const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', useRecommend: true, fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
 
 function fontFamilyOf(font: Settings['font']): string {
   /* 執筆画面と同じ指定にする。名前で書くと当たらず、別の明朝で描かれる */
