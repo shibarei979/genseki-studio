@@ -159,7 +159,11 @@ function normalizeForReading(text: string): string {
    */
   next = next.replace(/\.{3,}/g, (m) => '…'.repeat(Math.max(1, Math.round(m.length / 3))))
   /* 全角 1 つ（—）は半角 2 つ（--）。本数を保つ */
-  next = next.replace(/[—―]+/g, (m) => '--'.repeat(m.length))
+  /*
+   * ★ ダッシュは半角に開かない。開くと下で「－－」になり、縦書きで切れる。
+   *   半角で打たれた「--」のほうを、ダッシュへ寄せる。
+   */
+  next = next.replace(/-{2,}/g, (m) => '―'.repeat(Math.max(1, Math.round(m.length / 2))))
 
   /*
    * 長音が続くところはダッシュに直す。

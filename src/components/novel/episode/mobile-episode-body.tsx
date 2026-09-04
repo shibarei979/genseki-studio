@@ -131,8 +131,18 @@ function normalizeForReading(text: string): string {
    * 点が増えたり減ったりする。
    */
   next = next.replace(/\.{3,}/g, (m) => '…'.repeat(Math.max(1, Math.round(m.length / 3))))
-  /* 全角 1 つ（—）は半角 2 つ（--）。本数を保つ */
-  next = next.replace(/[—―]+/g, (m) => '--'.repeat(m.length))
+  /*
+   * ★ ダッシュは、半角に開かない。
+   *
+   *   前はここで「—」を「--」に開いていた。
+   *   そのあと下の「半角を全角へ」で「－－」になり、
+   *   縦書きでは 1 本ずつ切れて出ていた。
+   *   執筆画面では開かないので、あちらだけ繋がって見えていた。
+   *
+   *   逆に、半角で打たれた「--」はダッシュへ寄せる。
+   *   2 つで 1 本ぶんとして数える。
+   */
+  next = next.replace(/-{2,}/g, (m) => '―'.repeat(Math.max(1, Math.round(m.length / 2))))
 
   /*
    * 長音が続くところはダッシュに直す。
