@@ -335,6 +335,12 @@ export interface Repository {
         anchorText: string,
     ): Promise<void>;
 
+    /** 作者のすすめる見せ方。null にすると取り消す */
+    setEpisodeIllustRecommend(
+        id: string,
+        rec: { width: number; align: number } | null,
+    ): Promise<void>;
+
     setEpisodeIllustSize(
         id: string,
         size: "small" | "medium" | "large" | null,

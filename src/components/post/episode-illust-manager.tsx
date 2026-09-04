@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import IconCropper from "@/components/mypage/icon-cropper";
+import IllustRecommendEditor from "@/components/post/illust-recommend-editor";
 import { ILLUST_SIZE_LABEL } from "@/config/illust-size";
 import { getRepository } from "@/lib/repository";
 import { shrinkImage } from "@/lib/storage/image-store";
@@ -63,6 +64,9 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
      *   周りの白が広い絵は、それだけで小さく見える。
      */
     const [cropTarget, setCropTarget] = useState<File | null>(null);
+
+    /* すすめる見せ方を決めている絵 */
+    const [recTarget, setRecTarget] = useState<EpisodeIllust | null>(null);
     const [error, setError] = useState("");
 
 
@@ -186,6 +190,14 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
 
                                     <button
                                         type="button"
+                                        onClick={() => setRecTarget(illust)}
+                                        className="rounded border border-line px-2 py-0.5 text-[10.5px] text-muted hover:border-forest-line hover:text-forest"
+                                    >
+                                        {illust.rec_width ? "すすめる見せ方を直す" : "すすめる見せ方を決める"}
+                                    </button>
+
+                                    <button
+                                        type="button"
                                         onClick={() => void handleDelete(illust)}
                                         className="rounded border border-line px-2 py-0.5 text-[10.5px] text-[var(--color-danger)] hover:opacity-80"
                                     >
@@ -255,6 +267,24 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
                     <p className="mt-1 text-[11px] text-[var(--color-danger)]">{error}</p>
                 )}
             </div>
+
+            {recTarget && (
+                <IllustRecommendEditor
+                    url={recTarget.url}
+                    body={body}
+                    afterSentence={recTarget.after_sentence}
+                    value={
+                        recTarget.rec_width
+                            ? { width: recTarget.rec_width, align: recTarget.rec_align ?? 0 }
+                            : null
+                    }
+                    onSave={async (rec) => {
+                        await getRepository().setEpisodeIllustRecommend(recTarget.id, rec);
+                        await reload();
+                    }}
+                    onClose={() => setRecTarget(null)}
+                />
+            )}
 
             {cropTarget && (
                 <IconCropper

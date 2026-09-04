@@ -1782,7 +1782,7 @@ export const supabaseRepository: Repository = {
     async listEpisodeIllusts(episodeId: string): Promise<EpisodeIllust[]> {
         const { data } = await db()
             .from("episode_illusts")
-            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text, size")
+            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text, size, rec_width, rec_align")
             .eq("episode_id", episodeId)
             .order("after_sentence", { ascending: true });
 
@@ -1807,7 +1807,7 @@ export const supabaseRepository: Repository = {
                 after_sentence: input.afterSentence,
                 anchor_text: input.anchorText,
             })
-            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text, size")
+            .select("id, novel_id, episode_id, url, is_ai, after_sentence, anchor_text, size, rec_width, rec_align")
             .single();
 
         if (error) throw error;
@@ -1824,6 +1824,20 @@ export const supabaseRepository: Repository = {
             .update({
                 after_sentence: afterSentence,
                 anchor_text: anchorText,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", id);
+    },
+
+    async setEpisodeIllustRecommend(
+        id: string,
+        rec: { width: number; align: number } | null,
+    ): Promise<void> {
+        await db()
+            .from("episode_illusts")
+            .update({
+                rec_width: rec ? Math.round(rec.width) : null,
+                rec_align: rec ? Math.round(rec.align) : null,
                 updated_at: new Date().toISOString(),
             })
             .eq("id", id);
