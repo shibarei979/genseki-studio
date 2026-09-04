@@ -240,34 +240,26 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>
                 挿絵の大きさ
               </div>
+              {/*
+                * ★ 「推奨」も同じ並びに入れる。
+                *
+                *   大きさの決め方は 1 つなので、
+                *   別の行に分けると、どちらが効いているのか分からない。
+                *
+                *   推奨   … 作者が決めた絵は、その幅と寄せで出す
+                *            決めていない絵は【大】で出す
+                */}
               <div style={{display:'flex',gap:6}}>
                 {(['small','medium','large'] as const).map(key => (
-                  <button key={key} onClick={()=>update({illustSize:key})}
-                    style={btnBase(settings.illustSize === key)}>
+                  <button key={key}
+                    onClick={()=>update({illustSize:key, useRecommend:false})}
+                    style={btnBase(settings.useRecommend === false && settings.illustSize === key)}>
                     {ILLUST_SIZE_LABEL[key]}
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/*
-              * 作者のすすめる見せ方。
-              *
-              * 決めてある絵だけに効く。決めていない絵は、
-              * 上の「挿絵の大きさ」に従う。
-              */}
-            <div style={{marginBottom:14}}>
-              <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>
-                挿絵の見せ方
-              </div>
-              <div style={{display:'flex',gap:6}}>
                 <button onClick={()=>update({useRecommend:true})}
                   style={btnBase(settings.useRecommend !== false)}>
-                  作者のすすめ
-                </button>
-                <button onClick={()=>update({useRecommend:false})}
-                  style={btnBase(settings.useRecommend === false)}>
-                  自分の設定
+                  推奨
                 </button>
               </div>
             </div>

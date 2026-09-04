@@ -60,11 +60,11 @@ export default async function EpisodePage({ params }: Props) {
    */
   const { data: illustRows } = await supabase
     .from('episode_illusts')
-    .select('id, url, is_ai, after_sentence, size')
+    .select('id, url, is_ai, after_sentence, size, rec_width, rec_align')
     .eq('episode_id', params.epId)
     .order('after_sentence', { ascending: true })
 
-  const illusts = (illustRows ?? []) as { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]
+  const illusts = (illustRows ?? []) as { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null; rec_width?: number | null; rec_align?: number | null }[]
   if (!episode) notFound()
   if (!novel) notFound()
 
