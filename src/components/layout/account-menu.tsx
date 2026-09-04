@@ -142,8 +142,13 @@ export default function AccountMenu({ isCurrent }: { isCurrent: boolean }) {
                              * 上の段から「作品投稿」を外したぶん、ここに置く。
                              * ホーム以外の画面からも書きはじめられるようにするため。
                              */}
+                            {/*
+                              * 行き先は新しく作る画面。
+                              * ヘッダーの「作品を書く」は一覧へ行くので、
+                              * こちらは「これから作る」ほうへ送る。
+                              */}
                             <MenuLink href="/post" onClick={() => setIsOpen(false)}>
-                                作品を描く
+                                作品を書く
                             </MenuLink>
 
                             {isAdmin && (
