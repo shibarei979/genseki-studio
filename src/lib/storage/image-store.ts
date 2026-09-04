@@ -186,32 +186,7 @@ export async function shrinkImage(
     /** 大きく出すものは true。縮める加減を緩める */
     isWide = false,
     keepOriginal = false,
-): Promise<string | Blob> {
-    /*
-     * ★ 元のまま置ける条件。
-     *
-     *   4MB 未満で、長辺が上限を超えていないもの。
-     *   描き直さないので、画質はまったく落ちない。
-     */
-    if (keepOriginal && file.size < 4_000_000) {
-        const fits = await new Promise<boolean>((resolve) => {
-            const url = URL.createObjectURL(file);
-            const probe = new Image();
-            probe.onload = () => {
-                const edge = Math.max(probe.width, probe.height);
-                URL.revokeObjectURL(url);
-                resolve(edge <= (isWide ? WIDE_MAX_EDGE : MAX_EDGE));
-            };
-            probe.onerror = () => {
-                URL.revokeObjectURL(url);
-                resolve(false);
-            };
-            probe.src = url;
-        });
-
-        if (fits) return file;
-    }
-
+): Promise<string> {
     const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result));
@@ -221,6 +196,28 @@ export async function shrinkImage(
 
     // SVG は縮めても意味が無いのでそのまま
     if (file.type === "image/svg+xml") return dataUrl;
+
+    /*
+     * ★ 元のまま置ける絵は、描き直さない。
+     *
+     *   4MB 未満で、長辺が上限を超えていないもの。
+     *   dataUrl は元の中身をそのまま写したものなので、
+     *   これを返せば画質はまったく落ちない。
+     */
+    if (keepOriginal && file.size < 4_000_000) {
+        const fits = await new Promise<boolean>((resolve) => {
+            const probe = new Image();
+            probe.onload = () =>
+                resolve(
+                    Math.max(probe.width, probe.height) <=
+                        (isWide ? WIDE_MAX_EDGE : MAX_EDGE),
+                );
+            probe.onerror = () => resolve(false);
+            probe.src = dataUrl;
+        });
+
+        if (fits) return dataUrl;
+    }
 
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
         const element = new Image();
