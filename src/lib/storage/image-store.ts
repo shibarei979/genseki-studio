@@ -108,17 +108,110 @@ const QUALITY = 0.82;
  * 大きく出す画像はここまで残す。
  *
  * コンテストの帯は 600px ほどで出るので、
- * 画面の細かい端末（2倍）を見込んで 1200px あれば足りる。
- * これ以上残しても、見た目は変わらず容量だけ増える。
+ * 画面の細かい端末（2倍）を見込んで 1200px あれば足りていた。
+ *
+ * ★ 挿絵も同じ道を通るので 1600px まで残す。
+ *
+ *   挿絵は作者が幅を決められる。上げた時点で縮めてしまうと、
+ *   大きく見せたい絵が、そこまでしか広げられない。
+ *   容量は増えるが、絵の荒れのほうが目につく。
  */
-const WIDE_MAX_EDGE = 1200;
-const WIDE_QUALITY = 0.86;
+const WIDE_MAX_EDGE = 1600;
+/* 描き直すときの質。線画がつぶれない所まで上げる */
+const WIDE_QUALITY = 0.95;
+
+/**
+ * 絵を縮める。
+ *
+ * ★ 触らずに済むものは、触らない。
+ *
+ *   これまでは、どの絵も一度 webp に描き直していた。
+ *   線画や字の入った絵は、それだけで輪郭が甘くなる。
+ *   小さくて軽い絵は、元のまま上げるほうがきれいで速い。
+ *
+ * @param keepOriginal 元のまま置けるなら、そうする（挿絵で使う）
+ */
+/**
+ * 描き直すときの形を選ぶ。
+ *
+ * ★ 絵によって、落ちにくい形が違う。
+ *
+ *   線画・字・べた塗り … 色数が少ない。png なら 1 ドットも変わらない
+ *   写真・厚塗り       … 色数が多い。png だと桁違いに重くなるので webp
+ *
+ *   色の数を数えて分ける。透けている所があれば png（webp でも残るが、
+ *   透過のある絵は線画であることが多い）。
+ */
+export function pickFormat(canvas: HTMLCanvasElement): {
+    mime: string;
+    quality: number;
+} {
+    try {
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) return { mime: "image/webp", quality: 0.95 };
+
+        /* 全部見ると重いので、間引いて数える */
+        const { width, height } = canvas;
+        const step = Math.max(1, Math.floor(Math.sqrt((width * height) / 20000)));
+        const data = context.getImageData(0, 0, width, height).data;
+
+        const colors = new Set<number>();
+        let hasAlpha = false;
+
+        for (let y = 0; y < height; y += step) {
+            for (let x = 0; x < width; x += step) {
+                const at = (y * width + x) * 4;
+                if (data[at + 3] < 250) hasAlpha = true;
+                colors.add(
+                    (data[at] << 16) | (data[at + 1] << 8) | data[at + 2],
+                );
+                if (colors.size > 6000) break;
+            }
+            if (colors.size > 6000) break;
+        }
+
+        /* 色数が少ないもの、透けているものは、まったく落とさない形で */
+        if (hasAlpha || colors.size <= 6000) {
+            return { mime: "image/png", quality: 1 };
+        }
+    } catch {
+        /* 数えられなければ、これまでどおり */
+    }
+
+    return { mime: "image/webp", quality: 0.95 };
+}
 
 export async function shrinkImage(
     file: File,
     /** 大きく出すものは true。縮める加減を緩める */
     isWide = false,
-): Promise<string> {
+    keepOriginal = false,
+): Promise<string | Blob> {
+    /*
+     * ★ 元のまま置ける条件。
+     *
+     *   4MB 未満で、長辺が上限を超えていないもの。
+     *   描き直さないので、画質はまったく落ちない。
+     */
+    if (keepOriginal && file.size < 4_000_000) {
+        const fits = await new Promise<boolean>((resolve) => {
+            const url = URL.createObjectURL(file);
+            const probe = new Image();
+            probe.onload = () => {
+                const edge = Math.max(probe.width, probe.height);
+                URL.revokeObjectURL(url);
+                resolve(edge <= (isWide ? WIDE_MAX_EDGE : MAX_EDGE));
+            };
+            probe.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve(false);
+            };
+            probe.src = url;
+        });
+
+        if (fits) return file;
+    }
+
     const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result));
@@ -148,5 +241,13 @@ export async function shrinkImage(
     if (!context) return dataUrl;
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-    return canvas.toDataURL("image/webp", isWide ? WIDE_QUALITY : QUALITY);
+    /*
+     * ★ 形は絵に合わせて選ぶ。
+     *   線画や字は png（まったく落ちない）、写真は webp。
+     */
+    const picked = pickFormat(canvas);
+    return canvas.toDataURL(
+        picked.mime,
+        picked.mime === "image/png" ? 1 : isWide ? WIDE_QUALITY : QUALITY,
+    );
 }

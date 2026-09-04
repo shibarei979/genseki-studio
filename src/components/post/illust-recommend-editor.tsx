@@ -29,6 +29,15 @@ import { stripRuby } from "@/lib/utils/ruby";
 const MIN_WIDTH = 80;
 const MAX_WIDTH = 1200;
 
+/*
+ * ★ 元の絵より広げない。
+ *
+ *   広げると引き伸ばしになり、輪郭がぼやける。
+ *   注意を出すだけにしていたが、それでも広げてしまい
+ *   「荒くなる」という声が届いた。
+ *   はじめから、そこまでしか動かせないようにする。
+ */
+
 /** 読む画面の本文の幅。ここに合わせて見本を出す */
 const READING_WIDTH = 840;
 
@@ -59,12 +68,19 @@ export default function IllustRecommendEditor({
 
     const boxRef = useRef<HTMLDivElement>(null);
 
-    /* 元の絵の幅。それより広げても、ぼやけるだけだと伝える */
+    /* 元の絵の幅。ここが上限になる */
     useEffect(() => {
         const image = new Image();
-        image.onload = () => setNatural(image.naturalWidth);
+        image.onload = () => {
+            setNatural(image.naturalWidth);
+            /* いまの指定が元より広ければ、そこまで戻す */
+            setWidth((prev) => Math.min(prev, image.naturalWidth));
+        };
         image.src = url;
     }, [url]);
+
+    /* 動かせる上限。元の絵の幅まで */
+    const limit = Math.min(MAX_WIDTH, natural ?? MAX_WIDTH);
 
     /* 見本に出す本文。置いた場所の前後だけ */
     const sentences = splitIntoSentences(body);
@@ -170,21 +186,21 @@ export default function IllustRecommendEditor({
                         <input
                             type="range"
                             min={MIN_WIDTH}
-                            max={MAX_WIDTH}
+                            max={limit}
                             step={1}
-                            value={width}
+                            value={Math.min(width, limit)}
                             onChange={(event) => setWidth(Number(event.target.value))}
                             className="flex-1"
                         />
                         <input
                             type="number"
                             min={MIN_WIDTH}
-                            max={MAX_WIDTH}
-                            value={width}
+                            max={limit}
+                            value={Math.min(width, limit)}
                             onChange={(event) =>
                                 setWidth(
                                     Math.min(
-                                        MAX_WIDTH,
+                                        limit,
                                         Math.max(MIN_WIDTH, Number(event.target.value) || MIN_WIDTH),
                                     ),
                                 )
@@ -212,9 +228,16 @@ export default function IllustRecommendEditor({
                         </span>
                     </label>
 
-                    {natural && width > natural && (
-                        <p className="mt-2 text-[11px] text-[var(--color-amber-text,var(--color-text-muted))]">
-                            元の絵は {natural}px です。これより広げると、ぼやけます。
+                    {natural && (
+                        <p className="mt-2 text-[11px] text-faint">
+                            元の絵は {natural}px です。これより大きくすると輪郭がぼやけるので、
+                            ここまでしか広げられません。
+                            {natural < 400 && (
+                                <>
+                                    <br />
+                                    大きく見せたいときは、もっと大きい絵を上げ直してください。
+                                </>
+                            )}
                         </p>
                     )}
 

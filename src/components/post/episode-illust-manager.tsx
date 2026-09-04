@@ -90,8 +90,14 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
         setError("");
 
         try {
-            /* 縮めてから上げる。そのままだと数 MB になる */
-            const shrunk = await shrinkImage(file as File, true);
+            /*
+             * ★ 画質を落とさない。
+             *
+             *   小さくて軽い絵は、元のまま上げる。
+             *   描き直すと、線画や字の輪郭が甘くなる。
+             *   大きすぎるものだけ縮める。
+             */
+            const shrunk = await shrinkImage(file as File, true, true);
             const url = await uploadImage(shrunk, "illust");
 
             await getRepository().addEpisodeIllust({
@@ -293,7 +299,22 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
                     title="挿絵を切り抜く"
                     /* はじめは横長。窓の中で縦長・正方形にも変えられる */
                     aspect={1.6}
+                    /*
+                     * ★ 挿絵は大きく書き出す。
+                     *   既定の 400px だと、そこが天井になって荒れる。
+                     * ★ 形は絵に合わせて選ぶ。
+                     *   線画や字は png で、1 ドットも変えずに書き出す。
+                     *   写真は webp。png だと桁違いに重くなる。
+                     */
+                    outputSize={1600}
+                    mime="auto"
+                    quality={0.95}
                     onCancel={() => setCropTarget(null)}
+                    onSkip={() => {
+                        const file = cropTarget;
+                        setCropTarget(null);
+                        if (file) void handleUpload(file);
+                    }}
                     onDone={(blob) => {
                         setCropTarget(null);
                         void handleUpload(blob);

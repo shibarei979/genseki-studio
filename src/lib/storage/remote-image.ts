@@ -34,7 +34,17 @@ export async function uploadImage(
      */
     const file = typeof source === "string" ? toBlob(source) : source;
 
-    const extension = file.type.includes("png") ? "png" : "jpg";
+    /*
+     * ★ 形に合わせた名前を付ける。
+     *
+     *   前は png か jpg しか無く、webp まで .jpg で置いていた。
+     *   中身と名前が食い違うと、後から見分けが付かない。
+     */
+    const extension = file.type.includes("png")
+        ? "png"
+        : file.type.includes("webp")
+          ? "webp"
+          : "jpg";
     const name = `${folder}/${Date.now()}-${Math.random()
         .toString(36)
         .slice(2, 8)}.${extension}`;

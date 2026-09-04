@@ -1,5 +1,6 @@
 'use client'
 
+import { pickFormat } from '@/lib/storage/image-store'
 import { useEffect, useRef, useState } from 'react'
 
 /**
@@ -18,7 +19,15 @@ import { useEffect, useRef, useState } from 'react'
  */
 
 /** 出来上がりの一辺 */
-const OUTPUT_SIZE = 400
+/*
+ * 書き出す幅。
+ *
+ * ★ 挿絵はここを大きくする。
+ *   アイコンや表紙は小さくてよいが、
+ *   挿絵を 400px で書き出すと、それが天井になり
+ *   大きく見せたときに荒れる。
+ */
+const OUTPUT_SIZE_DEFAULT = 400
 
 /** 画面に出す枠の一辺 */
 const VIEW_SIZE = 260
@@ -30,6 +39,10 @@ export default function IconCropper({
     shape = 'circle',
     title = 'アイコンを切り抜く',
     aspect = 1,
+    outputSize = OUTPUT_SIZE_DEFAULT,
+    mime = 'image/jpeg',
+    quality = 0.9,
+    onSkip,
 }: {
     file: File
     onDone: (blob: Blob) => void
@@ -42,6 +55,19 @@ export default function IconCropper({
      */
     shape?: 'circle' | 'rect'
     title?: string
+    /** 書き出す幅。挿絵は大きくする */
+    outputSize?: number
+    /**
+     * 書き出す形。
+     *
+     * 'auto' を渡すと、絵を見て選ぶ。
+     * 線画や字は png、写真は webp。
+     */
+    mime?: string
+    /** 書き出す質。1 に近いほどきれい */
+    quality?: number
+    /** 切り抜かずにそのまま使う。渡すと押し具が出る */
+    onSkip?: () => void
     /** 縦横の比。表紙は縦長にする */
     aspect?: number
 }) {
@@ -56,7 +82,7 @@ export default function IconCropper({
 
     /* 枠の高さ。比が 1 なら正方形、小さいほど縦長 */
     const viewH = Math.round(VIEW_SIZE / ratio)
-    const outH = Math.round(OUTPUT_SIZE / ratio)
+    const outH = Math.round(outputSize / ratio)
 
     const [image, setImage] = useState<HTMLImageElement | null>(null)
     const [scale, setScale] = useState(1)
@@ -152,7 +178,7 @@ export default function IconCropper({
         setIsBusy(true)
 
         const canvas = document.createElement('canvas')
-        canvas.width = OUTPUT_SIZE
+        canvas.width = outputSize
         canvas.height = outH
 
         const ctx = canvas.getContext('2d')
@@ -162,23 +188,32 @@ export default function IconCropper({
         }
 
         /* 画面で見えている通りに写す */
-        const ratio = OUTPUT_SIZE / VIEW_SIZE
+        const ratio = outputSize / VIEW_SIZE
         const w = image.width * scale * ratio
         const h = image.height * scale * ratio
-        const x = (OUTPUT_SIZE - w) / 2 + pos.x * ratio
+        const x = (outputSize - w) / 2 + pos.x * ratio
         const y = (outH - h) / 2 + pos.y * ratio
 
         ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, OUTPUT_SIZE, outH)
+        ctx.fillRect(0, 0, outputSize, outH)
         ctx.drawImage(image, x, y, w, h)
+
+        /*
+         * ★ 形は絵に合わせて選ぶ。
+         *
+         *   mime に 'auto' が渡されたときだけ。
+         *   線画や字は png（1ドットも変わらない）、写真は webp。
+         *   アイコンと表紙は、これまでどおりの形のまま。
+         */
+        const picked = mime === 'auto' ? pickFormat(canvas) : { mime, quality }
 
         canvas.toBlob(
             (blob) => {
                 setIsBusy(false)
                 if (blob) onDone(blob)
             },
-            'image/jpeg',
-            0.9,
+            picked.mime,
+            picked.quality,
         )
     }
 
@@ -338,6 +373,28 @@ export default function IconCropper({
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+                    {/*
+                      * ★ 切り抜かずに使う道。
+                      *
+                      *   切り抜くと、いったん描き直すので画質が落ちる。
+                      *   そのままでよい絵は、触らずに上げるのが一番きれい。
+                      */}
+                    {onSkip && (
+                        <button
+                            type="button"
+                            onClick={onSkip}
+                            style={{
+                                flex: 1, padding: '10px 0', borderRadius: 8,
+                                border: '1px solid var(--color-brand-border)',
+                                background: 'var(--color-bg-card)',
+                                color: 'var(--color-brand)',
+                                fontSize: 13, cursor: 'pointer',
+                            }}
+                        >
+                            そのまま使う
+                        </button>
+                    )}
+
                     <button
                         type="button"
                         onClick={onCancel}
