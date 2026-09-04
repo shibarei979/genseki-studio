@@ -11,7 +11,9 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { getImage } from "@/lib/storage/image-store";
 
 import type { ResourceEntry, ResourceRelation } from "@/types";
 
@@ -80,6 +82,45 @@ export default function RelationGraph({
         connectedIds.add(relation.to_entry_id);
     }
     const nodes = entries.filter((entry) => connectedIds.has(entry.id));
+
+    /*
+     * 丸の中に出す絵。
+     *
+     * ★ image_url は、そのままでは絵の住所ではない。
+     *
+     *   「idb:…」の形で覚えていることがあり、
+     *   そのときは置き場から引き出さないと出せない。
+     *   一覧では EntryImage が同じことをしている。
+     *   ここだけ生のまま <image> に渡していたので、丸が空だった。
+     */
+    const [pictures, setPictures] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        let isAlive = true;
+
+        void (async () => {
+            const found: Record<string, string> = {};
+
+            await Promise.all(
+                entries
+                    .filter((entry) => entry.image_url)
+                    .map(async (entry) => {
+                        try {
+                            const value = await getImage(entry.image_url as string);
+                            if (value) found[entry.id] = value;
+                        } catch {
+                            /* 引き出せない絵は、丸のまま出す */
+                        }
+                    }),
+            );
+
+            if (isAlive) setPictures(found);
+        })();
+
+        return () => {
+            isAlive = false;
+        };
+    }, [entries]);
 
     if (nodes.length === 0) {
         return (
@@ -275,7 +316,7 @@ export default function RelationGraph({
                             }}
                             className={onMove ? "cursor-grab" : "cursor-pointer"}
                         >
-                            {node.image_url ? (
+                            {pictures[node.id] ? (
                                 <>
                                     <clipPath id={`clip-${node.id}`}>
                                         <circle
@@ -285,7 +326,7 @@ export default function RelationGraph({
                                         />
                                     </clipPath>
                                     <image
-                                        href={node.image_url}
+                                        href={pictures[node.id]}
                                         x={position.x - NODE_RADIUS}
                                         y={position.y - NODE_RADIUS}
                                         width={NODE_RADIUS * 2}
@@ -316,7 +357,7 @@ export default function RelationGraph({
                                 strokeWidth={node.id === selectedId ? 2.5 : 0}
                             />
 
-                            {!node.image_url && (
+                            {!pictures[node.id] && (
                                 <text
                                     x={position.x}
                                     y={position.y + 5}
