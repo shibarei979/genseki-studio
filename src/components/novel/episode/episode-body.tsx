@@ -183,6 +183,40 @@ function normalizeForReading(text: string): string {
   return next
 }
 
+
+/**
+ * 続いた棒（——、――、────）を 1 本の線として描く。
+ *
+ * ★ 縦書きでは、棒の字を並べても繋がらない。
+ *
+ *   字と字のあいだに隙間が入り、「ー ー ー」に見える。
+ *   ダッシュは「1 本の長い線」のつもりで書かれるので、
+ *   切れて出ると意味が変わってしまう。
+ *
+ *   2 つ以上続いているところだけ、線に置き換える。
+ *   1 つだけのときは字のまま出す（音引きと区別できないため）。
+ */
+function renderDashRuns(line: string, keyPrefix: string) {
+  const parts = line.split(/([—―─‒–]{2,})/)
+
+  return parts.map((part, i) => {
+    if (!part) return null
+
+    if (/^[—―─‒–]{2,}$/.test(part)) {
+      return (
+        <span key={`${keyPrefix}-dash-${i}`}
+          style={{display:'inline-block',verticalAlign:'top',writingMode:'horizontal-tb',
+            height:`${part.length}em`,width:'1em'}}>
+          <span style={{display:'block',width:'0.08em',minWidth:1,height:'100%',
+            margin:'0 auto',background:'currentColor'}}/>
+        </span>
+      )
+    }
+
+    return withTateChuYoko(part, `${keyPrefix}-${i}`)
+  })
+}
+
 function VerticalText({ text }: { text: string }) {
   /*
    * 整えるのは、ルビを切り出したあと。
@@ -247,7 +281,7 @@ function VerticalText({ text }: { text: string }) {
             * 英数字は縦中横で立てる。
             * そのままだと「35歳」の 35 も (Pr. I) も寝たまま出る。
             */
-          withTateChuYoko(line, `${keyPrefix}-${i}`)
+          renderDashRuns(line, `${keyPrefix}-${i}`)
         )}
         {i < all.length - 1 ? <br/> : null}
       </span>
