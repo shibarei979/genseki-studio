@@ -63,7 +63,23 @@ function normalizeForHorizontalReading(text: string): string {
    * 同じ本数の「ーーーー」に置き換える。
    * 1 つだけのハイフンは触らない（ジャン-ピエール などのため）。
    */
-  next = next.replace(/[-–—―－]{2,}/g, (m) => 'ー'.repeat(m.length))
+  /*
+   * ★ 長音（ー）に置き換えない。字のあいだが空いて線が切れる。
+   *   ダッシュ（―）は横に繋がるので、そのまま寄せる。
+   */
+  next = next.replace(/[-–—―－]{2,}/g, (m) => '―'.repeat(m.length))
+
+  /*
+   * 伸ばし棒を並べて線にした所も、ダッシュへ寄せる。
+   *
+   * ★ 前後にかなが無いときだけ。
+   *   「ぎゅーーーっと」は伸ばしなので触らない。
+   *   「ーーー、そして」は線なので寄せる。
+   */
+  next = next.replace(
+    /(^|[^ぁ-んァ-ヶー])(ー{2,})(?![ぁ-んァ-ヶー])/g,
+    (_m, pre, run) => `${pre}${'―'.repeat(run.length)}`,
+  )
 
   /* 全角英数字・記号を半角へ */
   next = next.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
