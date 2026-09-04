@@ -58,9 +58,9 @@ const TABLE: Record<
          *   元の絵より引き伸ばすことはしない。
          *   小さい絵は、これまでどおりの大きさで出る。
          */
-        small: { maxHeight: 180, maxWidth: "100%", stamp: 24 },
-        medium: { maxHeight: 300, maxWidth: "100%", stamp: 30 },
-        large: { maxHeight: 460, maxWidth: "100%", stamp: 38 },
+        small: { maxHeight: 150, maxWidth: "100%", stamp: 24 },
+        medium: { maxHeight: 230, maxWidth: "100%", stamp: 30 },
+        large: { maxHeight: 330, maxWidth: "100%", stamp: 38 },
     },
     mobileVertical: {
         small: { maxHeight: 120, maxWidth: 90, stamp: 22 },
@@ -68,9 +68,9 @@ const TABLE: Record<
         large: { maxHeight: 260, maxWidth: 180, stamp: 34 },
     },
     mobileHorizontal: {
-        small: { maxHeight: 140, maxWidth: "100%", stamp: 22 },
-        medium: { maxHeight: 220, maxWidth: "100%", stamp: 28 },
-        large: { maxHeight: 320, maxWidth: "100%", stamp: 34 },
+        small: { maxHeight: 130, maxWidth: "100%", stamp: 22 },
+        medium: { maxHeight: 190, maxWidth: "100%", stamp: 28 },
+        large: { maxHeight: 260, maxWidth: "100%", stamp: 34 },
     },
 };
 

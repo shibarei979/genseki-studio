@@ -13,11 +13,19 @@ export interface Settings {
    *   本文を早く読みたい人がいる。
    */
   illustSize: 'small' | 'medium' | 'large'
+  /**
+   * 作者のすすめる見せ方を使うか。
+   *
+   * ★ 既定は使う。
+   *   作者が幅と寄せを決めた絵は、まずその形で見せる。
+   *   合わなければ、ここで切って自分の設定に戻せる。
+   */
+  useRecommend: boolean
   lineHeight: number
   writingMode: 'horizontal' | 'vertical'
 }
 
-const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'large', lineHeight: 2.1, writingMode: 'horizontal' }
+const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'large', useRecommend: true, lineHeight: 2.1, writingMode: 'horizontal' }
 const STORAGE_KEY = 'reading_settings'
 
 const FONT_OPTIONS = [
@@ -239,6 +247,28 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                     {ILLUST_SIZE_LABEL[key]}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/*
+              * 作者のすすめる見せ方。
+              *
+              * 決めてある絵だけに効く。決めていない絵は、
+              * 上の「挿絵の大きさ」に従う。
+              */}
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>
+                挿絵の見せ方
+              </div>
+              <div style={{display:'flex',gap:6}}>
+                <button onClick={()=>update({useRecommend:true})}
+                  style={btnBase(settings.useRecommend !== false)}>
+                  作者のすすめ
+                </button>
+                <button onClick={()=>update({useRecommend:false})}
+                  style={btnBase(settings.useRecommend === false)}>
+                  自分の設定
+                </button>
               </div>
             </div>
 

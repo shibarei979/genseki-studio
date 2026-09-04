@@ -22,7 +22,7 @@ interface Props {
   recommendedMode?: 'vertical' | 'horizontal' | null
   /** 話ごとの挿絵。本文の前に出る */
   /** 話の中の挿絵。after_sentence は「何文目の後ろか」。0 は本文の頭 */
-  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null; rec_width?: number | null; rec_align?: number | null }[]
   illustUrl?: string | null
   illustIsAi?: boolean | null
   /* 栞 */
@@ -310,15 +310,22 @@ const splitForMark = splitIntoSentences
  *
  * 前後に余白を取る。文にくっついていると本文の一部に見える。
  */
-function MobileIllust({ url, isAi, size }: { url: string; isAi?: boolean; size?: string | null }) {
+function MobileIllust({ url, isAi, size, rec }: {
+  url: string; isAi?: boolean; size?: string | null
+  rec?: { width: number; align: number } | null
+}) {
   return (
     /* 携帯も同じ考え。上下に余白を取り、幅は 9 割まで */
     <span style={{display:'block',margin:'24px auto',textAlign:'center',maxWidth:'90%'}}>
-      <span style={{position:'relative',display:'inline-block',maxWidth:'100%'}}>
+      <span style={{position:'relative',display:'inline-block',maxWidth:'100%',
+        /* 作者のすすめがあるときは、その幅で。画面より広ければ画面に合わせる */
+        ...(rec ? { width: Math.min(rec.width, 10000) } : {})}}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="挿絵"
-          style={{maxHeight:illustBox('mobileHorizontal',size).maxHeight,
-            maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+          style={rec
+            ? {width:'100%',height:'auto',borderRadius:8,display:'block'}
+            : {maxHeight:illustBox('mobileHorizontal',size).maxHeight,
+               maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
         {isAi && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
@@ -751,7 +758,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
           */}
         {/* 本文の頭に置かれた絵。表にあるときは、そちらを使う */}
         {illusts.filter(one => one.after_sentence === 0).map(one => (
-          <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
+          <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize} rec={settings.useRecommend !== false && one.rec_width ? { width: one.rec_width, align: one.rec_align ?? 0 } : null}/>
         ))}
 
         {illusts.length === 0 && illustUrl && (
@@ -798,7 +805,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                   <span key={idx}>
                     <br/>
                     {atBreak.map(one => (
-                      <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
+                      <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize} rec={settings.useRecommend !== false && one.rec_width ? { width: one.rec_width, align: one.rec_align ?? 0 } : null}/>
                     ))}
                   </span>
                 )
@@ -838,7 +845,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                 <span key={idx}>
                   {sentence}
                   {here.map(one => (
-                    <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
+                    <MobileIllust key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize} rec={settings.useRecommend !== false && one.rec_width ? { width: one.rec_width, align: one.rec_align ?? 0 } : null}/>
                   ))}
                 </span>
               )

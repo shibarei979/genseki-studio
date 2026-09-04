@@ -35,7 +35,7 @@ interface Props {
    * ★ 1 話に何枚でも、好きな場所に置ける。
    *   after_sentence は「何文目の後ろか」。0 は本文の頭。
    */
-  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null; rec_width?: number | null; rec_align?: number | null }[]
   /** 古い持ち方の挿絵。表に 1 枚も無いときだけ、本文の頭に出す */
   illustUrl?: string | null
   illustIsAi?: boolean | null
@@ -548,9 +548,11 @@ function SpeechPanel({ title, body, isMobile }: { title: string; body: string; i
 // ===== 文単位コメント機能 =====
 /* 分け方は @/lib/utils/sentences に 1 か所だけ置いている */
 
-function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts = [], illustSize, fontSize, lineHeight, fontFamily, onQuote, selecting, onAfterQuote }: {
+function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts = [], illustSize, settingsForRec = true, fontSize, lineHeight, fontFamily, onQuote, selecting, onAfterQuote }: {
+  /** 作者のすすめる見せ方を使うか */
+  settingsForRec?: boolean
   /** 話の中の挿絵。何文目の後ろに置くかを持っている */
-  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null; rec_width?: number | null; rec_align?: number | null }[]
   illustSize?: string | null
   marking?: boolean
   marks?: { id: string; sentence: number; text: string; color: string }[]
@@ -596,7 +598,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
             <span key={idx}>
               <br/>
               {atBreak.map(one => (
-                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize}/>
+                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize} rec={useRec(one, settingsForRec)}/>
               ))}
             </span>
           )
@@ -677,7 +679,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
           <span key={idx}>
             {sentence}
             {here.map(one => (
-              <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize}/>
+              <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || illustSize} rec={useRec(one, settingsForRec)}/>
             ))}
           </span>
         )
@@ -692,7 +694,26 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
  * ★ 前後に余白を取る。
  *   文にくっついていると、絵が本文の一部に見える。
  */
-function IllustBlock({ url, isAi, size }: { url: string; isAi?: boolean; size?: string | null }) {
+/**
+ * その絵に、作者のすすめる見せ方を使うか。
+ *
+ * ★ 決めていない絵には効かない。
+ * ★ 読む人が「自分の設定」を選んでいれば効かない。
+ */
+function useRec(
+  one: { rec_width?: number | null; rec_align?: number | null },
+  enabled: boolean,
+): { width: number; align: number } | null {
+  if (!enabled) return null
+  if (!one.rec_width) return null
+  return { width: one.rec_width, align: one.rec_align ?? 0 }
+}
+
+function IllustBlock({ url, isAi, size, rec }: {
+  url: string; isAi?: boolean; size?: string | null
+  /** 作者のすすめる見せ方。使うときだけ渡ってくる */
+  rec?: { width: number; align: number } | null
+}) {
   return (
     /*
      * ★ 挿絵は、本文とは別の塊として置く。
@@ -703,12 +724,18 @@ function IllustBlock({ url, isAi, size }: { url: string; isAi?: boolean; size?: 
      * ★ 幅は本文の 7 割まで、いちばん広くて 640px。
      *   画面いっぱいに広げると圧迫感が出る。
      */
-    <span style={{display:'block',margin:'32px auto',textAlign:'center',maxWidth:'min(75%, 640px)'}}>
-      <span style={{position:'relative',display:'inline-block',maxWidth:'100%'}}>
+    <span style={{display:'block',margin:'32px auto',textAlign:'center',
+      maxWidth: rec ? '100%' : 'min(75%, 640px)',
+      /* ★ 作者のすすめがあるときは、寄せもそのとおりに */
+      ...(rec ? { transform: `translateX(${rec.align / 4}%)` } : {})}}>
+      <span style={{position:'relative',display:'inline-block',maxWidth:'100%',
+        ...(rec ? { width: rec.width } : {})}}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="挿絵"
-          style={{maxHeight:illustBox('desktopHorizontal',size).maxHeight,
-            maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+          style={rec
+            ? {width:'100%',height:'auto',borderRadius:8,display:'block'}
+            : {maxHeight:illustBox('desktopHorizontal',size).maxHeight,
+               maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
         {isAi && (
           /* 表紙・挿絵と同じ印を使う。別の形にすると、何の印か伝わらない */
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -1049,7 +1076,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
         )}
 
         {vertical ? (
-          <VerticalBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} illusts={illusts} illustUrl={illustUrl} illustIsAi={illustIsAi} illustSize={settings.illustSize} title={title} body={body} preface={preface} afterword={afterword}
+          <VerticalBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} illusts={illusts} settingsForRec={settings.useRecommend !== false} illustUrl={illustUrl} illustIsAi={illustIsAi} illustSize={settings.illustSize} title={title} body={body} preface={preface} afterword={afterword}
             authorName={authorName} fontSize={settings.fontSize} fontFamily={fontFamily}
             selecting={selecting} onQuote={handleQuote} onAfterQuote={handleAfterQuote}/>
         ) : (
@@ -1082,7 +1109,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
                 *   両方出すと、移し終えた作品で二重になる。
                 */}
               {illusts.filter(one => one.after_sentence === 0).map(one => (
-                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize}/>
+                <IllustBlock key={one.id} url={one.url} isAi={one.is_ai} size={one.size || settings.illustSize} rec={useRec(one, settings.useRecommend !== false)}/>
               ))}
 
               {illusts.length === 0 && illustUrl && (
@@ -1123,7 +1150,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
                   引用したい文をクリックしてください
                 </div>
               )}
-              <QuotableBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} body={body} illusts={illusts} illustSize={settings.illustSize} fontSize={settings.fontSize} lineHeight={settings.lineHeight} fontFamily={fontFamily} onQuote={handleQuote} selecting={selecting} onAfterQuote={handleAfterQuote}/>
+              <QuotableBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} body={body} illusts={illusts} illustSize={settings.illustSize} settingsForRec={settings.useRecommend !== false} fontSize={settings.fontSize} lineHeight={settings.lineHeight} fontFamily={fontFamily} onQuote={handleQuote} selecting={selecting} onAfterQuote={handleAfterQuote}/>
             </div>
             {afterword && (
               <div style={{borderTop:'1px solid var(--color-brand-border)'}}>
@@ -1148,8 +1175,10 @@ interface VerticalProps {
   title: string; body: string; preface?: string|null; afterword?: string|null
   authorName?: string; fontSize: number; fontFamily: string
   selecting?: boolean; onQuote?: (text:string)=>void; onAfterQuote?: () => void
+  /** 作者のすすめる見せ方を使うか */
+  settingsForRec?: boolean
   /** 話の中の挿絵。after_sentence は「何文目の後ろか」。0 は本文の頭 */
-  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null }[]
+  illusts?: { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null; rec_width?: number | null; rec_align?: number | null }[]
   /** 古い持ち方の挿絵。表に 1 枚も無いときだけ、題名の右に出る */
   illustUrl?: string | null
   illustIsAi?: boolean | null
@@ -1162,7 +1191,7 @@ interface VerticalProps {
   onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
 }
 
-function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
+function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], settingsForRec = true, illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, fontSize, fontFamily, selecting, onQuote, onAfterQuote }: VerticalProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   useEffect(() => {
