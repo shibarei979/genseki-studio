@@ -155,6 +155,18 @@ function normalizeForReading(text: string): string {
   return next
 }
 
+/**
+ * 区切り線の行かどうか。
+ *
+ * 罫線の字（─ ━ ── ＿ 等）だけでできている行を、線として扱う。
+ * 3 つ以上続いているときだけ。文中の 1 本は字のまま出す。
+ */
+export function isDividerLine(line: string): boolean {
+  const body = line.trim()
+  if (body.length < 3) return false
+  return /^[─━‐‒–—―ー_＿=＝*＊・\s]+$/.test(body) && /[─━—―_＿]/.test(body)
+}
+
 export function VerticalText({ text }: { text: string }) {
   /*
    * 整えるのは、ルビを切り出したあと。
@@ -191,10 +203,27 @@ export function VerticalText({ text }: { text: string }) {
     return text.split('\n').map((line, i, all) => (
       <span key={`${keyPrefix}-${i}`}>
         {/*
-          * 英数字は縦中横で立てる。
-          * そのままだと「35歳」の 35 も (Pr. I) も寝たまま出る。
+          * ★ 区切り線は、字ではなく線で描く。
+          *
+          *   「────────」は罫線の字を並べたもの。
+          *   読む画面の書体では字と字のあいだが空き、
+          *   4 本の切れた線に見えていた。
+          *   執筆画面では書体が違うので繋がっていた。
+          *
+          *   字を並べるのをやめ、1 本の線として描く。
+          *   どの書体でも切れない。
           */}
-        {withTateChuYoko(line, `${keyPrefix}-${i}`)}
+        {isDividerLine(line) ? (
+          <span style={{display:'inline-block',verticalAlign:'top',writingMode:'horizontal-tb',height:'6em',margin:'0.5em 0'}}>
+            <span style={{display:'block',width:1,height:'100%',margin:'0 auto',background:'currentColor',opacity:.45}}/>
+          </span>
+        ) : (
+          /*
+            * 英数字は縦中横で立てる。
+            * そのままだと「35歳」の 35 も (Pr. I) も寝たまま出る。
+            */
+          withTateChuYoko(line, `${keyPrefix}-${i}`)
+        )}
         {i < all.length - 1 ? <br/> : null}
       </span>
     ))

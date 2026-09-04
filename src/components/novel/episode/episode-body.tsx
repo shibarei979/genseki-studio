@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby, stripRuby } from '@/lib/utils/ruby'
 import { splitIntoSentences } from '@/lib/utils/sentences'
+import { isDividerLine } from '@/components/novel/episode/mobile-episode-body'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 import MobileEpisodeBody from '@/components/novel/episode/mobile-episode-body'
 import { useQuote } from '@/components/novel/episode/quote-context'
@@ -231,10 +232,23 @@ function VerticalText({ text }: { text: string }) {
     return text.split('\n').map((line, i, all) => (
       <span key={`${keyPrefix}-${i}`}>
         {/*
-          * 英数字は縦中横で立てる。
-          * そのままだと「35歳」の 35 も (Pr. I) も寝たまま出る。
+          * ★ 区切り線は、字ではなく線で描く。
+          *
+          *   罫線の字を並べたものなので、書体によっては
+          *   字と字のあいだが空き、切れた線に見える。
+          *   1 本の線として描けば、どの書体でも切れない。
           */}
-        {withTateChuYoko(line, `${keyPrefix}-${i}`)}
+        {isDividerLine(line) ? (
+          <span style={{display:'inline-block',verticalAlign:'top',writingMode:'horizontal-tb',height:'6em',margin:'0.5em 0'}}>
+            <span style={{display:'block',width:1,height:'100%',margin:'0 auto',background:'currentColor',opacity:.45}}/>
+          </span>
+        ) : (
+          /*
+            * 英数字は縦中横で立てる。
+            * そのままだと「35歳」の 35 も (Pr. I) も寝たまま出る。
+            */
+          withTateChuYoko(line, `${keyPrefix}-${i}`)
+        )}
         {i < all.length - 1 ? <br/> : null}
       </span>
     ))
