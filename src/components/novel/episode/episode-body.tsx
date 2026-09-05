@@ -576,7 +576,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
   }
 
   return (
-    <div style={{fontSize,lineHeight,color:'var(--color-text)',fontFamily,wordBreak:'break-all'}}>
+    <div style={{fontSize,lineHeight,color:'var(--color-text)',fontFamily,wordBreak:'break-all',whiteSpace:'pre-wrap'}}>
       {sentences.map((raw, idx) => {
         const trimmedForDisplay = raw === '\n' ? '' : raw
         const htmlInner = renderBodyH(trimmedForDisplay)
@@ -1364,7 +1364,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], s
             aria-hidden="true"
             style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}
           />
-          <div style={{display:'inline-block',fontSize,lineHeight:2.1,color:'var(--color-text)',fontFamily,wordBreak:'break-all',verticalAlign:'top'}}>
+          <div style={{display:'inline-block',fontSize,lineHeight:2.1,color:'var(--color-text)',fontFamily,wordBreak:'break-all',verticalAlign:'top',whiteSpace:'pre-wrap'}}>
             {/*
               * ★ 栞が付いていれば、ふだんでも文ごとに分ける。
               *

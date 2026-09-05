@@ -626,7 +626,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
               */}
             <span aria-hidden="true"
               style={{display:'inline-block',height:'100%',width:0,verticalAlign:'top'}}/>
-            <div style={{display:'inline-block', fontSize: settings.fontSize, lineHeight: settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', verticalAlign:'top', writingMode:'vertical-rl'}}>
+            <div style={{display:'inline-block', fontSize: settings.fontSize, lineHeight: settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', whiteSpace:'pre-wrap', verticalAlign:'top', writingMode:'vertical-rl'}}>
               {/* 栞が付いていれば、ふだんでも文ごとに分ける */}
               {(marking || marks.length > 0 || illusts.length > 0) ? (
                 /*
@@ -793,7 +793,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
            * 栞の状態か、本文の中に挿絵があるときだけ、文ごとに分ける。
            * ふだんは分けない。数だけ入れ物が増えて重い。
            */
-          <div style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all'}}>
+          <div style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', whiteSpace:'pre-wrap'}}>
             {splitForMark(body).map((raw, idx) => {
               const mark = marks.find(one => one.sentence === idx)
 
@@ -853,7 +853,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
           </div>
         ) : (
           <div
-            style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all'}}
+            style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', whiteSpace:'pre-wrap'}}
             dangerouslySetInnerHTML={{__html: renderBody(body)}}
           />
         )}
