@@ -156,8 +156,30 @@ export default function EpisodeEditor({
         await getRepository().pickMentionLine(pickEntryId, episode.id, line, text);
     }
 
-    // 別の話に切り替わったら編集中の値を差し替える
+    /*
+     * 別の話に切り替わったときだけ、編集中の値を差し替える。
+     *
+     * ★ 本文が変わったからといって、書き戻さない。
+     *
+     *   前は episode.body も見張っていた。
+     *   自動保存が終わると、親が話を読み直して episode.body が
+     *   新しくなる。するとここが動き、打っている最中の本文を
+     *   保存された時点の本文で上書きしていた。
+     *
+     *   ・保存の往復のあいだに打った字が消える
+     *   ・打ち込み欄の中身が入れ替わるので、カーソルが飛ぶ
+     *
+     *   「改行を調整していると1文字消える」という声は、この形。
+     *   改行は1文字なので、往復の隙に入りやすい。
+     *
+     *   差し替えるのは、開いている話が変わったときだけでよい。
+     */
+    const loadedIdRef = useRef<string | null>(null);
+
     useEffect(() => {
+        if (loadedIdRef.current === episode.id) return;
+
+        loadedIdRef.current = episode.id;
         setTitle(episode.title);
         setBody(episode.body);
         setBeforeNormalize(null);
