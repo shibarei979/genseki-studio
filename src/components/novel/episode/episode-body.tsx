@@ -101,8 +101,12 @@ function normalizeForHorizontalReading(text: string): string {
     (_m, pre, run) => `${pre}${'―'.repeat(run.length)}`,
   )
 
-  /* 全角英数字・記号を半角へ */
-  next = next.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+  /*
+   * 記号だけを半角へ。
+   *
+   * ★ 数字と英字は置き換えない。書いた字をそのまま出す。
+   */
+  next = next.replace(/[！-／：-＠［-｀｛-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
 
   /*
    * 全角空白を半角へ。ただし行頭の字下げは残す。
@@ -196,8 +200,20 @@ function normalizeForReading(text: string): string {
    */
   next = next.replace(/(^|[^ぁ-んァ-ヶー])(ー{2,})(?![ぁ-んァ-ヶー])/g, (_m, pre) => `${pre}——`)
 
-  /* 半角英数字・記号を全角へ */
-  next = next.replace(/[!-~]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
+  /*
+   * 記号だけを全角へ。
+   *
+   * ★ 数字と英字は置き換えない。
+   *
+   *   前は半角英数字もまとめて全角にしていた。
+   *   全角と半角を書き分けている人がいる。
+   *   （麻雀牌を、全角＝索子・半角＝その他 で表していた例がある）
+   *   揃えてしまうと、書き分けが消える。
+   *
+   *   縦書きでの立ち方は、縦中横が別に面倒を見ている。
+   *   置き換えなくても、2桁までは1マスに収まる。
+   */
+  next = next.replace(/[!-\/:-@\[-`{-~]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xFEE0))
 
   /* 半角空白も全角へ */
   next = next.replace(/ /g, '　')
