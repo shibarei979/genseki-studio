@@ -50,17 +50,16 @@ export default function MessageSender({ users, sentMessages: initialMessages }: 
       return
     }
 
-    // 通知も送る
-    await fetch('/api/notify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: toUserId,
-        type: 'admin',
-        message: `【運営からのお知らせ】${subject.trim()}`,
-        link: '/mypage/messages',
-      })
-    })
+    /*
+     * ★ 通知は別に送らない。
+     *
+     *   前はここで /api/notify も呼び、ベルに「便り」と「知らせ」の
+     *   2 つが並んでいた。しかも知らせの行き先 /mypage/messages は
+     *   存在せず、開くと「このページはありません」になっていた。
+     *
+     *   便りは admin_messages に入っており、ベルと /notices の
+     *   両方がそこを見る。1 つで足りる。
+     */
 
     const toUser = users.find(u => u.user_id === toUserId)
     const newMsg: Message = {

@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import EntryImage from "@/components/common/entry-image";
 import Header from "@/components/layout/header";
 import { useMyNotifications } from "@/hooks/use-my-notifications";
+import { createClient } from "@/lib/supabase/client";
 import { getRepository } from "@/lib/repository";
 import type { AdminNotice, NoticeType } from "@/types";
 import {
@@ -35,6 +36,50 @@ export default function NoticesClient() {
     const [notices, setNotices] = useState<AdminNotice[] | null>(null);
     const [filter, setFilter] = useState<Filter>("all");
     const { rows: alerts, markRead: markAlertRead } = useMyNotifications();
+
+    /*
+     * 運営からの便り。
+     *
+     * ★ 携帯はベルを押すとこの頁へ来る。
+     *
+     *   便りは admin_messages に入っており、
+     *   ここでは読んでいなかった。そのため携帯の人は
+     *   便りが届いたことに気づけなかった。
+     */
+    const [letters, setLetters] = useState<
+        { id: string; subject: string; created_at: string }[]
+    >([]);
+
+    useEffect(() => {
+        void (async () => {
+            try {
+                const supabase = createClient();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+
+                if (!user) return;
+
+                const { data } = await supabase
+                    .from("admin_messages")
+                    .select("id, subject, created_at")
+                    .eq("to_user_id", user.id)
+                    .is("from_user_id", null)
+                    .order("created_at", { ascending: false })
+                    .limit(20);
+
+                setLetters(
+                    (data ?? []).map((row) => ({
+                        id: row.id as string,
+                        subject: (row.subject as string) || "運営からの便り",
+                        created_at: (row.created_at as string) ?? "",
+                    })),
+                );
+            } catch {
+                /* 読めなくても、お知らせだけは出す */
+            }
+        })();
+    }, []);
 
     useEffect(() => {
         void (async () => {
@@ -88,6 +133,33 @@ export default function NoticesClient() {
                 <h1 className="text-xl font-semibold tracking-wide text-ink">
                     お知らせ
                 </h1>
+
+                {/* 運営からの便り。押すと本文を開く */}
+                {letters.length > 0 && (
+                    <section className="mt-5">
+                        <h2 className="text-xs font-medium tracking-wide text-faint">
+                            運営からの便り
+                        </h2>
+
+                        <ul className="mt-3 space-y-2">
+                            {letters.map((letter) => (
+                                <li key={letter.id}>
+                                    <Link
+                                        href={`/messages?open=${letter.id}`}
+                                        className="flex items-center gap-3 rounded-xl border border-forest-line bg-forest-tint/40 px-4 py-3 hover:bg-canvas"
+                                    >
+                                        <span className="shrink-0 rounded-full bg-forest-tint px-1.5 py-0.5 text-[10px] text-forest">
+                                            便り
+                                        </span>
+                                        <span className="min-w-0 flex-1 text-[13px] text-ink">
+                                            {letter.subject}
+                                        </span>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
 
                 {/*
                   * 自分あての知らせ。
