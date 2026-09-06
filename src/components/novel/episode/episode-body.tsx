@@ -1280,8 +1280,18 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], s
            *   縦書きは高さが行数になるので、
            *   高いほど 1 画面に入る量が増える。
            */
-          height:'calc(100vh - 96px)',paddingBottom:4}}>
+          height:'calc(100vh - 96px)',paddingBottom:4,
+          /*
+           * ★ 中身を右端へ寄せる。
+           *
+           *   縦書きは右から左へ読む。1画面に収まる短い話だと、
+           *   中身が枠より狭くなり、既定では左端に置かれていた。
+           *   読み始めが真ん中にあって、右側が空いて見える。
+           */
+          textAlign:'right'}}>
         <div style={{
+          /* 中の行揃えは、縦書きの既定に戻す */
+          textAlign:'start',
           writingMode:'vertical-rl',
           /*
            * mixed のまま。

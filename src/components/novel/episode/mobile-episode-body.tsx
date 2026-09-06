@@ -571,11 +571,15 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
             overflowY: 'hidden',
             height: containerHeight,
             paddingBottom: 4,
+            /* ★ 中身を右端へ寄せる。縦書きは右から読み始める */
+            textAlign: 'right',
           }}
         >
           <div
             className="vertical-body"
             style={{
+              /* 中の行揃えは、縦書きの既定に戻す */
+              textAlign: 'start',
               writingMode: 'vertical-rl',
               textOrientation: 'mixed',
               display: 'inline-block',
