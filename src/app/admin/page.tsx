@@ -427,6 +427,27 @@ export default async function AdminPage({
   const chartData365  = buildChartData(makeDays(365))
   const chartData1825 = buildChartData(makeDays(365 * 5))
 
+  /*
+   * 今日、話を読んだ人の実数。
+   *
+   * ★ 上の Promise.all には足さない。
+   *   1 つ足すと、そのあとの値が全部ずれる。ここで別に取る。
+   *
+   * ★ 「本日ログイン」とは別の数。
+   *   入りっぱなしのまま読んだ人は、ログインに数えられない。
+   *   知りたいのは、たいてい読まれたかどうかのほう。
+   */
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
+  const { data: readerRows } = await adminSupabase
+    .from('page_views')
+    .select('user_id')
+    .not('user_id', 'is', null)
+    .gte('viewed_at', todayStart.toISOString())
+
+  const readersToday = new Set((readerRows ?? []).map((row: { user_id: string }) => row.user_id)).size
+
   // ログインユーザー数（今日・直近7日）とデバイス別PV（直近7日）
   const loginStats = loginRes.data
   const loginToday = loginStats?.today || 0
@@ -706,12 +727,14 @@ export default async function AdminPage({
 
           <div className="admin-cards" style={{
             display:'grid',
-            gridTemplateColumns:'repeat(4, minmax(0, 1fr))',
+            /* 札が1枚増えたので 5 列。狭い画面は CSS 側で落ちる */
+            gridTemplateColumns:'repeat(5, minmax(0, 1fr))',
             gap:14,
           }}>
             {[
               { label: `${rangeLabel}ユーザー`, value: loginMonth.toLocaleString(), note: `${rangeLabel}以内に来た人` },
-              { label: '本日ログイン', value: loginToday.toLocaleString(), note: '今日来た人' },
+              { label: '今日 読んだ人', value: readersToday.toLocaleString(), note: '今日 話を開いた人の実数' },
+              { label: '本日ログイン', value: loginToday.toLocaleString(), note: '今日 入り直した人' },
               { label: '7日ログイン',  value: loginWeek.toLocaleString(),  note: '直近7日に来た人' },
               { label: '未対応の通報', value: (openReportRes.count ?? 0).toLocaleString(), note: 'まだ見ていない通報' },
 
