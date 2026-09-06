@@ -133,17 +133,33 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
      * 入る前と、作る前に確かめる。
      */
     async function isBanned(target: string): Promise<boolean> {
+        /*
+         * ★ 待ち続けない。
+         *
+         *   返事が来ないと、この await は永遠に終わらない。
+         *   押し具は「送っています」のままになり、
+         *   登録の画面が動かなくなる。
+         *   実際に「登録しようとしても画面が動かない」という声が届いた。
+         *
+         *   4 秒で切り上げ、確かめられなければ通す。
+         */
+        const stopper = new AbortController();
+        const timer = window.setTimeout(() => stopper.abort(), 4000);
+
         try {
             const response = await fetch("/api/auth/check-ban", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: target }),
+                signal: stopper.signal,
             });
             const data = await response.json();
             return data?.banned === true;
         } catch {
             /* 確かめられなければ通す。ここで全員を止めない */
             return false;
+        } finally {
+            window.clearTimeout(timer);
         }
     }
 
@@ -243,7 +259,14 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
 
         const birthdate = `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`;
 
-        const { error: caught } = await createClient().auth.signUp({
+        /*
+         * ★ 何が起きても押し具を戻す。
+         *   途中で落ちると「送っています」のまま固まる。
+         */
+        let caught: { message: string } | null = null;
+
+        try {
+        const signed = await createClient().auth.signUp({
             email: email.trim(),
             password,
             options: {
@@ -259,8 +282,14 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
                 },
             },
         });
-
-        setIsBusy(false);
+            caught = signed.error;
+        } catch (thrown) {
+            caught = {
+                message: thrown instanceof Error ? thrown.message : "うまくいきませんでした",
+            };
+        } finally {
+            setIsBusy(false);
+        }
 
         if (caught) {
             setError(describe(caught.message));
