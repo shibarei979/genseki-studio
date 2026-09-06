@@ -15,6 +15,7 @@
 
 import { NextResponse } from "next/server";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /* 組み立ての段階で走らせない。呼ばれたときだけ動かす */
@@ -65,7 +66,16 @@ export async function GET() {
         supabase.from("novels").select("*", { count: "exact", head: true }).eq("author_id", user.id).eq("published", true),
         supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", user.id),
         supabase.from("read_episodes").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("tweets").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+        /*
+         * ★ つぶやきの数だけ、運営用の繋ぎ口で数える。
+         *
+         *   表を閉じたので、入っている人の資格では数えられない。
+         *   数えられないと 0 になり、
+         *   「コミュニティーに書く」の達成が上がらなかった。
+         *
+         *   数えるのは自分の行だけ。ほかの人の中身は見ない。
+         */
+        createAdminClient().from("tweets").select("*", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("series").select("*", { count: "exact", head: true }).eq("user_id", user.id),
 
         novelIds.length > 0
