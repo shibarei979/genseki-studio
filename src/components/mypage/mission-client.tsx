@@ -66,7 +66,8 @@ export const WRITER_MISSIONS: Mission[] = [
   { id: 'profile-setup',  label: '自己紹介を書く',     desc: 'プロフィールに自己紹介を設定', target: 1,  cat: 'creator',  cur: s => (s.hasBio ? 1 : 0) },
   { id: 'first-episode',  label: '投稿する',           desc: '最初の話を投稿する',           target: 1,  cat: 'creator',  cur: s => s.episodeCount },
   { id: 'episode-5',      label: '5回投稿する',        desc: '話を5回投稿する',              target: 5,  cat: 'creator',  cur: s => s.episodeCount },
-  { id: 'first-tweet',    label: 'つぶやく',           desc: 'つぶやきを投稿する',           target: 1,  cat: 'creator',  cur: s => s.tweetCount || 0 },
+  /* 場所の名で呼ぶ。読む人は「つぶやき」より「コミュニティー」で覚えている */
+  { id: 'first-tweet',    label: 'コミュニティーに書く', desc: 'コミュニティーに投稿する',     target: 1,  cat: 'creator',  cur: s => s.tweetCount || 0 },
   { id: 'first-series',   label: 'シリーズを作る',     desc: '作品をまとめるシリーズを作成', target: 1,  cat: 'creator',  cur: s => s.seriesCount || 0 },
 ]
 
