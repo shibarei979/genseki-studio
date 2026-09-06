@@ -37,7 +37,7 @@ export const REPORT_TARGET_LABEL: Record<ReportTarget, string> = {
     novel: "作品",
     episode: "話",
     comment: "感想",
-    tweet: "つぶやき",
+    tweet: "コミュニティーの書き込み",
     user: "利用者",
 };
 

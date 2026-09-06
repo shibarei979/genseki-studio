@@ -324,7 +324,7 @@ export async function POST(request: Request) {
             notice = {
                 targetId,
                 type: "reply",
-                message: `${name}さんがあなたのつぶやきに返信しました`,
+                message: `${name}さんがあなたの書き込みに返信しました`,
                 link: `/author/${ownerId ?? user.id}`,
             };
         }
@@ -351,7 +351,7 @@ export async function POST(request: Request) {
             notice = {
                 targetId: ownerId,
                 type: "like",
-                message: `${name}さんがつぶやきにいいねしました`,
+                message: `${name}さんが書き込みにいいねしました`,
                 link: `/author/${ownerId ?? user.id}`,
                 once: true,
             };

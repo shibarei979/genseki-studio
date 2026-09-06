@@ -111,7 +111,7 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
 
   const Tweet = (
     <div style={card}>
-      <div style={cardHead}><span style={cardTitle}>最近のつぶやき</span><button onClick={()=>onTabChange?.('tweet')} style={{...seeAll, background:'none', border:'none', cursor:'pointer', padding:0}}>すべて見る →</button></div>
+      <div style={cardHead}><span style={cardTitle}>コミュニティーの書き込み</span><button onClick={()=>onTabChange?.('tweet')} style={{...seeAll, background:'none', border:'none', cursor:'pointer', padding:0}}>すべて見る →</button></div>
       {recentTweet ? (
         <div>
           <div style={{ fontSize: 12.5, color: 'var(--color-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginBottom: 6 }}>
@@ -119,7 +119,7 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
           </div>
           <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>♡ {recentTweet.like_count || 0}　💬 {recentTweet.reply_count || 0}</div>
         </div>
-      ) : <div style={emptyText}>まだつぶやきがありません</div>}
+      ) : <div style={emptyText}>まだ書き込みがありません</div>}
     </div>
   )
 

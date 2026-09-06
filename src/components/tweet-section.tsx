@@ -519,7 +519,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
   }
 
   async function handlePost() {
-    if (!currentUserId) return guard('つぶやく', () => {})()
+    if (!currentUserId) return guard('書き込む', () => {})()
     if (!body.trim()) return
     setPosting(true)
     let imageUrl: string | null = null
@@ -585,7 +585,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
      */
     if (error || !data) {
       setPostError(
-        error?.message ?? 'つぶやきを保存できませんでした',
+        error?.message ?? '書き込みを保存できませんでした',
       )
       return
     }
@@ -614,7 +614,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
        * 黙って捨てると、書いたはずのアンケートが消える。
        * つぶやきは残っているので、そのことも伝える。
        */
-      setPostError('アンケートは選択肢が2つ以上必要です。つぶやきだけ投稿しました。')
+      setPostError('アンケートは選択肢が2つ以上必要です。書き込みだけ投稿しました。')
     }
 
     if (filled.length >= 2) {
@@ -839,7 +839,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     const target = tweets.find(t => t.id === tweetId)
     if (!currentUserId || !target || target.user_id !== currentUserId) return
 
-    if (!confirm('このつぶやきを削除しますか？')) return
+    if (!confirm('この書き込みを削除しますか？')) return
 
     /* 消すのも受け口を通す */
     let error: { message: string } | null = null
@@ -951,12 +951,12 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
 
   return (
     <div>
-      {!isOwner && authorId && <div style={{fontSize:15,fontWeight:700,color:'var(--color-text)',marginBottom:12}}>つぶやき</div>}
+      {!isOwner && authorId && <div style={{fontSize:15,fontWeight:700,color:'var(--color-text)',marginBottom:12}}>コミュニティー</div>}
 
       {/* ログインしていない人へ */}
       {!isOwner && !authorId && (
         <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'18px 20px',marginBottom:20,fontSize:12.5,lineHeight:1.9,color:'var(--color-text-muted)'}}>
-          つぶやくにはログインが要ります。読むだけなら、そのままどうぞ。
+          書き込むにはログインが要ります。読むだけなら、そのままどうぞ。
         </div>
       )}
       {isOwner && (
@@ -1103,8 +1103,8 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
           isOwner || authorId === currentUserId ? (
             <div style={{textAlign:'center',padding:'56px 24px',color:'var(--color-text-faint)',fontSize:14,background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16}}>
               {isOwner
-                ? 'まだつぶやきがありません。上の入力欄から投稿できます。'
-                : 'まだつぶやきがありません。'}
+                ? 'まだ書き込みがありません。上の入力欄から投稿できます。'
+                : 'まだ書き込みがありません。'}
             </div>
           ) : null
         )

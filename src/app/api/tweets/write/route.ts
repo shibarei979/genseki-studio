@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
         if (!tweetId) {
             return NextResponse.json(
-                { error: "どのつぶやきか分かりません" },
+                { error: "どの書き込みか分かりません" },
                 { status: 400 },
             );
         }
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
 
         if (!target) {
             return NextResponse.json(
-                { error: "そのつぶやきがありません" },
+                { error: "その書き込みがありません" },
                 { status: 404 },
             );
         }
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
         if (action === "update") {
             if (!isMine) {
                 return NextResponse.json(
-                    { error: "自分のつぶやきではありません" },
+                    { error: "自分の書き込みではありません" },
                     { status: 403 },
                 );
             }
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
         if (action === "delete") {
             if (!isMine && !isAdmin) {
                 return NextResponse.json(
-                    { error: "自分のつぶやきではありません" },
+                    { error: "自分の書き込みではありません" },
                     { status: 403 },
                 );
             }

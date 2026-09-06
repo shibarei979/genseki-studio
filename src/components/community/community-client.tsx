@@ -50,7 +50,7 @@ import type { WritingRoom } from "@/types";
 const VIEWS = [
     { key: "timeline", label: "タイムライン", icon: <HomeIcon /> },
     { key: "rooms", label: "執筆室", icon: <DoorIcon /> },
-    { key: "mine", label: "自分のつぶやき", icon: <PenIcon /> },
+    { key: "mine", label: "自分の書き込み", icon: <PenIcon /> },
     { key: "following", label: "フォロー中", icon: <PeopleIcon /> },
     { key: "notices", label: "お知らせ", icon: <BellIcon /> },
     { key: "bookmarks", label: "ブックマーク", icon: <BookmarkIcon /> },
@@ -280,7 +280,7 @@ export default function CommunityClient() {
                                 className="flex items-center justify-center gap-2 rounded-lg bg-forest-dark py-3 text-[13px] font-medium text-white hover:opacity-90"
                             >
                                 <PenIcon />
-                                つぶやく
+                                書き込む
                             </Link>
 
                             <nav className="mt-4 space-y-0.5">
@@ -594,7 +594,7 @@ export default function CommunityClient() {
                                     <ul className="mt-3 space-y-3">
                                         {[
                                             {
-                                                title: "つぶやく",
+                                                title: "書き込む",
                                                 body: "進み具合や、詰まっていることを短く。返事が来なくても構いません。",
                                             },
                                             {
