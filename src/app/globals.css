@@ -195,10 +195,10 @@ body {
  *   線     背景よりわずかに明るいだけ。強いと枠が目立つ。
  */
 html[data-theme="dark"] {
-    --color-canvas: #12161b;
-    --color-surface: #1a2027;
-    --color-bg: #1a2027;
-    --color-bg-card: #1a2027;
+    --color-canvas: #0d1116;
+    --color-surface: #151b22;
+    --color-bg: #151b22;
+    --color-bg-card: #151b22;
 
     --color-text: #dfe4e8;
     --color-ink: #dfe4e8;
@@ -226,15 +226,20 @@ html[data-theme="dark"] {
     --color-sea-tint: #223440;
     --color-sea-line: #33505f;
 
-    --color-amber: #d9a441;
-    --color-amber-tint: #2e2718;
+    /*
+     * ★ 橙にする。
+     *   昼の色（#99610a）は茶色に寄っており、
+     *   暗い画面ではただ濁って見える。
+     */
+    --color-amber: #f0913a;
+    --color-amber-tint: #33261a;
+    --color-warning: #f0913a;
     --color-danger: #e0796d;
     --color-danger-tint: #33201e;
     --color-info: #7fb4d4;
     --color-info-bg: #1c2b34;
     --color-info-border: #33505f;
     --color-success: #7fb389;
-    --color-warning: #d9a441;
     --color-leaf: #7fb389;
     --color-leaf-tint: #1e2a20;
 
@@ -248,7 +253,17 @@ html[data-theme="dark"] {
  * ほんの少しだけ落ち着かせる。強くすると作品の絵が損なわれる。
  */
 html[data-theme="dark"] img {
-    filter: brightness(0.94);
+    filter: brightness(0.88);
+}
+
+/*
+ * ★ 上の大きな帯は、もっと落とす。
+ *
+ *   面積が広く、夜の画面ではそこだけが眩しい。
+ *   絵そのものは変えず、出すときだけ落とす。
+ */
+html[data-theme="dark"] .hero img {
+    filter: brightness(0.62);
 }
 
 /* 表紙と挿絵は作品そのもの。触らない */
@@ -369,7 +384,7 @@ html[data-theme="dark"] img[alt="挿絵"] {
 html[data-theme="dark"] [data-manuscript-theme="white"],
 html[data-theme="dark"] [data-manuscript-theme="cream"],
 html[data-theme="dark"] [data-manuscript-theme="sepia"] {
-    --manuscript-bg: #1a2027;
+    --manuscript-bg: #151b22;
     --manuscript-fg: #dfe4e8;
 }
 

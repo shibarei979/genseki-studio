@@ -75,6 +75,45 @@
     position: relative;
 }
 
+
+/*==================================================
+夜の見た目
+・ホームは自前の色を持っている（--text-color / --base-color-…）
+・サイト全体の昼夜に合わせて、その中身を差し替える
+・色の名前は変えないので、部品は書き直さなくてよい
+==================================================*/
+html[data-theme="dark"] .reader-home,
+html[data-theme="dark"] .reader-home[data-theme="light"] {
+    --text-color: #dfe4e8;
+    --base-color-1: #151b22;
+    --base-color-2: #1d242c;
+
+    /* 本棚の木と紙は、質感なので少しだけ落とす */
+    --base-color-3: #8a7550;
+    --base-color-4: #6d532c;
+    --base-color-5: #4a341e;
+
+    --main-color-1: #7fb4d4;
+    --main-color-2: #4d87ab;
+    --main-color-3: #2b5f7d;
+    --main-color-4: #0b1016;
+
+    background: var(--color-canvas, #0d1116);
+}
+
+/*
+ * ★ 大きな絵は、そのままだと明るすぎる。
+ *
+ *   夜の画面で上の帯だけが眩しく、目が痛くなる。
+ *   絵そのものは変えず、出すときだけ落とす。
+ */
+html[data-theme="dark"] .reader-home .hero,
+html[data-theme="dark"] .reader-home .hero img,
+html[data-theme="dark"] .reader-home .bg,
+html[data-theme="dark"] .reader-home .bg img {
+    filter: brightness(0.72);
+}
+
 .reader-home[data-theme="light"] {
     /* 現行の下地の色。札の白が浮くように、わずかに灰を入れる */
     background: var(--color-canvas, #f4f5f3);
