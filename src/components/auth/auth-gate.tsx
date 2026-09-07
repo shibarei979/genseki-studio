@@ -82,6 +82,22 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
     const isOpen = !needsLogin;
 
+    /*
+     * ★ 誰でも入れる所は、待たずにそのまま出す。
+     *
+     *   前は、入っているかを確かめ終えるまで
+     *   「読み込んでいます」の 1 行だけを出していた。
+     *   これは最初に配る HTML にも入るので、
+     *   検索の見回りが最初に受け取る中身が、
+     *   どの頁も「読み込んでいます」だけになっていた。
+     *
+     *   作品も目次も本文も、そこには何も無い。
+     *   検索に載らない大きな理由になっていた。
+     *
+     *   ログインが要る所だけ、これまでどおり待つ。
+     */
+    if (isOpen) return <>{children}</>;
+
     if (isLoading) {
         return (
             <div
