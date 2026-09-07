@@ -76,14 +76,7 @@
 }
 
 
-/*==================================================
-夜の見た目
-・ホームは自前の色を持っている（--text-color / --base-color-…）
-・サイト全体の昼夜に合わせて、その中身を差し替える
-・色の名前は変えないので、部品は書き直さなくてよい
-==================================================*/
-html[data-theme="dark"] .reader-home,
-html[data-theme="dark"] .reader-home[data-theme="light"] {
+.reader-home[data-theme="light"] {
     --text-color: #dfe4e8;
     --base-color-1: #151b22;
     --base-color-2: #1d242c;
@@ -101,18 +94,6 @@ html[data-theme="dark"] .reader-home[data-theme="light"] {
     background: var(--color-canvas, #0d1116);
 }
 
-/*
- * ★ 本棚は、色を変えず明るさだけ落とす。
- *
- *   木と紙と背表紙の色で質感を出している。
- *   夜の色に置き換えると、ただの黒い板になる。
- *   そのままの色で、暗くする。
- */
-html[data-theme="dark"] .reader-home .bookshelf-loop,
-html[data-theme="dark"] .reader-home .bg,
-html[data-theme="dark"] .reader-home .bg img {
-    filter: brightness(0.62);
-}
 
 .reader-home[data-theme="light"] {
     /* 現行の下地の色。札の白が浮くように、わずかに灰を入れる */

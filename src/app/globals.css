@@ -178,104 +178,35 @@ body {
  * 夜の見た目（ダークモード）
  * ============================================================
  *
- * ★ 色の名前は変えない。中身だけ差し替える。
+ * ★ 色は入れ替えない。画面全体の明るさを落とすだけ。
  *
- *   画面の部品は var(--color-…) で色を呼んでいる。
- *   その中身をここで暗いものに置き換えれば、
- *   部品を1つも書き直さずに全体が暗くなる。
+ *   前は色の名前の中身を暗いものに差し替えていた。
+ *   だが、色の名前で呼んでいない所（直に #ffffff と
+ *   書いてある所が 1,000 か所ほど）は白いまま残り、
+ *   暗い画面の中で、そこだけが光る形になっていた。
  *
- * ★ 直に色を書いてある所（#ffffff など）は、まだ白いまま。
- *   気づいた所から順に、この仕組みへ寄せていく。
+ *   全部の色を名前に寄せるには何日もかかる。
+ *   その間ずっと壊れて見えるより、
+ *   画面の上に薄い黒の膜を1枚かけるほうがよい。
  *
- * ★ 濃さの決め方
+ * ★ 膜は position:fixed で置く。
  *
- *   背景   ほぼ黒にせず、少し青みのある濃紺寄り。
- *          真っ黒だと字が浮きすぎて、長く読むと疲れる。
- *   字     真っ白にしない。白は眩しい。
- *   線     背景よりわずかに明るいだけ。強いと枠が目立つ。
+ *   html や body に filter を掛けると、
+ *   その中の position:fixed が親を基準に置き直され、
+ *   小窓や下の帯の位置が崩れる。
+ *   膜なら、どの部品にも触らない。
+ *
+ * ★ 押しても素通りする（pointer-events: none）。
+ *   膜の上から、これまでどおり押せる。
  */
-html[data-theme="dark"] {
-    --color-canvas: #0d1116;
-    --color-surface: #151b22;
-    --color-bg: #151b22;
-    --color-bg-card: #151b22;
-
-    --color-text: #dfe4e8;
-    --color-ink: #dfe4e8;
-    --color-text-muted: #a3adb6;
-    --color-muted: #a3adb6;
-    --color-text-faint: #77828c;
-    --color-faint: #77828c;
-    --color-text-inverse: #12161b;
-
-    --color-line: #2c353e;
-    --color-tag-border: #2c353e;
-    --color-brand-border: #33505f;
-
-    /* 印の色。暗い背景では、明るいほうへ寄せないと沈む */
-    --color-brand: #7fb4d4;
-    --color-brand-light: #223440;
-    --color-forest: #7fb4d4;
-    --color-forest-dark: #a6cce2;
-    --color-forest-tint: #223440;
-    --color-forest-line: #33505f;
-    --color-logo: #7fb4d4;
-    --color-sea: #7fb4d4;
-    --color-sea-dark: #a6cce2;
-    --color-sea-light: #223440;
-    --color-sea-tint: #223440;
-    --color-sea-line: #33505f;
-
-    /*
-     * ★ 橙にする。
-     *   昼の色（#99610a）は茶色に寄っており、
-     *   暗い画面ではただ濁って見える。
-     */
-    --color-amber: #f0913a;
-    --color-amber-tint: #33261a;
-    --color-warning: #f0913a;
-    --color-danger: #e0796d;
-    --color-danger-tint: #33201e;
-    --color-info: #7fb4d4;
-    --color-info-bg: #1c2b34;
-    --color-info-border: #33505f;
-    --color-success: #7fb389;
-    --color-leaf: #7fb389;
-    --color-leaf-tint: #1e2a20;
-
-    --base-color-1: #12161b;
-
-    color-scheme: dark;
-}
-
-/*
- * 絵は、そのままだと暗い画面で浮く。
- * ほんの少しだけ落ち着かせる。強くすると作品の絵が損なわれる。
- */
-html[data-theme="dark"] img {
-    filter: brightness(0.88);
-}
-
-/*
- * ★ 上の大きな帯は、色を変えず、明るさだけ落とす。
- *
- *   夜の色に置き換えると黒い箱になり、
- *   もとの絵と字の組み合わせが崩れる。
- *   白いままでよいので、そこだけ暗くする。
- */
-html[data-theme="dark"] .hero {
-    filter: brightness(0.62);
-}
-
-/* 中の絵は二重に落とさない */
-html[data-theme="dark"] .hero img {
-    filter: none;
-}
-
-/* 表紙と挿絵は作品そのもの。触らない */
-html[data-theme="dark"] img[alt$="表紙"],
-html[data-theme="dark"] img[alt="挿絵"] {
-    filter: none;
+html[data-theme="dark"] body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: #000;
+    opacity: 0.42;
+    pointer-events: none;
+    z-index: 2147483000;
 }
 
 /*
@@ -378,20 +309,6 @@ html[data-theme="dark"] img[alt="挿絵"] {
 [data-manuscript-theme="sepia"] {
     --manuscript-bg: #f2e8d5;
     --manuscript-fg: #4a3b28;
-}
-
-/*
- * ★ 夜のときは、明るい紙を選んでいる人だけ暗い紙で出す。
- *
- *   紙の色は作者が選んでいる（白・クリーム・セピア・夜・黒）。
- *   その設定は書き換えない。夜のあいだの見え方だけを変える。
- *   昼に戻せば、選んだ紙で出る。
- */
-html[data-theme="dark"] [data-manuscript-theme="white"],
-html[data-theme="dark"] [data-manuscript-theme="cream"],
-html[data-theme="dark"] [data-manuscript-theme="sepia"] {
-    --manuscript-bg: #151b22;
-    --manuscript-fg: #dfe4e8;
 }
 
 [data-manuscript-theme="night"] {

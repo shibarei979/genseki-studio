@@ -40,11 +40,7 @@ export default function ReaderHero() {
     const [index, setIndex] = useState(0);
 
     return (
-        /*
-         * hero の名を付ける。
-         * 夜のとき、この中の絵だけ明るさを落とすため（globals.css）。
-         */
-        <section className="hero relative overflow-hidden rounded-xl border border-line bg-surface">
+        <section className="relative overflow-hidden rounded-xl border border-line bg-surface">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
                 src={HERO_IMAGES[index]}
