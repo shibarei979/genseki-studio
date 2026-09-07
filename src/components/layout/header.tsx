@@ -457,7 +457,14 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                         >
                             <BellIcon />
                             {badgeCount > 0 && (
-                                <span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full bg-forest ring-2 ring-[var(--color-surface)]" />
+                                /*
+                                 * ★ 赤にする。
+                                 *
+                                 *   青緑はベルの色と近く、
+                                 *   点が付いているか分からなかった。
+                                 *   新しい知らせがあることは、色で分かるべき。
+                                 */
+                                <span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full bg-[var(--color-danger)] ring-2 ring-[var(--color-surface)]" />
                             )}
                         </button>
 

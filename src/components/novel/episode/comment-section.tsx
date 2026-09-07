@@ -114,6 +114,37 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
     }
   }, [quotedText])
 
+  /*
+   * 通知から来たとき、その感想まで送る。
+   *
+   * ★ 住所の後ろに #comment-〇〇 が付いている。
+   *
+   *   ブラウザの標準の飛び先だけでは届かない。
+   *   感想は後から読み込むので、飛ぼうとした時点では
+   *   まだ画面に無い。読み込み終えてから自分で送る。
+   *
+   * ★ 少しのあいだ色を付ける。
+   *   どれのことか、見て分かるようにする。
+   */
+  useEffect(() => {
+    if (comments.length === 0) return
+    if (typeof window === 'undefined') return
+
+    const hash = window.location.hash
+    if (!hash.startsWith('#comment-')) return
+
+    const found = document.getElementById(hash.slice(1))
+    if (!found) return
+
+    found.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+    const before = found.style.background
+    found.style.background = 'var(--color-brand-light)'
+    const timer = window.setTimeout(() => { found.style.background = before }, 2400)
+
+    return () => window.clearTimeout(timer)
+  }, [comments])
+
   useEffect(() => {
     if (!userId) return guard('感想を書く', () => {})()
     /*
@@ -501,7 +532,8 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                 {c.replies && c.replies.length > 0 && (
                   <div style={{ marginTop: 10, paddingLeft: 14, borderLeft: '2px solid var(--color-brand-light)', display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {c.replies.map(r => (
-                      <div key={r.id} style={{ display: 'flex', gap: 8 }}>
+                      /* 返信にも目印。通知はここへ飛ぶことがある */
+                      <div key={r.id} id={`comment-${r.id}`} style={{ scrollMarginTop: 80, display: 'flex', gap: 8 }}>
                         {r.icon_url ? (
                           <img src={r.icon_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                         ) : (
