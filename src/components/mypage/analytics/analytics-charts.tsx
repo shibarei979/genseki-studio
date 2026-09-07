@@ -30,6 +30,8 @@ interface NovelStat {
   daily30?: { date: string; views: number; m?: number; d?: number; a?: number }[]
   /** 日ごとの数（YYYY-MM-DD をそのまま持つ）。月の図を組み立てるのに使う */
   dailyByDay?: Record<string, { v: number; m: number; d: number; a: number }>
+  /** 月ごとの数（YYYY-MM）。年の図を組み立てるのに使う */
+  monthlyByMonth?: Record<string, { v: number; m: number; d: number; a: number }>
   /** 1年。1年を30に分けたもの */
   yearly30?: { date: string; views: number; m?: number; d?: number; a?: number }[]
   /** 総合。1年ずつ */
@@ -76,6 +78,13 @@ export default function AnalyticsCharts({
    *   月をまたいで並ぶと、月の頭が分からず読みにくい。
    */
   const [monthBack, setMonthBack] = useState(0)
+
+  /*
+   * どの年を見ているか。0 が今年、-1 が去年。
+   *
+   * ★ 1年は「直近1年」ではなく「その年の1月から12月まで」。
+   */
+  const [yearBack, setYearBack] = useState(0)
   const selected = novels.find(n => n.id === selectedId) || novels[0]
   if (!selected) return null
 
@@ -98,10 +107,23 @@ export default function AnalyticsCharts({
     monthData.push({ date: String(day), views: found.v, m: found.m, d: found.d, a: found.a })
   }
 
+  /*
+   * 見ている年の 1 月から 12 月まで。
+   * 数の無い月も 0 として並べる。
+   */
+  const shownYear = new Date().getFullYear() + yearBack
+
+  const yearData: { date: string; views: number; m: number; d: number; a: number }[] = []
+  for (let month = 1; month <= 12; month++) {
+    const key = `${shownYear}-${String(month).padStart(2, '0')}`
+    const found = selected.monthlyByMonth?.[key] || { v: 0, m: 0, d: 0, a: 0 }
+    yearData.push({ date: `${month}月`, views: found.v, m: found.m, d: found.d, a: found.a })
+  }
+
   /* 選んだ期間の並びと合計 */
   const rangeData =
     range === 'month' ? monthData
-    : range === 'year' ? (selected.yearly30 ?? [])
+    : range === 'year' ? yearData
     : (selected.allYears ?? [])
 
   const rangeTotal = rangeData.reduce((sum, row) => sum + row.views, 0)
@@ -183,10 +205,12 @@ export default function AnalyticsCharts({
 
             {/*
              * 期間の切り替え。
-             *   1か月  30日ぶんを1日ずつ
-             *   1年    1年を30に分けて（1本あたり約12日）
+             *   1か月  その月の1日から末日まで
+             *   1年    その年の1月から12月まで
              *   総合   1年ずつ
-             * どれも本数を30前後に揃える。365本並べても読めない。
+             *
+             * ★ 「直近30日」「直近1年」ではなく、暦で区切る。
+             *   月をまたいで並ぶと、どこが月の頭か分からない。
              */}
             <div style={{display:'inline-flex',border:'1px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden',marginBottom:14}}>
               {RANGES.map(r => (
@@ -211,6 +235,32 @@ export default function AnalyticsCharts({
               *
               * 遡れるのは 12 か月まで。先の月へは進めない。
               */}
+            {range === 'year' && (
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                <button
+                  onClick={()=>setYearBack(v => Math.max(-10, v - 1))}
+                  disabled={yearBack <= -10}
+                  style={{border:'1px solid var(--color-brand-border)',background:'var(--color-bg-card)',
+                    borderRadius:8,padding:'4px 10px',fontSize:12,cursor:yearBack<=-10?'default':'pointer',
+                    color:yearBack<=-10?'var(--color-text-faint)':'var(--color-text-muted)'}}
+                >
+                  ← 前の年
+                </button>
+
+                <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>{shownYear}年</span>
+
+                <button
+                  onClick={()=>setYearBack(v => Math.min(0, v + 1))}
+                  disabled={yearBack >= 0}
+                  style={{border:'1px solid var(--color-brand-border)',background:'var(--color-bg-card)',
+                    borderRadius:8,padding:'4px 10px',fontSize:12,cursor:yearBack>=0?'default':'pointer',
+                    color:yearBack>=0?'var(--color-text-faint)':'var(--color-text-muted)'}}
+                >
+                  次の年 →
+                </button>
+              </div>
+            )}
+
             {range === 'month' && (
               <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
                 <button

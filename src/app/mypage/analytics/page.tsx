@@ -249,6 +249,12 @@ export default async function AnalyticsPage() {
       daily7,
       daily30,
       /*
+       * 月ごとの数も、そのまま渡す。
+       *
+       * ★ 図の側で「◯年の 1 月から 12 月まで」を組み立てるのに使う。
+       */
+      monthlyByMonth: st.monthly,
+      /*
        * 日ごとの数を、そのまま渡す。
        *
        * ★ 図の側で「◯月の 1 日から末日まで」を組み立てるのに使う。
