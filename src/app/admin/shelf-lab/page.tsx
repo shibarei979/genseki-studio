@@ -25,6 +25,7 @@
 
 import BookshelfSection from "@/components/home/bookshelf-section";
 import HomeEffects from "@/components/home/home-effects";
+import ShelfNav from "@/components/home/shelf-nav";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { HomeBook } from "@/types/home";
@@ -75,7 +76,7 @@ export default async function ShelfLabPage() {
     }));
 
     return (
-        <div className="reader-home" data-theme="light">
+        <>
             <div className="mx-auto max-w-[900px] px-6 py-5">
                 <h1 className="text-sm font-medium text-ink">本棚を試す場所</h1>
                 <p className="mt-1 text-xs leading-relaxed text-muted">
@@ -87,13 +88,34 @@ export default async function ShelfLabPage() {
             </div>
 
             {/*
-              * 本棚と、その下の板。
-              * 板が無いと本が宙に浮いて見える（読者のホームと同じ作り）。
+              * ★ 読者のホームと、まったく同じ入れ子にする。
+              *
+              *   home.js は .reader-home の中の
+              *   .rh_main > .rh_shelf を見て位置を計算する。
+              *   囲いが違うと、本が積み上がったまま並ばない。
+              *
+              *   data-view / data-auth も、あちらと同じものを付ける。
               */}
-            <div className="rh_main">
-                <div className="rh_shelf">
-                    <BookshelfSection books={books} />
-                    <div className="rh_shelf-board" aria-hidden="true" />
+            {/*
+              * ★ id="home-page" が要る。
+              *
+              *   home.js の init は、この印を探して
+              *   見つからなければ何もせずに戻る。
+              *   印が無いと、本が積み上がったまま並ばない。
+              */}
+            <div
+                id="home-page"
+                className="reader-home"
+                data-theme="light"
+                data-view="reader"
+                data-auth="login"
+            >
+                <div className="rh_main">
+                    <div className="rh_shelf">
+                        <BookshelfSection books={books} />
+                        <div className="rh_shelf-board" aria-hidden="true" />
+                        <ShelfNav />
+                    </div>
                 </div>
             </div>
 
@@ -102,6 +124,6 @@ export default async function ShelfLabPage() {
               * 入れ替え用の作品は、本棚と同じものを渡しておく。
               */}
             <HomeEffects pools={{ pickupPool: books, newReleasePool: books }} />
-        </div>
+        </>
     );
 }
