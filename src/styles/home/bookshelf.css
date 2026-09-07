@@ -6,7 +6,22 @@
    Bookshelf Loop
 ========================================================== */
 
+/*
+ * ★ 位置が決まるまで、見せない。
+ *
+ *   本の並びは home.js が計算して当てている。
+ *   その前は、全部が同じ場所に積み上がった状態で描かれる。
+ *   読み込みの一瞬だけ、本が崩れて見えていた。
+ *
+ *   計算が済んだら is-ready が付く（home-effects.tsx）。
+ *   万一 JS が動かなくても、少し待てば出るようにしてある。
+ */
+.bookshelf-loop:not(.is-ready) {
+    opacity: 0;
+}
+
 .bookshelf-loop {
+    transition: opacity .18s ease;
     width: 100%;
     height: calc(60vh / var(--page-zoom) - 250px);
     min-height: 370px;
