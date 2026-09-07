@@ -16,7 +16,7 @@
  * ============================================================
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * 見出しの絵。
@@ -25,12 +25,17 @@ import { useState } from "react";
  * 上から順に試し、読めなければ次へ送る。
  */
 const HERO_IMAGES = [
-    "/images/HERO_IMAGE.png",
+    /* 置いてあるのは .jpg。先に試す */
     "/images/HERO_IMAGE.jpg",
+    "/images/HERO_IMAGE.png",
     "/images/HERO_IMAGE.jpeg",
     "/images/HERO_IMAGE.webp",
-    /* どれも無かったときの控え。同梱してあるので必ず読める */
-    "/images/hero-voyage.webp",
+    /*
+     * どれも無かったときの控え。
+     * hero-voyage.webp を挙げていたが、置かれていなかった。
+     * 実際にある灯台の絵にする。
+     */
+    "/images/hero-lighthouse.webp",
 ];
 
 /** 絵のどこを見せるか。人物が右に寄っているので右端を残す */
@@ -38,11 +43,34 @@ const HERO_POSITION = "right 40%";
 
 export default function ReaderHero() {
     const [index, setIndex] = useState(0);
+    const imageRef = useRef<HTMLImageElement>(null);
+
+    /*
+     * ★ 読めなかったことに、あとから気づく。
+     *
+     *   onError は、React が画面を受け持つ前に起きた失敗を拾えない。
+     *   最初に配る HTML の時点で読み込みが始まるので、
+     *   そこで失敗すると、次の候補へ送られないまま止まる。
+     *   実際、絵が出ないまま白い帯になっていた。
+     *
+     *   受け持ったあとに、読めているかを見て、
+     *   駄目なら次の候補へ送る。
+     */
+    useEffect(() => {
+        const image = imageRef.current;
+        if (!image) return;
+        if (image.complete && image.naturalWidth === 0) {
+            setIndex((current) =>
+                Math.min(current + 1, HERO_IMAGES.length - 1),
+            );
+        }
+    }, [index]);
 
     return (
         <section className="relative overflow-hidden rounded-xl border border-line bg-surface">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
+                ref={imageRef}
                 src={HERO_IMAGES[index]}
                 alt=""
                 draggable={false}
