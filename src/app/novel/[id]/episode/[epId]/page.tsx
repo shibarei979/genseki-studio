@@ -1,3 +1,4 @@
+import { nameSource } from '@/lib/utils/view-source'
 import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 export const dynamic = 'force-dynamic'
@@ -216,8 +217,18 @@ export default async function EpisodePage({ params }: Props) {
     const isAuthorView = !!user && novel.author_id === user.id
 
     // デバイス判定（user-agentから）
-    const ua = (await headers()).get('user-agent') || ''
+    const head = await headers()
+    const ua = head.get('user-agent') || ''
     const device = /mobile|android|iphone|ipad/i.test(ua) ? 'mobile' : 'desktop'
+
+    /*
+     * ★ どこから来たかも残す。
+     *
+     *   元の住所そのものは持たない。
+     *   「X」「YouTube」など、来た先の名だけにする。
+     *   住所ごと持つと、人を追える記録になってしまう。
+     */
+    const source = nameSource(head.get('referer') || '', new URL(appConfig.siteUrl).host)
     // 1日1人1話1PV制限：同じユーザーが同じ日に同じ話を見ていたらカウントしない
     const todayStart = new Date(); todayStart.setHours(0,0,0,0)
     if (user) {
@@ -237,11 +248,11 @@ export default async function EpisodePage({ params }: Props) {
          *   マイページの作品ごとの閲覧数は novel_id で数えているので、
          *   いつまでも 0 のままだった。
          */
-        await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: user.id, device, is_author: isAuthorView })
+        await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: user.id, device, source, is_author: isAuthorView })
       }
     } else {
       // 未ログインは従来通り記録（IPやCookieでの制限は行わない）
-      await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: null, device })
+      await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: null, device, source })
     }
   } catch (_) {}
 
