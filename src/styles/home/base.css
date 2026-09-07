@@ -75,26 +75,6 @@
     position: relative;
 }
 
-
-.reader-home[data-theme="light"] {
-    --text-color: #dfe4e8;
-    --base-color-1: #151b22;
-    --base-color-2: #1d242c;
-
-    /*
-     * 本棚の木と紙は、色を変えない。
-     * 上の filter で明るさだけ落とす。
-     */
-
-    --main-color-1: #7fb4d4;
-    --main-color-2: #4d87ab;
-    --main-color-3: #2b5f7d;
-    --main-color-4: #0b1016;
-
-    background: var(--color-canvas, #0d1116);
-}
-
-
 .reader-home[data-theme="light"] {
     /* 現行の下地の色。札の白が浮くように、わずかに灰を入れる */
     background: var(--color-canvas, #f4f5f3);
