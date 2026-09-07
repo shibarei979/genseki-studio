@@ -448,6 +448,61 @@ export default async function AdminPage({
 
   const readersToday = new Set((readerRows ?? []).map((row: { user_id: string }) => row.user_id)).size
 
+  /*
+   * 今日 動いた人の実数。
+   *
+   * ★ 読んだ人だけでは、サイトの動きが分からない。
+   *
+   *   書いている人は話を開かないので「読んだ人」に入らない。
+   *   実際、書いた人のほうが読んだ人より多い日がある。
+   *   読む・書く・いいね・保存・感想・発掘・フォロー・書き込み、
+   *   どれか一つでもした人を 1 と数える。
+   *
+   * ★ 話を「作った日」で数える。直した日では数えない。
+   *   一括の書き換えを流すと、全作者が動いたことになってしまう。
+   */
+  const since = todayStart.toISOString()
+
+  const [
+    likeRows, bookmarkRows, commentRows, discoverRows,
+    followRows, tweetRows, episodeRows,
+  ] = await Promise.all([
+    adminSupabase.from('likes').select('user_id').gte('created_at', since),
+    adminSupabase.from('bookmarks').select('user_id').gte('created_at', since),
+    adminSupabase.from('comments').select('user_id').gte('created_at', since),
+    adminSupabase.from('discovers').select('user_id').gte('created_at', since),
+    adminSupabase.from('follows').select('follower_id').gte('created_at', since),
+    adminSupabase.from('tweets').select('user_id').gte('created_at', since),
+    adminSupabase.from('episodes').select('novel_id').gte('created_at', since),
+  ])
+
+  const activeToday = new Set<string>()
+  ;(readerRows ?? []).forEach((row: { user_id: string }) => activeToday.add(row.user_id))
+  for (const rows of [likeRows, bookmarkRows, commentRows, discoverRows, tweetRows]) {
+    ;(rows.data ?? []).forEach((row: { user_id: string | null }) => {
+      if (row.user_id) activeToday.add(row.user_id)
+    })
+  }
+  ;(followRows.data ?? []).forEach((row: { follower_id: string | null }) => {
+    if (row.follower_id) activeToday.add(row.follower_id)
+  })
+
+  /* 話を作った人は、作品から作者を引く */
+  const writtenNovelIds = Array.from(
+    new Set((episodeRows.data ?? []).map((row: { novel_id: string }) => row.novel_id).filter(Boolean)),
+  )
+
+  if (writtenNovelIds.length > 0) {
+    const { data: writers } = await adminSupabase
+      .from('novels')
+      .select('author_id')
+      .in('id', writtenNovelIds)
+
+    ;(writers ?? []).forEach((row: { author_id: string | null }) => {
+      if (row.author_id) activeToday.add(row.author_id)
+    })
+  }
+
   // ログインユーザー数（今日・直近7日）とデバイス別PV（直近7日）
   const loginStats = loginRes.data
   const loginToday = loginStats?.today || 0
@@ -662,7 +717,7 @@ export default async function AdminPage({
           */}
         <div className="admin-cards" style={{
           display:'grid',
-          gridTemplateColumns:'repeat(5, minmax(0, 1fr))',
+          gridTemplateColumns:'repeat(6, minmax(0, 1fr))',
           gap:16,
           marginBottom:24,
         }}>
@@ -727,12 +782,13 @@ export default async function AdminPage({
 
           <div className="admin-cards" style={{
             display:'grid',
-            /* 札が1枚増えたので 5 列。狭い画面は CSS 側で落ちる */
-            gridTemplateColumns:'repeat(5, minmax(0, 1fr))',
+            /* 札が2枚増えたので 6 列。狭い画面は CSS 側で落ちる */
+            gridTemplateColumns:'repeat(6, minmax(0, 1fr))',
             gap:14,
           }}>
             {[
               { label: `${rangeLabel}ユーザー`, value: loginMonth.toLocaleString(), note: `${rangeLabel}以内に来た人` },
+              { label: '今日 動いた人', value: activeToday.size.toLocaleString(), note: '読む・書く・いいね などをした人' },
               { label: '今日 読んだ人', value: readersToday.toLocaleString(), note: '今日 話を開いた人の実数' },
               { label: '本日ログイン', value: loginToday.toLocaleString(), note: '今日 入り直した人' },
               { label: '7日ログイン',  value: loginWeek.toLocaleString(),  note: '直近7日に来た人' },
