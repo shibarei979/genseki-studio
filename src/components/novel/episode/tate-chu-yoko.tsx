@@ -28,7 +28,7 @@ import React from 'react'
 
 /** まとめて立てられる長さの上限 */
 const DIGIT_MAX = 2;
-const LATIN_MAX = 4;
+/* 英字は 1 マスにまとめない。長さにかかわらず縦に積む */
 
 /** 半角の数字の並び、または半角の英字の並び */
 const RUN = /[0-9]+|[A-Za-z]+/g;
@@ -52,23 +52,42 @@ export function withTateChuYoko(
         const key = `${keyPrefix}-tcy-${index}`;
         index += 1;
 
-        if (run.length <= (isDigits ? DIGIT_MAX : LATIN_MAX)) {
+        /*
+         * ★ 英字は、長さにかかわらず縦に積む。
+         *
+         *   前は 4 字までを 1 マスにまとめていた（縦中横）。
+         *   だが縦書きの小説では、英字は縦に積むのが見慣れた形。
+         *   長さで見え方が変わると、同じ語が場所によって
+         *   寝たり立ったりして落ち着かない。
+         *
+         *   1 マスにまとめるのは数字だけにする。
+         */
+        if (isDigits && run.length <= DIGIT_MAX) {
             /* 枡にまとめて立てる */
             out.push(
                 <span key={key} className="tcy">
                     {run}
                 </span>,
             );
-        } else if (isDigits) {
-            /* 桁が多い数字は、1 字ずつ立てて縦に積む */
+        } else {
+            /*
+             * 桁の多い数字と、英字。1 字ずつ立てて縦に積む。
+             *
+             * ★ 前は倒していた（横に寝かせていた）。
+             *
+             *   もっとも、以前は読む前に半角を全角へ直しており、
+             *   全角の英字はそのまま縦に積まれていた。
+             *   書いた字をそのまま出すようにしたところ、
+             *   半角のまま倒れるようになり、見え方が変わった。
+             *
+             *   縦書きの小説では、英字も縦に積むのが見慣れた形。
+             *   字は書かれたまま、置き方だけ縦にする。
+             */
             out.push(
                 <span key={key} className="tcy-upright">
                     {run}
                 </span>,
             );
-        } else {
-            /* 長い欧文は倒したまま。立てると読めない */
-            out.push(run);
         }
 
         last = hit.index + run.length;
