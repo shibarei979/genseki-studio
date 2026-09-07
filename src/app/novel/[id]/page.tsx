@@ -417,7 +417,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
             <span style={{fontSize:13,fontWeight:500,color: isReadEp ? '#4b5563' : 'var(--color-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.title}</span>
             {isScheduled && (
               <span style={{fontSize:9,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 7px',borderRadius:10,flexShrink:0,whiteSpace:'nowrap'}}>
-                予約 {new Date(ep.scheduled_at).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+                予約 {new Date(ep.scheduled_at).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}
               </span>
             )}
           </div>
@@ -532,7 +532,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
             <h1 style={{fontSize:20,fontWeight:700,color:'var(--color-text)',lineHeight:1.4,marginBottom:8,fontFamily:"'Noto Serif JP',serif"}}>{novel.title}</h1>
             {upcomingEpisode && (
               <div style={{display:'flex',alignItems:'center',gap:8,background:'var(--color-info-bg)',border:'1.5px solid #93c5fd',borderRadius:8,padding:'8px 14px',marginBottom:10,fontSize:12,color:'#1d4ed8',fontWeight:600}}>
-                次回更新予告：{new Date(upcomingEpisode.scheduled_at!).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃
+                次回更新予告：{new Date(upcomingEpisode.scheduled_at!).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃
               </div>
             )}
             <div style={{fontSize:13,color:'var(--color-text-muted)',marginBottom:12,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
@@ -779,7 +779,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
               */}
             {upcomingEpisode && (
               <div style={{padding:'8px 14px',borderBottom:'1px solid var(--color-brand-border)',background:'var(--color-info-bg)',fontSize:12,color:'var(--color-info)',textAlign:'center'}}>
-                次の話は {new Date(upcomingEpisode.scheduled_at!).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃の予定です
+                次の話は {new Date(upcomingEpisode.scheduled_at!).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃の予定です
               </div>
             )}
 

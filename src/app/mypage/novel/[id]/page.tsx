@@ -25,7 +25,7 @@ export default async function NovelManagePage({ params }: { params: { id: string
   if (novel.author_id !== user.id) redirect('/mypage')  // 自分の作品のみ
 
   // 話一覧を先に取得（PV集計に話IDが必要）
-  const { data: epsData } = await supabase.from('episodes').select('id, ep_number, title, body, published, is_published, scheduled_at, created_at, updated_at').eq('novel_id', params.id).order('ep_number', { ascending: true })
+  const { data: epsData } = await supabase.from('episodes').select('id, ep_number, title, body, published, is_published, scheduled_at, created_at, updated_at, posted_at').eq('novel_id', params.id).order('ep_number', { ascending: true })
   const episodes = epsData || []
   const epIds = episodes.map((e: any) => e.id)
 
@@ -51,8 +51,20 @@ export default async function NovelManagePage({ params }: { params: { id: string
   const totalChars = episodes.reduce((s: number, e: any) => s + (e.body?.length || 0), 0)
   /* 公開の印は is_published。published は作った時点で立つので使わない */
   const publishedEps = episodes.filter((e: any) => e.is_published === true)
-  const firstDate = publishedEps[0]?.created_at
-  const lastDate = publishedEps.length > 0 ? publishedEps.reduce((max: string, e: any) => (e.created_at > max ? e.created_at : max), publishedEps[0].created_at) : null
+  /*
+   * ★ 掲載日は「読めるようになった日」で見る。
+   *
+   *   前は created_at（話を作った日）で見ていた。
+   *   まとめて書いて毎日 予約投稿する人は、
+   *   全部の話が同じ日に作られている。
+   *   そのため初回と最新が同じ日に並んでいた。
+   *
+   *   posted_at が入っていない古い話は、作った日で代える。
+   */
+  const postedAt = (e: any) => e.posted_at || e.created_at
+  const postedDates = publishedEps.map(postedAt).filter(Boolean).sort()
+  const firstDate = postedDates[0] ?? null
+  const lastDate = postedDates.length > 0 ? postedDates[postedDates.length - 1] : null
 
   const fmt = (s?: string | null) => {
     if (!s) return '—'

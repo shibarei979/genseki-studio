@@ -282,7 +282,7 @@ export default async function EpisodePage({ params }: Props) {
           </div>
           {isOwner && episode.published === false && episode.scheduled_at && (
             <div style={{background:'#eff6ff',border:'1.5px solid #93c5fd',borderRadius:10,padding:'10px 16px',marginBottom:14,fontSize:12,color:'#1d4ed8',fontWeight:600}}>
-              📅 この話は予約投稿中です。{new Date(episode.scheduled_at).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} に公開されます（このプレビューは作者にのみ表示されています）
+              📅 この話は予約投稿中です。{new Date(episode.scheduled_at).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} に公開されます（このプレビューは作者にのみ表示されています）
             </div>
           )}
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:16,gap:8}}>
@@ -292,7 +292,7 @@ export default async function EpisodePage({ params }: Props) {
           </div>
           {showUpcoming && (
             <div style={{background:'var(--color-info-bg)',border:'1px solid var(--color-info-border)',borderRadius:8,padding:'8px 14px',marginBottom:16,fontSize:12,color:'var(--color-info)',textAlign:'center'}}>
-              次の話は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃の予定です
+              次の話は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃の予定です
             </div>
           )}
           {/* 挿絵は EpisodeBody の中で、縦書きの流れに沿って出す */}
@@ -340,7 +340,7 @@ export default async function EpisodePage({ params }: Props) {
                 {/* 次の予定があるなら、目次に戻る前にそれを見せる */}
                 {showUpcoming ? (
                   <span style={{fontSize:11,color:'var(--color-info)'}}>
-                    次は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃
+                    次は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃
                   </span>
                 ) : (
                   <Link href={`/novel/${params.id}`} style={{fontSize:11,color:'var(--color-brand)',textDecoration:'none'}}>目次に戻る</Link>
