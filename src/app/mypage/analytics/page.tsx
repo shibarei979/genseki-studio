@@ -248,6 +248,13 @@ export default async function AnalyticsPage() {
       hourlyYesterday: st.hourlyYesterday,
       daily7,
       daily30,
+      /*
+       * 日ごとの数を、そのまま渡す。
+       *
+       * ★ 図の側で「◯月の 1 日から末日まで」を組み立てるのに使う。
+       *   直近 30 日だと、月をまたいで並び、月の頭が分からない。
+       */
+      dailyByDay: st.dailyAll,
       yearly30,
       allYears,
       dailyTop,

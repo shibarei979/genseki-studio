@@ -28,6 +28,8 @@ interface NovelStat {
   daily7: { date: string; views: number; m?: number; d?: number; a?: number }[]
   /** 1か月。30日ぶんを1日ずつ */
   daily30?: { date: string; views: number; m?: number; d?: number; a?: number }[]
+  /** 日ごとの数（YYYY-MM-DD をそのまま持つ）。月の図を組み立てるのに使う */
+  dailyByDay?: Record<string, { v: number; m: number; d: number; a: number }>
   /** 1年。1年を30に分けたもの */
   yearly30?: { date: string; views: number; m?: number; d?: number; a?: number }[]
   /** 総合。1年ずつ */
@@ -66,12 +68,39 @@ export default function AnalyticsCharts({
 }) {
   const [selectedId, setSelectedId] = useState(novels[0]?.id || '')
   const [range, setRange] = useState<'month'|'year'|'all'>('month')
+
+  /*
+   * どの月を見ているか。0 が今月、-1 が先月。
+   *
+   * ★ 1か月は「直近30日」ではなく「その月の1日から末日まで」。
+   *   月をまたいで並ぶと、月の頭が分からず読みにくい。
+   */
+  const [monthBack, setMonthBack] = useState(0)
   const selected = novels.find(n => n.id === selectedId) || novels[0]
   if (!selected) return null
 
+  /*
+   * 見ている月の 1 日から末日まで。
+   *
+   * 数の無い日も 0 として並べる。抜けると図が詰まって見える。
+   */
+  const shown = new Date()
+  shown.setDate(1)
+  shown.setMonth(shown.getMonth() + monthBack)
+
+  const monthLabel = `${shown.getFullYear()}年${shown.getMonth() + 1}月`
+  const lastDay = new Date(shown.getFullYear(), shown.getMonth() + 1, 0).getDate()
+
+  const monthData: { date: string; views: number; m: number; d: number; a: number }[] = []
+  for (let day = 1; day <= lastDay; day++) {
+    const key = `${shown.getFullYear()}-${String(shown.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const found = selected.dailyByDay?.[key] || { v: 0, m: 0, d: 0, a: 0 }
+    monthData.push({ date: String(day), views: found.v, m: found.m, d: found.d, a: found.a })
+  }
+
   /* 選んだ期間の並びと合計 */
   const rangeData =
-    range === 'month' ? (selected.daily30 ?? selected.daily7)
+    range === 'month' ? monthData
     : range === 'year' ? (selected.yearly30 ?? [])
     : (selected.allYears ?? [])
 
@@ -173,6 +202,40 @@ export default function AnalyticsCharts({
                 </button>
               ))}
             </div>
+
+            {/*
+              * 月を前後に動かす。
+              *
+              * ★ 1か月のときだけ出す。
+              *   1年・総合には「前の月」という考えが無い。
+              *
+              * 遡れるのは 12 か月まで。先の月へは進めない。
+              */}
+            {range === 'month' && (
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                <button
+                  onClick={()=>setMonthBack(v => Math.max(-11, v - 1))}
+                  disabled={monthBack <= -11}
+                  style={{border:'1px solid var(--color-brand-border)',background:'var(--color-bg-card)',
+                    borderRadius:8,padding:'4px 10px',fontSize:12,cursor:monthBack<=-11?'default':'pointer',
+                    color:monthBack<=-11?'var(--color-text-faint)':'var(--color-text-muted)'}}
+                >
+                  ← 前の月
+                </button>
+
+                <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)'}}>{monthLabel}</span>
+
+                <button
+                  onClick={()=>setMonthBack(v => Math.min(0, v + 1))}
+                  disabled={monthBack >= 0}
+                  style={{border:'1px solid var(--color-brand-border)',background:'var(--color-bg-card)',
+                    borderRadius:8,padding:'4px 10px',fontSize:12,cursor:monthBack>=0?'default':'pointer',
+                    color:monthBack>=0?'var(--color-text-faint)':'var(--color-text-muted)'}}
+                >
+                  次の月 →
+                </button>
+              </div>
+            )}
 
             <DayChart data={rangeData}/>
           </div>
