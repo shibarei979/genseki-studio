@@ -23,6 +23,8 @@ import ResourceIcon from "@/components/resource/resource-icons";
 import ResourceTop from "@/components/resource/resource-top";
 import DeleteButton from "@/components/common/delete-button";
 import PlotView from "@/components/resource/plot-view";
+import { createClient } from "@/lib/supabase/client";
+import type { PlotTemplate } from "@/lib/resource/plot-templates";
 import RelationsView from "@/components/resource/relations-view";
 import TimelineView from "@/components/resource/timeline-view";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
@@ -179,6 +181,99 @@ export default function ResourceClient({ workId }: Props) {
 
     const reload = useCallback(async () => {
         const repository = getRepository();
+
+    /*
+     * 自分で作ったプロットの型。
+     *
+     * ★ 見出しと並びだけを残す。
+     *
+     *   書いた中身まで持っていくと、前の作品の文が混ざり、
+     *   新しい作品で消し直すことになる。
+     */
+    const [myTemplates, setMyTemplates] = useState<PlotTemplate[]>([]);
+
+    const loadTemplates = useCallback(async () => {
+        try {
+            const supabase = createClient();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+
+            if (!user) return;
+
+            const { data } = await supabase
+                .from("plot_templates")
+                .select("id, name, note, stages")
+                .eq("user_id", user.id)
+                .order("updated_at", { ascending: false });
+
+            setMyTemplates(
+                (data ?? []).map((row: Record<string, unknown>) => ({
+                    key: `mine-${row.id as string}`,
+                    label: (row.name as string) || "自分の型",
+                    note: (row.note as string) || "自分で作った型",
+                    stages: (row.stages as PlotTemplate["stages"]) ?? [],
+                })),
+            );
+        } catch {
+            /* 読めなくても、決まった型は出る */
+        }
+    }, []);
+
+    useEffect(() => {
+        void loadTemplates();
+    }, [loadTemplates]);
+
+    /** いまの構成を、型として残す */
+    async function saveTemplate(name: string) {
+        try {
+            const supabase = createClient();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+
+            if (!user) return;
+
+            const payload = stages.map((stage) => ({
+                title: stage.title,
+                description: stage.description,
+                scenes: scenes
+                    .filter((scene) => scene.stage_id === stage.id)
+                    .map((scene) => scene.title),
+            }));
+
+            const { error } = await supabase.from("plot_templates").insert({
+                user_id: user.id,
+                name,
+                note: `${payload.length}段`,
+                stages: payload,
+            });
+
+            if (error) throw error;
+            await loadTemplates();
+            window.alert("型として残しました。次の作品から選べます。");
+        } catch (caught) {
+            window.alert(
+                caught instanceof Error
+                    ? `残せませんでした（${caught.message}）`
+                    : "残せませんでした",
+            );
+        }
+    }
+
+    /** 自分で作った型を消す */
+    async function deleteTemplate(key: string) {
+        const id = key.replace("mine-", "");
+        if (!window.confirm("この型を消します。元には戻せません。")) return;
+
+        try {
+            await createClient().from("plot_templates").delete().eq("id", id);
+            await loadTemplates();
+        } catch {
+            window.alert("消せませんでした。");
+        }
+    }
+
 
         /*
          * まとめて頼む。
@@ -888,6 +983,9 @@ export default function ResourceClient({ workId }: Props) {
                                 <PlotView
                                     stages={stages}
                                     scenes={scenes}
+                                    myTemplates={myTemplates}
+                                    onSaveTemplate={saveTemplate}
+                                    onDeleteTemplate={deleteTemplate}
                                     entries={entries.filter(
                                         (entry) => entry.candidate_status === "none",
                                     )}

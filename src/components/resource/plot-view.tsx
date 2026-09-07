@@ -42,6 +42,12 @@ interface Props {
     onCreateStage: () => void;
     /** 見本から段と場面をまとめて作る */
     onApplyTemplate?: (template: PlotTemplate) => void;
+    /** 自分で作った型。作った本人だけに出る */
+    myTemplates?: PlotTemplate[];
+    /** いまの構成を、型として残す */
+    onSaveTemplate?: (name: string) => Promise<void>;
+    /** 自分で作った型を消す */
+    onDeleteTemplate?: (key: string) => Promise<void>;
     onUpdateStage: (stageId: string, patch: Partial<PlotStage>) => void;
     onDeleteStage: (stage: PlotStage) => void;
     onReorderStages: (orderedIds: string[]) => void;
@@ -53,6 +59,9 @@ interface Props {
 export default function PlotView({
     stages,
     scenes,
+    myTemplates = [],
+    onSaveTemplate,
+    onDeleteTemplate,
     entries,
     onCreateStage,
     onApplyTemplate,
@@ -161,7 +170,7 @@ export default function PlotView({
                     </p>
 
                     <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
-                        {PLOT_TEMPLATES.map((template) => (
+                        {[...myTemplates, ...PLOT_TEMPLATES].map((template) => (
                             <li key={template.key}>
                                 <button
                                     type="button"
@@ -204,6 +213,30 @@ export default function PlotView({
                         型を使わず、自分で組み立てる
                     </button>
                 </section>
+            )}
+
+            {/*
+              * いまの構成を、型として残す。
+              *
+              * ★ 次の作品で、同じ枠を一から作らなくてよくなる。
+              *   残すのは見出しと並びだけ。書いた中身は持っていかない。
+              */}
+            {stages.length > 0 && onSaveTemplate && (
+                <div className="flex items-center justify-end">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            const name = window.prompt(
+                                "この構成を、型として残します。名前を付けてください。",
+                                "自分の型",
+                            );
+                            if (name?.trim()) void onSaveTemplate(name.trim());
+                        }}
+                        className="rounded-md border border-line px-3 py-1.5 text-[11.5px] text-muted hover:border-forest-line hover:text-forest"
+                    >
+                        この構成を型として残す
+                    </button>
+                </div>
             )}
 
             {/* 進み具合 */}
