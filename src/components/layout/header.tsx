@@ -18,7 +18,6 @@ import { useEffect, useRef, useState } from "react";
 import EntryImage from "@/components/common/entry-image";
 import AccountMenu from "@/components/layout/account-menu";
 import ModeToggle from "@/components/layout/mode-toggle";
-import ThemeToggle from "@/components/layout/theme-toggle";
 import RoomPresenceBar from "@/components/room/room-presence-bar";
 import { useMyNotifications } from "@/hooks/use-my-notifications";
 import { getRepository } from "@/lib/repository";
@@ -489,9 +488,6 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                         mode={profile?.home_mode}
                         userId={profile?.user_id ?? null}
                     />
-
-                    {/* 昼と夜の切り替え。読み書きの切り替えの隣に置く */}
-                    <ThemeToggle />
 
                     <div ref={noticeRef} className="relative">
                         <button

@@ -32,12 +32,6 @@ export interface Profile {
      */
     home_work_view?: "shelf" | "list" | null;
     /**
-     * 見た目。light 昼 / dark 夜。
-     *
-     * 空なら昼。機械の中にも同じものを覚えている。
-     */
-    theme?: "light" | "dark" | null;
-    /**
      * 作品を押したときの見せ方。
      *
      *   card  札。情報が多く、すぐ読める（初期）
