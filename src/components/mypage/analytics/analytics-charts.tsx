@@ -470,6 +470,22 @@ function HourlyChart({ data }: { data: number[] }) {
 }
 
 // 日別
+/*
+ * 図の色。
+ *
+ * ★ 3 つがはっきり分かれる色にする。
+ *
+ *   前は 青緑・青・薄い灰。並ぶと見分けが付かなかった。
+ *   色みそのものを離す（青・橙・紫）。
+ *   濃さも変えているので、白黒で刷っても分かれる。
+ */
+const SEG_COLOR = {
+    mobile: '#1f6feb',   // スマホ  青
+    desktop: '#f08c00',  // PC     橙
+    guest: '#8b5cf6',    // 未ログイン 紫
+    legacy: '#9ca3af',   // 不明   灰
+}
+
 function DayChart({ data }: { data: { date: string; views: number; m?: number; d?: number; a?: number }[] }) {
   const max = Math.max(1, ...data.map(d => d.views))
 
@@ -493,9 +509,9 @@ function DayChart({ data }: { data: { date: string; views: number; m?: number; d
   return (
     <div>
       <div style={{display:'flex',gap:12,marginBottom:10,fontSize:10.5,color:'var(--color-text-muted)',flexWrap:'wrap'}}>
-        <span><span style={{display:'inline-block',width:9,height:9,borderRadius:2,background:'var(--color-brand)',marginRight:4}}/>スマホ</span>
-        <span><span style={{display:'inline-block',width:9,height:9,borderRadius:2,background:'var(--color-info)',marginRight:4}}/>PC</span>
-        <span><span style={{display:'inline-block',width:9,height:9,borderRadius:2,background:'#cbd5e1',marginRight:4}}/>未ログイン</span>
+        <span><span style={{display:'inline-block',width:11,height:11,borderRadius:3,background:SEG_COLOR.mobile,marginRight:5}}/>スマホ</span>
+        <span><span style={{display:'inline-block',width:11,height:11,borderRadius:3,background:SEG_COLOR.desktop,marginRight:5}}/>PC</span>
+        <span><span style={{display:'inline-block',width:11,height:11,borderRadius:3,background:SEG_COLOR.guest,marginRight:5}}/>未ログイン</span>
       </div>
 
       <div style={{display:'flex',gap:8}}>
@@ -524,10 +540,10 @@ function DayChart({ data }: { data: { date: string; views: number; m?: number; d
                     title={`${d.date}: ${d.views}PV（スマホ${mm}・PC${dd}・未ログイン${aa}${legacy>0?`・不明${legacy}`:''}）`}
                   >
                     <div style={{width:'100%',maxWidth:data.length > 14 ? 18 : 40,height:`${(d.views/max)*100}%`,minHeight:d.views>0?3:0,display:'flex',flexDirection:'column',borderRadius:'3px 3px 0 0',overflow:'hidden',margin:'0 auto'}}>
-                      {mm>0 && <div style={{flex:mm,background:'var(--color-brand)'}}/>}
-                      {dd>0 && <div style={{flex:dd,background:'var(--color-info)'}}/>}
-                      {aa>0 && <div style={{flex:aa,background:'#cbd5e1'}}/>}
-                      {legacy>0 && <div style={{flex:legacy,background:'#ffd9bd'}}/>}
+                      {mm>0 && <div style={{flex:mm,background:SEG_COLOR.mobile}}/>}
+                      {dd>0 && <div style={{flex:dd,background:SEG_COLOR.desktop}}/>}
+                      {aa>0 && <div style={{flex:aa,background:SEG_COLOR.guest}}/>}
+                      {legacy>0 && <div style={{flex:legacy,background:SEG_COLOR.legacy}}/>}
                     </div>
                   </div>
                 )
@@ -565,8 +581,8 @@ export function DeviceDonut({
   const pcDeg = Math.round(pcRatio * 360)
 
   const rows = [
-    { label:'PC',   count:desktopUsers, color:'var(--color-info)' },
-    { label:'スマホ', count:mobileUsers,  color:'var(--color-brand)' },
+    { label:'PC',   count:desktopUsers, color:SEG_COLOR.desktop },
+    { label:'スマホ', count:mobileUsers,  color:SEG_COLOR.mobile },
   ]
 
   return (
