@@ -1,6 +1,7 @@
+import { looksLikeBot } from '@/lib/utils/bot'
 import { nameSource } from '@/lib/utils/view-source'
 import { createClient } from '@/lib/supabase/server'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: { params: { id: string; epId: string } }) {
@@ -229,6 +230,20 @@ export default async function EpisodePage({ params }: Props) {
      *   住所ごと持つと、人を追える記録になってしまう。
      */
     const source = nameSource(head.get('referer') || '', new URL(appConfig.siteUrl).host)
+
+    /*
+     * ★ 誰が来たかではなく、何人が来たかを数えるための札。
+     *
+     *   中身は、でたらめな並び。名前も住所も持たない。
+     *   同じ機械から来た、ということしか分からない。
+     *
+     * ★ 見回りの機械には印を付ける。消さずに残す。
+     *   混ぜて数えると、人数が実際より膨らむ。
+     */
+    const jar = await cookies()
+    const visitorId = jar.get('gk-visitor')?.value ?? null
+    const sessionId = jar.get('gk-session')?.value ?? null
+    const isBot = looksLikeBot(ua)
     // 1日1人1話1PV制限：同じユーザーが同じ日に同じ話を見ていたらカウントしない
     const todayStart = new Date(); todayStart.setHours(0,0,0,0)
     if (user) {
@@ -248,11 +263,11 @@ export default async function EpisodePage({ params }: Props) {
          *   マイページの作品ごとの閲覧数は novel_id で数えているので、
          *   いつまでも 0 のままだった。
          */
-        await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: user.id, device, source, is_author: isAuthorView })
+        await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: user.id, device, source, is_author: isAuthorView, visitor_id: visitorId, session_id: sessionId, is_bot: isBot })
       }
     } else {
       // 未ログインは従来通り記録（IPやCookieでの制限は行わない）
-      await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: null, device, source })
+      await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: null, device, source, visitor_id: visitorId, session_id: sessionId, is_bot: isBot })
     }
   } catch (_) {}
 

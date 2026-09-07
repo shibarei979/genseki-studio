@@ -36,9 +36,48 @@ export async function middleware(request: NextRequest) {
     }
 
     // 繋いでいないときは何もしない
-    if (!hasSupabase()) return NextResponse.next();
+    const response = hasSupabase()
+        ? await updateSession(request)
+        : NextResponse.next();
 
-    return updateSession(request);
+    /*
+     * ★ 訪れた人に、意味の無い札を 1 つ配る。
+     *
+     *   いま「入っていない人の閲覧 419」が何人か分からない。
+     *   5人が読み回ったのか 300人が来たのかで、意味が正反対になる。
+     *
+     * ★ 名前も、住所も、機械の型番も取らない。
+     *   でたらめな並びを 1 つ持つだけ。
+     *   消せば、次から別の札になる。
+     *
+     * ★ ここで配ると、最初の 1 頁から数えられる。
+     *   画面の側で配ると、1 頁目だけ数え落とす。
+     *
+     *   visitor  1 年。何人が来たかを数える
+     *   session  30 分。1 回の訪問を追う
+     */
+    if (!request.cookies.get("gk-visitor")) {
+        response.cookies.set("gk-visitor", makeToken(), {
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: "lax",
+            path: "/",
+        });
+    }
+
+    if (!request.cookies.get("gk-session")) {
+        response.cookies.set("gk-session", makeToken(), {
+            maxAge: 60 * 30,
+            sameSite: "lax",
+            path: "/",
+        });
+    }
+
+    return response;
+}
+
+/** でたらめな並び。意味は持たない */
+function makeToken(): string {
+    return crypto.randomUUID().replace(/-/g, "").slice(0, 20);
 }
 
 export const config = {
