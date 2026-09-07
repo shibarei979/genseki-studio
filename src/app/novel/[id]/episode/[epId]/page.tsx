@@ -203,6 +203,15 @@ export default async function EpisodePage({ params }: Props) {
   const showUpcoming = !nextEp && upcomingEp
 
   try {
+    /*
+     * ★ 作者が自分の作品を開いたぶんは数えない。
+     *
+     *   書いている人は、確かめのために何度も開く。
+     *   それが閲覧数に入ると、読まれた実感が濁る。
+     *   自分で自分の数を押し上げられる形にもなる。
+     */
+    if (user && novel.author_id === user.id) throw new Error('author-preview')
+
     // デバイス判定（user-agentから）
     const ua = (await headers()).get('user-agent') || ''
     const device = /mobile|android|iphone|ipad/i.test(ua) ? 'mobile' : 'desktop'
