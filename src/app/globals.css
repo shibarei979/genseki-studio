@@ -257,13 +257,19 @@ html[data-theme="dark"] img {
 }
 
 /*
- * ★ 上の大きな帯は、もっと落とす。
+ * ★ 上の大きな帯は、色を変えず、明るさだけ落とす。
  *
- *   面積が広く、夜の画面ではそこだけが眩しい。
- *   絵そのものは変えず、出すときだけ落とす。
+ *   夜の色に置き換えると黒い箱になり、
+ *   もとの絵と字の組み合わせが崩れる。
+ *   白いままでよいので、そこだけ暗くする。
  */
-html[data-theme="dark"] .hero img {
+html[data-theme="dark"] .hero {
     filter: brightness(0.62);
+}
+
+/* 中の絵は二重に落とさない */
+html[data-theme="dark"] .hero img {
+    filter: none;
 }
 
 /* 表紙と挿絵は作品そのもの。触らない */

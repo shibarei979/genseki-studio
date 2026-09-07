@@ -26,6 +26,19 @@ const KEY = "site-theme";
 export default function ThemeToggle() {
     const [isDark, setIsDark] = useState(false);
 
+    /*
+     * 押し具を出すかどうか。
+     *
+     * ★ いまは運営だけに出す。
+     *
+     *   夜の色は、色の名前で呼んでいる所にしか効いていない。
+     *   直に色を書いてある所（1,000 か所ほど）は白いまま残る。
+     *   その状態で誰にでも出すと、壊れて見える画面が出る。
+     *
+     *   白い所を潰し終えたら、この囲いを外す。
+     */
+    const [canUse, setCanUse] = useState(false);
+
     /* いまの見た目を、画面に当てる */
     useEffect(() => {
         const saved = readSaved();
@@ -40,13 +53,37 @@ export default function ThemeToggle() {
                     data: { user },
                 } = await supabase.auth.getUser();
 
-                if (!user) return;
+                /* 入っていない人は、必ず昼 */
+                if (!user) {
+                    apply(false);
+                    setIsDark(false);
+                    try {
+                        window.localStorage.removeItem(KEY);
+                    } catch {
+                        /* 消せなくても、見え方は昼のまま */
+                    }
+                    return;
+                }
 
                 const { data } = await supabase
                     .from("profiles")
-                    .select("theme")
+                    .select("theme, is_admin")
                     .eq("user_id", user.id)
                     .maybeSingle();
+
+                setCanUse(data?.is_admin === true);
+
+                /* 運営でない人は、昼に戻す */
+                if (data?.is_admin !== true) {
+                    apply(false);
+                    setIsDark(false);
+                    try {
+                        window.localStorage.removeItem(KEY);
+                    } catch {
+                        /* 消せなくても、見え方は昼のまま */
+                    }
+                    return;
+                }
 
                 const theme = data?.theme;
                 if (theme === "dark" || theme === "light") {
@@ -88,6 +125,8 @@ export default function ThemeToggle() {
             }
         })();
     }
+
+    if (!canUse) return null;
 
     return (
         <button
