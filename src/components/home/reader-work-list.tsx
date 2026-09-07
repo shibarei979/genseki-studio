@@ -79,7 +79,15 @@ export default function ReaderWorkList({
             </span>
 
             {/* 押すと保存できる。気になった本をその場で残す */}
-            <BookmarkMark novelId={book.href.replace('/novel/', '')} />
+            {/*
+              * ★ 作品の id だけを渡す。
+              *
+              *   前は /novel/ を取り除いただけだった。
+              *   行き先が話（/novel/〈作品〉/episode/〈話〉）のときは
+              *   「作品id/episode/話id」がそのまま渡り、
+              *   栞の問い合わせが 400 で落ちていた。
+              */}
+            <BookmarkMark novelId={book.href.replace('/novel/', '').split('/')[0]} />
           </Link>
         ))}
       </div>

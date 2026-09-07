@@ -25,12 +25,20 @@ import { useState } from "react";
  * 上から順に試し、読めなければ次へ送る。
  */
 const HERO_IMAGES = [
-    "/images/HERO_IMAGE.png",
+    /*
+     * ★ 置いてあるのは .jpg。先に試す。
+     *
+     *   .png を先に置いていたが、そのファイルは無い。
+     *   404 のあと次の候補へ送る作りだが、
+     *   最初に配る HTML の時点で失敗すると
+     *   React が受け持つ前なので、送られないまま止まる。
+     */
     "/images/HERO_IMAGE.jpg",
+    "/images/HERO_IMAGE.png",
     "/images/HERO_IMAGE.jpeg",
     "/images/HERO_IMAGE.webp",
-    /* どれも無かったときの控え。同梱してあるので必ず読める */
-    "/images/hero-voyage.webp",
+    /* どれも無かったときの控え。置いてあるものにする */
+    "/images/hero-lighthouse.webp",
 ];
 
 /** 絵のどこを見せるか。人物が右に寄っているので右端を残す */
