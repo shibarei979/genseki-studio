@@ -133,16 +133,36 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
     const hash = window.location.hash
     if (!hash.startsWith('#comment-')) return
 
-    const found = document.getElementById(hash.slice(1))
-    if (!found) return
+    /*
+     * ★ 何度か探しに行く。
+     *
+     *   一度きりだと、返信がまだ描かれていないときに空振りする。
+     *   0.3 秒ごとに、見つかるまで 10 回まで探す。
+     */
+    let tries = 0
+    let colorTimer = 0
 
-    found.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const finder = window.setInterval(() => {
+      tries += 1
 
-    const before = found.style.background
-    found.style.background = 'var(--color-brand-light)'
-    const timer = window.setTimeout(() => { found.style.background = before }, 2400)
+      const found = document.getElementById(hash.slice(1))
+      if (!found) {
+        if (tries >= 10) window.clearInterval(finder)
+        return
+      }
 
-    return () => window.clearTimeout(timer)
+      window.clearInterval(finder)
+      found.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+      const before = found.style.background
+      found.style.background = 'var(--color-brand-light)'
+      colorTimer = window.setTimeout(() => { found.style.background = before }, 2400)
+    }, 300)
+
+    return () => {
+      window.clearInterval(finder)
+      if (colorTimer) window.clearTimeout(colorTimer)
+    }
   }, [comments])
 
   useEffect(() => {

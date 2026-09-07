@@ -334,7 +334,32 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
          *   1 つずつ押さないと消えない作りだったので、
          *   丸い印が消えず、新しい知らせに気づけなかった。
          */
-        if (next) markAllAlertsRead();
+        if (next) {
+            markAllAlertsRead();
+
+            /*
+             * ★ 便りも読んだことにする。
+             *
+             *   便りが 1 通でも未読だと、赤い丸が残り続けていた。
+             *   「開いたのに消えない」はこれ。
+             *   本文は、押せばこれまでどおり読める。
+             */
+            if (letters.length > 0) {
+                const ids = letters.map((letter) => letter.id);
+                setLetters([]);
+
+                void (async () => {
+                    try {
+                        await createClient()
+                            .from("admin_messages")
+                            .update({ is_read: true })
+                            .in("id", ids);
+                    } catch {
+                        /* 付かなくても、見え方は変わらない */
+                    }
+                })();
+            }
+        }
     }
 
     /** 「/」だけは完全一致で見る。前方一致だと常に現在地になってしまう */
