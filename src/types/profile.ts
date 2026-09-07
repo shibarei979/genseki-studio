@@ -26,6 +26,12 @@ export interface Profile {
      */
     home_mode?: string | null;
     /**
+     * ホームの作品の見せ方。shelf 棚 / list 一覧。
+     *
+     * 空なら棚。機械の中にも同じものを覚えている。
+     */
+    home_work_view?: "shelf" | "list" | null;
+    /**
      * 作品を押したときの見せ方。
      *
      *   card  札。情報が多く、すぐ読める（初期）

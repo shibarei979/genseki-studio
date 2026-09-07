@@ -19,6 +19,7 @@
 
 "use client";
 
+import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -185,21 +186,75 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
     const [view, setView] = useState<"shelf" | "list">("shelf");
 
     useEffect(() => {
+        /*
+         * まず機械の中の覚えを使う。すぐ出せるので、ちらつかない。
+         * そのあと帳（アカウント）の覚えで上書きする。
+         */
         try {
             const saved = window.localStorage.getItem("home-work-view");
             if (saved === "list" || saved === "shelf") setView(saved);
         } catch {
             /* 読めなくても、棚で始めればよい */
         }
+
+        void (async () => {
+            try {
+                const supabase = createClient();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+
+                if (!user) return;
+
+                const { data } = await supabase
+                    .from("profiles")
+                    .select("home_work_view")
+                    .eq("user_id", user.id)
+                    .maybeSingle();
+
+                const saved = data?.home_work_view;
+                if (saved === "list" || saved === "shelf") setView(saved);
+            } catch {
+                /* 取れなくても、機械の覚えで動く */
+            }
+        })();
     }, []);
 
+    /*
+     * 選んだほうを覚える。
+     *
+     * ★ 機械と帳の両方に残す。
+     *
+     *   機械だけだと、別の機械でまた棚から始まる。
+     *   帳だけだと、開いた瞬間は棚が出て、あとで入れ替わる。
+     *   両方に残せば、どちらでも同じ形で始まる。
+     */
     function changeView(next: "shelf" | "list") {
         setView(next);
+
         try {
             window.localStorage.setItem("home-work-view", next);
         } catch {
             /* 覚えられなくても、その場では切り替わる */
         }
+
+        void (async () => {
+            try {
+                const supabase = createClient();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+
+                if (!user) return;
+
+                await supabase
+                    .from("profiles")
+                    .update({ home_work_view: next })
+                    .eq("user_id", user.id);
+            } catch {
+                /* 残せなくても、機械の覚えは効く */
+            }
+        })();
     }
 
     /*
