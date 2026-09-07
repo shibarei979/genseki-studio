@@ -285,6 +285,36 @@ export default async function AdminPage({
     supabase.from('comments').select('*', { count: 'exact', head: true }),
   ])
 
+  /*
+   * ------------------------------------------------------------
+   * 日付は日本時間で区切る
+   * ------------------------------------------------------------
+   *
+   * ★ サーバーの時計は協定世界時（UTC）。
+   *
+   *   new Date().setHours(0,0,0,0) は、その機械の 0 時になる。
+   *   日本から見ると 朝 9 時が「今日の始まり」になっていた。
+   *   9 時前に開くと前日ぶんが混ざり、9 時を過ぎると
+   *   その日の朝の動きが落ちる。
+   *
+   *   ここでは日本時間の 0 時で切り直す。
+   */
+  const JST_OFFSET_MS = 9 * 60 * 60 * 1000
+
+  /** 日本時間の、その日の 0 時 */
+  function jstDayStart(base: Date = new Date(), addDays = 0): Date {
+    const shifted = new Date(base.getTime() + JST_OFFSET_MS)
+    shifted.setUTCHours(0, 0, 0, 0)
+    shifted.setUTCDate(shifted.getUTCDate() + addDays)
+    return new Date(shifted.getTime() - JST_OFFSET_MS)
+  }
+
+  /** 日本時間での「◯月◯日」 */
+  function jstLabel(d: Date): string {
+    const shifted = new Date(d.getTime() + JST_OFFSET_MS)
+    return `${shifted.getUTCMonth() + 1}/${shifted.getUTCDate()}`
+  }
+
   // グラフ用データ
   function makeDays(n: number) {
     return Array.from({ length: n }, (_, i) => {
@@ -298,7 +328,7 @@ export default async function AdminPage({
    * どれも互いに関わらないのに、3 回に分けて待っていた。
    * 失敗しても止めないものは、後で拾う。
    */
-  const weekAgo = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000).toISOString()
+  const weekAgo = jstDayStart(new Date(), -rangeDays).toISOString()
   /*
    * 選ばれた期間と、その1つ前。
    *
@@ -309,9 +339,9 @@ export default async function AdminPage({
    * 呼んでいる所が多く、まとめて変えると読み違えやすい。
    * 中身は「選ばれた期間」に変わっている。
    */
-  const since30 = new Date(); since30.setDate(since30.getDate() - rangeDays)
-  const since60 = new Date(); since60.setDate(since60.getDate() - rangeDays * 2)
-  const since365 = new Date(); since365.setDate(since365.getDate() - 365)
+  const since30 = jstDayStart(new Date(), -rangeDays)
+  const since60 = jstDayStart(new Date(), -rangeDays * 2)
+  const since365 = jstDayStart(new Date(), -365)
 
   const [
     { data: allUsers }, { data: allNovels },
@@ -399,11 +429,11 @@ export default async function AdminPage({
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {
-      const s = new Date(d); s.setHours(0,0,0,0)
-      const e = new Date(d); e.setHours(23,59,59,999)
-      const fmt = (dt: Date) => `${dt.getMonth()+1}/${dt.getDate()}`
+      /* 日本時間の 0 時から、次の日の 0 時まで */
+      const s = jstDayStart(d)
+      const e = jstDayStart(d, 1)
       return {
-        date: fmt(d),
+        date: jstLabel(d),
         /*
          * 登録した人を、向きで分ける。
          *
@@ -412,13 +442,13 @@ export default async function AdminPage({
          */
         readers: (allUsers || []).filter((u: any) => {
           const t = new Date(u.created_at)
-          return t >= s && t <= e && u.home_mode === 'read'
+          return t >= s && t < e && u.home_mode === 'read'
         }).length,
         authors: (allUsers || []).filter((u: any) => {
           const t = new Date(u.created_at)
-          return t >= s && t <= e && u.home_mode !== 'read'
+          return t >= s && t < e && u.home_mode !== 'read'
         }).length,
-        novels: (allNovels || []).filter((n: any) => { const t = new Date(n.created_at); return t >= s && t <= e }).length,
+        novels: (allNovels || []).filter((n: any) => { const t = new Date(n.created_at); return t >= s && t < e }).length,
       }
     })
   }
@@ -437,8 +467,8 @@ export default async function AdminPage({
    *   入りっぱなしのまま読んだ人は、ログインに数えられない。
    *   知りたいのは、たいてい読まれたかどうかのほう。
    */
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
+  /* 日本時間の今日 0 時から */
+  const todayStart = jstDayStart()
 
   const { data: readerRows } = await adminSupabase
     .from('page_views')
