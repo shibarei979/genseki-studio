@@ -88,7 +88,16 @@ export const metadata: Metadata = {
     authors: [{ name: "原石航路" }],
     // 電話番号や住所を勝手にリンクにしない
     formatDetection: { telephone: false, email: false, address: false },
-    alternates: { canonical: "/" },
+    /*
+     * ★ 正規の住所は、頁ごとに決める。
+     *
+     *   ここに canonical: "/" と書くと、
+     *   別に決めていない頁すべてが「本当の住所はホーム」と
+     *   名乗ることになる。
+     *   検索の側は、それらをホームの写しとみなして載せない。
+     *
+     *   ホームぶんだけは、下の metadataBase から自動で付く。
+     */
     /*
      * AdSense の所有権の確認。
      * head に <meta name="google-adsense-account"> を出す。
@@ -161,6 +170,54 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         </noscript>
                     </>
                 )}
+                {/*
+                  * ★ このサイトが何者かを、検索に伝える。
+                  *
+                  *   名前・住所・目印の絵と、
+                  *   同じ相手が持つ外の場所（X・YouTube など）を並べる。
+                  *
+                  *   これが無いと、検索の側は
+                  *   「原石航路」という名と、この住所を結び付けられない。
+                  *   外の場所ばかりが上に出ていたのは、そのため。
+                  */}
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify({
+                            "@context": "https://schema.org",
+                            "@graph": [
+                                {
+                                    "@type": "Organization",
+                                    "@id": `${appConfig.siteUrl}#org`,
+                                    name: "原石航路",
+                                    url: appConfig.siteUrl,
+                                    logo: `${appConfig.siteUrl}/icon-512.png`,
+                                    description: appConfig.description,
+                                    sameAs: [
+                                        "https://x.com/shibasakirei",
+                                    ],
+                                },
+                                {
+                                    "@type": "WebSite",
+                                    "@id": `${appConfig.siteUrl}#site`,
+                                    name: "原石航路",
+                                    url: appConfig.siteUrl,
+                                    inLanguage: "ja",
+                                    publisher: { "@id": `${appConfig.siteUrl}#org` },
+                                    potentialAction: {
+                                        "@type": "SearchAction",
+                                        target: {
+                                            "@type": "EntryPoint",
+                                            urlTemplate: `${appConfig.siteUrl}/search?q={search_term_string}`,
+                                        },
+                                        "query-input": "required name=search_term_string",
+                                    },
+                                },
+                            ],
+                        }),
+                    }}
+                />
+
                 {/*
                   * 携帯だけのヘッダー。
                   * 同じ幅で、既存のヘッダーは CSS 側で出さない。
