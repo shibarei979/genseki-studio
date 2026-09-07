@@ -57,6 +57,13 @@ export interface Work {
      * ひとつにまとめると、その区別が付かない。
      */
     cover_is_ai?: boolean | null;
+    /**
+     * AI の印を置く角。tl 左上 / tr 右上 / bl 左下 / br 右下。
+     *
+     * 空なら右上（これまでどおり）。
+     * 見せたい所に重なると困る、という声から足した。
+     */
+    cover_stamp_corner?: "tl" | "tr" | "bl" | "br" | null;
     /** 作品の形 */
     format?: WorkFormat | null;
     /** AI をどう使ったか */

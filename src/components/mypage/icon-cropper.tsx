@@ -223,8 +223,19 @@ export default function IconCropper({
             style={{
                 position: 'fixed', inset: 0, zIndex: 300,
                 background: 'rgba(20,30,40,0.5)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                /*
+                 * ★ 上下に送れるようにする。
+                 *
+                 *   窓の高さが画面を超えると、下の押し具が
+                 *   画面の外へ出て押せなかった。
+                 *   ノートパソコンの表紙の切り抜きで、
+                 *   決められないという声が届いた。
+                 *
+                 *   中央寄せをやめ、上から詰めて送れるようにする。
+                 */
+                display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
                 padding: 16,
+                overflowY: 'auto',
             }}
         >
             <div
@@ -234,6 +245,8 @@ export default function IconCropper({
                     borderRadius: 14,
                     padding: '22px 24px',
                     width: 'min(340px, 100%)',
+                    /* 高い窓でも、上下に余白を残して収める */
+                    margin: 'auto',
                 }}
             >
                 <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>

@@ -68,7 +68,7 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
   const [profileRes, novelRes] = await Promise.all([
     user ? supabase.from('profiles').select('*').eq('user_id', user.id).single() : Promise.resolve({ data: null }),
     supabase.from('novels')
-      .select('id, title, summary, genre, tags, is_serial, published, views, author_id, created_at, novel_type, official_tags, ai_usage, cover_url, cover_is_ai, age_rating, visibility, deleted_at')
+      .select('id, title, summary, genre, tags, is_serial, published, views, author_id, created_at, novel_type, official_tags, ai_usage, cover_url, cover_is_ai, cover_stamp_corner, age_rating, visibility, deleted_at')
       .eq('id', params.id).maybeSingle(),
   ])
   const profile = profileRes.data
@@ -646,8 +646,11 @@ export default async function NovelPage({ params }: { params: { id: string } }) 
                         title="この表紙はAI画像を使っています"
                         style={{
                           position:'absolute',
-                          top:-6,
-                          right:-6,
+                          /* 作者が選んだ角に置く。空なら右上 */
+                          top: (novel.cover_stamp_corner ?? 'tr').startsWith('t') ? -6 : undefined,
+                          bottom: (novel.cover_stamp_corner ?? 'tr').startsWith('b') ? -6 : undefined,
+                          left: (novel.cover_stamp_corner ?? 'tr').endsWith('l') ? -6 : undefined,
+                          right: (novel.cover_stamp_corner ?? 'tr').endsWith('r') ? -6 : undefined,
                           zIndex:1,
                           width:72,
                           height:72,

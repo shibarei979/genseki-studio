@@ -70,6 +70,10 @@ export default function WorkInfoForm({
      * 立てると、作品ページの表紙の右上にハンコが出る。
      */
     const [coverIsAi, setCoverIsAi] = useState(work.cover_is_ai === true);
+    /* AI の印を置く角。空なら右上 */
+    const [stampCorner, setStampCorner] = useState<"tl" | "tr" | "bl" | "br">(
+        work.cover_stamp_corner ?? "tr",
+    );
     const [coverBusy, setCoverBusy] = useState(false);
     const [coverError, setCoverError] = useState("");
 
@@ -207,6 +211,16 @@ export default function WorkInfoForm({
     async function handleSave() {
         if (!canSave) return;
         setIsSaving(true);
+        setCoverError("");
+
+        /*
+         * ★ 失敗を黙って捨てない。
+         *
+         *   前は書き込みが弾かれても何も出ず、
+         *   「保存しました」も出ないだけだった。
+         *   表紙が変わらないのに理由が分からない、という声が出た。
+         */
+        try {
         await onSave({
             title: title.trim(),
             catchphrase: catchphrase.trim() || null,
@@ -228,10 +242,18 @@ export default function WorkInfoForm({
             recommended_mode: recommendedMode,
             cover_url: coverUrl,
             cover_is_ai: coverIsAi,
+            cover_stamp_corner: stampCorner,
         });
-        setIsSaving(false);
         setSavedMessage("保存しました");
         window.setTimeout(() => setSavedMessage(""), 2500);
+        } catch (caught) {
+            setCoverError(
+                caught instanceof Error
+                    ? `保存できませんでした（${caught.message}）`
+                    : "保存できませんでした",
+            );
+        }
+        setIsSaving(false);
     }
 
     return (
@@ -395,8 +417,13 @@ export default function WorkInfoForm({
                                             src="/images/ai-cover-stamp.png"
                                             alt="この表紙はAI画像を使っています"
                                             /* 作品ページと同じ見え方。大きさだけ表紙に合わせる */
-                                            className="pointer-events-none absolute -right-1 -top-1 h-10 w-10"
+                                            className="pointer-events-none absolute h-10 w-10"
                                             style={{
+                                                /* 作者が選んだ角に置く */
+                                                top: stampCorner.startsWith("t") ? -4 : undefined,
+                                                bottom: stampCorner.startsWith("b") ? -4 : undefined,
+                                                left: stampCorner.endsWith("l") ? -4 : undefined,
+                                                right: stampCorner.endsWith("r") ? -4 : undefined,
                                                 transform: "rotate(-8deg)",
                                                 /* 作品ページと同じ薄さ */
                                                 opacity: 0.55,
@@ -479,13 +506,49 @@ export default function WorkInfoForm({
                                             この表紙は AI を使って作りました
                                         </span>
                                         <span className="mt-0.5 block text-[11px] leading-relaxed text-muted">
-                                            立てると、作品ページの表紙の右上に
+                                            立てると、作品ページの表紙に
                                             「AI」の印が出ます。
                                             {!coverUrl &&
                                                 "（表紙を入れると、左に見本が出ます）"}
                                         </span>
                                     </span>
                                 </label>
+
+                                {/*
+                                  * 印を置く角。
+                                  *
+                                  * ★ 顔など見せたい所に重なる、という声から足した。
+                                  *   選ぶと、左の見本がその場で動く。
+                                  */}
+                                {coverIsAi && (
+                                    <div className="mt-2">
+                                        <span className="text-[11px] text-muted">
+                                            印を置く角
+                                        </span>
+                                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                            {([
+                                                ["tl", "左上"],
+                                                ["tr", "右上"],
+                                                ["bl", "左下"],
+                                                ["br", "右下"],
+                                            ] as const).map(([key, label]) => (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    onClick={() => setStampCorner(key)}
+                                                    className={[
+                                                        "rounded border px-2.5 py-1 text-[11px]",
+                                                        stampCorner === key
+                                                            ? "border-forest bg-forest-tint text-forest"
+                                                            : "border-line text-muted hover:border-forest-line",
+                                                    ].join(" ")}
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <p className="mt-1.5 rounded-md border border-amber bg-amber-tint/30 px-2.5 py-2 text-[11px] leading-relaxed text-ink">
                                     <strong>ほかの人の絵を無断で使うことはできません。</strong>

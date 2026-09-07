@@ -171,7 +171,36 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
     const [sort, setSort] = useState<SortKey>("updated");
 
     /* 棚で見るか、一覧で見るか */
+    /*
+     * 棚と一覧のどちらで見るか。
+     *
+     * ★ 選んだほうを覚える。
+     *
+     *   前は開くたびに棚へ戻っていた。
+     *   一覧のほうが好きな人は、毎回選び直していた。
+     *
+     *   覚え場所はこの機械の中だけ（localStorage）。
+     *   別の機械では、また棚から始まる。
+     */
     const [view, setView] = useState<"shelf" | "list">("shelf");
+
+    useEffect(() => {
+        try {
+            const saved = window.localStorage.getItem("home-work-view");
+            if (saved === "list" || saved === "shelf") setView(saved);
+        } catch {
+            /* 読めなくても、棚で始めればよい */
+        }
+    }, []);
+
+    function changeView(next: "shelf" | "list") {
+        setView(next);
+        try {
+            window.localStorage.setItem("home-work-view", next);
+        } catch {
+            /* 覚えられなくても、その場では切り替わる */
+        }
+    }
 
     /*
      * 1 段に何冊入るかを測る。
@@ -248,7 +277,7 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                         <button
                             key={row.key}
                             type="button"
-                            onClick={() => setView(row.key)}
+                            onClick={() => changeView(row.key)}
                             aria-pressed={view === row.key}
                             className={[
                                 "rounded px-2.5 py-1 text-[11px]",
