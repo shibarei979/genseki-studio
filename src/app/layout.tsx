@@ -1,6 +1,7 @@
 import AuthGate from "@/components/auth/auth-gate";
 import BookInfoHost from "@/components/book-info-host";
 import PresencePing from "@/components/common/presence-ping";
+import VisitPing from "@/components/common/visit-ping";
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
 import Script from "next/script";
@@ -249,6 +250,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   * 30 秒ごとに 1 回だけ送る。
                   */}
                 <PresencePing />
+
+                {/*
+                  * 着いた頁を控える。
+                  *
+                  * 画面には何も出さない。
+                  * 到着から登録までの流れを追うのに使う。
+                  */}
+                <VisitPing />
             </body>
         </html>
     );

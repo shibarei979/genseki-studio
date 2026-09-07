@@ -299,6 +299,14 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
         const { data: session } = await createClient().auth.getSession();
         if (session.session) {
             /*
+             * ★ どこから来た人が登録したかを、ここで結ぶ。
+             *
+             *   名前は渡さない。その機械の札を、帳に結ぶだけ。
+             *   これで「Xから来た人が何人 登録したか」が分かる。
+             */
+            void fetch("/api/visit/claim", { method: "POST" }).catch(() => {});
+
+            /*
              * 登録できたら、2つ聞く画面へ送る。
              *
              * ★ 入るだけの人は通さない。
