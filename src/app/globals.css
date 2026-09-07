@@ -172,6 +172,91 @@ body {
     outline-offset: 2px;
 }
 
+
+/*
+ * ============================================================
+ * 夜の見た目（ダークモード）
+ * ============================================================
+ *
+ * ★ 色の名前は変えない。中身だけ差し替える。
+ *
+ *   画面の部品は var(--color-…) で色を呼んでいる。
+ *   その中身をここで暗いものに置き換えれば、
+ *   部品を1つも書き直さずに全体が暗くなる。
+ *
+ * ★ 直に色を書いてある所（#ffffff など）は、まだ白いまま。
+ *   気づいた所から順に、この仕組みへ寄せていく。
+ *
+ * ★ 濃さの決め方
+ *
+ *   背景   ほぼ黒にせず、少し青みのある濃紺寄り。
+ *          真っ黒だと字が浮きすぎて、長く読むと疲れる。
+ *   字     真っ白にしない。白は眩しい。
+ *   線     背景よりわずかに明るいだけ。強いと枠が目立つ。
+ */
+html[data-theme="dark"] {
+    --color-canvas: #12161b;
+    --color-surface: #1a2027;
+    --color-bg: #1a2027;
+    --color-bg-card: #1a2027;
+
+    --color-text: #dfe4e8;
+    --color-ink: #dfe4e8;
+    --color-text-muted: #a3adb6;
+    --color-muted: #a3adb6;
+    --color-text-faint: #77828c;
+    --color-faint: #77828c;
+    --color-text-inverse: #12161b;
+
+    --color-line: #2c353e;
+    --color-tag-border: #2c353e;
+    --color-brand-border: #33505f;
+
+    /* 印の色。暗い背景では、明るいほうへ寄せないと沈む */
+    --color-brand: #7fb4d4;
+    --color-brand-light: #223440;
+    --color-forest: #7fb4d4;
+    --color-forest-dark: #a6cce2;
+    --color-forest-tint: #223440;
+    --color-forest-line: #33505f;
+    --color-logo: #7fb4d4;
+    --color-sea: #7fb4d4;
+    --color-sea-dark: #a6cce2;
+    --color-sea-light: #223440;
+    --color-sea-tint: #223440;
+    --color-sea-line: #33505f;
+
+    --color-amber: #d9a441;
+    --color-amber-tint: #2e2718;
+    --color-danger: #e0796d;
+    --color-danger-tint: #33201e;
+    --color-info: #7fb4d4;
+    --color-info-bg: #1c2b34;
+    --color-info-border: #33505f;
+    --color-success: #7fb389;
+    --color-warning: #d9a441;
+    --color-leaf: #7fb389;
+    --color-leaf-tint: #1e2a20;
+
+    --base-color-1: #12161b;
+
+    color-scheme: dark;
+}
+
+/*
+ * 絵は、そのままだと暗い画面で浮く。
+ * ほんの少しだけ落ち着かせる。強くすると作品の絵が損なわれる。
+ */
+html[data-theme="dark"] img {
+    filter: brightness(0.94);
+}
+
+/* 表紙と挿絵は作品そのもの。触らない */
+html[data-theme="dark"] img[alt$="表紙"],
+html[data-theme="dark"] img[alt="挿絵"] {
+    filter: none;
+}
+
 /*
  * ------------------------------------------------------------
  * 原稿エディタ
@@ -272,6 +357,20 @@ body {
 [data-manuscript-theme="sepia"] {
     --manuscript-bg: #f2e8d5;
     --manuscript-fg: #4a3b28;
+}
+
+/*
+ * ★ 夜のときは、明るい紙を選んでいる人だけ暗い紙で出す。
+ *
+ *   紙の色は作者が選んでいる（白・クリーム・セピア・夜・黒）。
+ *   その設定は書き換えない。夜のあいだの見え方だけを変える。
+ *   昼に戻せば、選んだ紙で出る。
+ */
+html[data-theme="dark"] [data-manuscript-theme="white"],
+html[data-theme="dark"] [data-manuscript-theme="cream"],
+html[data-theme="dark"] [data-manuscript-theme="sepia"] {
+    --manuscript-bg: #1a2027;
+    --manuscript-fg: #dfe4e8;
 }
 
 [data-manuscript-theme="night"] {

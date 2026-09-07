@@ -153,6 +153,20 @@ const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="ja" className={`${notoSans.variable} ${notoSerif.variable}`}>
+            <head>
+                {/*
+                  * ★ 昼夜の印を、いちばん先に当てる。
+                  *
+                  *   部品の中で当てると、画面が出てから当たるので
+                  *   夜の人に一瞬だけ白い画面が見える。
+                  *   ここで先に当てれば、ちらつかない。
+                  */}
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `try{var t=localStorage.getItem('site-theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}`,
+                    }}
+                />
+            </head>
             <body>
                 {gtmId && (
                     <>
