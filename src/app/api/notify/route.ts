@@ -128,9 +128,13 @@ export async function POST(request: Request) {
             /* 自分が書いたものについてだけ、知らせを出せる */
             if (!comment || comment.user_id !== user.id) return none;
 
+            /*
+             * ★ その感想そのものへ飛ばす。
+             *   話の頭に着くと、どの感想のことか探すことになる。
+             */
             const link = comment.episode_id
-                ? `/novel/${comment.novel_id}/episode/${comment.episode_id}`
-                : `/novel/${comment.novel_id}`;
+                ? `/novel/${comment.novel_id}/episode/${comment.episode_id}#comment-${comment.id}`
+                : `/novel/${comment.novel_id}#comment-${comment.id}`;
 
             if (comment.parent_id) {
                 const { data: parent } = await admin

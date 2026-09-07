@@ -115,7 +115,34 @@ export function useMyNotifications() {
         })();
     }, []);
 
+    /*
+     * まとめて読んだ印を付ける。
+     *
+     * ★ ベルを開いた時点で付ける。
+     *
+     *   1 つずつ押さないと消えない作りだったので、
+     *   丸い印が付きっぱなしになり、
+     *   新しい知らせが来ても気づけなかった。
+     */
+    const markAllRead = useCallback(() => {
+        const unread = rows.filter((row) => !row.is_read).map((row) => row.id);
+        if (unread.length === 0) return;
+
+        setRows((prev) => prev.map((row) => ({ ...row, is_read: true })));
+
+        void (async () => {
+            try {
+                await createClient()
+                    .from("notifications")
+                    .update({ is_read: true })
+                    .in("id", unread);
+            } catch {
+                /* 付かなくても、見え方は変わらない */
+            }
+        })();
+    }, [rows]);
+
     const unreadCount = rows.filter((row) => !row.is_read).length;
 
-    return { rows, unreadCount, markRead };
+    return { rows, unreadCount, markRead, markAllRead };
 }

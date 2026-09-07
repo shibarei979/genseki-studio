@@ -416,7 +416,8 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
         </div>
       ) : (
         sortedComments.map((c, i) => (
-          <div key={c.id} style={{ padding: '14px 16px', margin: '0 12px 10px', border: `1px solid ${c.is_pinned ? 'var(--color-brand)' : 'var(--color-brand-border)'}`, borderRadius: 12, background: c.is_pinned ? 'var(--color-brand-light)' : 'var(--color-bg-card)' }}>
+          /* 通知から、この感想へ直に来られるようにする目印 */
+          <div key={c.id} id={`comment-${c.id}`} style={{ scrollMarginTop: 80, padding: '14px 16px', margin: '0 12px 10px', border: `1px solid ${c.is_pinned ? 'var(--color-brand)' : 'var(--color-brand-border)'}`, borderRadius: 12, background: c.is_pinned ? 'var(--color-brand-light)' : 'var(--color-bg-card)' }}>
             <div style={{ display: 'flex', gap: 10 }}>
               {c.icon_url ? (
                 <img src={c.icon_url} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />

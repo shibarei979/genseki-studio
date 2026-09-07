@@ -260,6 +260,16 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
                         /* そのまま上げず、切り抜きへ */
                         if (file) setCropTarget(file);
                         event.target.value = "";
+
+                        /*
+                         * ★ 焦点を外す。
+                         *
+                         *   選び終えたあとも、この押し具に焦点が残る。
+                         *   切り抜きの窓を閉じると焦点が戻り、
+                         *   Enter や space を押すたびに窓が開き直していた。
+                         *   「何度も勝手に開く」はこれ。
+                         */
+                        event.target.blur();
                     }}
                     className="w-full text-[12px] text-muted"
                 />

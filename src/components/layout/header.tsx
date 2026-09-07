@@ -78,8 +78,15 @@ const NAV_ITEMS: {
      * 「作品を書く」。
      * 読者向けモードでは出さない。
      * 読む人に執筆への入口を見せる必要はない。
+     *
+     * ★ 行き先は作品の一覧。
+     *
+     *   前は新しく作る画面へ送っていた。
+     *   だが入ってから来る人の多くは、
+     *   いまある作品に新しい話を足しに来る。
+     *   一覧を先に見せ、新しく作るのはその中の押し具にする。
      */
-    { href: "/post", label: "作品を書く", writerOnly: true },
+    { href: "/works", label: "作品を書く", writerOnly: true },
     /*
      * 「作品を探す」。
      * 中身（絞り込みと並べ替え）が入ったので出した。
@@ -197,6 +204,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
         rows: alerts,
         unreadCount: alertUnread,
         markRead: markAlertRead,
+        markAllRead: markAllAlertsRead,
     } = useMyNotifications();
 
     useEffect(() => {
@@ -319,6 +327,14 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
             window.localStorage.setItem(SEEN_KEY, shown[0].date);
             setSeenAt(shown[0].date);
         }
+
+        /*
+         * ★ 自分あての知らせも、開いた時点で読んだことにする。
+         *
+         *   1 つずつ押さないと消えない作りだったので、
+         *   丸い印が消えず、新しい知らせに気づけなかった。
+         */
+        if (next) markAllAlertsRead();
     }
 
     /** 「/」だけは完全一致で見る。前方一致だと常に現在地になってしまう */

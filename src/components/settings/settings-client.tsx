@@ -109,7 +109,20 @@ export default function SettingsClient({ workId }: Props) {
     }
 
     async function handleChangeAi(patch: Partial<Omit<AiSettings, "work_id">>) {
-        setAi(await getRepository().saveAiSettings(workId, patch));
+        /*
+         * ★ 失敗を黙って捨てない。
+         *   前は落ちるとそのまま終わり、印が動かない理由が
+         *   画面から分からなかった。
+         */
+        try {
+            setAi(await getRepository().saveAiSettings(workId, patch));
+        } catch (caught) {
+            window.alert(
+                caught instanceof Error
+                    ? `変えられませんでした（${caught.message}）`
+                    : "変えられませんでした",
+            );
+        }
     }
 
     async function handleChangePreferences(

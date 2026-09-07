@@ -191,6 +191,15 @@ function toWork(row: Record<string, unknown>): Work {
         cover_is_ai: (row.cover_is_ai as boolean | null) ?? false,
         genre_changed_at: (row.genre_changed_at as string | null) ?? null,
         /*
+         * ★ 作者がすすめる読む向き。
+         *
+         *   表には保存していたが、ここで読み出していなかった。
+         *   そのため画面を開き直すたびに「決めない」に戻り、
+         *   何度選んでも変わらないように見えていた。
+         */
+        recommended_mode:
+            (row.recommended_mode as Work["recommended_mode"]) ?? null,
+        /*
          * 作品の形。
          * format が空でも、投稿サイト側の novel_type があれば
          * そちらから読む。以前に向こうで作った作品のため。
@@ -1128,11 +1137,29 @@ export const supabaseRepository: Repository = {
         const current = await this.getAiSettings(workId);
         const merged = { ...current, ...patch };
 
-        const { work_id: _ignored, ...columns } = merged;
-
-        const { error } = await db()
-            .from("work_ai_settings")
-            .upsert({ ...columns, novel_id: workId }, { onConflict: "novel_id" });
+        /*
+         * ★ 送る列を、名指しで組み立てる。
+         *
+         *   前は読み出した行をそのまま送り返していた。
+         *   表に無い列（work_id など）が混ざると弾かれ、
+         *   画面の印が動かないまま何も起きなかった。
+         */
+        const { error } = await db().from("work_ai_settings").upsert(
+            {
+                novel_id: workId,
+                is_enabled: merged.is_enabled,
+                auto_extract: merged.auto_extract,
+                approval_mode: merged.approval_mode,
+                extract_characters: merged.extract_characters,
+                extract_places: merged.extract_places,
+                extract_organizations: merged.extract_organizations,
+                extract_terms: merged.extract_terms,
+                extract_events: merged.extract_events,
+                suggest_links: merged.suggest_links,
+                generate_images: merged.generate_images,
+            },
+            { onConflict: "novel_id" },
+        );
 
         if (error) throw new Error(describeError(error.message));
         return merged;
