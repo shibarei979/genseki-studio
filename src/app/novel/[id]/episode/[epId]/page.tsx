@@ -218,11 +218,18 @@ export default async function EpisodePage({ params }: Props) {
         .limit(1)
         .maybeSingle()
       if (!existingPv) {
-        await supabase.from('page_views').insert({ episode_id: params.epId, user_id: user.id, device })
+        /*
+         * ★ どの作品かも一緒に残す。
+         *
+         *   前は話の id しか入れていなかった。
+         *   マイページの作品ごとの閲覧数は novel_id で数えているので、
+         *   いつまでも 0 のままだった。
+         */
+        await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: user.id, device })
       }
     } else {
       // 未ログインは従来通り記録（IPやCookieでの制限は行わない）
-      await supabase.from('page_views').insert({ episode_id: params.epId, user_id: null, device })
+      await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: null, device })
     }
   } catch (_) {}
 

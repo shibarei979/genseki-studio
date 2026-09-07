@@ -60,7 +60,8 @@ export default function ExportButton({ novelId, novelTitle, authorName }: Props)
   async function addPageViews(episodes: Episode[]) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const rows = episodes.map(ep => ({ episode_id: ep.id, user_id: user?.id || null }))
+      /* 作品の id も残す。マイページはこれで数えている */
+      const rows = episodes.map(ep => ({ novel_id: novelId, episode_id: ep.id, user_id: user?.id || null }))
       if (rows.length > 0) {
         await supabase.from('page_views').insert(rows)
       }
