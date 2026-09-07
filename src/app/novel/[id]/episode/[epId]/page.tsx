@@ -204,13 +204,16 @@ export default async function EpisodePage({ params }: Props) {
 
   try {
     /*
-     * ★ 作者が自分の作品を開いたぶんは数えない。
+     * ★ 作者が自分の作品を開いたぶんは、印を付けて残す。
      *
-     *   書いている人は、確かめのために何度も開く。
-     *   それが閲覧数に入ると、読まれた実感が濁る。
-     *   自分で自分の数を押し上げられる形にもなる。
+     *   閲覧数には入れない。書いている人は確かめのために
+     *   何度も開くので、入れると読まれた実感が濁る。
+     *
+     *   ただし記録は残す。消してしまうと
+     *   「今日 読んだ人」から書き手が抜け、
+     *   動いている人の数と噛み合わなくなる。
      */
-    if (user && novel.author_id === user.id) throw new Error('author-preview')
+    const isAuthorView = !!user && novel.author_id === user.id
 
     // デバイス判定（user-agentから）
     const ua = (await headers()).get('user-agent') || ''
@@ -234,7 +237,7 @@ export default async function EpisodePage({ params }: Props) {
          *   マイページの作品ごとの閲覧数は novel_id で数えているので、
          *   いつまでも 0 のままだった。
          */
-        await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: user.id, device })
+        await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: user.id, device, is_author: isAuthorView })
       }
     } else {
       // 未ログインは従来通り記録（IPやCookieでの制限は行わない）

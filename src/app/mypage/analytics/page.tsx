@@ -39,7 +39,7 @@ export default async function AnalyticsPage() {
     allEpisodes.forEach((e: any) => { epToNovel[e.id] = e.novel_id })
 
     const [{ data: pageViews }, { data: likes }, { data: bookmarks }, { data: comments }, { data: epLikes }, { data: epComments }] = await Promise.all([
-      epIds.length > 0 ? supabase.from('page_views').select('episode_id, user_id, viewed_at, device').in('episode_id', epIds) : Promise.resolve({ data: [] }),
+      epIds.length > 0 ? supabase.from('page_views').select('episode_id, user_id, viewed_at, device').eq('is_author', false).in('episode_id', epIds) : Promise.resolve({ data: [] }),
       supabase.from('likes').select('novel_id').in('novel_id', novelIds),
       supabase.from('bookmarks').select('novel_id').in('novel_id', novelIds),
       supabase.from('comments').select('novel_id, episode_id, body, user_id, created_at, rating').in('novel_id', novelIds).neq('user_id', user.id).order('created_at', { ascending: false }),

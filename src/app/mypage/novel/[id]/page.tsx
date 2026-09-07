@@ -45,7 +45,7 @@ export default async function NovelManagePage({ params }: { params: { id: string
     supabase.from('discovers').select('*', { count: 'exact', head: true }).eq('novel_id', params.id).eq('is_pending', false),
     supabase.from('comments').select('*', { count: 'exact', head: true }).eq('novel_id', params.id).neq('user_id', user.id),
     epIds.length > 0
-      ? supabase.from('page_views').select('*', { count: 'exact', head: true }).in('episode_id', epIds)
+      ? supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).in('episode_id', epIds)
       : Promise.resolve({ count: 0 } as any),
   ])
   const totalChars = episodes.reduce((s: number, e: any) => s + (e.body?.length || 0), 0)

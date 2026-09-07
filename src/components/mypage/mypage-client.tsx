@@ -915,7 +915,7 @@ export default function MypageClient({
 
       if (epIds.length > 0) {
         const [{ data: pvs }, { data: els }, { data: cms }] = await Promise.all([
-          supabase.from('page_views').select('episode_id').in('episode_id', epIds),
+          supabase.from('page_views').select('episode_id').eq('is_author', false).in('episode_id', epIds),
           supabase.from('episode_likes').select('episode_id').in('episode_id', epIds),
           supabase.from('comments').select('episode_id').in('episode_id', epIds),
         ])

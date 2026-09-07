@@ -114,7 +114,7 @@ export default async function MypagePage() {
     const [likesData, commentsData, viewsData, epsData] = await Promise.all([
       supabase.from('likes').select('novel_id').in('novel_id', novelIds),
       supabase.from('comments').select('novel_id').in('novel_id', novelIds),
-      supabase.from('page_views').select('novel_id').in('novel_id', novelIds),
+      supabase.from('page_views').select('novel_id').eq('is_author', false).in('novel_id', novelIds),
       supabase.from('episodes').select('novel_id').in('novel_id', novelIds).eq('published', true),
     ])
 

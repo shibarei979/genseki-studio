@@ -331,8 +331,8 @@ export default async function AdminPage({
      * 期間を変えても「月間ユーザー」が動かなかった。
      */
     Promise.resolve(adminSupabase.rpc('get_login_stats', { days: rangeDays })).catch(() => ({ data: null } as any)),
-    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'mobile').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
-    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'desktop').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
+    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).eq('device', 'mobile').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
+    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).eq('device', 'desktop').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
 
     /*
      * 前の30日ぶん。「前月比」を出すのに要る。
@@ -346,9 +346,9 @@ export default async function AdminPage({
       .eq('published', true).lt('created_at', since30.toISOString()),
     supabase.from('comments').select('*', { count: 'exact', head: true })
       .lt('created_at', since30.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true })
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
       .gte('viewed_at', since30.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true })
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
       .gte('viewed_at', since60.toISOString()).lt('viewed_at', since30.toISOString()),
 
     /*
@@ -384,18 +384,18 @@ export default async function AdminPage({
      * パソコンで大量に読んだ日に大きく振れる。
      * 長い期間も並べて、傾向を見られるようにする。
      */
-    supabase.from('page_views').select('*', { count: 'exact', head: true })
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
       .eq('device', 'mobile').gte('viewed_at', since30.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true })
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
       .eq('device', 'desktop').gte('viewed_at', since30.toISOString()),
 
-    supabase.from('page_views').select('*', { count: 'exact', head: true })
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
       .eq('device', 'mobile').gte('viewed_at', since365.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true })
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
       .eq('device', 'desktop').gte('viewed_at', since365.toISOString()),
 
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'mobile'),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('device', 'desktop'),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).eq('device', 'mobile'),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).eq('device', 'desktop'),
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {
