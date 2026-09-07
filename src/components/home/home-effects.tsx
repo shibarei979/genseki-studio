@@ -27,6 +27,19 @@ declare global {
  * - 「更新」ボタン用の候補プール（Pick Up! / New Release!）を
  *   サーバーから受け取り home.js 側の WorksRefresh に渡す
  */
+/**
+ * 本棚を見せる。
+ *
+ * HTML に書いた「見えない」を外し、印を付ける。
+ * 二度呼ばれても害はない。
+ */
+function reveal() {
+    document.querySelectorAll<HTMLElement>(".bookshelf-loop").forEach((shelf) => {
+        shelf.style.opacity = "";
+        shelf.classList.add("is-ready");
+    });
+}
+
 export default function HomeEffects({ pools }: { pools: HomePools }) {
     const boot = useCallback(() => {
         window.HomeV2?.init(pools);
@@ -41,9 +54,7 @@ export default function HomeEffects({ pools }: { pools: HomePools }) {
          *   同じ回で付けると、まだ位置が当たっていないことがある。
          */
         requestAnimationFrame(() => {
-            document
-                .querySelectorAll(".bookshelf-loop")
-                .forEach((shelf) => shelf.classList.add("is-ready"));
+            reveal();
         });
     }, [pools]);
 
@@ -58,9 +69,7 @@ export default function HomeEffects({ pools }: { pools: HomePools }) {
          *   崩れて見えるほうが、何も無いよりましなので。
          */
         const rescue = window.setTimeout(() => {
-            document
-                .querySelectorAll(".bookshelf-loop")
-                .forEach((shelf) => shelf.classList.add("is-ready"));
+            reveal();
         }, 2500);
 
         return () => {

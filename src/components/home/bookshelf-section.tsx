@@ -9,7 +9,15 @@ import type { HomeBook } from "@/types/home";
  */
 export default function BookshelfSection({ books }: { books: HomeBook[] }) {
     return (
-        <div className="bookshelf-loop">
+        /*
+         * ★ 最初から見えない状態で配る。
+         *
+         *   CSS で隠すと、その CSS が届くまでの隙に見えてしまう。
+         *   HTML そのものに書いておけば、最初の1枚目から隠れる。
+         *
+         *   位置が決まったら外す（home-effects.tsx）。
+         */
+        <div className="bookshelf-loop" style={{ opacity: 0 }}>
             <div className="bsl_track">
                 {books.map((book, i) => (
                     <BookCard key={book.id} book={book} variant="shelf" index={i} />
