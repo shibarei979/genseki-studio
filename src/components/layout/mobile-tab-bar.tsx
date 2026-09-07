@@ -36,7 +36,8 @@ import { getRepository } from '@/lib/repository'
  */
 const WRITER_TABS = [
     { href: '/', label: 'ホーム', icon: 'home' },
-    { href: '/post', label: '作品を書く', icon: 'pen' },
+    /* ヘッダーと同じ行き先にする。押すたびに違う画面が出ると迷う */
+  { href: '/post', label: '作品を書く', icon: 'pen' },
     { href: '/search', label: '作品を探す', icon: 'search' },
     { href: '/ranking', label: 'ランキング', icon: 'chart' },
     { href: '/rooms', label: 'コミュニティー', icon: 'people' },

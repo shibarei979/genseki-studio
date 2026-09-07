@@ -86,7 +86,8 @@ const NAV_ITEMS: {
      *   いまある作品に新しい話を足しに来る。
      *   一覧を先に見せ、新しく作るのはその中の押し具にする。
      */
-    { href: "/works", label: "作品を書く", writerOnly: true },
+    /* 押すと「新しく作る」画面へ。作品の一覧は、そこから開ける */
+    { href: "/post", label: "作品を書く", writerOnly: true },
     /*
      * 「作品を探す」。
      * 中身（絞り込みと並べ替え）が入ったので出した。
@@ -316,16 +317,37 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                   kind: row.kind,
               }));
     const unread = shown.filter((notice) => !seenAt || notice.date > seenAt);
-    /* ベルの印。お知らせの未読・届いた便り・自分あての知らせを合わせて数える */
-    const badgeCount = unread.length + letters.length + alertUnread;
+
+    /*
+     * ベルの印。
+     *
+     * ★ 「最後にベルを開いた時刻」より新しいものだけ数える。
+     *
+     *   前は、読んだ印（is_read）が消えるのを待っていた。
+     *   便り・お知らせ・知らせの 3 つが別々の印を持っており、
+     *   どれか 1 つでも残ると赤い丸が消えなかった。
+     *
+     *   時刻ひとつで数えれば、開いた時点で必ず 0 になる。
+     *   新しいものが届けば、また付く。
+     */
+    const openedAt = seenAt ?? "";
+
+    const badgeCount =
+        shown.filter((notice) => (notice.at || notice.date) > openedAt).length +
+        letters.filter((letter) => (letter.at || "") > openedAt).length +
+        alerts.filter((alert) => (alert.created_at || "") > openedAt).length;
 
     function handleOpenNotice() {
         const next = !isNoticeOpen;
         setIsNoticeOpen(next);
-        if (next && shown.length > 0) {
-            // 開いた時点で読んだことにする
-            window.localStorage.setItem(SEEN_KEY, shown[0].date);
-            setSeenAt(shown[0].date);
+        if (next) {
+            /*
+             * 開いた時刻を覚える。これより古いものは、もう数えない。
+             * 日付だけを覚えていたので、同じ日に届いたものが残っていた。
+             */
+            const now = new Date().toISOString();
+            window.localStorage.setItem(SEEN_KEY, now);
+            setSeenAt(now);
         }
 
         /*
