@@ -63,16 +63,61 @@ export default async function ShelfLabPage() {
         }
     }
 
+    /*
+     * ★ 読者のホームと、同じ作り方にする。
+     *
+     *   付箋   ジャンル 1 枚だけ。タグまで並べると背表紙が埋まる
+     *   左頁   あらすじ
+     *   帯     拡散のひとことだけ。無ければ空
+     *          あらすじを帯に出すと、本物と形が変わる
+     */
+    /*
+     * 帯（読んだ人のひとこと）と、いいねの数。
+     * 本物のホームと同じものを出さないと、形が違って見える。
+     */
+    const ids = (data ?? []).map((row) => row.id as string);
+
+    const obiOf: Record<string, string> = {};
+    const likeOf: Record<string, number> = {};
+
+    if (ids.length > 0) {
+        /*
+         * 帯の文は discovers（発掘のひとこと）から。
+         * 本物のホームも、ここを見ている。
+         */
+        const { data: obis } = await supabase
+            .from("discovers")
+            .select("novel_id, comment")
+            .in("novel_id", ids)
+            .not("comment", "is", null);
+
+        for (const row of obis ?? []) {
+            const key = row.novel_id as string;
+            const text = String(row.comment ?? "").trim();
+            if (text && !obiOf[key]) obiOf[key] = text;
+        }
+
+        const { data: likes } = await supabase
+            .from("likes")
+            .select("novel_id")
+            .in("novel_id", ids);
+
+        for (const row of likes ?? []) {
+            const key = row.novel_id as string;
+            likeOf[key] = (likeOf[key] ?? 0) + 1;
+        }
+    }
+
     const books: HomeBook[] = (data ?? []).map((row) => ({
         id: row.id as string,
         href: `/novel/${row.id}`,
         title: (row.title as string) ?? "",
-        author: nameOf[row.author_id as string] ?? "",
-        head: (row.genre as string) ?? "",
-        excerpt: ((row.summary as string) ?? "").slice(0, 60),
-        comment: "",
-        likes: 0,
-        tags: ((row.tags as string[]) ?? []).slice(0, 3),
+        author: nameOf[row.author_id as string] ?? "不明な作者",
+        tags: [(row.genre as string) ?? ""].filter(Boolean),
+        head: ((row.summary as string) ?? "").slice(0, 90),
+        excerpt: "",
+        comment: obiOf[row.id as string] ?? "",
+        likes: likeOf[row.id as string] ?? 0,
     }));
 
     return (
