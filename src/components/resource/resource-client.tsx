@@ -179,9 +179,6 @@ export default function ResourceClient({ workId }: Props) {
     }, []);
     const aiStatus = useAiStatus();
 
-    const reload = useCallback(async () => {
-        const repository = getRepository();
-
     /*
      * 自分で作ったプロットの型。
      *
@@ -273,6 +270,10 @@ export default function ResourceClient({ workId }: Props) {
             window.alert("消せませんでした。");
         }
     }
+
+    const reload = useCallback(async () => {
+        const repository = getRepository();
+
 
 
         /*
