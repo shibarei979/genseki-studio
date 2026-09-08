@@ -896,6 +896,38 @@ function PostForm({
     const [at, setAt] = useState(toLocalInput(episode.publish_at));
     const [error, setError] = useState("");
 
+    /*
+     * この話に置いてある挿絵の枚数。
+     *
+     * ★ 数えるのは、伝えるためだけ。
+     *
+     *   挿絵は episode_illusts の表にあり、
+     *   執筆室で置いた時点でもう頁に出ている。
+     *   なのにこの画面は「変更はありません」と出るので、
+     *   出せていないと思われていた。
+     *
+     *   何枚出ているかを見せて、済んでいることを伝える。
+     */
+    const [illustCount, setIllustCount] = useState<number | null>(null);
+
+    useEffect(() => {
+        let alive = true;
+
+        void (async () => {
+            try {
+                const rows = await getRepository().listEpisodeIllusts(episode.id);
+                if (alive) setIllustCount(rows.length);
+            } catch {
+                /* 数えられなくても、投稿はできる */
+                if (alive) setIllustCount(null);
+            }
+        })();
+
+        return () => {
+            alive = false;
+        };
+    }, [episode.id]);
+
     const isScheduled = Boolean(episode.publish_at) && !episode.is_published;
 
     /*
@@ -1569,6 +1601,29 @@ function PostForm({
                     </button>
                 )}
             </div>
+
+            {/*
+              * 投稿済みの話で、この押し具が何を控えるのかを書く。
+              *
+              * ★ 挿絵を足しただけの人が、ここで止まっていた。
+              *
+              *   挿絵と本文は、執筆室で控えた時点でもう頁に出ている。
+              *   ここは、この画面で直した題名や前書きを控える所。
+              *   それを書いていなかったので、
+              *   「変更はありません」を「出せていない」と読まれていた。
+              */}
+            {episode.is_published && (
+                <p className="mt-2 text-right text-[11px] leading-relaxed text-faint">
+                    本文と挿絵
+                    {illustCount !== null && illustCount > 0
+                        ? `（${illustCount}枚）`
+                        : ""}
+                    は、執筆室で保存した時点でもう出ています。
+                    <br />
+                    ここで控えるのは、この画面で直したもの
+                    （題名・前書き・あとがき・所属章）だけです。
+                </p>
+            )}
         </div>
     );
 }
