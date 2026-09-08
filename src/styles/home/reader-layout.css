@@ -1296,21 +1296,17 @@
 /* 広い画面では、本の左に並べる */
 @media (min-width: 900px) {
     /*
-     * ★ 中央ではなく、左に寄せる。
+     * 額と本を中央に置く。
      *
-     *   見出し「受賞作品」は左端にある。
-     *   台だけ中央にあると、1 冊のときに左が大きく空いて、
-     *   見出しと台が別のものに見える。
-     *
-     *   もっと中へ入れたいときは padding-left を増やす。
-     *   真ん中に戻すなら justify-content を center に。
+     * 左端に寄せたこともあるが、板が長いぶん右が空いて
+     * 台の真ん中がどこか分からなくなった。
+     * 左へ寄せるなら justify-content を flex-start に。
      */
     .reader-home .fs_stage {
         display: flex;
         align-items: flex-end;
-        justify-content: flex-start;
+        justify-content: center;
         gap: 30px;
-        padding-left: 2%;
     }
 
     .reader-home .fs_contest {
@@ -1408,6 +1404,17 @@
 }
 
 /*
+ * 受賞の本は表紙が濃い。
+ *
+ * ★ 背は表紙より明るくする。
+ *   濃い色どうしを合わせると境目が消え、
+ *   本ではなく厚い板に見える。
+ */
+.reader-home .fs--award .fs_book::before {
+    background: linear-gradient(90deg, #4a4438 0%, #7c7466 55%, #3a352c 100%);
+}
+
+/*
  * 天。上から見える紙の断面。
  * これが無いと、立っているのか寝ているのか分からない。
  */
@@ -1448,6 +1455,78 @@
     line-break: strict;
     word-break: normal;
     overflow-wrap: break-word;
+}
+
+/*
+ * 表紙を一周する金の罫。受賞のときだけ。
+ *
+ * 位置は本の側から渡す（帯があるかで下端が変わる）。
+ * 線 1 本で、刷り物が装丁に変わる。
+ */
+.reader-home .fs_rule {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    border: 1px solid rgba(224, 194, 122, .45);
+    border-radius: 1px;
+    pointer-events: none;
+}
+
+/*
+ * 題名を上下から挟む短い罫。
+ *
+ * 表彰状も本の扉も、題を罫で挟む。
+ * 端を薄く消すと、金の箔が擦れたように見える。
+ */
+.reader-home .fs_tick {
+    display: block;
+    width: 26px;
+    height: 1px;
+    margin: 0 auto 8px;
+    background: linear-gradient(
+        90deg,
+        rgba(236, 209, 145, 0),
+        rgba(236, 209, 145, .95),
+        rgba(236, 209, 145, 0)
+    );
+}
+
+.reader-home .fs_tick--under {
+    margin: 8px auto 0;
+}
+
+/*
+ * 受賞の題名。
+ *
+ * ★ 金は 1 色だと金に見えない。
+ *   文字の上を明るく、下を落として、刷った箔のようにする。
+ *   下の暗い影は、濃い表紙から字を浮かせる役も持つ。
+ */
+.reader-home .fs_book-title--award {
+    font-weight: 600;
+    letter-spacing: .04em;
+    background-image: linear-gradient(180deg, #fdf3d6 0%, #f0dda8 52%, #d9bd7d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /*
+     * ★ 影は text-shadow ではなく filter で落とす。
+     *   文字を透かして色を敷いているので、text-shadow だと
+     *   影が金の上に乗って、字が濁る。
+     */
+    filter: drop-shadow(0 1px 0 rgba(20, 10, 0, .45));
+}
+
+/*
+ * ★ 文字を透かして色を敷いているので、
+ *   透かしが効かない機械では色が消える。
+ *   そのときのために、本の側から渡した金色をそのまま使う。
+ */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+    .reader-home .fs_book-title--award {
+        -webkit-text-fill-color: currentColor;
+        background-image: none;
+    }
 }
 
 /*

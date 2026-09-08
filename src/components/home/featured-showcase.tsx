@@ -15,18 +15,19 @@ import { COVERS, hashOf } from '@/components/home/home-work-table'
  *
  *     絵は額に入れて立てる
  *     本は賞の帯を巻く（本屋で見る、あの紙の帯）
+ *     表紙は濃い色、題名は金、上下を罫で挟む
  *
  *   賞の名を吹き出しで横に置くより、
  *   帯にしたほうが「受賞した本」に見える。
  *   日本の本屋で、賞はいつも帯に刷ってある。
  *
- * ★ 本そのものは飾らない。
+ * ★ 濃い表紙で本の形が消えないよう、二つ手を打ってある。
  *
- *   表紙を濃くし、金の罫を回してみたことがある。
- *   賞らしくはなったが、背表紙も天も影に沈んで、
- *   本の形が消え、厚い板が立っているように見えた。
+ *     本を 1.16 倍にして、天（上の紙の断面）を太くした
+ *     背表紙を表紙より明るくして、境目を残した
  *
- *   賞であることは帯が伝える。本は本のままでよい。
+ *   小さいまま濃くすると、天も背も影に沈み、
+ *   厚い板が立っているようにしか見えない。
  *
  * ★ おすすめのときは、帯も付けない。
  *   賞との区別が消える。賞の代わりに吹き出しを 1 つ。
@@ -69,19 +70,19 @@ const OBI = 46
 /*
  * 受賞の表紙を濃い色にするか。
  *
- * ★ いまは false。いつもの本と同じ淡い表紙にする。
+ * ★ 濃い色にする。賞を取った本は装丁が変わる。
  *
- *   一度は濃い紺にしてみたが、色が濃いと
- *   背表紙も天も影に沈んで、本の形が見えなくなった。
- *   厚い板が立っているように見える。
+ *   一度は淡い表紙に戻したが、賞らしさが出なかった。
+ *   濃い色で本の形が消えていたのは、色のせいではなく
+ *   本が小さく、天（上の紙の断面）が細かったため。
+ *   大きくして、天と背をはっきりさせたら形は戻った。
  *
- *   賞であることは帯が伝えるので、本は本のままでよい。
- *   濃い装丁に戻したくなったら、ここを true にする。
+ *   いつもの淡い表紙に戻すなら、ここを false にする。
  */
-const DARK_COVER = false
+const DARK_COVER = true
 
 /*
- * 濃くするときの表紙。
+ * 受賞の表紙。
  * 3 色あるのは、3 冊並んだときに同じ本が並んで見えないため。
  * 帯が臙脂なので、赤系は入れない。
  */
@@ -217,16 +218,44 @@ export default function FeaturedShowcase({
                                             background: 'linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.06) 100%)',
                                         }} />
 
+                                        {/*
+                                          * 金の罫。受賞のときだけ。
+                                          * 表紙の内側を一周する細い線。
+                                          * 線 1 本で、刷り物が装丁に変わる。
+                                          */}
+                                        {isAward && (
+                                            <span aria-hidden="true" className="fs_rule" style={{
+                                                left: SPINE + 5,
+                                                bottom: obi ? OBI + 7 : 9,
+                                            }} />
+                                        )}
+
                                         {/* 題名。上から 22% の位置に、中央そろえで 2 行まで */}
                                         <span style={{
                                             position: 'absolute', left: 0, right: 0,
                                             top: Math.round(BOOK_HEIGHT * 0.22),
-                                            padding: `0 12px 0 ${SPINE + 10}px`,
+                                            /*
+                                              * 左右の余白。
+                                              * 左が広いのは、背の影 8px がここに掛かるため。
+                                              * これ以上詰めると、題名が影に沈む。
+                                              */
+                                            padding: `0 10px 0 ${SPINE + 8}px`,
                                         }}>
-                                            <span className="fs_book-title"
+                                            {/*
+                                              * 題名を上下から挟む短い罫。受賞のときだけ。
+                                              *
+                                              * 表彰状も本の扉も、題を罫で挟む。
+                                              * 挟むだけで、ただの見出しが銘に変わる。
+                                              */}
+                                            {isAward && <span aria-hidden="true" className="fs_tick" />}
+
+                                            <span
+                                                className={isAward ? 'fs_book-title fs_book-title--award' : 'fs_book-title'}
                                                 style={{ fontSize: TITLE_SIZE, color: cover.ink }}>
                                                 {item.title}
                                             </span>
+
+                                            {isAward && <span aria-hidden="true" className="fs_tick fs_tick--under" />}
                                         </span>
 
                                         {/*
