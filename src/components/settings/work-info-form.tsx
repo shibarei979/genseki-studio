@@ -365,8 +365,19 @@ export default function WorkInfoForm({
                             </p>
                         ) : (
                             ageRating !== "r18" && (
+                                /*
+                                 * ★ この文は「BL・GL が選べない」と読まれていた。
+                                 *
+                                 *   BL・GL は、どの年齢区分でも選べる。
+                                 *   R18 の作品だけのものは、別枠の 3 つ。
+                                 *   名前を省いたせいで、要望として
+                                 *   「R15 でも BL・GL を」と届いた。
+                                 */
                                 <p className="mt-1.5 text-[11px] text-faint">
-                                    BL・GL は、年齢の区分を R18 にすると選べます。
+                                    BL・GL は、どの年齢の区分でも選べます。
+                                    <br />
+                                    BL R18・GL R18・官能 R18 は、年齢の区分を R18
+                                    にすると選べます。
                                 </p>
                             )
                         )}

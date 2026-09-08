@@ -22,6 +22,7 @@
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { formatNumber } from "@/lib/utils/text";
 import type { Episode, WorkWithStats } from "@/types";
@@ -822,24 +823,105 @@ function RowMenu({
     const [isOpen, setIsOpen] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    /*
+     * 小窓を出す場所。
+     *
+     * ★ 小窓は、行の中ではなく画面のいちばん上の層に出す。
+     *
+     *   前は行の中に置いていた。
+     *   一覧の外枠に overflow-hidden が掛かっているので、
+     *   下のほうの行では小窓が切り落とされ、
+     *   上下の行と重なり方も取り合っていた。
+     *   「設定」や「削除」に指を合わせても、
+     *   隣の行のほうが押されていた。
+     *
+     *   層を分ければ、切られることも、
+     *   取り合うことも無くなる。
+     *
+     * ★ 場所は「⋮」の位置から毎回計り直す。
+     *   巻いたり幅が変わったりすると、ずれる。
+     *   そのときは閉じる。追いかけると重い。
+     */
+    const [spot, setSpot] = useState<{ top: number; left: number } | null>(null);
+
+    const MENU_WIDTH = 176;
+
+    function place() {
+        const button = buttonRef.current;
+        if (!button) return;
+
+        const box = button.getBoundingClientRect();
+
+        /* 右端に揃える。画面から出るときは中へ寄せる */
+        const left = Math.max(
+            8,
+            Math.min(box.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8),
+        );
+
+        /*
+         * 下に置けなければ、上に出す。
+         * 一覧のいちばん下の行で、小窓が画面の外へ落ちる。
+         */
+        const below = window.innerHeight - box.bottom;
+        const top = below < 200 ? box.top - 4 - 200 : box.bottom + 4;
+
+        setSpot({ top: Math.max(8, top), left });
+    }
 
     useEffect(() => {
         if (!isOpen) return;
+
         function handleOutside(event: MouseEvent) {
-            if (!rootRef.current?.contains(event.target as Node)) {
+            const inButton = buttonRef.current?.contains(event.target as Node);
+            const inMenu = rootRef.current?.contains(event.target as Node);
+            if (!inButton && !inMenu) {
                 setIsOpen(false);
                 setIsConfirming(false);
             }
         }
+
+        function handleEscape(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                setIsOpen(false);
+                setIsConfirming(false);
+            }
+        }
+
+        /* 巻いたら閉じる。付いて回るより、消えたほうが分かりやすい */
+        function handleMove() {
+            setIsOpen(false);
+            setIsConfirming(false);
+        }
+
         document.addEventListener("mousedown", handleOutside);
-        return () => document.removeEventListener("mousedown", handleOutside);
+        document.addEventListener("keydown", handleEscape);
+        window.addEventListener("scroll", handleMove, true);
+        window.addEventListener("resize", handleMove);
+
+        return () => {
+            document.removeEventListener("mousedown", handleOutside);
+            document.removeEventListener("keydown", handleEscape);
+            window.removeEventListener("scroll", handleMove, true);
+            window.removeEventListener("resize", handleMove);
+        };
     }, [isOpen]);
 
     return (
-        <div ref={rootRef} className="relative inline-block">
+        <div className="relative inline-block">
             <button
+                ref={buttonRef}
                 type="button"
-                onClick={() => setIsOpen((open) => !open)}
+                onClick={() => {
+                    if (isOpen) {
+                        setIsOpen(false);
+                        setIsConfirming(false);
+                        return;
+                    }
+                    place();
+                    setIsOpen(true);
+                }}
                 aria-label={`${work.title || "無題"}の操作`}
                 aria-expanded={isOpen}
                 style={tone ? { color: tone } : undefined}
@@ -853,8 +935,18 @@ function RowMenu({
                 <DotsIcon small={Boolean(tone)} />
             </button>
 
-            {isOpen && (
-                <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-lg border border-line bg-surface py-1 text-left shadow-lg">
+            {isOpen && spot && typeof document !== "undefined" && createPortal(
+                <div
+                    ref={rootRef}
+                    style={{
+                        position: "fixed",
+                        top: spot.top,
+                        left: spot.left,
+                        width: 176,
+                        zIndex: 60,
+                    }}
+                    className="overflow-hidden rounded-lg border border-line bg-surface py-1 text-left shadow-lg"
+                >
                     {isConfirming ? (
                         <div className="px-3 py-2.5">
                             <p className="text-[12px] leading-relaxed text-ink">
@@ -902,7 +994,8 @@ function RowMenu({
                             </button>
                         </>
                     )}
-                </div>
+                </div>,
+                document.body,
             )}
         </div>
     );

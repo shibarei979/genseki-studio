@@ -44,6 +44,27 @@ export interface Work {
      * 読む人の設定を書き換えはせず、印を出すだけ。
      */
     recommended_mode?: "vertical" | "horizontal" | null;
+
+    /**
+     * いつも出す時刻。"19:00" のような形。
+     *
+     * ★ 予約の日時を、毎回ゼロから選ばせないため。
+     *
+     *   決まった時間に出す人が多い。
+     *   その時刻を覚えておき、次の予定を一押しで入れる。
+     *
+     * 決めていなければ null。
+     */
+    default_publish_time?: string | null;
+
+    /**
+     * 何日ごとに出すか。
+     *
+     * 最後に予約した話の何日あとを、次の予定にするか。
+     * 決めていなければ null（1 日として扱う）。
+     */
+    default_publish_days?: number | null;
+
     keywords: string[];
     /** カバー画像 URL。v1 では未使用 */
     cover_url: string | null;

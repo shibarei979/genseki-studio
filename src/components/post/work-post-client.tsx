@@ -743,19 +743,53 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                             chapters={chapters}
                             publish={publish}
                             onChange={(patch) => void change(selected.id, patch)}
-                            onPosted={() => {
+                            onPosted={({ scheduled: didSchedule }) => {
                                 /*
-                                 * 投稿したら、書いていた所へ戻る。
+                                 * いま出したときは、書いていた所へ戻る。
                                  *
                                  * 出したあとは、たいてい続きを書くか
                                  * 直しに戻る。投稿の画面に留まっても
                                  * 次にすることが無い。
                                  */
-                                router.push(
-                                    `/workspace/${workId}?ep=${selected.id}`,
+                                if (!didSchedule) {
+                                    router.push(
+                                        `/workspace/${workId}?ep=${selected.id}`,
+                                    );
+                                    return;
+                                }
+
+                                /*
+                                 * 予約したときは、この画面に留まる。
+                                 *
+                                 * ★ 何話も続けて予約する人がいる。
+                                 *   他の場所から数十話を移してきたときなど。
+                                 *   1 話ごとに戻されると、そのたびに
+                                 *   この画面まで来直すことになる。
+                                 *
+                                 * ★ 次のまだ出していない話へ、選び先を進める。
+                                 *   同じ話が開いたままだと、
+                                 *   予約できたのかどうかが分かりにくい。
+                                 */
+                                const next = episodes.find(
+                                    (row) =>
+                                        row.ep_number > selected.ep_number &&
+                                        !row.is_published &&
+                                        !row.publish_at,
                                 );
+
+                                if (next) setSelectedId(next.id);
+                                void reload();
                             }}
                             work={work}
+                            /*
+                             * 最後に予約した話の時刻。
+                             * 次の予定を組み立てるのに使う。
+                             */
+                            lastScheduledAt={
+                                scheduled.length > 0
+                                    ? scheduled[scheduled.length - 1].publish_at ?? null
+                                    : null
+                            }
                             onChangeWorkInfo={(patch) =>
                                 void (async () => {
                                     await getRepository().updateWork(workId, patch);
@@ -808,9 +842,20 @@ function PostForm({
     onChangeWorkInfo,
     onPosted,
     work,
+    lastScheduledAt,
 }: {
-    /** 投稿し終えたとき。書いていた所へ戻すのに使う */
-    onPosted?: () => void;
+    /** 最後に予約した話の時刻。次の予定を組み立てるのに使う */
+    lastScheduledAt?: string | null;
+    /**
+     * 投稿し終えたとき。
+     *
+     * ★ 予約したのか、いま出したのかを渡す。
+     *   いま出したときは書いていた所へ戻し、
+     *   予約したときはこの画面に留まる。
+     *   予約は何話も続けて入れる作業なので、
+     *   1 話ごとに戻されると、そのたびに来直すことになる。
+     */
+    onPosted?: (info: { scheduled: boolean }) => void;
     episode: Episode;
     chapters: Chapter[];
     publish: PublishSettings | null;
@@ -926,7 +971,7 @@ function PostForm({
                 is_published: false,
                 publish_at: floorTo5Min(target).toISOString(),
             });
-            onPosted?.();
+            onPosted?.({ scheduled: true });
             return;
         }
 
@@ -938,7 +983,7 @@ function PostForm({
             illust_url: illustUrl || null,
             illust_is_ai: illustIsAi,
         });
-        onPosted?.();
+        onPosted?.({ scheduled: false });
     }
 
     return (
@@ -1174,6 +1219,92 @@ function PostForm({
                             <p className="mt-1 text-[10px] text-faint">
                                 空のままなら、押した時点で投稿します。
                             </p>
+
+                            {/*
+                              * 次の予定を一押しで入れる。
+                              *
+                              * ★ 何十話もまとめて予約する人がいる。
+                              *   1 話ごとに日と時刻を選び直すのは、
+                              *   同じ手を何十回も繰り返すことになる。
+                              *
+                              * ★ 押すまで欄は空のまま。
+                              *   初めから入れておくと、いま出したい人が
+                              *   気付かず予約してしまう。
+                              */}
+                            <div className="mt-2 rounded-md border border-line bg-canvas px-2.5 py-2">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setAt(
+                                            toLocalInput(
+                                                nextSlot(
+                                                    lastScheduledAt,
+                                                    work.default_publish_time,
+                                                    work.default_publish_days,
+                                                ).toISOString(),
+                                            ),
+                                        )
+                                    }
+                                    className="text-[11px] text-forest hover:underline"
+                                >
+                                    次の予定を入れる（
+                                    {formatAt(
+                                        nextSlot(
+                                            lastScheduledAt,
+                                            work.default_publish_time,
+                                            work.default_publish_days,
+                                        ).toISOString(),
+                                    )}
+                                    ）
+                                </button>
+
+                                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                    <label className="flex items-center gap-1.5 text-[10px] text-muted">
+                                        いつも出す時刻
+                                        <input
+                                            type="time"
+                                            step={300}
+                                            value={work.default_publish_time ?? ""}
+                                            onChange={(e) =>
+                                                onChangeWorkInfo?.({
+                                                    default_publish_time:
+                                                        e.target.value || null,
+                                                })
+                                            }
+                                            className="rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink"
+                                        />
+                                    </label>
+
+                                    <label className="flex items-center gap-1.5 text-[10px] text-muted">
+                                        何日ごと
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={60}
+                                            value={work.default_publish_days ?? 1}
+                                            onChange={(e) =>
+                                                onChangeWorkInfo?.({
+                                                    default_publish_days:
+                                                        Math.min(
+                                                            60,
+                                                            Math.max(
+                                                                1,
+                                                                Number(e.target.value) || 1,
+                                                            ),
+                                                        ),
+                                                })
+                                            }
+                                            className="w-14 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink"
+                                        />
+                                        日
+                                    </label>
+                                </div>
+
+                                <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
+                                    最後に予約した話の何日あとを、次の予定にするかです。
+                                    この作品にだけ効きます。
+                                </p>
+                            </div>
                         </Field>
 
                         {isScheduled && (
@@ -1600,6 +1731,53 @@ function ToggleLine({
             </button>
         </label>
     );
+}
+
+/**
+ * 次の予定の時刻を組み立てる。
+ *
+ * ★ 入力欄に初めから入れておくことはしない。
+ *
+ *   入れておくと、いま出したいだけの人が
+ *   「この話を投稿する」を押したときに、
+ *   気付かないまま予約になってしまう。
+ *   押したときだけ入る形にする。
+ *
+ * ★ 組み立て方
+ *
+ *   最後に予約した話がある   その◯日あと
+ *   まだ 1 つも無い          明日
+ *
+ *   どちらも、決めた時刻に合わせる。
+ *   出来た時刻が過ぎていれば、先へ進める。
+ */
+function nextSlot(
+    lastScheduledAt: string | null | undefined,
+    time: string | null | undefined,
+    days: number | null | undefined,
+): Date {
+    const step = Math.min(60, Math.max(1, Number(days) || 1));
+
+    const base = lastScheduledAt ? new Date(lastScheduledAt) : null;
+    const at =
+        base && !Number.isNaN(base.getTime())
+            ? new Date(base.getTime())
+            : new Date();
+
+    at.setDate(at.getDate() + (base ? step : 1));
+
+    /* 決めた時刻に合わせる。決めていなければ、その時刻のまま */
+    const parts = (time || "").split(":");
+    if (parts.length === 2) {
+        at.setHours(Number(parts[0]) || 0, Number(parts[1]) || 0, 0, 0);
+    }
+
+    /* 出来た時刻が過ぎていたら、先へ進める */
+    while (at.getTime() <= Date.now()) {
+        at.setDate(at.getDate() + step);
+    }
+
+    return at;
 }
 
 /**
