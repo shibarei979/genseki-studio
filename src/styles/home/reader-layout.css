@@ -1216,6 +1216,107 @@
     );
 }
 
+/*
+ * 頁の包み。額と本を一緒に入れ替える。
+ *
+ * ★ z-index を持たせて、板より前に置く。
+ *   板は 1、上面は 16px ぶん本に掛かる。
+ *
+ * ★ 現れ方は淡く。横に滑らせない。
+ *   本が板の上を滑ると、棚から落ちそうに見える。
+ */
+.reader-home .fs_page {
+    position: relative;
+    z-index: 2;
+    animation: fs_appear .32s ease both;
+}
+
+@keyframes fs_appear {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reader-home .fs_page {
+        animation: none;
+    }
+}
+
+/*
+ * 横に送るボタン。
+ *
+ * ★ 板の左右、本の高さの真ん中に置く。
+ *   下に並べると、板より外に飾りが増えて枠に見える。
+ *
+ * ★ 触れる大きさは 40px。指で押せる下限。
+ */
+.reader-home .fs_arrow {
+    position: absolute;
+    top: 42%;
+    z-index: 4;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-brand-border, rgba(0, 0, 0, .14));
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .92);
+    color: var(--color-brand, #1f4e6b);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(70, 45, 25, .18);
+    transition: background .15s ease, box-shadow .15s ease;
+}
+
+.reader-home .fs_arrow:hover {
+    background: #fff;
+    box-shadow: 0 3px 9px rgba(70, 45, 25, .26);
+}
+
+/* 目で押す位置を見失わないよう、輪郭を残す */
+.reader-home .fs_arrow:focus-visible {
+    outline: 2px solid var(--color-brand, #1f4e6b);
+    outline-offset: 2px;
+}
+
+.reader-home .fs_arrow--prev {
+    left: 0;
+}
+
+.reader-home .fs_arrow--next {
+    right: 0;
+}
+
+/*
+ * 狭い画面では、額が本の上に乗る。
+ * 高さの真ん中に置くと、ボタンが絵に重なる。
+ * 本の高さに合わせて、下から数える。
+ */
+@media (max-width: 899px) {
+    .reader-home .fs_arrow {
+        top: auto;
+        bottom: 96px;
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+    }
+}
+
+/*
+ * いま何枚目か。
+ * 板の下、右端に小さく置く。真ん中だと本の列と競う。
+ */
+.reader-home .fs_count {
+    margin: 14px 0 0;
+    text-align: center;
+    font-size: 11.5px;
+    letter-spacing: .12em;
+    color: var(--color-text-faint, #7d867f);
+    font-variant-numeric: tabular-nums;
+}
+
 /* 板の左右のはみ出しを、この枠の中に収める */
 .reader-home .fs_stage .book-shelf-board {
     left: 0;
@@ -1302,7 +1403,7 @@
      * 台の真ん中がどこか分からなくなった。
      * 左へ寄せるなら justify-content を flex-start に。
      */
-    .reader-home .fs_stage {
+    .reader-home .fs_page {
         display: flex;
         align-items: flex-end;
         justify-content: center;

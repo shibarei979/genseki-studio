@@ -325,12 +325,26 @@ export default async function ReaderHome() {
       })
     }
   }
+  /*
+   * 見せ場の動き。運営が管理画面で決める。
+   *
+   * 表がまだ無い、行がまだ無い、のどちらでも動くようにする。
+   * 読めなければ、これまでと同じ 3 冊・送りなしで出す。
+   */
+  const { data: fsSettingRow } = await supabase
+    .from('featured_settings')
+    .select('per_view, auto_seconds')
+    .maybeSingle()
+
+  const featuredPerView = Number(fsSettingRow?.per_view ?? 3)
+  const featuredAutoSeconds = Number(fsSettingRow?.auto_seconds ?? 0)
+
   const awards = featured.filter((f) => f.kind === 'award')
   const picked = awards.length > 0 ? awards : featured.filter((f) => f.kind === 'pick')
 
   const featuredTitle = awards.length > 0 ? '受賞作品' : '運営のおすすめ'
   const featuredLabels: Record<string, string> = {}
-  const featuredContest: Record<string, { title: string; banner: string | null }> = {}
+  const featuredContest: Record<string, { id: string; title: string; banner: string | null }> = {}
 
   for (const f of picked) {
     /*
@@ -347,6 +361,7 @@ export default async function ReaderHome() {
       const contest = contestById.get(f.contest_id)
       if (contest) {
         featuredContest[f.novel_id] = {
+          id: f.contest_id,
           title: contest.title,
           banner: contest.banner_url,
         }
@@ -676,12 +691,17 @@ export default async function ReaderHome() {
         title: novel.title || '（題名なし）',
         author: extras.authorMap[novel.author_id] || '名前のない書き手',
         label: featuredLabels[novel.id],
+        contestId: featuredContest[novel.id]?.id ?? null,
         contestTitle: featuredContest[novel.id]?.title,
         contestBanner: featuredContest[novel.id]?.banner ?? null,
       }
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
-    .slice(0, LIST_SIZE)
+    /*
+     * ★ 10 件で切らない。
+     *   横に送れるようになったので、選んだものは全部出す。
+     *   上限は読み込みの 50 件のほう。
+     */
 
   /* 短編。ひと息で読み切れるもの */
   const shortBooks = readable
@@ -1154,7 +1174,12 @@ export default async function ReaderHome() {
               *   整ったら isAdmin の囲いを外す。
               */}
             {isAdmin && featuredItems.length > 0 && (
-              <FeaturedShowcase title={featuredTitle} items={featuredItems} />
+              <FeaturedShowcase
+                title={featuredTitle}
+                items={featuredItems}
+                perView={featuredPerView}
+                autoSeconds={featuredAutoSeconds}
+              />
             )}
 
 

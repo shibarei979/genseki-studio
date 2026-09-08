@@ -73,6 +73,18 @@ export default function AdminFeaturedClient() {
     /* 選べるコンテスト。受賞のときに結び付ける */
     const [contests, setContests] = useState<{ id: string; title: string }[]>([])
 
+    /*
+     * 見せ場の動き。
+     *
+     *   perView      一度に並べる冊数
+     *   autoSeconds  ひとりでに送る間隔。0 なら送らない
+     *
+     * 表がまだ無くても画面が開くように、初めから値を入れておく。
+     */
+    const [perView, setPerView] = useState(3)
+    const [autoSeconds, setAutoSeconds] = useState(0)
+    const [savedAt, setSavedAt] = useState('')
+
     useEffect(() => {
         void load()
 
@@ -84,6 +96,18 @@ export default function AdminFeaturedClient() {
                 .limit(50)
 
             setContests((data || []) as { id: string; title: string }[])
+        })()
+
+        void (async () => {
+            const { data } = await supabase
+                .from('featured_settings')
+                .select('per_view, auto_seconds')
+                .maybeSingle()
+
+            if (data) {
+                setPerView(Number(data.per_view ?? 3))
+                setAutoSeconds(Number(data.auto_seconds ?? 0))
+            }
         })()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -206,6 +230,30 @@ export default function AdminFeaturedClient() {
         await load()
     }
 
+    /*
+     * 見せ場の動きを控える。
+     *
+     * 行は 1 つだけ。id を決め打ちにして上書きする。
+     * 増やすと、どれが効いているのか分からなくなる。
+     */
+    async function saveSettings(next: { per_view?: number; auto_seconds?: number }) {
+        const body = {
+            id: true,
+            per_view: next.per_view ?? perView,
+            auto_seconds: next.auto_seconds ?? autoSeconds,
+            updated_at: new Date().toISOString(),
+        }
+
+        const { error } = await supabase.from('featured_settings').upsert(body)
+
+        if (error) {
+            window.alert(`控えられませんでした：${error.message}`)
+            return
+        }
+
+        setSavedAt(new Date().toLocaleTimeString('ja-JP'))
+    }
+
     const awards = rows.filter((r) => r.kind === 'award')
     const picks = rows.filter((r) => r.kind === 'pick')
 
@@ -233,6 +281,86 @@ export default function AdminFeaturedClient() {
                 <br />
                 受賞作品を 1 つでも登録すると、そちらだけが出ます。
                 どちらも空のときは、枠ごと出ません。
+            </div>
+
+            {/*
+              * 見せ場の動き。
+              *
+              * ★ 何冊選んでも、板に並ぶのはここで決めた数まで。
+              *   残りは横のボタンで送る。
+              *
+              * ★ 頁の切れ目はコンテスト。
+              *   別の催しの本が同じ板に混ざると、
+              *   横に立つ額の絵と結び付かない。
+              */}
+            <div style={{
+                border:'1px solid var(--admin-border)',
+                background:'var(--admin-bg-card)',
+                borderRadius:12, padding:'14px 16px', marginBottom:20,
+            }}>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)',marginBottom:4}}>
+                    見せ場の動き
+                </div>
+                <p style={{fontSize:11.5,color:'var(--admin-text-faint)',
+                    marginBottom:12,lineHeight:1.8}}>
+                    板に一度に並ぶ冊数と、送り方を決めます。
+                    <br />
+                    頁の切れ目はコンテストです。同じ催しの中でだけ、決めた冊数ずつに割ります。
+                    佳作が 7 つ、3 冊ずつなら 3・3・1 の 3 枚になります。
+                </p>
+
+                <div style={{display:'flex',gap:18,flexWrap:'wrap',alignItems:'flex-end'}}>
+                    <label style={{fontSize:12,color:'var(--admin-text-muted)'}}>
+                        一度に並べる冊数
+                        <br />
+                        <select
+                            value={perView}
+                            onChange={(e) => {
+                                const value = Number(e.target.value)
+                                setPerView(value)
+                                void saveSettings({ per_view: value })
+                            }}
+                            style={{marginTop:6,padding:'6px 10px',fontSize:13,borderRadius:6,
+                                border:'1px solid var(--admin-border)',minWidth:110}}
+                        >
+                            {[1, 2, 3, 4, 5].map((n) => (
+                                <option key={n} value={n}>{n} 冊</option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <label style={{fontSize:12,color:'var(--admin-text-muted)'}}>
+                        ひとりでに送る
+                        <br />
+                        <select
+                            value={autoSeconds}
+                            onChange={(e) => {
+                                const value = Number(e.target.value)
+                                setAutoSeconds(value)
+                                void saveSettings({ auto_seconds: value })
+                            }}
+                            style={{marginTop:6,padding:'6px 10px',fontSize:13,borderRadius:6,
+                                border:'1px solid var(--admin-border)',minWidth:150}}
+                        >
+                            <option value={0}>送らない（押したときだけ）</option>
+                            {[4, 5, 6, 8, 10, 12, 15, 20, 30].map((n) => (
+                                <option key={n} value={n}>{n} 秒ごと</option>
+                            ))}
+                        </select>
+                    </label>
+
+                    {savedAt && (
+                        <span style={{fontSize:11.5,color:'var(--admin-text-faint)',paddingBottom:8}}>
+                            {savedAt} に控えました
+                        </span>
+                    )}
+                </div>
+
+                <p style={{fontSize:11.5,color:'var(--admin-text-faint)',
+                    marginTop:12,lineHeight:1.8}}>
+                    読む人が本に手を触れているあいだは、ひとりでに送りません。
+                    動きを減らす設定の機械でも送らず、横のボタンだけになります。
+                </p>
             </div>
 
             {/* 作品を探して足す */}

@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useMemo, useRef, useState } from 'react'
+
 import Link from 'next/link'
 
 import { COVERS, hashOf } from '@/components/home/home-work-table'
@@ -60,8 +62,14 @@ const SPINE = 8
 const EDGE = 6
 const TITLE_SIZE = 14
 
-/** 一度に並べる冊数 */
-const SHOW = 3
+/*
+ * 一度に並べる冊数の、上と下。
+ *
+ * 運営が管理画面で決める。ここはその範囲だけ。
+ * 6 冊以上は板からはみ出す。0 冊は何も出ない。
+ */
+const PER_VIEW_MIN = 1
+const PER_VIEW_MAX = 5
 
 /** 帯の高さ。表紙の下から 4 分の 1 ほど */
 const OBI = 46
@@ -98,6 +106,8 @@ export interface FeaturedItem {
     author: string
     /** 賞の名前。受賞のときだけ入る */
     label?: string
+    /** どのコンテストの賞か。頁を分ける区切りに使う */
+    contestId?: string | null
     /** コンテストの名前。受賞のときだけ入る */
     contestTitle?: string
     /** コンテストの帯の絵。本の横に出す */
@@ -107,19 +117,111 @@ export interface FeaturedItem {
 export default function FeaturedShowcase({
     title,
     items,
+    perView = 3,
+    autoSeconds = 0,
 }: {
     title: string
     items: FeaturedItem[]
+    /** 一度に並べる冊数。運営が管理画面で決める */
+    perView?: number
+    /** 何秒でひとりでに送るか。0 なら送らない */
+    autoSeconds?: number
 }) {
-    if (items.length === 0) return null
+    /*
+     * 頁の作り方。
+     *
+     * ★ まずコンテストで区切る。
+     *
+     *   同じ板に別の催しの本が混ざると、
+     *   額の絵とその本が結び付かない。
+     *   区切りは並び順のとおり。運営が決めた順を崩さない。
+     *
+     * ★ 次に、決められた冊数ずつに割る。
+     *
+     *   割り切れなくてよい。
+     *   佳作が 7 つ、3 冊ずつなら 3・3・1 になる。
+     *   最後の頁が 1 冊でも、それが本当の数なので出す。
+     */
+    const pages = useMemo(() => {
+        const size = Math.min(PER_VIEW_MAX, Math.max(PER_VIEW_MIN, Math.round(perView)))
 
-    const shown = items.slice(0, SHOW)
+        /* まずコンテストごとのまとまりにする */
+        const groups: FeaturedItem[][] = []
+        let current: FeaturedItem[] = []
+        let currentKey: string | null = null
+
+        for (const item of items) {
+            const key = item.contestId ?? ''
+            if (currentKey !== null && key !== currentKey) {
+                groups.push(current)
+                current = []
+            }
+            currentKey = key
+            current.push(item)
+        }
+        if (current.length > 0) groups.push(current)
+
+        /* まとまりごとに、冊数で割る */
+        const out: FeaturedItem[][] = []
+        for (const group of groups) {
+            for (let at = 0; at < group.length; at += size) {
+                out.push(group.slice(at, at + size))
+            }
+        }
+        return out
+    }, [items, perView])
+
+    const [at, setAt] = useState(0)
+
+    /*
+     * 手が触れているあいだは、ひとりでに送らない。
+     * 読もうとしている本が、目の前で消えると腹が立つ。
+     */
+    const [held, setHeld] = useState(false)
+
+    /* 頁が減ったとき、行き先が無くならないようにする */
+    const count = pages.length
+    const safeAt = count > 0 ? at % count : 0
+    const lastCount = useRef(count)
+    useEffect(() => {
+        if (lastCount.current !== count) {
+            lastCount.current = count
+            setAt(0)
+        }
+    }, [count])
+
+    /*
+     * ひとりでに送る。
+     *
+     * ★ 動きを減らす設定の機械では送らない。
+     * ★ 頁が 1 つしかないときも送らない。
+     */
+    useEffect(() => {
+        if (count < 2 || autoSeconds <= 0 || held) return
+        if (typeof window === 'undefined') return
+
+        const quiet = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+        if (quiet) return
+
+        const timer = window.setInterval(() => {
+            setAt((now) => (now + 1) % count)
+        }, autoSeconds * 1000)
+
+        return () => window.clearInterval(timer)
+    }, [count, autoSeconds, held])
+
+    if (items.length === 0 || count === 0) return null
+
+    const shown = pages[safeAt] ?? []
 
     /*
      * 受賞か、ただのおすすめか。
      * 賞の名前が 1 つでもあれば受賞として飾る。
+     *
+     * ★ 頁ごとではなく、全体で決める。
+     *   頁をめくるたびに額と帯が消えたら、別の枠に見える。
      */
-    const isAward = shown.some((one) => one.label)
+    const isAward = items.some((one) => one.label)
 
     /*
      * 吹き出しの言葉。おすすめのときだけ出す。
@@ -129,11 +231,14 @@ export default function FeaturedShowcase({
 
     /*
      * コンテストの絵と名前。
-     * 3冊のうち、最初に見つかったものを使う。
-     * 冊ごとに違う催しの絵を並べると、目が散る。
+     * いま出ている頁のものを使う。頁をめくれば、額の絵も変わる。
      */
     const banner = shown.find((one) => one.contestBanner)?.contestBanner || null
     const contestTitle = shown.find((one) => one.contestTitle)?.contestTitle || ''
+
+    function step(direction: -1 | 1) {
+        setAt((now) => (now + direction + count) % count)
+    }
 
     return (
         <div className={isAward ? 'fs fs--award' : 'fs'}>
@@ -141,7 +246,13 @@ export default function FeaturedShowcase({
                 <span className="fs_title">{title}</span>
             </div>
 
-            <div className="fs_stage book-shelf-area">
+            <div
+                className="fs_stage book-shelf-area"
+                onMouseEnter={() => setHeld(true)}
+                onMouseLeave={() => setHeld(false)}
+                onFocusCapture={() => setHeld(true)}
+                onBlurCapture={() => setHeld(false)}
+            >
                 {/*
                   * ★ コンテストの絵を、額に入れて板に立てる。
                   *
@@ -151,6 +262,12 @@ export default function FeaturedShowcase({
                   *
                   *   絵が無い（おすすめ）ときは、本だけ並べる。
                   */}
+                {/*
+                  * ★ 頁が変わるたび、包みごと作り直す。
+                  *   key を変えると、CSS の淡く現れる動きがもう一度走る。
+                  *   額と本が同時に入れ替わるので、頁が変わったと分かる。
+                  */}
+                <div className="fs_page" key={safeAt}>
                 {banner && (
                     <div className="fs_contest">
                         <div className="fs_frame">
@@ -304,6 +421,34 @@ export default function FeaturedShowcase({
                       */}
                     {!isAward && <span className="fs_bubble">{bubble}</span>}
                 </div>
+                </div>
+
+                {/*
+                  * 横に送るボタン。
+                  *
+                  * ★ 頁が 1 つしかないときは出さない。
+                  *   押しても何も起きないボタンは、置かないほうがよい。
+                  */}
+                {count > 1 && (
+                    <>
+                        <button
+                            type="button"
+                            className="fs_arrow fs_arrow--prev"
+                            onClick={() => step(-1)}
+                            aria-label="前を見る"
+                        >
+                            <span aria-hidden="true">‹</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="fs_arrow fs_arrow--next"
+                            onClick={() => step(1)}
+                            aria-label="次を見る"
+                        >
+                            <span aria-hidden="true">›</span>
+                        </button>
+                    </>
+                )}
 
                 {/*
                   * 板。
@@ -315,6 +460,19 @@ export default function FeaturedShowcase({
                   */}
                 <div className="book-shelf-board" aria-hidden="true" />
             </div>
+
+            {/*
+              * いま何枚目か。
+              *
+              * ★ 丸を並べる形にはしない。
+              *   賞が 20 も 30 もあると、丸で埋まる。
+              *   数字なら、いくつあっても幅が変わらない。
+              */}
+            {count > 1 && (
+                <p className="fs_count">
+                    {safeAt + 1} / {count}
+                </p>
+            )}
         </div>
     )
 }
