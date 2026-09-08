@@ -864,12 +864,23 @@ export const supabaseRepository: Repository = {
          *   下書きのときだけ引き上げればよい。
          */
         if (patch.is_published === true && data?.novel_id) {
+            /*
+             * ★ 題名の無い作品は、公開にしない。
+             *
+             *   題名なしのまま並ぶと、読者からは中身が分からない。
+             *   実際、題名の無い作品が 5 件 公開に出ていた。
+             *
+             *   話は投稿できる。作品が下書きのまま残るだけなので、
+             *   題名を付ければ、そのとき公開になる。
+             */
             await db()
                 .from("novels")
                 .update({ published: true, visibility: "public" })
                 .eq("id", data.novel_id)
                 .eq("published", false)
-                .eq("visibility", "draft");
+                .eq("visibility", "draft")
+                .not("title", "is", null)
+                .neq("title", "");
 
             /* 限定公開のままの作品は、印だけ立てる */
             await db()

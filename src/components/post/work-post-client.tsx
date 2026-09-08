@@ -390,6 +390,27 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                         </div>
                     )}
 
+                    {/*
+                      * ★ 題名が無いと、作品は公開にならない。
+                      *
+                      *   話は投稿できるが、作品が下書きのまま残り、
+                      *   誰にも読まれない。
+                      *   投稿してから気づくと、その間ずっと届かない。
+                      */}
+                    {!work.title?.trim() && (
+                        <div className="mt-4 rounded-lg border border-[var(--color-danger)] bg-[var(--color-danger-tint)] px-4 py-3">
+                            <p className="text-[13px] font-medium text-[var(--color-danger)]">
+                                題名がありません
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed text-ink">
+                                題名を付けるまで、この作品は公開されません。
+                                話を投稿しても、読者には出ません。
+                                <br />
+                                作品の設定から、題名を付けてください。
+                            </p>
+                        </div>
+                    )}
+
                     <div className="mt-4 rounded-lg border border-line bg-surface">
                         <div className="border-b border-line px-4 py-4">
                             <h1 className="truncate text-[15px] font-medium text-ink">
