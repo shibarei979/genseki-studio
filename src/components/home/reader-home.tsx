@@ -295,21 +295,63 @@ export default async function ReaderHome() {
    */
   const { data: featuredRows } = await supabase
     .from('featured_novels')
-    .select('novel_id, kind, label, sort_order')
+    .select('novel_id, kind, label, sort_order, contest_id, prize')
     .eq('is_visible', true)
     .order('sort_order', { ascending: true })
     .limit(50)
 
   const featured = (featuredRows || []) as {
     novel_id: string; kind: string; label: string; sort_order: number
+    contest_id?: string | null; prize?: string | null
   }[]
+
+  /*
+   * コンテストの名前と帯の絵。
+   * 本の横に出すのに使う。賞の名前だけでは、どの催しか伝わらない。
+   */
+  const contestIds = [...new Set(featured.map((f) => f.contest_id).filter(Boolean))] as string[]
+  const contestById = new Map<string, { title: string; banner_url: string | null }>()
+
+  if (contestIds.length > 0) {
+    const { data: contestRows } = await supabase
+      .from('contests')
+      .select('id, title, banner_url')
+      .in('id', contestIds)
+
+    for (const row of contestRows || []) {
+      contestById.set(row.id as string, {
+        title: (row.title as string) || '',
+        banner_url: (row.banner_url as string) || null,
+      })
+    }
+  }
   const awards = featured.filter((f) => f.kind === 'award')
   const picked = awards.length > 0 ? awards : featured.filter((f) => f.kind === 'pick')
 
   const featuredTitle = awards.length > 0 ? '受賞作品' : '運営のおすすめ'
   const featuredLabels: Record<string, string> = {}
+  const featuredContest: Record<string, { title: string; banner: string | null }> = {}
+
   for (const f of picked) {
-    if (f.label.trim()) featuredLabels[f.novel_id] = f.label.trim()
+    /*
+     * 札に出す文。
+     *
+     * 賞の種類（大賞など）があれば、それを出す。
+     * 無ければ、これまでどおり自由に書いた文。
+     */
+    const prize = (f.prize || '').trim()
+    if (prize) featuredLabels[f.novel_id] = prize
+    else if (f.label.trim()) featuredLabels[f.novel_id] = f.label.trim()
+
+    if (f.contest_id) {
+      const contest = contestById.get(f.contest_id)
+      if (contest) {
+        featuredContest[f.novel_id] = {
+          title: contest.title,
+          banner: contest.banner_url,
+        }
+      }
+    }
   }
 
   /*
@@ -634,6 +676,8 @@ export default async function ReaderHome() {
         title: novel.title || '（題名なし）',
         author: extras.authorMap[novel.author_id] || '名前のない書き手',
         label: featuredLabels[novel.id],
+        contestTitle: featuredContest[novel.id]?.title,
+        contestBanner: featuredContest[novel.id]?.banner ?? null,
       }
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
@@ -1100,7 +1144,16 @@ export default async function ReaderHome() {
               *   見せ場が自分で枠と見出しを持っているので、
               *   入れると枠が二重になる。
               */}
-            {featuredItems.length > 0 && (
+            {/*
+              * ★ いまは運営だけに見せる。
+              *
+              *   受賞の飾りは、まだ形を決めている途中。
+              *   読者に半端な状態で見せるより、
+              *   整うまで隠しておく。
+              *
+              *   整ったら isAdmin の囲いを外す。
+              */}
+            {isAdmin && featuredItems.length > 0 && (
               <FeaturedShowcase title={featuredTitle} items={featuredItems} />
             )}
 

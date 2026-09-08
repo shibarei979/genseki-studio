@@ -44,6 +44,10 @@ export interface FeaturedItem {
     author: string
     /** 賞の名前。受賞のときだけ入る */
     label?: string
+    /** コンテストの名前。受賞のときだけ入る */
+    contestTitle?: string
+    /** コンテストの帯の絵。本の横に出す */
+    contestBanner?: string | null
 }
 
 export default function FeaturedShowcase({
@@ -66,6 +70,14 @@ export default function FeaturedShowcase({
      */
     const bubble = shown.find((one) => one.label)?.label || '今週のおすすめ作品'
 
+    /*
+     * コンテストの絵と名前。
+     * 3冊のうち、最初に見つかったものを使う。
+     * 冊ごとに違う催しの絵を並べると、目が散る。
+     */
+    const banner = shown.find((one) => one.contestBanner)?.contestBanner || null
+    const contestTitle = shown.find((one) => one.contestTitle)?.contestTitle || ''
+
     return (
         <div className="fs">
             <div className="fs_head">
@@ -73,6 +85,25 @@ export default function FeaturedShowcase({
             </div>
 
             <div className="fs_stage book-shelf-area">
+                {/*
+                  * ★ コンテストの絵を、本の横に置く。
+                  *
+                  *   賞の名前だけだと、どの催しの賞か伝わらない。
+                  *   帯の絵があれば、見ただけで分かる。
+                  *
+                  *   絵が無い（おすすめ）ときは、本だけ並べる。
+                  */}
+                {banner && (
+                    <div className="fs_contest">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={banner}
+                            alt={contestTitle || 'コンテスト'}
+                            className="fs_contest-img"
+                        />
+                    </div>
+                )}
+
                 <div className="fs_row">
                     {shown.map((item) => {
                         const cover = COVERS[hashOf(item.title || item.id) % COVERS.length]

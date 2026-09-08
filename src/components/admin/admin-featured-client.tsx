@@ -29,10 +29,32 @@ interface Row {
     label: string
     sort_order: number
     is_visible: boolean
+    /** どのコンテストの賞か */
+    contest_id?: string | null
+    /** 何の賞か。大賞・銀賞 など */
+    prize?: string | null
     /* 作品の題名。別に引いて添える */
     title?: string
     author?: string
 }
+
+/*
+ * 賞の種類。
+ *
+ * ★ 決まった中から選ばせる。
+ *   自由に書くと「大賞」「大賞受賞」「【大賞】」が混ざり、
+ *   並べたときに揃わない。
+ */
+const PRIZES = [
+    '大賞',
+    '金賞',
+    '銀賞',
+    '銅賞',
+    '優秀賞',
+    '審査員特別賞',
+    '読者賞',
+    '入選',
+] as const
 
 export default function AdminFeaturedClient() {
     const supabase = createClient()
@@ -45,8 +67,21 @@ export default function AdminFeaturedClient() {
     const [found, setFound] = useState<{ id: string; title: string }[]>([])
     const [searching, setSearching] = useState(false)
 
+    /* 選べるコンテスト。受賞のときに結び付ける */
+    const [contests, setContests] = useState<{ id: string; title: string }[]>([])
+
     useEffect(() => {
         void load()
+
+        void (async () => {
+            const { data } = await supabase
+                .from('contests')
+                .select('id, title')
+                .order('created_at', { ascending: false })
+                .limit(50)
+
+            setContests((data || []) as { id: string; title: string }[])
+        })()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -123,6 +158,23 @@ export default function AdminFeaturedClient() {
             .eq('id', id)
 
         if (error) window.alert(`保存できませんでした：${error.message}`)
+    }
+
+    /** どのコンテストの、何の賞かを決める */
+    async function saveAward(
+        id: string,
+        patch: { contest_id?: string | null; prize?: string | null },
+    ) {
+        const { error } = await supabase
+            .from('featured_novels')
+            .update({ ...patch, updated_at: new Date().toISOString() })
+            .eq('id', id)
+
+        if (error) {
+            window.alert(`保存できませんでした：${error.message}`)
+            return
+        }
+        await load()
     }
 
     async function move(id: string, direction: -1 | 1) {
@@ -236,6 +288,9 @@ export default function AdminFeaturedClient() {
                         rows={awards}
                         needLabel
                         onLabel={saveLabel}
+                        contests={contests}
+                        prizes={PRIZES}
+                        onAward={saveAward}
                         onMove={move}
                         onRemove={remove}
                     />
@@ -244,6 +299,9 @@ export default function AdminFeaturedClient() {
                         note="受賞作品が 1 つも無いときに、ホームへ出ます。"
                         rows={picks}
                         onLabel={saveLabel}
+                        contests={contests}
+                        prizes={PRIZES}
+                        onAward={saveAward}
                         onMove={move}
                         onRemove={remove}
                     />
@@ -256,11 +314,15 @@ export default function AdminFeaturedClient() {
 
 function Section({
     title, note, rows, needLabel, onLabel, onMove, onRemove,
+    contests = [], prizes = [], onAward,
 }: {
     title: string
     note: string
     rows: Row[]
     needLabel?: boolean
+    contests?: { id: string; title: string }[]
+    prizes?: readonly string[]
+    onAward?: (id: string, patch: { contest_id?: string | null; prize?: string | null }) => Promise<void>
     onLabel: (id: string, label: string) => Promise<void>
     onMove: (id: string, direction: -1 | 1) => Promise<void>
     onRemove: (id: string) => Promise<void>
@@ -296,13 +358,49 @@ function Section({
                                     {row.title}
                                 </div>
                                 {needLabel && (
-                                    <input
-                                        defaultValue={row.label}
-                                        onBlur={(e) => void onLabel(row.id, e.target.value)}
-                                        placeholder="賞の名前（例：第一回プレリリースコンテスト 大賞）"
-                                        style={{marginTop:6,width:'100%',padding:'5px 9px',fontSize:12,
-                                            borderRadius:6,border:'1px solid var(--admin-border)'}}
-                                    />
+                                    <div style={{marginTop:6,display:'flex',gap:6,flexWrap:'wrap'}}>
+                                        {/*
+                                          * どのコンテストの賞か。
+                                          * 選ぶと、本の横にその帯の絵が出る。
+                                          */}
+                                        <select
+                                            defaultValue={row.contest_id ?? ''}
+                                            onChange={(e) => void onAward?.(row.id, {
+                                                contest_id: e.target.value || null,
+                                            })}
+                                            style={{padding:'5px 9px',fontSize:12,borderRadius:6,
+                                                border:'1px solid var(--admin-border)',minWidth:180}}
+                                        >
+                                            <option value="">コンテストを選ぶ</option>
+                                            {contests.map((c) => (
+                                                <option key={c.id} value={c.id}>{c.title}</option>
+                                            ))}
+                                        </select>
+
+                                        {/* 何の賞か。決まった中から選ぶ */}
+                                        <select
+                                            defaultValue={row.prize ?? ''}
+                                            onChange={(e) => void onAward?.(row.id, {
+                                                prize: e.target.value || null,
+                                            })}
+                                            style={{padding:'5px 9px',fontSize:12,borderRadius:6,
+                                                border:'1px solid var(--admin-border)',minWidth:130}}
+                                        >
+                                            <option value="">賞を選ぶ</option>
+                                            {prizes.map((name) => (
+                                                <option key={name} value={name}>{name}</option>
+                                            ))}
+                                        </select>
+
+                                        {/* どうしても言葉で書きたいとき */}
+                                        <input
+                                            defaultValue={row.label}
+                                            onBlur={(e) => void onLabel(row.id, e.target.value)}
+                                            placeholder="自由に書く（選んだ賞より優先されません）"
+                                            style={{flex:1,minWidth:180,padding:'5px 9px',fontSize:12,
+                                                borderRadius:6,border:'1px solid var(--admin-border)'}}
+                                        />
+                                    </div>
                                 )}
                             </div>
 

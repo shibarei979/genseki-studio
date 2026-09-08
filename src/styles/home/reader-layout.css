@@ -1155,6 +1155,47 @@
     right: 0;
 }
 
+/*
+ * コンテストの帯。本の横に置く。
+ *
+ * ★ 板の上に乗せない。本の並びの左に添える。
+ *   賞の名前だけでは、どの催しか伝わらない。
+ */
+.reader-home .fs_contest {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    margin: 0 0 14px;
+}
+
+.reader-home .fs_contest-img {
+    width: min(320px, 72%);
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--color-brand-border, rgba(0, 0, 0, .12));
+    box-shadow: 0 2px 8px rgba(70, 45, 25, .14);
+}
+
+/* 広い画面では、本の左に並べる */
+@media (min-width: 900px) {
+    .reader-home .fs_stage {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 26px;
+    }
+
+    .reader-home .fs_contest {
+        margin: 0 0 10px;
+        flex-shrink: 0;
+    }
+
+    .reader-home .fs_contest-img {
+        width: 240px;
+    }
+}
+
 /* 3 冊を横に並べる。狭い画面では折り返す */
 .reader-home .fs_row {
     position: relative;
