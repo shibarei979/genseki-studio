@@ -1169,15 +1169,15 @@ export default async function ReaderHome() {
               *   入れると枠が二重になる。
               */}
             {/*
-              * ★ いまは運営だけに見せる。
+              * ★ 誰にでも見せる。
               *
-              *   受賞の飾りは、まだ形を決めている途中。
-              *   読者に半端な状態で見せるより、
-              *   整うまで隠しておく。
+              *   形が決まるまで運営だけに見せていたが、
+              *   額・帯・送りが揃ったので囲いを外した。
               *
-              *   整ったら isAdmin の囲いを外す。
+              *   選んだ作品が 1 つも無いときは、枠ごと出ない。
+              *   空の板だけが残ると、置き忘れに見える。
               */}
-            {isAdmin && featuredItems.length > 0 && (
+            {featuredItems.length > 0 && (
               <FeaturedShowcase
                 title={featuredTitle}
                 items={featuredItems}
