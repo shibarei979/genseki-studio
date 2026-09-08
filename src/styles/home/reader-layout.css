@@ -1349,86 +1349,45 @@
 }
 
 /*
- * 本の奥行き。
+ * 本 1 冊。
  *
- * 執筆向けホームの本は棚に横並びで、隣と重なって奥行きが出る。
- * ここでも 3 冊並ぶが、間が空くので自分で奥行きを作る。
+ * ★ 形は執筆向けホームの棚の本と、そっくり同じにする。
  *
- *   1  少し回して、斜めから見た形にする
- *   2  背表紙を左に立てる
- *   3  天（上から見える紙の断面）を出す
+ *   一度、斜めに回して背表紙と天の面を立ててみた。
+ *   飾り台らしくはなったが、あちらの本は平らなので、
+ *   同じサイトの本に見えなくなった。
+ *
+ *   あちらに合わせたところ
+ *     回さない（斜めにしない）
+ *     背表紙の面も天の面も立てない
+ *     厚みは、表紙の右に覗く小口だけで表す
+ *     影は右下へ 3px。触れると 4px 持ち上がるだけ
+ *
+ *   違うのは大きさだけ。128×166 を 1.16 倍にしてある。
  */
 .reader-home .fs_book {
     display: block;
     height: 100%;
     text-decoration: none;
-    filter: drop-shadow(4px 4px 3px rgba(40, 35, 25, .16));
-    transition: transform .25s ease;
-
-    transform-style: preserve-3d;
-    /* 回しすぎると題名が読めない。11 度まで */
-    transform: perspective(700px) rotateY(-11deg);
+    /* 左上からの光に合わせて右下へ落とす。棚の本と同じ数字 */
+    filter: drop-shadow(3px 3px 2px rgba(40, 35, 25, .12));
+    transition: transform .2s ease;
 }
 
 .reader-home .fs_book:hover {
-    /* 正面へ向けて、持ち上げる */
-    transform: perspective(700px) rotateY(-4deg) translateY(-5px);
+    /* 棚の本と同じ持ち上がり方。回さない */
+    transform: translateY(-4px);
 }
 
-/* 動きを減らす設定の人には、傾きだけ残して動かさない */
+/* 動きを減らす設定の人には、持ち上げない */
 @media (prefers-reduced-motion: reduce) {
     .reader-home .fs_book {
         transition: none;
     }
 
     .reader-home .fs_book:hover {
-        transform: perspective(700px) rotateY(-11deg);
+        transform: none;
     }
-}
-
-/*
- * 背表紙。本の左に、厚みぶんの面を立てる。
- * これが無いと、回しても板が斜めになっただけに見える。
- */
-.reader-home .fs_book::before {
-    content: "";
-    position: absolute;
-    top: 2px;
-    bottom: 2px;
-    left: 0;
-    width: 16px;
-    transform: rotateY(-90deg);
-    transform-origin: left center;
-    background: linear-gradient(90deg, #5f5a51 0%, #8b857a 55%, #4d4941 100%);
-    border-radius: 2px 0 0 2px;
-}
-
-/*
- * 受賞の本は表紙が濃い。
- *
- * ★ 背は表紙より明るくする。
- *   濃い色どうしを合わせると境目が消え、
- *   本ではなく厚い板に見える。
- */
-.reader-home .fs--award .fs_book::before {
-    background: linear-gradient(90deg, #4a4438 0%, #7c7466 55%, #3a352c 100%);
-}
-
-/*
- * 天。上から見える紙の断面。
- * これが無いと、立っているのか寝ているのか分からない。
- */
-.reader-home .fs_book::after {
-    content: "";
-    position: absolute;
-    left: 1px;
-    right: 7px;
-    top: 0;
-    height: 16px;
-    transform: rotateX(74deg);
-    transform-origin: center top;
-    background: repeating-linear-gradient(90deg, #e7dfcd 0 1px, #f8f4ec 1px 2px);
-    border-radius: 2px 2px 0 0;
 }
 
 /*
