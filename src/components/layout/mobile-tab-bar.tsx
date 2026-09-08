@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { getRepository } from '@/lib/repository'
 
@@ -92,6 +92,48 @@ export default function MobileTabBar() {
         })()
     }, [])
 
+    /*
+     * 帯の高さを測って、中身の下の余白に渡す。
+     *
+     * ★ 帯の高さは決め打ちにできない。
+     *
+     *   1 つぶんの高さは min-height（52px）で、上限ではない。
+     *   端末の文字を大きくしている人や、
+     *   名前が折り返した端末では、帯はもっと高くなる。
+     *
+     *   余白のほうは 58px で固定してあったので、
+     *   その差だけ頁のいちばん下が帯に隠れていた。
+     *   目次の長い作品で下まで送ると、そこに押し具がある。
+     *
+     * ★ 測った値は --mtb-h に入れ、CSS の側で使う。
+     */
+    const barRef = useRef<HTMLElement | null>(null)
+
+    useEffect(() => {
+        const bar = barRef.current
+        if (!bar) return
+
+        function tell() {
+            const height = bar?.offsetHeight ?? 0
+            if (height > 0) {
+                document.documentElement.style.setProperty('--mtb-h', `${height}px`)
+            }
+        }
+
+        tell()
+
+        /* 文字の大きさや向きが変わったら、測り直す */
+        const watcher =
+            typeof ResizeObserver !== 'undefined' ? new ResizeObserver(tell) : null
+        watcher?.observe(bar)
+        window.addEventListener('resize', tell)
+
+        return () => {
+            watcher?.disconnect()
+            window.removeEventListener('resize', tell)
+        }
+    })
+
     const TABS = isReader ? READER_TABS : WRITER_TABS
 
     if (HIDE_ON.some((path) => pathname.startsWith(path))) return null
@@ -101,7 +143,7 @@ export default function MobileTabBar() {
     if (/\/read$/.test(pathname)) return null
 
     return (
-        <nav className="mtb" aria-label="主な行き先">
+        <nav ref={barRef} className="mtb" aria-label="主な行き先">
             {TABS.map((tab) => {
                 /*
                  * いま居る所を濃くする。

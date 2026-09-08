@@ -108,9 +108,23 @@
      *
      * これが無いと、頁のいちばん下が帯に隠れて読めない。
      * フッターの著作権表示などが特に隠れやすい。
+     *
+     * ★ 58px の決め打ちをやめた。
+     *
+     *   1 つぶんの高さは min-height で、上限ではない。
+     *   端末の文字を大きくしていると帯はもっと高くなり、
+     *   余白のほうは 58px のままだった。
+     *   その差だけ、頁のいちばん下が帯に隠れていた。
+     *
+     *   いまは帯そのものを測った値（--mtb-h）を使う。
+     *   測れないあいだの備えに 58px を残す。
+     *
+     * ★ さらに 16px 足す。
+     *   ちょうどの高さだと、押し具が帯にぴったり接して
+     *   指が帯のほうに当たる。
      */
     body {
-        padding-bottom: calc(58px + env(safe-area-inset-bottom, 0));
+        padding-bottom: calc(var(--mtb-h, 58px) + 16px);
     }
 }
 
@@ -131,7 +145,7 @@
     }
 
     body {
-        padding-bottom: calc(48px + env(safe-area-inset-bottom, 0));
+        padding-bottom: calc(var(--mtb-h, 48px) + 12px);
     }
 }
 
