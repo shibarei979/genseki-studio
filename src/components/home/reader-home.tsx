@@ -1138,8 +1138,13 @@ export default async function ReaderHome() {
               * 上から「まだ知らない作品」、下へ「自分に近いもの」。
               * 来た人がまず出会うのは、知らない一冊であってほしい。
               *
-              *   おすすめ → 新着 → 最新話 → 受賞 → バナー
+              *   おすすめ → 受賞 → 新着 → 最新話 → バナー
               *   → 続きから読む → フォロー中 → 短編
+              *
+              * ★ 受賞は上から 2 つ目。
+              *   下にあると、そこまで指を送らない人には無いのと同じ。
+              *   いちばん上には置かない。
+              *   来た人がまず出会うのは、賞ではなく知らない一冊であってほしい。
               */}
 
             <ReaderWorkList
@@ -1147,6 +1152,24 @@ export default async function ReaderHome() {
               books={recommendBooks}
               moreHref="/search"
             />
+
+            {/*
+              * 受賞作品の見せ場。
+              *
+              * ★ rwl の枠に入れない。
+              *   見せ場が自分で枠と見出しを持っているので、
+              *   入れると枠が二重になる。
+              *
+              * ★ 選んだ作品が 1 つも無いときは、枠ごと出ない。
+              *   空の板だけが残ると、置き忘れに見える。
+              */}
+            {featuredItems.length > 0 && (
+              <FeaturedShowcase
+                title={featuredTitle}
+                items={featuredItems}
+                autoSeconds={featuredAutoSeconds}
+              />
+            )}
 
             {/* その時の新着。点数では選ばず、新しい順に出す */}
             <ReaderWorkList
@@ -1160,31 +1183,6 @@ export default async function ReaderHome() {
               books={updatedBooks}
               moreHref="/search?sort=updated"
             />
-
-            {/*
-              * 受賞作品の見せ場。
-              *
-              * ★ rwl の枠に入れない。
-              *   見せ場が自分で枠と見出しを持っているので、
-              *   入れると枠が二重になる。
-              */}
-            {/*
-              * ★ 誰にでも見せる。
-              *
-              *   形が決まるまで運営だけに見せていたが、
-              *   額・帯・送りが揃ったので囲いを外した。
-              *
-              *   選んだ作品が 1 つも無いときは、枠ごと出ない。
-              *   空の板だけが残ると、置き忘れに見える。
-              */}
-            {featuredItems.length > 0 && (
-              <FeaturedShowcase
-                title={featuredTitle}
-                items={featuredItems}
-                autoSeconds={featuredAutoSeconds}
-              />
-            )}
-
 
 
             {/*
