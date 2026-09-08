@@ -9,8 +9,21 @@ import { COVERS, hashOf } from '@/components/home/home-work-table'
  * 原石航路 Studio
  * FeaturedShowcase — 受賞作品・運営のおすすめの見せ場
  *
- * 板の上に本を 3 冊、横に並べる。
- * 吹き出しは全体に 1 つだけ、見出しの横に出す。
+ * 板の上に、催しの絵と本を並べる。
+ *
+ * ★ 受賞のときは、本屋の受賞台を真似る。
+ *
+ *     絵は額に入れて立てる
+ *     本は賞の帯を巻く（本屋で見る、あの紙の帯）
+ *     表紙は濃い色に金の罫
+ *
+ *   賞の名を吹き出しで横に置くより、
+ *   帯にしたほうが「受賞した本」に見える。
+ *   日本の本屋で、賞はいつも帯に刷ってある。
+ *
+ * ★ おすすめのときは、飾らない。
+ *   金や帯を付けると、賞との区別が消える。
+ *   表紙はいつもの色、賞の代わりに吹き出しを 1 つ。
  *
  * ★ 本の作りは、執筆向けホームの作品一覧をそのまま持ってきた。
  *
@@ -37,6 +50,24 @@ const TITLE_SIZE = 12
 /** 一度に並べる冊数 */
 const SHOW = 3
 
+/** 帯の高さ。表紙の下から 4 分の 1 ほど */
+const OBI = 42
+
+/*
+ * 受賞の表紙。
+ *
+ * いつもの表紙は淡い色で、机の上の原稿に見える。
+ * 賞を取った本は装丁が変わるので、濃い色に金の文字を置く。
+ *
+ * 3 色あるのは、3 冊並んだときに同じ本が並んで見えないため。
+ * 帯が臙脂なので、赤系は入れない。
+ */
+const AWARD_COVERS = [
+    { base: '#1c3b55', ink: '#f2e4bc' }, // 紺
+    { base: '#2f4536', ink: '#eee2b6' }, // 深緑
+    { base: '#3b3730', ink: '#f0e0b4' }, // 墨
+]
+
 export interface FeaturedItem {
     id: string
     href: string
@@ -62,13 +93,16 @@ export default function FeaturedShowcase({
     const shown = items.slice(0, SHOW)
 
     /*
-     * 吹き出しの言葉。
-     *
-     * 賞の名前が 1 つでもあれば、それを出す。
-     * 無ければ「今週のおすすめ作品」。
-     * 3 冊それぞれに付けると、同じ札が 3 つ並んで煩い。
+     * 受賞か、ただのおすすめか。
+     * 賞の名前が 1 つでもあれば受賞として飾る。
      */
-    const bubble = shown.find((one) => one.label)?.label || '今週のおすすめ作品'
+    const isAward = shown.some((one) => one.label)
+
+    /*
+     * 吹き出しの言葉。おすすめのときだけ出す。
+     * 受賞のときは、賞の名前が帯に載るので要らない。
+     */
+    const bubble = '今週のおすすめ作品'
 
     /*
      * コンテストの絵と名前。
@@ -79,34 +113,43 @@ export default function FeaturedShowcase({
     const contestTitle = shown.find((one) => one.contestTitle)?.contestTitle || ''
 
     return (
-        <div className="fs">
+        <div className={isAward ? 'fs fs--award' : 'fs'}>
             <div className="fs_head">
                 <span className="fs_title">{title}</span>
             </div>
 
             <div className="fs_stage book-shelf-area">
                 {/*
-                  * ★ コンテストの絵を、本の横に置く。
+                  * ★ コンテストの絵を、額に入れて板に立てる。
                   *
                   *   賞の名前だけだと、どの催しの賞か伝わらない。
-                  *   帯の絵があれば、見ただけで分かる。
+                  *   絵をそのまま置くと、板の上に紙が落ちているように見える。
+                  *   額に入れると、飾ってあることが分かる。
                   *
                   *   絵が無い（おすすめ）ときは、本だけ並べる。
                   */}
                 {banner && (
                     <div className="fs_contest">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src={banner}
-                            alt={contestTitle || 'コンテスト'}
-                            className="fs_contest-img"
-                        />
+                        <div className="fs_frame">
+                            <div className="fs_mat">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={banner}
+                                    alt={contestTitle || 'コンテスト'}
+                                    className="fs_contest-img"
+                                />
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 <div className="fs_row">
                     {shown.map((item) => {
-                        const cover = COVERS[hashOf(item.title || item.id) % COVERS.length]
+                        const table = isAward ? AWARD_COVERS : COVERS
+                        const cover = table[hashOf(item.title || item.id) % table.length]
+
+                        /* この本に帯を巻くか。賞の名前があるときだけ */
+                        const obi = isAward && item.label ? item.label : null
 
                         return (
                             <div
@@ -151,25 +194,59 @@ export default function FeaturedShowcase({
                                             background: 'linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.06) 100%)',
                                         }} />
 
+                                        {/*
+                                          * 金の罫。受賞のときだけ。
+                                          * 表紙の内側を一周する細い線。
+                                          * これがあるだけで、装丁された本に見える。
+                                          */}
+                                        {isAward && (
+                                            <span aria-hidden="true" className="fs_rule" style={{
+                                                left: SPINE + 4,
+                                                bottom: obi ? OBI + 6 : 8,
+                                            }} />
+                                        )}
+
                                         {/* 題名。上から 22% の位置に、中央そろえで 2 行まで */}
                                         <span style={{
                                             position: 'absolute', left: 0, right: 0,
                                             top: Math.round(BOOK_HEIGHT * 0.22),
                                             padding: `0 12px 0 ${SPINE + 10}px`,
                                         }}>
+                                            {/* 題名の上の短い罫。受賞のときだけ */}
+                                            {isAward && (
+                                                <span aria-hidden="true" className="fs_tick" />
+                                            )}
                                             <span className="fs_book-title"
                                                 style={{ fontSize: TITLE_SIZE, color: cover.ink }}>
                                                 {item.title}
                                             </span>
                                         </span>
 
-                                        {/* 作者名。下に小さく */}
+                                        {/*
+                                          * 作者名。
+                                          * 帯を巻くときは、その上へ逃がす。
+                                          * 下のままだと帯に隠れる。
+                                          */}
                                         <span style={{
-                                            position: 'absolute', left: SPINE + 10, right: 12, bottom: 12,
+                                            position: 'absolute', left: SPINE + 10, right: 12,
+                                            bottom: obi ? OBI + 10 : 12,
                                             fontSize: 10, lineHeight: 1.5, color: cover.ink, opacity: .68,
                                         }}>
                                             著：{item.author}
                                         </span>
+
+                                        {/*
+                                          * 賞の帯。
+                                          *
+                                          * ★ 表紙の下に、紙を一本巻く。
+                                          *   本屋に並ぶ受賞作と同じ形。
+                                          *   賞の名前は、ここに刷る。
+                                          */}
+                                        {obi && (
+                                            <span className="fs_obi" style={{ height: OBI }}>
+                                                <span className="fs_obi-text">{obi}</span>
+                                            </span>
+                                        )}
                                     </span>
                                 </Link>
                             </div>
@@ -177,12 +254,12 @@ export default function FeaturedShowcase({
                     })}
 
                     {/*
-                      * 吹き出し。
+                      * 吹き出し。おすすめのときだけ。
                       *
-                      * 本の横に 1 つだけ置く。
-                      * 3 冊それぞれに付けると、同じ札が 3 つ並んで煩い。
+                      * 受賞のときは帯があるので出さない。
+                      * 帯と吹き出しが両方あると、同じことを二度言う。
                       */}
-                    <span className="fs_bubble">{bubble}</span>
+                    {!isAward && <span className="fs_bubble">{bubble}</span>}
                 </div>
 
                 {/*

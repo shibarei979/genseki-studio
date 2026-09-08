@@ -1074,12 +1074,20 @@
  * ============================================================
  * 受賞作品・運営のおすすめの見せ場
  *
- * 板の上に本を 3 冊、横に並べる。
- * 吹き出しは全体に 1 つだけ、見出しの横に出す。
+ * 板の上に、催しの絵と本を並べる。
  *
  * ★ 枠で囲まない。
  *   本を飾っている所なので、白い箱に入れると
  *   ほかの並びと同じ「表」に見えてしまう。
+ *
+ * ★ 受賞（.fs--award）のときだけ飾る。
+ *
+ *     絵は額に入れる
+ *     本は賞の帯を巻く
+ *     板の上に、明かりを一つ落とす
+ *
+ *   おすすめのときは、いつもの本のまま。
+ *   両方を飾ると、賞との区別が消える。
  * ============================================================
  */
 .reader-home .fs {
@@ -1089,6 +1097,21 @@
      * 0 だと、次の並びが板にくっついて見える。
      */
     margin: 24px 0 40px;
+}
+
+/*
+ * 金の色。この見せ場の中だけで使う。
+ *
+ * 3 段あるのは、金は 1 色だと金に見えないため。
+ * 暗い所と明るい所が隣り合って、はじめて光って見える。
+ */
+.reader-home .fs--award {
+    --fs-gold: #c8a54e;
+    --fs-gold-light: #f2e3ad;
+    --fs-gold-dark: #9a7526;
+    /* 帯の臙脂 */
+    --fs-obi: #8f2830;
+    --fs-obi-dark: #6d1c23;
 }
 
 /* 見出しと吹き出しを横に並べる */
@@ -1101,6 +1124,7 @@
 }
 
 .reader-home .fs_title {
+    position: relative;
     font-size: 21px;
     font-weight: 700;
     font-family: garamond, "Hiragino Mincho ProN", "Yu Mincho", serif;
@@ -1108,10 +1132,29 @@
 }
 
 /*
- * 吹き出し。
+ * 見出しの下の双罫。受賞のときだけ。
  *
- * 3 冊それぞれに付けると、同じ札が 3 つ並んで煩い。
- * 見出しの横に 1 つだけ置く。
+ * 太い線と細い線を重ねる。表彰状の罫と同じ引き方で、
+ * 1 本だけだと、ただの下線に見える。
+ */
+.reader-home .fs--award .fs_title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -9px;
+    height: 3px;
+    background:
+        linear-gradient(90deg, var(--fs-gold-dark), var(--fs-gold-light) 45%, var(--fs-gold)) 0 0 / 100% 2px no-repeat,
+        linear-gradient(90deg, var(--fs-gold), var(--fs-gold)) 0 100% / 100% 1px no-repeat;
+    opacity: .85;
+}
+
+/*
+ * 吹き出し。おすすめのときだけ出る。
+ *
+ * 受賞のときは、賞の名前が本の帯に刷ってある。
+ * 帯と吹き出しの両方に賞の名を出すと、同じことを二度言う。
  */
 .reader-home .fs_bubble {
     position: relative;
@@ -1149,6 +1192,30 @@
     padding: 0 0 18px;
 }
 
+/*
+ * 板の上の明かり。受賞のときだけ。
+ *
+ * 展示台に当てる照明のつもり。
+ * 背より少し明るい暖色を、下ほど濃く敷く。
+ * 本の後ろ（z-index 0）に置くので、文字には掛からない。
+ */
+.reader-home .fs--award .fs_stage::before {
+    content: "";
+    position: absolute;
+    left: -2%;
+    right: -2%;
+    bottom: 0;
+    height: 76%;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(
+        62% 100% at 50% 100%,
+        rgba(226, 186, 108, .30) 0%,
+        rgba(226, 186, 108, .12) 46%,
+        rgba(226, 186, 108, 0) 78%
+    );
+}
+
 /* 板の左右のはみ出しを、この枠の中に収める */
 .reader-home .fs_stage .book-shelf-board {
     left: 0;
@@ -1156,7 +1223,7 @@
 }
 
 /*
- * コンテストの帯。本の横に置く。
+ * コンテストの絵。本の横に置く。
  *
  * ★ 板の上に乗せない。本の並びの左に添える。
  *   賞の名前だけでは、どの催しか伝わらない。
@@ -1169,9 +1236,58 @@
     margin: 0 0 14px;
 }
 
+/*
+ * 額。
+ *
+ * ★ 絵をそのまま置くと、板の上に紙が落ちて見える。
+ *
+ *   金の縁 → 台紙 → 絵、の三重にする。
+ *   縁の色を 5 段で振るのは、平らな金色は金に見えないため。
+ *   内側の白い線と外側の暗い線で、面に厚みを出す。
+ */
+.reader-home .fs_frame {
+    padding: 9px;
+    border-radius: 3px;
+    background: linear-gradient(
+        145deg,
+        #d9be73 0%,
+        #b08d3a 22%,
+        #f4e6b4 50%,
+        #a67f2c 78%,
+        #cfb060 100%
+    );
+    box-shadow:
+        /* 縁の厚み */
+        inset 2px 2px 3px rgba(255, 255, 255, .55),
+        inset -2px -2px 3px rgba(60, 40, 10, .30),
+        inset 0 0 0 1px rgba(90, 65, 20, .35),
+        /* 板に落ちる影 */
+        0 8px 14px rgba(70, 45, 20, .28),
+        0 2px 4px rgba(70, 45, 20, .22);
+
+    /* まっすぐだと貼り紙に見える。少しだけ傾けて、立て掛けてある形に */
+    transform: rotate(-.7deg);
+}
+
+/* 台紙。絵の周りの余白。これが額と絵を離す */
+.reader-home .fs_mat {
+    padding: 7px;
+    background: #fbf6e9;
+    box-shadow:
+        inset 0 0 0 1px rgba(120, 95, 45, .28),
+        inset 0 2px 5px rgba(90, 65, 25, .18);
+}
+
 .reader-home .fs_contest-img {
+    display: block;
     width: min(320px, 72%);
     height: auto;
+    box-shadow: 0 1px 3px rgba(60, 40, 15, .30);
+}
+
+/* 額が置かれていないとき（おすすめ）は、絵をそのまま出す */
+.reader-home .fs_contest > .fs_contest-img {
+    width: min(320px, 72%);
     border-radius: 8px;
     border: 1px solid var(--color-brand-border, rgba(0, 0, 0, .12));
     box-shadow: 0 2px 8px rgba(70, 45, 25, .14);
@@ -1193,6 +1309,23 @@
 
     .reader-home .fs_contest-img {
         width: 240px;
+    }
+
+    /*
+     * 額が板に落とす影。
+     *
+     * 本と同じ影を敷く。無いと、額だけが宙に浮く。
+     * 板の上に立つのは広い画面のときだけなので、ここに入れる。
+     */
+    .reader-home .fs--award .fs_contest::after {
+        content: "";
+        position: absolute;
+        left: 5%;
+        right: 5%;
+        bottom: -5px;
+        height: 7px;
+        background: rgba(70, 45, 25, .20);
+        filter: blur(4px);
     }
 }
 
@@ -1235,6 +1368,17 @@
     transform: perspective(700px) rotateY(-4deg) translateY(-5px);
 }
 
+/* 動きを減らす設定の人には、傾きだけ残して動かさない */
+@media (prefers-reduced-motion: reduce) {
+    .reader-home .fs_book {
+        transition: none;
+    }
+
+    .reader-home .fs_book:hover {
+        transform: perspective(700px) rotateY(-11deg);
+    }
+}
+
 /*
  * 背表紙。本の左に、厚みぶんの面を立てる。
  * これが無いと、回しても板が斜めになっただけに見える。
@@ -1250,6 +1394,11 @@
     transform-origin: left center;
     background: linear-gradient(90deg, #5f5a51 0%, #8b857a 55%, #4d4941 100%);
     border-radius: 2px 0 0 2px;
+}
+
+/* 受賞の本は表紙が濃いので、背も濃くする。灰色のままだと継ぎ目が見える */
+.reader-home .fs--award .fs_book::before {
+    background: linear-gradient(90deg, #26221c 0%, #4a443a 55%, #1f1c17 100%);
 }
 
 /*
@@ -1279,6 +1428,95 @@
     font-family: garamond, "Hiragino Mincho ProN", serif;
     line-height: 1.5;
     letter-spacing: .04em;
+}
+
+/*
+ * 表紙を一周する金の罫。受賞のときだけ。
+ *
+ * 位置は本の側から渡す（帯があるかで下端が変わる）。
+ * 線 1 本で、刷り物が装丁に変わる。
+ */
+.reader-home .fs_rule {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    border: 1px solid rgba(219, 186, 108, .50);
+    border-radius: 1px;
+    pointer-events: none;
+}
+
+/* 題名の上に置く短い罫。中央に 22px だけ */
+.reader-home .fs_tick {
+    display: block;
+    width: 22px;
+    height: 1px;
+    margin: 0 auto 7px;
+    background: linear-gradient(90deg, rgba(219, 186, 108, 0), rgba(219, 186, 108, .9), rgba(219, 186, 108, 0));
+}
+
+/*
+ * 賞の帯。
+ *
+ * ★ 本屋に並ぶ受賞作と同じ形にする。
+ *
+ *   日本の本で、賞はいつも帯に刷ってある。
+ *   吹き出しを横に出すより、こちらのほうが早く伝わる。
+ *
+ *   紙が巻いてあるように見せるため、
+ *   上の縁に影を落とし、上端に細い光を置く。
+ */
+.reader-home .fs_obi {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: linear-gradient(
+        180deg,
+        var(--fs-obi) 0%,
+        var(--fs-obi) 55%,
+        var(--fs-obi-dark) 100%
+    );
+
+    box-shadow:
+        /* 巻いた紙の段差 */
+        0 -3px 6px rgba(0, 0, 0, .26),
+        inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+
+/* 帯の上下に刷る金の細罫 */
+.reader-home .fs_obi::before,
+.reader-home .fs_obi::after {
+    content: "";
+    position: absolute;
+    left: 7px;
+    right: 7px;
+    height: 1px;
+    background: rgba(240, 219, 158, .55);
+}
+
+.reader-home .fs_obi::before {
+    top: 5px;
+}
+
+.reader-home .fs_obi::after {
+    bottom: 5px;
+}
+
+/* 賞の名前。帯に刷る文字なので、太く、字間を空ける */
+.reader-home .fs_obi-text {
+    padding: 0 6px;
+    font-family: garamond, "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: .1em;
+    text-align: center;
+    color: #f4dfa4;
+    text-shadow: 0 1px 1px rgba(60, 10, 15, .55);
 }
 
 /*
