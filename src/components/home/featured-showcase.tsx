@@ -15,50 +15,73 @@ import { COVERS, hashOf } from '@/components/home/home-work-table'
  *
  *     絵は額に入れて立てる
  *     本は賞の帯を巻く（本屋で見る、あの紙の帯）
- *     表紙は濃い色に金の罫
  *
  *   賞の名を吹き出しで横に置くより、
  *   帯にしたほうが「受賞した本」に見える。
  *   日本の本屋で、賞はいつも帯に刷ってある。
  *
- * ★ おすすめのときは、飾らない。
- *   金や帯を付けると、賞との区別が消える。
- *   表紙はいつもの色、賞の代わりに吹き出しを 1 つ。
+ * ★ 本そのものは飾らない。
+ *
+ *   表紙を濃くし、金の罫を回してみたことがある。
+ *   賞らしくはなったが、背表紙も天も影に沈んで、
+ *   本の形が消え、厚い板が立っているように見えた。
+ *
+ *   賞であることは帯が伝える。本は本のままでよい。
+ *
+ * ★ おすすめのときは、帯も付けない。
+ *   賞との区別が消える。賞の代わりに吹き出しを 1 つ。
  *
  * ★ 本の作りは、執筆向けホームの作品一覧をそのまま持ってきた。
+ *   大きさだけ 1.16 倍にしてある（飾り台なので）。
  *
- *     大きさ    128 × 166px
- *     紙の端    右に 5px。上下 2px 内側
+ *     紙の端    右に 6px。上下 2px 内側
  *     表紙      その左。左角 2px、右角 4px
- *     背の影    左に 7px
+ *     背の影    左に 8px
  *     題名      上から 22% の位置に、中央そろえで 2 行まで
  *
- *   数字を変えると別の本に見えるので、そのまま使う。
+ *   割合を崩すと別の本に見えるので、比はそのまま使う。
  *
  * ★ 本棚（home.js）には触っていない。
  *   ここは数字と CSS だけで描いている。
  * ============================================================
  */
 
-/** 執筆向けホームと同じ寸法。変えると別の本に見える */
-const BOOK_WIDTH = 128
-const BOOK_HEIGHT = 166
-const SPINE = 7
-const EDGE = 5
-const TITLE_SIZE = 12
+/*
+ * 本の寸法。
+ *
+ * 執筆向けホームの本は 128 × 166。
+ * ここは棚ではなく飾り台なので、1.16 倍にして少し大きく見せる。
+ * 縦横の比と各部の割合は、あちらと同じに保つ。
+ * 崩すと、別のサイトの本に見える。
+ */
+const BOOK_WIDTH = 148
+const BOOK_HEIGHT = 192
+const SPINE = 8
+const EDGE = 6
+const TITLE_SIZE = 14
 
 /** 一度に並べる冊数 */
 const SHOW = 3
 
 /** 帯の高さ。表紙の下から 4 分の 1 ほど */
-const OBI = 42
+const OBI = 46
 
 /*
- * 受賞の表紙。
+ * 受賞の表紙を濃い色にするか。
  *
- * いつもの表紙は淡い色で、机の上の原稿に見える。
- * 賞を取った本は装丁が変わるので、濃い色に金の文字を置く。
+ * ★ いまは false。いつもの本と同じ淡い表紙にする。
  *
+ *   一度は濃い紺にしてみたが、色が濃いと
+ *   背表紙も天も影に沈んで、本の形が見えなくなった。
+ *   厚い板が立っているように見える。
+ *
+ *   賞であることは帯が伝えるので、本は本のままでよい。
+ *   濃い装丁に戻したくなったら、ここを true にする。
+ */
+const DARK_COVER = false
+
+/*
+ * 濃くするときの表紙。
  * 3 色あるのは、3 冊並んだときに同じ本が並んで見えないため。
  * 帯が臙脂なので、赤系は入れない。
  */
@@ -145,7 +168,7 @@ export default function FeaturedShowcase({
 
                 <div className="fs_row">
                     {shown.map((item) => {
-                        const table = isAward ? AWARD_COVERS : COVERS
+                        const table = isAward && DARK_COVER ? AWARD_COVERS : COVERS
                         const cover = table[hashOf(item.title || item.id) % table.length]
 
                         /* この本に帯を巻くか。賞の名前があるときだけ */
@@ -194,28 +217,12 @@ export default function FeaturedShowcase({
                                             background: 'linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.06) 100%)',
                                         }} />
 
-                                        {/*
-                                          * 金の罫。受賞のときだけ。
-                                          * 表紙の内側を一周する細い線。
-                                          * これがあるだけで、装丁された本に見える。
-                                          */}
-                                        {isAward && (
-                                            <span aria-hidden="true" className="fs_rule" style={{
-                                                left: SPINE + 4,
-                                                bottom: obi ? OBI + 6 : 8,
-                                            }} />
-                                        )}
-
                                         {/* 題名。上から 22% の位置に、中央そろえで 2 行まで */}
                                         <span style={{
                                             position: 'absolute', left: 0, right: 0,
                                             top: Math.round(BOOK_HEIGHT * 0.22),
                                             padding: `0 12px 0 ${SPINE + 10}px`,
                                         }}>
-                                            {/* 題名の上の短い罫。受賞のときだけ */}
-                                            {isAward && (
-                                                <span aria-hidden="true" className="fs_tick" />
-                                            )}
                                             <span className="fs_book-title"
                                                 style={{ fontSize: TITLE_SIZE, color: cover.ink }}>
                                                 {item.title}
@@ -230,7 +237,7 @@ export default function FeaturedShowcase({
                                         <span style={{
                                             position: 'absolute', left: SPINE + 10, right: 12,
                                             bottom: obi ? OBI + 10 : 12,
-                                            fontSize: 10, lineHeight: 1.5, color: cover.ink, opacity: .68,
+                                            fontSize: 11, lineHeight: 1.5, color: cover.ink, opacity: .78,
                                         }}>
                                             著：{item.author}
                                         </span>
