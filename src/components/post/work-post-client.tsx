@@ -1523,6 +1523,39 @@ function PostForm({
                 </div>
             </div>
 
+            {/*
+              * 投稿済みの話に出す知らせ。
+              *
+              * ★ 挿絵を足しただけの人が、ここで止まっていた。
+              *
+              *   挿絵は episode_illusts の表にあり、
+              *   執筆室で置いた時点でもう頁に出ている。
+              *   なのに押し具は「変更はありません」と出るので、
+              *   出せていないと読まれていた。
+              *
+              * ★ 小さな字で添えるのではなく、箱にして押し具の上に置く。
+              *   押し具を見る前に、目に入る所でなければ意味がない。
+              */}
+            {episode.is_published && (
+                <div className="mt-5 rounded-lg border border-forest-line bg-forest-tint px-4 py-3">
+                    <p className="text-[13px] font-medium text-ink">
+                        この話は、もう読者に出ています
+                    </p>
+                    <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
+                        本文と挿絵
+                        {illustCount !== null && illustCount > 0
+                            ? `（${illustCount}枚）`
+                            : ""}
+                        は、執筆室で保存した時点で読めるようになっています。
+                        投稿し直す必要はありません。
+                    </p>
+                    <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
+                        下の「変更を保存する」で控えるのは、この画面で直したもの
+                        （題名・前書き・あとがき・所属章）だけです。
+                    </p>
+                </div>
+            )}
+
             {/* 下の操作 */}
             <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
                 {notice && <span className="text-xs text-forest">{notice}</span>}
@@ -1602,28 +1635,6 @@ function PostForm({
                 )}
             </div>
 
-            {/*
-              * 投稿済みの話で、この押し具が何を控えるのかを書く。
-              *
-              * ★ 挿絵を足しただけの人が、ここで止まっていた。
-              *
-              *   挿絵と本文は、執筆室で控えた時点でもう頁に出ている。
-              *   ここは、この画面で直した題名や前書きを控える所。
-              *   それを書いていなかったので、
-              *   「変更はありません」を「出せていない」と読まれていた。
-              */}
-            {episode.is_published && (
-                <p className="mt-2 text-right text-[11px] leading-relaxed text-faint">
-                    本文と挿絵
-                    {illustCount !== null && illustCount > 0
-                        ? `（${illustCount}枚）`
-                        : ""}
-                    は、執筆室で保存した時点でもう出ています。
-                    <br />
-                    ここで控えるのは、この画面で直したもの
-                    （題名・前書き・あとがき・所属章）だけです。
-                </p>
-            )}
         </div>
     );
 }
