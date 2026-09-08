@@ -67,7 +67,7 @@ export default async function AdminAnalyticsPage() {
   ] = await Promise.all([
     supabase.from('novels').select('id, genre').eq('published', true),
     supabase.from('likes').select('novel_id'),
-    supabase.from('page_views').select('viewed_at').gte('viewed_at', since30.toISOString()).limit(50000),
+    supabase.from('page_views').select('viewed_at').or('is_bot.is.null,is_bot.eq.false').gte('viewed_at', since30.toISOString()).limit(50000),
     supabase.from('novel_views').select('novel_id, view_count'),
     /*
      * 作品ごとの PV を出すので、新しい 50 件では足りない。
@@ -90,10 +90,10 @@ export default async function AdminAnalyticsPage() {
      * その上限で頭打ちになる。
      * count で頼めば、行を運ばずに本当の数が返る。
      */
-    supabase.from('page_views').select('*', { count: 'exact', head: true }),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).gte('viewed_at', since30.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).not('episode_id', 'is', null),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).is('episode_id', null),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false'),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').gte('viewed_at', since30.toISOString()),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').not('episode_id', 'is', null),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').is('episode_id', null),
 
     /*
      * 単位ごとの PV。
@@ -102,8 +102,8 @@ export default async function AdminAnalyticsPage() {
      * 1 つの数字だけでは、伸びているのか止まっているのかが
      * 分からない。
      */
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).gte('viewed_at', since1.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).gte('viewed_at', since7.toISOString()),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').gte('viewed_at', since1.toISOString()),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').gte('viewed_at', since7.toISOString()),
 
     /*
      * 月に一度でも読んだ人。
@@ -112,7 +112,7 @@ export default async function AdminAnalyticsPage() {
      * 読んだ記録のある人を数える。
      * 名前が要らないので、user_id だけ引く。
      */
-    supabase.from('page_views').select('user_id')
+    supabase.from('page_views').select('user_id').or('is_bot.is.null,is_bot.eq.false')
       .gte('viewed_at', since30.toISOString()).not('user_id', 'is', null).limit(50000),
 
     /* 月に一度でも書いた人 */

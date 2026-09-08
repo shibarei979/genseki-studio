@@ -361,8 +361,8 @@ export default async function AdminPage({
      * 期間を変えても「月間ユーザー」が動かなかった。
      */
     Promise.resolve(adminSupabase.rpc('get_login_stats', { days: rangeDays })).catch(() => ({ data: null } as any)),
-    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).eq('device', 'mobile').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
-    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).eq('device', 'desktop').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
+    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false).eq('device', 'mobile').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
+    Promise.resolve(adminSupabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false).eq('device', 'desktop').gte('viewed_at', weekAgo)).catch(() => ({ count: 0 } as any)),
 
     /*
      * 前の30日ぶん。「前月比」を出すのに要る。
@@ -376,9 +376,24 @@ export default async function AdminPage({
       .eq('published', true).lt('created_at', since30.toISOString()),
     supabase.from('comments').select('*', { count: 'exact', head: true })
       .lt('created_at', since30.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
+    /*
+     * 閲覧の数え方。
+     *
+     * ★ 見回りの機械（is_bot）は数に入れない。
+     *
+     *   9/8 は 1,172 のうち 994 が見回りだった。
+     *   そのまま出すと、人が 1,067 人来たと読み違える。
+     *
+     * ★ 印の無い古い記録は、人として数える。
+     *   is_bot を足す前の記録は null のまま。
+     *   除くと、それ以前の数がまるごと消える。
+     *
+     *   だから eq(is_bot,false) ではなく、
+     *   「null または false」で絞る。
+     */
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false)
       .gte('viewed_at', since30.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false)
       .gte('viewed_at', since60.toISOString()).lt('viewed_at', since30.toISOString()),
 
     /*
@@ -414,18 +429,18 @@ export default async function AdminPage({
      * パソコンで大量に読んだ日に大きく振れる。
      * 長い期間も並べて、傾向を見られるようにする。
      */
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false)
       .eq('device', 'mobile').gte('viewed_at', since30.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false)
       .eq('device', 'desktop').gte('viewed_at', since30.toISOString()),
 
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false)
       .eq('device', 'mobile').gte('viewed_at', since365.toISOString()),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false)
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false)
       .eq('device', 'desktop').gte('viewed_at', since365.toISOString()),
 
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).eq('device', 'mobile'),
-    supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).eq('device', 'desktop'),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false).eq('device', 'mobile'),
+    supabase.from('page_views').select('*', { count: 'exact', head: true }).or('is_bot.is.null,is_bot.eq.false').eq('is_author', false).eq('device', 'desktop'),
   ])
   function buildChartData(days: Date[]) {
     return days.map(d => {
@@ -473,6 +488,8 @@ export default async function AdminPage({
   const { data: readerRows } = await adminSupabase
     .from('page_views')
     .select('user_id')
+    /* 見回りの機械は数えない。他の数え方と揃える */
+    .or('is_bot.is.null,is_bot.eq.false')
     .not('user_id', 'is', null)
     .gte('viewed_at', todayStart.toISOString())
 
