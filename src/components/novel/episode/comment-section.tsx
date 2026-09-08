@@ -452,12 +452,29 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
               <button onClick={() => setQuotedText('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-faint)', fontSize: 16, lineHeight: 1 }}>×</button>
             </div>
           ) : (
-            <button onClick={() => setSelecting(!selecting)}
+            <button onClick={() => {
+                const next = !selecting
+                setSelecting(next)
+
+                /*
+                 * 入れたら、本文の頭まで戻す。
+                 *
+                 * ★ この押し具は本文のずっと下にある。
+                 *   押しても画面はここのまま。
+                 *   「文を押してください」と出ても、
+                 *   その本文が画面に無かった。
+                 */
+                if (next) {
+                  document
+                    .querySelector('[data-sentence="0"]')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }
+              }}
               style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '8px 12px', marginBottom: 10, background: selecting ? 'var(--color-brand-light)' : 'var(--color-bg-card)', border: `1.5px dashed ${selecting ? 'var(--color-brand)' : 'var(--color-brand-border)'}`, borderRadius: 8, fontSize: 12, color: selecting ? 'var(--color-brand)' : 'var(--color-text-muted)', cursor: 'pointer', fontWeight: 500 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
               </svg>
-              {selecting ? '本文中の文をクリックしてください（再度タップでキャンセル）' : '本文から引用する'}
+              {selecting ? '本文の文を押してください（もう一度押すと取り消し）' : '本文から引用する（なぞっても引けます）'}
             </button>
           )}
 

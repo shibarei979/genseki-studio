@@ -28,6 +28,7 @@ import CommentSection from '@/components/novel/episode/comment-section'
 import EpisodeLikeButton from '@/components/novel/episode/episode-like-button'
 import ReadButton from '@/components/novel/episode/read-button'
 import EpisodeBody from '@/components/novel/episode/episode-body'
+import QuoteFromSelection from '@/components/novel/episode/quote-from-selection'
 import VoicePlayer from '@/components/novel/episode/voice-player'
 import TypoReportButton from '@/components/novel/episode/typo-report-button'
 import ValidReadTracker from '@/components/novel/episode/valid-read-tracker'
@@ -292,6 +293,13 @@ export default async function EpisodePage({ params }: Props) {
 
   return (
     <QuoteProvider>
+    {/*
+      * なぞった文を引用する押し具。
+      *
+      * 本文の中で文字を選んだときだけ、画面の下に出る。
+      * 頁に 1 つでよいので、ここに置く。
+      */}
+    <QuoteFromSelection/>
     <div style={{minHeight:'100vh'}}>
       <Header />
 
