@@ -66,6 +66,15 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
   }
 
   const [comments, setComments] = useState<Comment[]>(() => buildTree(initialComments))
+
+  /*
+   * コメントを読み終えたか。
+   *
+   * ★ 読む前に「まだ感想がありません」を出さない。
+   *   読む前は必ず 0 件なので、
+   *   コメントが付いている話でも一瞬それが出る。
+   */
+  const [loaded, setLoaded] = useState(false)
   const [body, setBody] = useState('')
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
@@ -93,12 +102,19 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
      * 渡さないと作品ぜんぶが返り、
      * 第3話の感想が第1話にも並ぶ。
      */
+    setLoaded(false)
+
     fetch(`/api/novel/${novelId}/comments?episode=${encodeURIComponent(episodeId)}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (alive && data?.comments) setComments(buildTree(data.comments))
+        if (!alive) return
+        if (data?.comments) setComments(buildTree(data.comments))
+        setLoaded(true)
       })
-      .catch(() => { /* 届かなくても、本文は読める */ })
+      .catch(() => {
+        /* 届かなくても、本文は読める */
+        if (alive) setLoaded(true)
+      })
 
     return () => { alive = false }
     /*
@@ -396,6 +412,28 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
 
   return (
     <>
+    {/*
+      * まだ感想が無いときの誘い。
+      *
+      * ★ ここで出す。前は話の頁の側にあった。
+      *
+      *   あちらはコメントを読んでいない（読むのはこの部品）。
+      *   いつも 0 件として見ていたので、
+      *   コメントが付いていても「まだ感想がありません」が出ていた。
+      *
+      *   数を持っている側が出す。
+      */}
+    {loaded && comments.length === 0 && (
+      <div style={{ background: 'var(--color-brand-light)', border: '1.5px solid var(--color-brand-border)', borderRadius: 12, padding: '18px 20px', marginBottom: 16, textAlign: 'center' }}>
+        <div style={{ fontSize: 24, marginBottom: 6 }}>✍️</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-brand)', marginBottom: 4 }}>まだ感想がありません</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text)', lineHeight: 1.7 }}>
+          あなたの一言が、作者の次の一話につながります。<br/>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>最初の感想を書いてみませんか？</span>
+        </div>
+      </div>
+    )}
+
     <div ref={commentAnchorRef} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-border)', borderRadius: 12, overflow: 'hidden' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-brand-border)', background: 'var(--color-bg)', display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)' }}>コメント</span>

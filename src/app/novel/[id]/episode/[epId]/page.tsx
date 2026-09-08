@@ -280,16 +280,15 @@ export default async function EpisodePage({ params }: Props) {
 
   const navBtn = {fontSize:12,color:'var(--color-brand)',border:'1px solid var(--color-brand-border)',padding:'6px 14px',borderRadius:16,background:'var(--color-bg-card)',textDecoration:'none'} as const
 
-  const FirstCommentPrompt = () => comments.length === 0 ? (
-    <div style={{background:'var(--color-brand-light)',border:'1.5px solid var(--color-brand-border)',borderRadius:12,padding:'18px 20px',marginBottom:16,textAlign:'center' as const}}>
-      <div style={{fontSize:24,marginBottom:6}}>✍️</div>
-      <div style={{fontSize:13,fontWeight:700,color:'var(--color-brand)',marginBottom:4}}>まだ感想がありません</div>
-      <div style={{fontSize:12,color:'var(--color-text)',lineHeight:1.7}}>
-        あなたの一言が、作者の次の一話につながります。<br/>
-        <span style={{fontSize:11,color:'var(--color-text-muted)'}}>最初の感想を書いてみませんか？</span>
-      </div>
-    </div>
-  ) : null
+  /*
+   * 「まだ感想がありません」は、ここでは出さない。
+   *
+   * ★ この頁はコメントを読んでいない（読むのは CommentSection）。
+   *   上の comments はいつも空なので、
+   *   コメントが付いていても誘いが出ていた。
+   *
+   *   数を持っている CommentSection の側に移した。
+   */
 
   return (
     <QuoteProvider>
@@ -383,7 +382,6 @@ export default async function EpisodePage({ params }: Props) {
               目次を見る
             </Link>
           </div>
-          <FirstCommentPrompt/>
           <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments}/>
         </div>
       </div>
@@ -459,7 +457,6 @@ export default async function EpisodePage({ params }: Props) {
           </Link>
         </div>
 
-        <FirstCommentPrompt/>
         <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments}/>
 
         <div style={{height:80}}/>
