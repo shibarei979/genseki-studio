@@ -1138,20 +1138,15 @@ export default async function ReaderHome() {
               * 上から「まだ知らない作品」、下へ「自分に近いもの」。
               * 来た人がまず出会うのは、知らない一冊であってほしい。
               *
-              *   おすすめ → 受賞 → 新着 → 最新話 → バナー
+              *   受賞 → おすすめ → 新着 → 最新話 → バナー
               *   → 続きから読む → フォロー中 → 短編
               *
-              * ★ 受賞は上から 2 つ目。
-              *   下にあると、そこまで指を送らない人には無いのと同じ。
-              *   いちばん上には置かない。
-              *   来た人がまず出会うのは、賞ではなく知らない一冊であってほしい。
+              * ★ 受賞をいちばん上に置く。
+              *   運営が手で選んだ棚なので、
+              *   ここだけは見せ方を決めきってある。
+              *   受賞が 1 つも無い日は枠ごと出ないので、
+              *   そのときはおすすめが先頭に来る。
               */}
-
-            <ReaderWorkList
-              title="おすすめの作品"
-              books={recommendBooks}
-              moreHref="/search"
-            />
 
             {/*
               * 受賞作品の見せ場。
@@ -1170,6 +1165,12 @@ export default async function ReaderHome() {
                 autoSeconds={featuredAutoSeconds}
               />
             )}
+
+            <ReaderWorkList
+              title="おすすめの作品"
+              books={recommendBooks}
+              moreHref="/search"
+            />
 
             {/* その時の新着。点数では選ばず、新しい順に出す */}
             <ReaderWorkList
