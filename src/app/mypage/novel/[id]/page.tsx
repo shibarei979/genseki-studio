@@ -110,6 +110,16 @@ export default async function NovelManagePage({ params }: { params: { id: string
             <div style={row}><span style={rowLabel}>投稿状態</span><span style={rowValue}>{novel.published ? '公開中' : '下書き'}〈{novel.is_serial ? '連載中' : '完結'}〉</span></div>
             <div style={row}><span style={rowLabel}>話数</span><span style={rowValue}>{publishedEps.length}話{episodes.length !== publishedEps.length ? `（下書き${episodes.length - publishedEps.length}話）` : ''}</span></div>
             <div style={row}><span style={rowLabel}>投稿文字数</span><span style={rowValue}>{totalChars.toLocaleString()}文字</span></div>
+            {/*
+              * 短い住所。
+              * X のプロフィールなど、字数の少ない所に貼るためのもの。
+              */}
+            {novel.short_code && (
+              <div style={row}>
+                <span style={rowLabel}>短い住所</span>
+                <span style={rowValue}>gensekikoro.com/w/{novel.short_code}</span>
+              </div>
+            )}
             <div style={row}><span style={rowLabel}>初回掲載日</span><span style={rowValue}>{fmt(firstDate)}</span></div>
             <div style={row}><span style={rowLabel}>最新掲載日</span><span style={rowValue}>{fmt(lastDate)}</span></div>
             <div style={row}><span style={rowLabel}>現在の順位</span><span style={{ ...rowValue, fontWeight: currentRank ? 700 : 400, color: currentRank ? 'var(--color-brand)' : 'var(--color-text-muted)' }}>{currentRank ? `${currentRank.rank}位（総合・${PERIOD_LABEL[currentRank.period] || currentRank.period}）` : '圏外'}</span></div>

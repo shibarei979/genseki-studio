@@ -7,7 +7,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const supabase = await createClient()
   const { data: novel } = await supabase
     .from('novels')
-    .select('title, summary, cover_url, visibility, deleted_at')
+    .select('title, summary, cover_url, visibility, deleted_at, short_code')
     .eq('id', params.id).maybeSingle()
 
   /*
@@ -27,7 +27,13 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     description,
     // 下書きと限定公開は検索に載せない
     robots: isOpen ? undefined : { index: false, follow: false },
-    alternates: { canonical: `/novel/${params.id}` },
+    /*
+     * 正しい住所は、短いほう（あれば）。
+     * 長いほうは、そこへ送るだけの扱いにする。
+     */
+    alternates: {
+      canonical: novel?.short_code ? `/w/${novel.short_code}` : `/novel/${params.id}`,
+    },
     openGraph: {
       type: 'book',
       url: `/novel/${params.id}`,
@@ -46,7 +52,8 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   }
 }
 
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 import RecommendSection from '@/components/novel/recommend-section'
 import Link from 'next/link'
@@ -60,7 +67,26 @@ import { calcQualityScore } from '@/lib/quality-score'
 import FollowButton from '@/components/follow-button'
 import NovelParts from '@/components/novel/novel-parts'
 
-export default async function NovelPage({ params }: { params: { id: string } }) {
+export default async function NovelPage({ params }: { params: { id: string; viaCode?: boolean } }) {
+  /*
+   * ★ 短い住所を持つ作品は、そちらへ送る。
+   *
+   *   同じ中身が2つの住所で開けると、
+   *   検索の側が「写し」とみなして、どちらも順位を落とす。
+   *   本物は /w/〈短い番号〉 のほうに寄せる。
+   *
+   * ★ /w から呼ばれたときは送らない（送り返しの輪になる）。
+   */
+  if (!params.viaCode) {
+    const { data: shortRow } = await createAdminClient()
+      .from('novels')
+      .select('short_code')
+      .eq('id', params.id)
+      .maybeSingle()
+
+    if (shortRow?.short_code) redirect(`/w/${shortRow.short_code}`)
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

@@ -460,6 +460,17 @@ export default function MypageClient({
   const [showGenderModal,  setShowGenderModal]  = useState(false)
   const [showXModal,       setShowXModal]       = useState(false)
 
+  /*
+   * 作者の呼び名（短い住所）。
+   *
+   * ★ 番号（user_id）には触らない。別の呼び名を1つ足すだけ。
+   *   これまでの /author/〈番号〉も、そのまま使える。
+   */
+  const [showHandleModal, setShowHandleModal] = useState(false)
+  const [handle, setHandle] = useState<string>((profile as any)?.handle || '')
+  const [handleSaving, setHandleSaving] = useState(false)
+  const [handleError, setHandleError] = useState('')
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768)
     check(); window.addEventListener('resize', check)
@@ -509,6 +520,33 @@ export default function MypageClient({
     await supabase.from('profiles').update({ gender: val||null }).eq('user_id', profile.user_id)
     setShowGenderModal(false)
     setToast('性別を保存しました'); setTimeout(()=>setToast(''),2000)
+  }
+
+  /** 作者の呼び名を決める。番号は触らない */
+  async function handleSaveHandle() {
+    if (handleSaving) return
+    setHandleSaving(true)
+    setHandleError('')
+
+    try {
+      const response = await fetch('/api/handle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle }),
+      })
+      const payload = await response.json()
+
+      if (payload?.error) {
+        setHandleError(payload.error)
+      } else {
+        ;(profile as any).handle = payload.handle
+        setShowHandleModal(false)
+      }
+    } catch {
+      setHandleError('決められませんでした。時間をおいて試してください。')
+    }
+
+    setHandleSaving(false)
   }
 
   async function handleSaveXAccount() {
@@ -1726,6 +1764,7 @@ export default function MypageClient({
               {label:'自己紹介を編集', sub:profile.bio?profile.bio.slice(0,24)+'…':'未設定', onClick:()=>setShowBioModal(true)},
               {label:'性別', sub:gender||'未設定', onClick:()=>setShowGenderModal(true)},
               {label:'Xアカウント', sub:xAccount?`@${xAccount}`:'未連携', onClick:()=>setShowXModal(true)},
+              {label:'短い住所', sub:(profile as any)?.handle?`gensekikoro.com/u/${(profile as any).handle}`:'未設定', onClick:()=>setShowHandleModal(true)},
               {label:'生年月日を設定', sub:profile.birthdate||(profile as any).birthdate||'未設定', onClick:()=>setShowBdModal(true)},
               {label:'ストーリーボード', sub:'アイデアや構想を管理', onClick:()=>setShowBoard(true)},
               {label:'バッジ図鑑', sub:`${claimedSet.size}/${ALL_BADGES.filter(b=>!b.id.startsWith('_')).length}獲得済み`, onClick:()=>{setShowBadgeBook(true);setBadgePage(0)}},
@@ -1952,6 +1991,40 @@ export default function MypageClient({
       )}
 
       {/* Xアカウントモーダル */}
+      {/* 作者の呼び名（短い住所） */}
+      {showHandleModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+          <div style={{background:'var(--color-bg-card)',borderRadius:16,padding:'28px',maxWidth:460,width:'100%',boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}>
+            <div style={{fontSize:16,fontWeight:700,color:'var(--color-text)',marginBottom:8}}>短い住所を決める</div>
+            <div style={{fontSize:12,color:'var(--color-text-muted)',lineHeight:1.8,marginBottom:16}}>
+              決めると、あなたの作者ページに短い住所が付きます。<br/>
+              Xのプロフィールなど、字数の少ない所に貼れます。<br/>
+              英小文字・数字・下線で、3〜20字。早い者勝ちです。
+            </div>
+
+            <div style={{display:'flex',alignItems:'center',border:'1.5px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden',marginBottom:8}}>
+              <span style={{padding:'10px 12px',background:'var(--color-bg)',color:'var(--color-text-muted)',fontSize:12,borderRight:'1px solid var(--color-brand-border)',flexShrink:0,whiteSpace:'nowrap'}}>gensekikoro.com/u/</span>
+              <input value={handle}
+                onChange={e=>{setHandle(e.target.value.replace(/^@/,'').toLowerCase());setHandleError('')}}
+                placeholder="yourname" style={{flex:1,minWidth:0,padding:'10px 12px',border:'none',outline:'none',fontSize:13,background:'var(--color-bg-card)'}}/>
+            </div>
+
+            {handleError && <div style={{fontSize:12,color:'var(--color-danger)',marginBottom:8}}>{handleError}</div>}
+
+            <div style={{fontSize:11,color:'var(--color-text-faint)',marginBottom:16}}>
+              空にすると、手放せます。手放した名前は、ほかの人が使えるようになります。
+            </div>
+
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>{setShowHandleModal(false);setHandle((profile as any)?.handle||'');setHandleError('')}}
+                style={{flex:1,padding:'10px',border:'1px solid var(--color-brand-border)',borderRadius:8,background:'none',color:'var(--color-text-muted)',fontSize:13,cursor:'pointer'}}>やめる</button>
+              <button onClick={handleSaveHandle} disabled={handleSaving}
+                style={{flex:1,padding:'10px',border:'none',borderRadius:8,background:'var(--color-brand)',color:'var(--color-text-inverse)',fontSize:13,fontWeight:700,cursor:'pointer',opacity:handleSaving?0.6:1}}>{handleSaving?'決めています…':'これにする'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showXModal && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
           <div style={{background:'var(--color-bg-card)',borderRadius:16,padding:'28px',maxWidth:420,width:'100%',boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}>

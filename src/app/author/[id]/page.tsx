@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import GuestFollowButton from '@/components/guest-follow-button'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import TweetSection from '@/components/tweet-section'
@@ -9,9 +10,29 @@ import Link from 'next/link'
 import FollowButton from '@/components/follow-button'
 import BlockButton from '@/components/block-button'
 
-interface Props { params: { id: string } }
+interface Props { params: { id: string; viaHandle?: boolean } }
 
 export default async function AuthorPage({ params }: Props) {
+  /*
+   * ★ 呼び名を決めている人は、短い住所へ送る。
+   *
+   *   同じ中身が2つの住所で開けると、
+   *   検索の側が「写し」とみなして、どちらも順位を落とす。
+   *   本物は /u/〈呼び名〉 のほうに寄せる。
+   *
+   * ★ 決めていない人は、これまでどおりここで出す。
+   * ★ /u から呼ばれたときは送らない（送り返しの輪になる）。
+   */
+  if (!('viaHandle' in params)) {
+    const { data: owner } = await createAdminClient()
+      .from('profiles')
+      .select('handle')
+      .eq('user_id', params.id)
+      .maybeSingle()
+
+    if (owner?.handle) redirect(`/u/${owner.handle}`)
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   let profile = null

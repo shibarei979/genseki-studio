@@ -67,7 +67,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const supabase = createAdminClient();
         const { data } = await supabase
             .from("novels")
-            .select("id, created_at")
+            .select("id, created_at, short_code")
             .eq("visibility", "public")
             .is("deleted_at", null)
             .order("created_at", { ascending: false })
@@ -91,7 +91,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
         for (const novel of (data ?? []).filter((row) => live.has(row.id))) {
             entries.push({
-                url: `${base}/novel/${novel.id}`,
+                /* 短い住所があれば、そちらを地図に載せる */
+                url: novel.short_code
+                    ? `${base}/w/${novel.short_code}`
+                    : `${base}/novel/${novel.id}`,
                 lastModified: novel.created_at
                     ? new Date(novel.created_at)
                     : now,
