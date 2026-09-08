@@ -295,14 +295,14 @@ export default async function ReaderHome() {
    */
   const { data: featuredRows } = await supabase
     .from('featured_novels')
-    .select('novel_id, kind, label, sort_order, contest_id, prize')
+    .select('novel_id, kind, label, sort_order, contest_id, prize, starts_page')
     .eq('is_visible', true)
     .order('sort_order', { ascending: true })
     .limit(50)
 
   const featured = (featuredRows || []) as {
     novel_id: string; kind: string; label: string; sort_order: number
-    contest_id?: string | null; prize?: string | null
+    contest_id?: string | null; prize?: string | null; starts_page?: boolean
   }[]
 
   /*
@@ -333,10 +333,9 @@ export default async function ReaderHome() {
    */
   const { data: fsSettingRow } = await supabase
     .from('featured_settings')
-    .select('per_view, auto_seconds')
+    .select('auto_seconds')
     .maybeSingle()
 
-  const featuredPerView = Number(fsSettingRow?.per_view ?? 3)
   const featuredAutoSeconds = Number(fsSettingRow?.auto_seconds ?? 0)
 
   const awards = featured.filter((f) => f.kind === 'award')
@@ -344,6 +343,8 @@ export default async function ReaderHome() {
 
   const featuredTitle = awards.length > 0 ? '受賞作品' : '運営のおすすめ'
   const featuredLabels: Record<string, string> = {}
+  /* 運営が置いた切れ目。この作品から新しい板が始まる */
+  const featuredBreaks: Record<string, boolean> = {}
   const featuredContest: Record<string, { id: string; title: string; banner: string | null }> = {}
 
   for (const f of picked) {
@@ -354,6 +355,8 @@ export default async function ReaderHome() {
      * 無ければ、これまでどおり自由に書いた文。
      */
     const prize = (f.prize || '').trim()
+    if (f.starts_page) featuredBreaks[f.novel_id] = true
+
     if (prize) featuredLabels[f.novel_id] = prize
     else if (f.label.trim()) featuredLabels[f.novel_id] = f.label.trim()
 
@@ -692,6 +695,7 @@ export default async function ReaderHome() {
         author: extras.authorMap[novel.author_id] || '名前のない書き手',
         label: featuredLabels[novel.id],
         contestId: featuredContest[novel.id]?.id ?? null,
+        startsPage: featuredBreaks[novel.id] === true,
         contestTitle: featuredContest[novel.id]?.title,
         contestBanner: featuredContest[novel.id]?.banner ?? null,
       }
@@ -1177,7 +1181,6 @@ export default async function ReaderHome() {
               <FeaturedShowcase
                 title={featuredTitle}
                 items={featuredItems}
-                perView={featuredPerView}
                 autoSeconds={featuredAutoSeconds}
               />
             )}

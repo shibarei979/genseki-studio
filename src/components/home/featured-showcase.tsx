@@ -63,13 +63,12 @@ const EDGE = 6
 const TITLE_SIZE = 14
 
 /*
- * 一度に並べる冊数の、上と下。
+ * 1 枚の板に載る、いちばん多い冊数。
  *
- * 運営が管理画面で決める。ここはその範囲だけ。
- * 6 冊以上は板からはみ出す。0 冊は何も出ない。
+ * 6 冊以上は板からはみ出す。
+ * 運営が切れ目を置き忘れても、ここで必ず切れる。
  */
-const PER_VIEW_MIN = 1
-const PER_VIEW_MAX = 5
+const PAGE_MAX = 5
 
 /** 帯の高さ。表紙の下から 4 分の 1 ほど */
 const OBI = 46
@@ -106,8 +105,10 @@ export interface FeaturedItem {
     author: string
     /** 賞の名前。受賞のときだけ入る */
     label?: string
-    /** どのコンテストの賞か。頁を分ける区切りに使う */
+    /** どのコンテストの賞か。ここが変わると、必ず板が変わる */
     contestId?: string | null
+    /** ここから新しい板を始める。運営が管理画面で置いた切れ目 */
+    startsPage?: boolean
     /** コンテストの名前。受賞のときだけ入る */
     contestTitle?: string
     /** コンテストの帯の絵。本の横に出す */
@@ -117,59 +118,55 @@ export interface FeaturedItem {
 export default function FeaturedShowcase({
     title,
     items,
-    perView = 3,
     autoSeconds = 0,
 }: {
     title: string
     items: FeaturedItem[]
-    /** 一度に並べる冊数。運営が管理画面で決める */
-    perView?: number
     /** 何秒でひとりでに送るか。0 なら送らない */
     autoSeconds?: number
 }) {
     /*
-     * 頁の作り方。
+     * 板の分け方。
      *
-     * ★ まずコンテストで区切る。
+     * 並び順のとおりに前から置いていき、
+     * 次の三つのどれかで、新しい板に移る。
      *
-     *   同じ板に別の催しの本が混ざると、
-     *   額の絵とその本が結び付かない。
-     *   区切りは並び順のとおり。運営が決めた順を崩さない。
+     *   1  運営が切れ目を置いたところ（starts_page）
+     *   2  コンテストが変わるところ
+     *      別の催しの本が同じ板に並ぶと、
+     *      横に立つ額の絵と、その本が結び付かない
+     *   3  5 冊を超えるところ
+     *      それ以上は板からはみ出す
      *
-     * ★ 次に、決められた冊数ずつに割る。
-     *
-     *   割り切れなくてよい。
-     *   佳作が 7 つ、3 冊ずつなら 3・3・1 になる。
-     *   最後の頁が 1 冊でも、それが本当の数なので出す。
+     * 1 枚ごとの冊数は揃わなくてよい。
+     * 大賞を 1 冊、佳作を 3 冊、という並べ方ができる。
      */
     const pages = useMemo(() => {
-        const size = Math.min(PER_VIEW_MAX, Math.max(PER_VIEW_MIN, Math.round(perView)))
-
-        /* まずコンテストごとのまとまりにする */
-        const groups: FeaturedItem[][] = []
+        const out: FeaturedItem[][] = []
         let current: FeaturedItem[] = []
-        let currentKey: string | null = null
+        let lastContest: string | null = null
 
         for (const item of items) {
-            const key = item.contestId ?? ''
-            if (currentKey !== null && key !== currentKey) {
-                groups.push(current)
+            const contest = item.contestId ?? ''
+
+            const cut =
+                current.length > 0 &&
+                (item.startsPage === true ||
+                    contest !== lastContest ||
+                    current.length >= PAGE_MAX)
+
+            if (cut) {
+                out.push(current)
                 current = []
             }
-            currentKey = key
-            current.push(item)
-        }
-        if (current.length > 0) groups.push(current)
 
-        /* まとまりごとに、冊数で割る */
-        const out: FeaturedItem[][] = []
-        for (const group of groups) {
-            for (let at = 0; at < group.length; at += size) {
-                out.push(group.slice(at, at + size))
-            }
+            current.push(item)
+            lastContest = contest
         }
+
+        if (current.length > 0) out.push(current)
         return out
-    }, [items, perView])
+    }, [items])
 
     const [at, setAt] = useState(0)
 

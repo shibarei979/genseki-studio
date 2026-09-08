@@ -33,6 +33,8 @@ interface Row {
     contest_id?: string | null
     /** 何の賞か。大賞・銀賞 など */
     prize?: string | null
+    /** この作品から新しい板を始める */
+    starts_page?: boolean
     /* 作品の題名。別に引いて添える */
     title?: string
     author?: string
@@ -74,14 +76,9 @@ export default function AdminFeaturedClient() {
     const [contests, setContests] = useState<{ id: string; title: string }[]>([])
 
     /*
-     * 見せ場の動き。
-     *
-     *   perView      一度に並べる冊数
-     *   autoSeconds  ひとりでに送る間隔。0 なら送らない
-     *
+     * ひとりでに送る間隔。0 なら送らない。
      * 表がまだ無くても画面が開くように、初めから値を入れておく。
      */
-    const [perView, setPerView] = useState(3)
     const [autoSeconds, setAutoSeconds] = useState(0)
     const [savedAt, setSavedAt] = useState('')
 
@@ -101,13 +98,10 @@ export default function AdminFeaturedClient() {
         void (async () => {
             const { data } = await supabase
                 .from('featured_settings')
-                .select('per_view, auto_seconds')
+                .select('auto_seconds')
                 .maybeSingle()
 
-            if (data) {
-                setPerView(Number(data.per_view ?? 3))
-                setAutoSeconds(Number(data.auto_seconds ?? 0))
-            }
+            if (data) setAutoSeconds(Number(data.auto_seconds ?? 0))
         })()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -236,11 +230,10 @@ export default function AdminFeaturedClient() {
      * 行は 1 つだけ。id を決め打ちにして上書きする。
      * 増やすと、どれが効いているのか分からなくなる。
      */
-    async function saveSettings(next: { per_view?: number; auto_seconds?: number }) {
+    async function saveSettings(next: { auto_seconds: number }) {
         const body = {
             id: true,
-            per_view: next.per_view ?? perView,
-            auto_seconds: next.auto_seconds ?? autoSeconds,
+            auto_seconds: next.auto_seconds,
             updated_at: new Date().toISOString(),
         }
 
@@ -252,6 +245,25 @@ export default function AdminFeaturedClient() {
         }
 
         setSavedAt(new Date().toLocaleTimeString('ja-JP'))
+    }
+
+    /*
+     * 切れ目を置く、外す。
+     *
+     * 置いた作品から、新しい板が始まる。
+     * コンテストの変わり目と 5 冊目は、置かなくても必ず切れる。
+     */
+    async function saveBreak(id: string, value: boolean) {
+        const { error } = await supabase
+            .from('featured_novels')
+            .update({ starts_page: value, updated_at: new Date().toISOString() })
+            .eq('id', id)
+
+        if (error) {
+            window.alert(`変えられませんでした：${error.message}`)
+            return
+        }
+        await load()
     }
 
     const awards = rows.filter((r) => r.kind === 'award')
@@ -286,12 +298,10 @@ export default function AdminFeaturedClient() {
             {/*
               * 見せ場の動き。
               *
-              * ★ 何冊選んでも、板に並ぶのはここで決めた数まで。
-              *   残りは横のボタンで送る。
-              *
-              * ★ 頁の切れ目はコンテスト。
-              *   別の催しの本が同じ板に混ざると、
-              *   横に立つ額の絵と結び付かない。
+              * ★ 冊数は数で決めない。
+              *   一覧に切れ目を置いて、板の区切りを手で決める。
+              *   大賞は 1 冊で、佳作は 3 冊まとめて、という
+              *   並べ方は数では表せない。
               */}
             <div style={{
                 border:'1px solid var(--admin-border)',
@@ -303,58 +313,37 @@ export default function AdminFeaturedClient() {
                 </div>
                 <p style={{fontSize:11.5,color:'var(--admin-text-faint)',
                     marginBottom:12,lineHeight:1.8}}>
-                    板に一度に並ぶ冊数と、送り方を決めます。
+                    板の区切りは、下の一覧で線を置いて決めます。
+                    1 枚に 1 冊でも 4 冊でも構いません。
                     <br />
-                    頁の切れ目はコンテストです。同じ催しの中でだけ、決めた冊数ずつに割ります。
-                    佳作が 7 つ、3 冊ずつなら 3・3・1 の 3 枚になります。
+                    コンテストが変わるところと、5 冊を超えるところは、
+                    線を置かなくても必ず切れます。
                 </p>
 
-                <div style={{display:'flex',gap:18,flexWrap:'wrap',alignItems:'flex-end'}}>
-                    <label style={{fontSize:12,color:'var(--admin-text-muted)'}}>
-                        一度に並べる冊数
-                        <br />
-                        <select
-                            value={perView}
-                            onChange={(e) => {
-                                const value = Number(e.target.value)
-                                setPerView(value)
-                                void saveSettings({ per_view: value })
-                            }}
-                            style={{marginTop:6,padding:'6px 10px',fontSize:13,borderRadius:6,
-                                border:'1px solid var(--admin-border)',minWidth:110}}
-                        >
-                            {[1, 2, 3, 4, 5].map((n) => (
-                                <option key={n} value={n}>{n} 冊</option>
-                            ))}
-                        </select>
-                    </label>
-
-                    <label style={{fontSize:12,color:'var(--admin-text-muted)'}}>
-                        ひとりでに送る
-                        <br />
-                        <select
-                            value={autoSeconds}
-                            onChange={(e) => {
-                                const value = Number(e.target.value)
-                                setAutoSeconds(value)
-                                void saveSettings({ auto_seconds: value })
-                            }}
-                            style={{marginTop:6,padding:'6px 10px',fontSize:13,borderRadius:6,
-                                border:'1px solid var(--admin-border)',minWidth:150}}
-                        >
-                            <option value={0}>送らない（押したときだけ）</option>
-                            {[4, 5, 6, 8, 10, 12, 15, 20, 30].map((n) => (
-                                <option key={n} value={n}>{n} 秒ごと</option>
-                            ))}
-                        </select>
-                    </label>
-
+                <label style={{fontSize:12,color:'var(--admin-text-muted)'}}>
+                    ひとりでに送る
+                    <br />
+                    <select
+                        value={autoSeconds}
+                        onChange={(e) => {
+                            const value = Number(e.target.value)
+                            setAutoSeconds(value)
+                            void saveSettings({ auto_seconds: value })
+                        }}
+                        style={{marginTop:6,padding:'6px 10px',fontSize:13,borderRadius:6,
+                            border:'1px solid var(--admin-border)',minWidth:190}}
+                    >
+                        <option value={0}>送らない（押したときだけ）</option>
+                        {[4, 5, 6, 8, 10, 12, 15, 20, 30].map((n) => (
+                            <option key={n} value={n}>{n} 秒ごと</option>
+                        ))}
+                    </select>
                     {savedAt && (
-                        <span style={{fontSize:11.5,color:'var(--admin-text-faint)',paddingBottom:8}}>
+                        <span style={{fontSize:11.5,color:'var(--admin-text-faint)',marginLeft:12}}>
                             {savedAt} に控えました
                         </span>
                     )}
-                </div>
+                </label>
 
                 <p style={{fontSize:11.5,color:'var(--admin-text-faint)',
                     marginTop:12,lineHeight:1.8}}>
@@ -424,6 +413,7 @@ export default function AdminFeaturedClient() {
                         onAward={saveAward}
                         onMove={move}
                         onRemove={remove}
+                        onBreak={saveBreak}
                     />
                     <Section
                         title="運営のおすすめ"
@@ -435,6 +425,7 @@ export default function AdminFeaturedClient() {
                         onAward={saveAward}
                         onMove={move}
                         onRemove={remove}
+                        onBreak={saveBreak}
                     />
                 </>
             )}
@@ -443,8 +434,11 @@ export default function AdminFeaturedClient() {
     )
 }
 
+/** 1 枚の板に載る、いちばん多い冊数。見せ場の側と同じ数 */
+const PAGE_MAX = 5
+
 function Section({
-    title, note, rows, needLabel, onLabel, onMove, onRemove,
+    title, note, rows, needLabel, onLabel, onMove, onRemove, onBreak,
     contests = [], prizes = [], onAward,
 }: {
     title: string
@@ -457,7 +451,50 @@ function Section({
     onLabel: (id: string, label: string) => Promise<void>
     onMove: (id: string, direction: -1 | 1) => Promise<void>
     onRemove: (id: string) => Promise<void>
+    onBreak?: (id: string, value: boolean) => Promise<void>
 }) {
+    /*
+     * どこで板が変わるかを、先に数えておく。
+     *
+     * ★ 画面に出る形と、同じ順で数える。
+     *   ここの数え方が見せ場とずれると、
+     *   管理画面で見た並びと、ホームの並びが食い違う。
+     */
+    const marks: {
+        starts: boolean
+        /* 置かなくても切れる理由。'contest' か 'max'。無ければ null */
+        forced: 'contest' | 'max' | null
+        page: number
+    }[] = []
+
+    let page = 0
+    let size = 0
+    let lastContest: string | null = null
+
+    for (let at = 0; at < rows.length; at += 1) {
+        const contest = rows[at].contest_id ?? ''
+
+        let forced: 'contest' | 'max' | null = null
+        if (at > 0) {
+            if (contest !== lastContest) forced = 'contest'
+            else if (size >= PAGE_MAX) forced = 'max'
+        }
+
+        const starts = at === 0 || forced !== null || rows[at].starts_page === true
+        if (starts) {
+            page += 1
+            size = 0
+        }
+        size += 1
+        lastContest = contest
+
+        marks.push({ starts, forced, page })
+    }
+
+    /* 1 枚ごとの冊数。見出しに出す */
+    const sizeOf: Record<number, number> = {}
+    for (const mark of marks) sizeOf[mark.page] = (sizeOf[mark.page] || 0) + 1
+
     return (
         <div style={{marginBottom:26}}>
             <div style={{fontSize:14,fontWeight:700,color:'var(--admin-text)',marginBottom:4}}>
@@ -475,10 +512,70 @@ function Section({
             ) : (
                 <div style={{border:'1px solid var(--admin-border)',borderRadius:12,
                     background:'var(--admin-bg-card)',overflow:'hidden'}}>
-                    {rows.map((row, at) => (
-                        <div key={row.id} style={{display:'flex',alignItems:'center',gap:10,
-                            padding:'12px 14px',
-                            borderTop: at === 0 ? 'none' : '1px solid var(--admin-border)'}}>
+                    {rows.map((row, at) => {
+                      const mark = marks[at]
+
+                      return (
+                        <div key={row.id}>
+                        {/*
+                          * 板の見出し、または切れ目を置くための線。
+                          *
+                          * ★ 板が変わるところには、太い見出しを出す。
+                          *   何枚目の板に何冊載るかが、ここで分かる。
+                          *
+                          * ★ 変わらないところには、薄い線を出す。
+                          *   押すと、そこから新しい板になる。
+                          */}
+                        {mark.starts ? (
+                            <div style={{display:'flex',alignItems:'center',gap:10,
+                                padding:'8px 14px',
+                                background:'var(--admin-bg)',
+                                borderTop: at === 0 ? 'none' : '1px solid var(--admin-border)',
+                                borderBottom:'1px solid var(--admin-border)'}}>
+                                <span style={{fontSize:12,fontWeight:700,color:'var(--admin-text)'}}>
+                                    {mark.page} 枚目
+                                </span>
+                                <span style={{fontSize:11.5,color:'var(--admin-text-faint)'}}>
+                                    {sizeOf[mark.page]} 冊
+                                </span>
+
+                                <span style={{flex:1}} />
+
+                                {at === 0 ? null : mark.forced ? (
+                                    <span style={{fontSize:11,color:'var(--admin-text-faint)'}}>
+                                        {mark.forced === 'contest'
+                                            ? 'コンテストが変わるので、必ず切れます'
+                                            : `${PAGE_MAX} 冊を超えるので、必ず切れます`}
+                                    </span>
+                                ) : (
+                                    <button type="button"
+                                        onClick={() => void onBreak?.(row.id, false)}
+                                        style={{padding:'4px 10px',fontSize:11.5,borderRadius:6,
+                                            cursor:'pointer',border:'1px solid var(--admin-border)',
+                                            background:'var(--admin-bg-card)',
+                                            color:'var(--admin-text-muted)'}}>
+                                        前の板とつなげる
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div style={{display:'flex',alignItems:'center',gap:10,
+                                padding:'3px 14px',
+                                borderTop:'1px solid var(--admin-border)'}}>
+                                <span style={{flex:1}} />
+                                <button type="button"
+                                    onClick={() => void onBreak?.(row.id, true)}
+                                    style={{padding:'2px 10px',fontSize:11,borderRadius:6,
+                                        cursor:'pointer',border:'1px dashed var(--admin-border)',
+                                        background:'transparent',
+                                        color:'var(--admin-text-faint)'}}>
+                                    ここで切る
+                                </button>
+                            </div>
+                        )}
+
+                        <div style={{display:'flex',alignItems:'center',gap:10,
+                            padding:'12px 14px'}}>
                             <span style={{width:20,fontSize:12,color:'var(--admin-text-faint)'}}>
                                 {at + 1}
                             </span>
@@ -552,7 +649,9 @@ function Section({
                                 外す
                             </button>
                         </div>
-                    ))}
+                        </div>
+                      )
+                    })}
                 </div>
             )}
         </div>
