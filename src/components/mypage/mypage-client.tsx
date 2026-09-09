@@ -108,11 +108,19 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
   settings:  <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></>,
 }
 
-const TABS: { id: Tab; label: string; hideInFocus?: boolean }[] = [
+const TABS: { id: Tab; label: string; hideInFocus?: boolean; writerOnly?: boolean }[] = [
   { id:'mypage',    label:'マイページ' },
-  { id:'works',     label:'作品管理' },
+  /*
+   * ★ 書く人だけに出す。
+   *
+   *   読む向きにしている人には、作品も、
+   *   その作品への誤字の指摘も無い。
+   *   開いても空の画面が出るだけで、
+   *   何のための場所か分からない。
+   */
+  { id:'works',     label:'作品管理', writerOnly: true },
   /* 読者から届いた誤字の指摘。作者と報告者と運営だけが読める */
-  { id:'typos',     label:'誤字報告' },
+  { id:'typos',     label:'誤字報告', writerOnly: true },
   { id:'series',    label:'シリーズ' },
   { id:'bookmarks', label:'保存済み' },
   { id:'history',   label:'閲覧履歴' },
@@ -360,6 +368,8 @@ export default function MypageClient({
     setTimeout(() => window.location.reload(), 500)
   }
   const isFocusWriting = homeMode === 'focus'
+  /* 読む向きにしているか。書く人向けのものを出すかどうかの分かれ目 */
+  const isReaderMode = homeMode === 'read'
   /* 運営だけが触れる。作りかけの画面を確かめるため */
   const isRootAdmin = (profile.email || '').toLowerCase() === ROOT_ADMIN_EMAIL
   const [roleSaving, setRoleSaving] = useState(false)
@@ -493,12 +503,22 @@ export default function MypageClient({
   const claimedSet = new Set(claimedMissionIds)
   // 全ミッション達成でミッションタブは卒業（非表示）：書き手15・読み手10
   /*
-   * 書き手かどうか。
+   * 書き手向けのものを出すか。
    *
-   * 作品の数で決める。これは表で読んでいるので、
-   * 裏のぶんが届く前から正しく決まる。
+   * ★ 向きで決める。
+   *
+   *   前は true で固め打ちしていた。
+   *   「作品の数で決める」と書いてありながら、
+   *   誰にでも書き手向けのものが出ていた。
+   *
+   *   読む向きにしている人に「クリエイターへの道」が出て、
+   *   投稿もシリーズも作らないので、いつまでも達成できない。
+   *   終わらない宿題が並んでいるだけになる。
+   *
+   * ★ 書く向きに切り替えれば、また出る。
+   *   消えるのではなく、隠れるだけ。
    */
-  const isWriterRole = true
+  const isWriterRole = !isReaderMode
   const allMissionsDone = claimedMissionIds.length >= (isWriterRole ? 15 : 10)
   /*
    * 出すタブ。
@@ -507,8 +527,29 @@ export default function MypageClient({
    */
   const visibleTabs = TABS.filter(t =>
     (t.id !== 'mission' || !allMissionsDone) &&
-    !(isFocusWriting && t.hideInFocus)
+    !(isFocusWriting && t.hideInFocus) &&
+    /*
+     * ★ 読む向きの人には、書く人向けのタブを出さない。
+     *
+     *   作品管理も誤字報告も、作品を持っていないと
+     *   空の画面になる。行けるのに何も無い場所は、
+     *   置かないほうがよい。
+     *
+     *   書く向きに切り替えれば、また出る。
+     */
+    !(isReaderMode && t.writerOnly)
   )
+  /*
+   * いま開いているタブが消えたら、マイページへ戻す。
+   *
+   * ★ 作品管理を開いたまま読む向きに切り替えると、
+   *   タブは消えるのに中身だけ残る。
+   *   帰る場所が無くなるので、先頭へ戻す。
+   */
+  useEffect(() => {
+    if (!visibleTabs.some(t => t.id === activeTab)) setActiveTab('mypage')
+  }, [visibleTabs, activeTab])
+
   const published  = myNovels.filter(n => n.published)
   const drafts     = myNovels.filter(n => !n.published)
   const initial    = profile.display_name.slice(0,1)
