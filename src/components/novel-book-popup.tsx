@@ -2,6 +2,9 @@
 
 import { useEffect, useRef } from 'react'
 
+import { getRepository } from '@/lib/repository'
+import { createClient } from '@/lib/supabase/client'
+
 /**
  * ============================================================
  * 原石航路
@@ -60,6 +63,56 @@ export default function NovelBookPopup({
 }: Props) {
     const opened = useRef(false)
 
+    /*
+     * 見開きの中に「今後この小窓を出さない」を差し込む。
+     *
+     * ★ 見開きは home.js が開いている。
+     *   あのファイルは触らない決まりなので、
+     *   開いたあとに、こちらから 1 つ足す。
+     *
+     * ★ 二重に足さない。
+     *   同じ印を付けて、あれば何もしない。
+     */
+    function addOptOut() {
+        const root = document.querySelector('.book_info')
+        if (!root) return
+        if (root.querySelector('[data-popup-optout]')) return
+
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.dataset.popupOptout = '1'
+        button.textContent = '今後この小窓を出さない（マイページの設定で戻せます）'
+        button.style.cssText =
+            'display:block;width:100%;margin:10px 0 4px;padding:6px;border:none;' +
+            'background:none;color:var(--color-text-faint);font-size:11px;' +
+            'cursor:pointer;text-decoration:underline'
+
+        button.onclick = () => {
+            void (async () => {
+                try {
+                    const me = await getRepository().getProfile()
+                    const userId = (me as { user_id?: string } | null)?.user_id
+                    if (userId) {
+                        await createClient()
+                            .from('profiles')
+                            .update({ work_popup_style: 'none' })
+                            .eq('user_id', userId)
+                    }
+                } catch {
+                    /* 控えられなくても、いまは閉じる */
+                }
+                /*
+                 * 頁を読み直す。
+                 * 出すかどうかは組み上がるときに一度しか読まないので、
+                 * 読み直さないと次の作品でもまだ開く。
+                 */
+                window.location.reload()
+            })()
+        }
+
+        root.appendChild(button)
+    }
+
     function open() {
         /*
          * 器がまだ無いことがある。
@@ -72,6 +125,9 @@ export default function NovelBookPopup({
             window.location.href = `/novel/${novel.id}`
             return
         }
+
+        /* 開いたあとに差し込む。器ができるのを少し待つ */
+        window.setTimeout(addOptOut, 120)
 
         window.openBookInfo({
             id: novel.id,

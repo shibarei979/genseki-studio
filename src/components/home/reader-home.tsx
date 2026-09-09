@@ -5,7 +5,6 @@ import Link from 'next/link'
 
 import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
 import WorkPopupFlag from '@/components/home/work-popup-flag'
-import ShelfCardPopup from '@/components/home/shelf-card-popup'
 import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
 import FeaturedShowcase from '@/components/home/featured-showcase'
@@ -1099,7 +1098,10 @@ export default async function ReaderHome() {
             {/* 見せ方の設定を body に伝える。home.js がそれを見る */}
             <WorkPopupFlag />
             {/* 札の設定のとき、本棚の本を押したら札を出す */}
-            <ShelfCardPopup />
+            {/*
+              * 本棚の札は置かない。
+              * 札そのものをやめ、見開きに一本化した。
+              */}
             <div className="rh_main">
 
             {/*

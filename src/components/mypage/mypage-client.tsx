@@ -372,16 +372,14 @@ export default function MypageClient({
   /*
    * 作品を押したときの見せ方。
    *
-   * 決めていない人は札。
-   * 初めて来た人には、情報が多いほうが親切。
+   * ★ 札はやめた。見開きか、出さないかの 2 つ。
+   *   決めていない人と、札を選んでいた人は見開き。
    */
-  const [popupStyle, setPopupStyle] = useState(() => {
-    const saved = (profile as { work_popup_style?: string }).work_popup_style
-    if (saved === 'book') return 'book'
-    /* 小窓を出さない。押したら、そのまま作品の頁へ行く */
-    if (saved === 'none') return 'none'
-    return 'card'
-  })
+  const [popupStyle, setPopupStyle] = useState(
+    (profile as { work_popup_style?: string }).work_popup_style === 'none'
+      ? 'none'
+      : 'book',
+  )
 
   async function savePopupStyle(next: string) {
     if (next === popupStyle) return
@@ -1743,19 +1741,11 @@ export default function MypageClient({
 
               <div style={{display:'inline-flex',border:'1px solid var(--color-brand-border)',borderRadius:8,overflow:'hidden'}}>
                 <button
-                  onClick={()=>savePopupStyle('card')}
-                  style={{padding:'8px 18px',fontSize:13,cursor:'pointer',border:'none',
-                    fontWeight:popupStyle==='book'?500:700,
-                    background:popupStyle==='book'?'var(--color-bg-card)':'var(--color-brand)',
-                    color:popupStyle==='book'?'var(--color-text-muted)':'var(--base-color-1)'}}>
-                  札で見る
-                </button>
-                <button
                   onClick={()=>savePopupStyle('book')}
                   style={{padding:'8px 18px',fontSize:13,cursor:'pointer',border:'none',
-                    fontWeight:popupStyle==='book'?700:500,
-                    background:popupStyle==='book'?'var(--color-brand)':'var(--color-bg-card)',
-                    color:popupStyle==='book'?'var(--base-color-1)':'var(--color-text-muted)'}}>
+                    fontWeight:popupStyle==='none'?500:700,
+                    background:popupStyle==='none'?'var(--color-bg-card)':'var(--color-brand)',
+                    color:popupStyle==='none'?'var(--color-text-muted)':'var(--base-color-1)'}}>
                   本を開く
                 </button>
                 {/*
@@ -1776,8 +1766,6 @@ export default function MypageClient({
               </div>
 
               <p style={{fontSize:11,lineHeight:1.8,color:'var(--color-text-faint)',marginTop:8}}>
-                札は、あらすじやタグをまとめて読めます。
-                <br />
                 本を開くと、見開きであらすじを読めます。
                 <br />
                 出さないを選ぶと、作品を押したときそのまま作品の頁へ行きます。

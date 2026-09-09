@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-import NovelPreviewPopup from '@/components/novel-preview-popup'
 import NovelBookPopup from '@/components/novel-book-popup'
 import { getRepository } from '@/lib/repository'
 
@@ -42,14 +41,22 @@ export default function NovelPopup({ novel, children }: Props) {
    * 決まるまでは札。
    * 初めて来た人には、情報が多いほうが親切。
    */
-  const [style, setStyle] = useState<'card' | 'book' | 'none'>('card')
+  /*
+   * ★ 札はやめた。
+   *
+   *   同じものを 2 通りに出す道具が 2 つあると、
+   *   直すたびに両方を回ることになる。
+   *   見開きのほうが読み物らしく、あらすじも長く読める。
+   *
+   *   決めていない人も見開き。
+   */
+  const [style, setStyle] = useState<'book' | 'none'>('book')
 
   useEffect(() => {
     void (async () => {
       try {
         const profile = await getRepository().getProfile()
         const saved = (profile as { work_popup_style?: string })?.work_popup_style
-        if (saved === 'book') setStyle('book')
         if (saved === 'none') setStyle('none')
       } catch {
         /* 読めなくても札で出す。押せないより出るほうがよい */
@@ -76,9 +83,5 @@ export default function NovelPopup({ novel, children }: Props) {
     )
   }
 
-  if (style === 'book') {
-    return <NovelBookPopup novel={novel}>{children}</NovelBookPopup>
-  }
-
-  return <NovelPreviewPopup novel={novel}>{children}</NovelPreviewPopup>
+  return <NovelBookPopup novel={novel}>{children}</NovelBookPopup>
 }

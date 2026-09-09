@@ -21,28 +21,28 @@ import { getRepository } from '@/lib/repository'
 export default function WorkPopupFlag() {
     useEffect(() => {
         void (async () => {
-            let style = 'card'
+            /*
+             * ★ 既定は見開き。札はやめた。
+             *
+             * ★ 「出さない」のときだけ 'card' と伝える。
+             *
+             *   home.js は 'card' のときだけ見開きを開かず、
+             *   React 側に任せる作り。
+             *   任せてもらえれば、React 側が小窓を出さずに
+             *   作品の頁へ送る。
+             *
+             *   home.js は触らない決まりなので、
+             *   こちらで読み替える。
+             */
+            let style = 'book'
 
             try {
                 const profile = await getRepository().getProfile()
                 const saved = (profile as { work_popup_style?: string })
                     ?.work_popup_style
-                if (saved === 'book') style = 'book'
-
-                /*
-                 * ★ 「出さない」も、本棚には「札」として伝える。
-                 *
-                 *   home.js は「札」のときだけ見開きを開かず、
-                 *   React 側の小窓に任せる作り。
-                 *   そこへ任せてもらえれば、React 側が
-                 *   小窓を出さずに作品の頁へ送る。
-                 *
-                 *   home.js は触らない決まりなので、
-                 *   こちらで札に読み替える。
-                 */
                 if (saved === 'none') style = 'card'
             } catch {
-                /* 読めなければ札。押せないより出るほうがよい */
+                /* 読めなければ見開き。押せないより出るほうがよい */
             }
 
             document.body.dataset.workPopup = style
