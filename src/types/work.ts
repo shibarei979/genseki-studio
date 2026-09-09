@@ -256,6 +256,19 @@ export interface WorkWithStats extends Work {
  * 消すと、既にそれで出している作品のジャンルが空になる。
  */
 export const GENRES = [
+    /*
+     * ジャンルを決めきれない作品のための棚。
+     *
+     * ★ 検索の側には前からあったが、
+     *   作品に付けられなかった。
+     *   選べない棚が並んでいて、押しても 0 件だった。
+     *
+     * ★ いちばん上に置く。
+     *   「その他」は残りものの置き場だが、
+     *   こちらは「どれにも寄らない」を自分で選ぶもの。
+     *   意味が違うので、並びも分ける。
+     */
+    "オールジャンル",
     "ハイファンタジー",
     "異世界ファンタジー",
     "ローファンタジー",
@@ -307,7 +320,7 @@ export const GENRES = [
 ] as const;
 
 /** 新しく選べるジャンル。昔のものは出さない */
-export const GENRES_SELECTABLE = GENRES.slice(0, 19);
+export const GENRES_SELECTABLE = GENRES.slice(0, 20);
 
 /**
  * R18 の作品でだけ選べるジャンル。
@@ -387,6 +400,8 @@ export const GENRE_COLOR: Record<string, string> = {
     "官能 R18": "#b03a5b",
     GL: "#e07aa8",
     その他: "#8a8f93",
+    /* どれにも寄らない棚。落ち着いた青緑。その他の灰とは分ける */
+    オールジャンル: "#6f9aa8",
 
     /*
      * 昔のジャンル。

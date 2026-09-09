@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { GENRES_SELECTABLE, GENRES_R18_ONLY } from '@/types'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -11,7 +12,19 @@ import Link from 'next/link'
  * 昔の「ファンタジー」「異世界」で出している作品も
  * 拾えるようにしているので、ここには出さない。
  */
-const GENRES_BASE = ['オールジャンル','ハイファンタジー','異世界ファンタジー','ローファンタジー','SF','恋愛','学園','ミステリー','ホラー','歴史・時代','日常','アクション','コメディ','文芸','その他']
+/*
+ * ★ 手で書かず、作品に付けられるものから作る。
+ *
+ *   前はここに書き写していたので、
+ *   作品側に無い「オールジャンル」が並び、
+ *   逆に BL・GL は下で足す形になっていた。
+ *   ジャンルを増やすたびに、両方を直す必要があった。
+ *
+ *   R18 の棚だけは、年齢を確かめた人に出すので下で足す。
+ */
+const GENRES_BASE = GENRES_SELECTABLE.filter(
+  g => !GENRES_R18_ONLY.includes(g) && g !== 'BL' && g !== 'GL',
+)
 
 const MOODS = [
   { emoji: '💘', label: '胸きゅんしたい',      tags: ['恋愛','ときめき','胸キュン','片思い','ラブコメ'] },
