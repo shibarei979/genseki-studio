@@ -19,11 +19,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import EpisodeIllustManager from "@/components/post/episode-illust-manager";
+import TagInput from "@/components/works/tag-input";
 import Header from "@/components/layout/header";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
 import { getRepository } from "@/lib/repository";
 import { formatNumber } from "@/lib/utils/text";
 import type {
+    AgeRating,
     AiUsage,
     Chapter,
     Episode,
@@ -32,10 +34,14 @@ import type {
     WorkFormat,
 } from "@/types";
 import {
+    AGE_RATING_DESCRIPTION,
+    AGE_RATING_LABEL,
     AI_USAGE_LABEL,
+    GENRES_R18_ONLY,
     WORK_FORMAT_DESCRIPTION,
     WORK_FORMAT_LABEL,
     formatChapterLabel,
+    selectableGenres,
 } from "@/types";
 
 export default function WorkPostClient({ workId }: { workId: string }) {
@@ -956,6 +962,9 @@ function PostForm({
     const [at, setAt] = useState(toLocalInput(episode.publish_at));
     const [error, setError] = useState("");
 
+    /* 詳細設定を開いているか。畳んで置く */
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
+
     /* 作品の題名。出す前だけ、ここで直せる */
     const [workTitle, setWorkTitle] = useState(work.title ?? "");
 
@@ -1285,21 +1294,17 @@ function PostForm({
                         </div>
 
                         {/*
-                          * 後書きと、作品の形。
+                          * 後書き。
                           *
-                          * ★ 本文のすぐ下に、横に並べる。
+                          * ★ 本文のすぐ下に置く。
+                          *   本文のあとに出る言葉なので、順として自然。
                           *
-                          *   後書きは本文のあとに出る言葉なので、
-                          *   本文の下にあるほうが順として自然。
-                          *
-                          *   作品の形は右の柱に離れて置いてあったが、
-                          *   出す直前に一度だけ確かめるもの。
-                          *   本文と一緒に目に入る所へ移す。
-                          *
-                          * ★ 狭い画面では縦に落ちる。
-                          *   2 つを無理に並べると、選び具が潰れる。
+                          * ★ 作品の形はここから外し、詳細設定へ移した。
+                          *   ジャンル・タグ・年齢と同じ「作品そのもの」の話で、
+                          *   話ごとの欄に混ざっていると
+                          *   どちらを直しているのか分からなくなる。
                           */}
-                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div className="mt-4">
                             <Field label="後書き（任意）">
                                 <textarea
                                     value={afterword}
@@ -1310,47 +1315,6 @@ function PostForm({
                                 />
                             </Field>
 
-                            <div>
-                                <span className="text-xs font-medium text-ink">
-                                    作品の形
-                                </span>
-
-                                <ul className="mt-1.5 space-y-1.5">
-                                    {(Object.keys(WORK_FORMAT_LABEL) as WorkFormat[]).map(
-                                        (key) => (
-                                            <li key={key}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        onChangeWorkInfo?.({ format: key })
-                                                    }
-                                                    aria-pressed={work.format === key}
-                                                    className={[
-                                                        "w-full rounded-md border px-3 py-2 text-left",
-                                                        work.format === key
-                                                            ? "border-forest bg-forest-tint/50"
-                                                            : "border-line hover:border-forest-line",
-                                                    ].join(" ")}
-                                                >
-                                                    <span className="block text-[12px] text-ink">
-                                                        {WORK_FORMAT_LABEL[key]}
-                                                    </span>
-                                                    <span className="mt-0.5 block text-[10px] text-faint">
-                                                        {WORK_FORMAT_DESCRIPTION[key]}
-                                                    </span>
-                                                </button>
-                                            </li>
-                                        ),
-                                    )}
-                                </ul>
-
-                                {!work.format && (
-                                    <p className="mt-2 text-[10px] leading-relaxed text-amber">
-                                        まだ選ばれていません。
-                                        選ばないと「長編」として扱われます。
-                                    </p>
-                                )}
-                            </div>
                         </div>
                     </Card>
 
@@ -1558,6 +1522,189 @@ function PostForm({
                             <p className="mt-2 text-[11px] text-[var(--color-danger)]">
                                 {error}
                             </p>
+                        )}
+                    </Card>
+
+                    {/*
+                      * 作品の設定。
+                      *
+                      * ★ 畳んで置く。
+                      *
+                      *   ジャンルも年齢も、毎回は触らない。
+                      *   ひらいたまま並べると、話を出す手が
+                      *   作品の設定に埋もれる。
+                      *
+                      *   ただ「いま何になっているか」は、
+                      *   出す前に確かめたい。だから折り目の所に
+                      *   いまの値を並べておく。開かなくても分かる。
+                      *
+                      * ★ ここで直したぶんは、その場で控える。
+                      *   「保存」を押させない。押し忘れて出すと、
+                      *   直したつもりのまま古い形で並ぶ。
+                      */}
+                    <Card title="作品の設定">
+                        <p className="text-[11px] leading-relaxed text-muted">
+                            {work.genre || "ジャンル未設定"}
+                            {" ／ "}
+                            {AGE_RATING_LABEL[work.age_rating] ?? "全年齢"}
+                            {" ／ "}
+                            {work.format
+                                ? WORK_FORMAT_LABEL[work.format]
+                                : "長編（未選択）"}
+                            {" ／ "}
+                            タグ {work.keywords?.length ?? 0} 個
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsDetailOpen((open) => !open)}
+                            aria-expanded={isDetailOpen}
+                            className="mt-2.5 w-full rounded-md border border-line px-3 py-2 text-[12px] text-muted hover:border-forest-line hover:text-forest"
+                        >
+                            詳細設定{isDetailOpen ? "を閉じる" : "（ジャンル・タグ・年齢・形）"}
+                        </button>
+
+                        {isDetailOpen && (
+                            <div className="mt-3 space-y-4 border-t border-line pt-3">
+                                {/* 作品の形 */}
+                                <div>
+                                    <span className="text-xs font-medium text-ink">
+                                        作品の形
+                                    </span>
+                                    <ul className="mt-1.5 space-y-1.5">
+                                        {(
+                                            Object.keys(WORK_FORMAT_LABEL) as WorkFormat[]
+                                        ).map((key) => (
+                                            <li key={key}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        onChangeWorkInfo?.({ format: key })
+                                                    }
+                                                    aria-pressed={work.format === key}
+                                                    className={[
+                                                        "w-full rounded-md border px-3 py-2 text-left",
+                                                        work.format === key
+                                                            ? "border-forest bg-forest-tint/50"
+                                                            : "border-line hover:border-forest-line",
+                                                    ].join(" ")}
+                                                >
+                                                    <span className="block text-[12px] text-ink">
+                                                        {WORK_FORMAT_LABEL[key]}
+                                                    </span>
+                                                    <span className="mt-0.5 block text-[10px] text-faint">
+                                                        {WORK_FORMAT_DESCRIPTION[key]}
+                                                    </span>
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {/* 年齢の区分 */}
+                                <div>
+                                    <span className="text-xs font-medium text-ink">
+                                        年齢の区分
+                                    </span>
+                                    <div className="mt-1.5 grid grid-cols-3 gap-2">
+                                        {(
+                                            Object.keys(AGE_RATING_LABEL) as AgeRating[]
+                                        ).map((key) => (
+                                            <button
+                                                key={key}
+                                                type="button"
+                                                onClick={() => {
+                                                    /*
+                                                     * ★ R18 を外したら、R18 だけのジャンルも外す。
+                                                     *
+                                                     *   残したまま全年齢の棚に並ぶと、
+                                                     *   探している人にも探していない人にも
+                                                     *   意図と違う出方をする。
+                                                     *
+                                                     *   こちらで別のジャンルへ移し替えはしない。
+                                                     *   どこへ入れるかは書いた人が決めるもの。
+                                                     */
+                                                    const dropGenre =
+                                                        key !== "r18" &&
+                                                        GENRES_R18_ONLY.includes(
+                                                            work.genre || "",
+                                                        );
+
+                                                    onChangeWorkInfo?.({
+                                                        age_rating: key,
+                                                        ...(dropGenre ? { genre: "" } : {}),
+                                                    });
+                                                }}
+                                                aria-pressed={work.age_rating === key}
+                                                className={[
+                                                    "rounded-md border px-2 py-2 text-center",
+                                                    work.age_rating === key
+                                                        ? "border-forest bg-forest-tint/50"
+                                                        : "border-line hover:border-forest-line",
+                                                ].join(" ")}
+                                            >
+                                                <span className="block text-[12px] text-ink">
+                                                    {AGE_RATING_LABEL[key]}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
+                                        {AGE_RATING_DESCRIPTION[work.age_rating] ??
+                                            AGE_RATING_DESCRIPTION.all}
+                                    </p>
+                                </div>
+
+                                {/* ジャンル */}
+                                <div>
+                                    <span className="text-xs font-medium text-ink">
+                                        ジャンル
+                                    </span>
+                                    <select
+                                        value={work.genre || ""}
+                                        onChange={(e) =>
+                                            onChangeWorkInfo?.({ genre: e.target.value })
+                                        }
+                                        className={`mt-1.5 ${inputClass}`}
+                                    >
+                                        <option value="">選んでください</option>
+                                        {selectableGenres(work.age_rating).map((one) => (
+                                            <option key={one} value={one}>
+                                                {one}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
+                                        BL・GL は、どの年齢の区分でも選べます。
+                                        BL R18・GL R18・官能 R18 は、
+                                        年齢の区分を R18 にすると出ます。
+                                    </p>
+                                </div>
+
+                                {/* タグ */}
+                                <div>
+                                    <span className="text-xs font-medium text-ink">
+                                        タグ
+                                    </span>
+                                    <div className="mt-1.5">
+                                        <TagInput
+                                            id="post-tags"
+                                            tags={work.keywords ?? []}
+                                            onChange={(tags) =>
+                                                onChangeWorkInfo?.({ keywords: tags })
+                                            }
+                                        />
+                                    </div>
+                                    <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
+                                        候補から選ぶほか、打ち込んで作れます（入力して Enter）。
+                                    </p>
+                                </div>
+
+                                <p className="text-[10px] leading-relaxed text-faint">
+                                    ここで直したものは、その場で控わります。
+                                    あらすじや表紙は、作品の設定から直せます。
+                                </p>
+                            </div>
                         )}
                     </Card>
 
