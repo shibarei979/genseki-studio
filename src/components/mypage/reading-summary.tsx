@@ -29,13 +29,40 @@ interface Month {
     authors: [string, number][]
 }
 
-/* 輪の色。濃い順に。数が多いほど濃くする */
+/*
+ * 輪の色。
+ *
+ * ★ 4 つとも、はっきり違う色にする。
+ *
+ *   前は紺・緑・薄い縁・灰で組んでいた。
+ *   どれも暗くて近く、輪の切れ目が見えなかった。
+ *   割合の数字を読まないと分からないなら、輪の意味がない。
+ *
+ * ★ このサイトに元からある色から選ぶ。
+ *   紺は帯の色、琥珀は本棚の板の色。
+ *   新しい色を持ち込むより、見慣れた色のほうが落ち着く。
+ */
 const TONES = [
-    'var(--color-brand)',
-    'var(--color-forest)',
-    'var(--color-brand-border)',
-    'var(--color-text-faint)',
+    '#24506b', // 紺。帯の色
+    '#d09a4e', // 琥珀。本棚の板の色
+    '#6f9f74', // 若草
+    '#c5c2b8', // その他。灰
 ]
+
+/*
+ * 文庫本 1 冊ぶんの字数。
+ *
+ * ★ 数字だけでは、多いのか少ないのか分からない。
+ *   17 万字と言われても、手応えにならない。
+ *   本の冊数に直すと、読んだ量として感じられる。
+ *
+ * ★ 10 万字は目安。作品によって大きく違う。
+ *   だから「約」と書く。
+ */
+const BOOK_CHARS = 100000
+
+/** 原稿用紙 1 枚ぶんの字数 */
+const SHEET_CHARS = 400
 
 function monthKey(date: Date) {
     return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).slice(0, 7)
@@ -79,6 +106,17 @@ export default function ReadingSummary() {
 
     const now = months[at]
     const isThisMonth = at >= monthKey(new Date())
+
+    /*
+     * 先月の文字数。
+     *
+     * 増えたか減ったかが分かると、続ける手応えになる。
+     * 先月の記録が無ければ出さない。
+     */
+    const [year, month] = at.split('-').map(Number)
+    const back = new Date(year, month - 2, 1)
+    const beforeKey = `${back.getFullYear()}-${String(back.getMonth() + 1).padStart(2, '0')}`
+    const before = months[beforeKey]?.chars ?? null
 
     return (
         <div
@@ -142,42 +180,95 @@ export default function ReadingSummary() {
                 </p>
             ) : (
                 <>
-                    {/* 数 */}
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            /* 数字どうしも近づける。離すと関係が薄く見える */
-                            gap: '16px 32px',
-                            alignItems: 'baseline',
-                            marginBottom: 20,
-                        }}
-                    >
-                        <Figure label="読んだ文字数" value={now.chars.toLocaleString()} big />
-                        <Figure label="作品数" value={String(now.works)} />
-                        <Figure label="話数" value={String(now.episodes)} />
-                    </div>
-
-                    {/* 内訳 */}
                     {/*
-                      * ★ 幅いっぱいに引き伸ばさない。
+                      * 数と内訳を、横一列に並べる。
                       *
-                      *   前は 2 つを半分ずつに割っていた。
-                      *   輪も名前も小さいので、間が大きく空いて
-                      *   割合の数字が右端まで飛んでいた。
+                      * ★ 幅を余らせない。
+                      *   前は数字が左に固まり、右が空いていた。
+                      *   3 つの塊で埋める。
                       *
-                      *   中身の大きさに合わせて並べ、
-                      *   余ったところは空けたままにする。
+                      * ★ 狭い画面では、順に下へ落ちる。
                       */}
                     <div
                         style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '24px 48px',
-                            borderTop: '1px solid var(--color-brand-light)',
-                            paddingTop: 18,
+                            display: 'grid',
+                            gap: '22px 28px',
+                            gridTemplateColumns:
+                                'repeat(auto-fit, minmax(250px, 1fr))',
+                            alignItems: 'start',
                         }}
                     >
+                        {/* 読んだ量 */}
+                        <div>
+                            <div
+                                style={{
+                                    fontSize: 11,
+                                    color: 'var(--color-text-muted)',
+                                    marginBottom: 4,
+                                }}
+                            >
+                                読んだ文字数
+                            </div>
+
+                            <div
+                                style={{
+                                    fontSize: 34,
+                                    fontWeight: 700,
+                                    lineHeight: 1.1,
+                                    color: 'var(--color-brand)',
+                                    letterSpacing: '.01em',
+                                }}
+                            >
+                                {now.chars.toLocaleString()}
+                            </div>
+
+                            {/*
+                              * ★ 冊数に直す。
+                              *   17 万字と言われても手応えにならない。
+                              *   本の数にすると、読んだ量として感じられる。
+                              */}
+                            <div
+                                style={{
+                                    marginTop: 8,
+                                    fontSize: 13,
+                                    color: 'var(--color-text)',
+                                    lineHeight: 1.8,
+                                }}
+                            >
+                                文庫本にすると{' '}
+                                <b style={{ fontSize: 17, color: 'var(--color-forest)' }}>
+                                    約{(now.chars / BOOK_CHARS).toFixed(1)}
+                                </b>{' '}
+                                冊ぶん
+                                <br />
+                                <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                    原稿用紙 {Math.round(now.chars / SHEET_CHARS).toLocaleString()} 枚
+                                </span>
+                            </div>
+
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    gap: 22,
+                                    marginTop: 14,
+                                    paddingTop: 12,
+                                    borderTop: '1px solid var(--color-brand-light)',
+                                }}
+                            >
+                                <Figure label="作品数" value={String(now.works)} />
+                                <Figure label="話数" value={String(now.episodes)} />
+                                {before !== null && (
+                                    <Figure
+                                        label="先月とくらべて"
+                                        value={
+                                            (now.chars >= before ? '+' : '−') +
+                                            Math.abs(now.chars - before).toLocaleString()
+                                        }
+                                    />
+                                )}
+                            </div>
+                        </div>
+
                         <Ring title="ジャンルの内訳" rows={now.genres} />
                         <Ring title="作者別の文字数" rows={now.authors} />
                     </div>
