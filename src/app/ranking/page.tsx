@@ -203,18 +203,39 @@ async function computeRanking(period: string, novelType: string, serial: string,
   // ポイント計算：☆×1 + いいね×2 + 保存×3
   // ☆は1人1話5まで（同一ユーザー・同一話のratingは最大5に丸める）
   const pointMap: Record<string, number> = {}
+  /* 同点のときに見る。上の囲いの外でも使う */
+  const continuedForSort: Record<string, number> = {}
   const likeCntMap: Record<string, number> = {}
   const bookmarkCntMap: Record<string, number> = {}
   const starSumMap: Record<string, number> = {}
 
   if (candidateIds.length > 0) {
-    const [{ data: allLikes }, { data: allBookmarks }, { data: allRatings }] = await Promise.all([
-      supabase.from('likes').select('novel_id').in('novel_id', candidateIds),
-      supabase.from('bookmarks').select('novel_id').in('novel_id', candidateIds),
+    /*
+     * いいねと保存は novel_stats から読む。
+     *
+     * ★ 表を直に数えてはいけない。
+     *
+     *   likes と bookmarks の決まりは auth.uid() = user_id。
+     *   「自分が押したもの」しか読めないので、
+     *   ここで数えても 0 しか返らなかった。
+     *   ランキングは長いあいだ、実質「星の数」だけで
+     *   並んでいた。
+     *
+     *   novel_stats は数だけを返す入れ物で、
+     *   中の行の決まりを素通りする。
+     *   誰が押したかは漏れない。
+     *
+     * ★ いいねには話への♡も入っている。
+     *   読者が押すのは、たいてい本文の下の♡。
+     */
+    const [{ data: allStats }, { data: allRatings }] = await Promise.all([
+      supabase.from('novel_stats').select('novel_id, like_count, bookmark_count').in('novel_id', candidateIds),
       supabase.from('comments').select('novel_id, episode_id, user_id, rating').in('novel_id', candidateIds).not('rating', 'is', null),
     ])
-    allLikes?.forEach((l: any) => { likeCntMap[l.novel_id] = (likeCntMap[l.novel_id]||0)+1 })
-    allBookmarks?.forEach((b: any) => { bookmarkCntMap[b.novel_id] = (bookmarkCntMap[b.novel_id]||0)+1 })
+    allStats?.forEach((row: any) => {
+      likeCntMap[row.novel_id] = Number(row.like_count) || 0
+      bookmarkCntMap[row.novel_id] = Number(row.bookmark_count) || 0
+    })
 
     // ☆は「1人1話につき最大5」：user_id+episode_idごとに最大ratingを取る
     const bestRating: Record<string, number> = {} // key: novel_id|user_id|episode_id
@@ -239,8 +260,20 @@ async function computeRanking(period: string, novelType: string, serial: string,
       const pvSince = hours ? new Date(Date.now() - hours * 3600 * 1000).toISOString() : null
       for (let i = 0; i < candEpIds.length; i += 500) {
         const chunk = candEpIds.slice(i, i + 500)
-        let q: any = supabase.from('page_views').select('episode_id').eq('is_author', false).in('episode_id', chunk)
-        if (pvSince) q = q.gt('created_at', pvSince)
+        /*
+         * ★ 時刻の列は viewed_at。created_at ではない。
+         *   その列は無いので、期間つきの並びでは
+         *   この問い合わせが失敗し、読まれた数が
+         *   まるごと 0 として数えられていた。
+         *
+         * ★ 見回りの機械は外す。
+         *   印の無い古い記録（null）は人として残す。
+         */
+        let q: any = supabase.from('page_views').select('episode_id')
+          .eq('is_author', false)
+          .or('is_bot.is.null,is_bot.eq.false')
+          .in('episode_id', chunk)
+        if (pvSince) q = q.gt('viewed_at', pvSince)
         const { data: pvRows } = await q
         pvRows?.forEach((r: any) => { const nid = epToNovelPv[r.episode_id]; if (nid) pvCntMap[nid] = (pvCntMap[nid] || 0) + 1 })
       }
@@ -260,7 +293,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
      *   人数 × 話数ぶん調べることになり、
      *   開くたびの計算としては重すぎる。
      */
-    const continuedMap: Record<string, number> = {}
+    const continuedMap = continuedForSort
     {
       const readByUser: Record<string, Set<string>> = {}
 
@@ -310,7 +343,30 @@ async function computeRanking(period: string, novelType: string, serial: string,
     })
   }
 
-  const sorted = candidateNovels.sort((a: any, b: any) => (pointMap[b.id]||0) - (pointMap[a.id]||0))
+  /*
+   * 並べ替え。
+   *
+   * ★ 同点の決まりを持たせる。
+   *
+   *   前は点だけで並べていたので、同点のときは
+   *   表から返ってきた順のまま残っていた。
+   *   どちらが上に来るかは運で決まっていた。
+   *
+   *   同点なら「続けて読んだ人」が多いほう。
+   *   それも同じなら、更新の新しいほう。
+   *
+   *   続けて読んだ人を次に見るのは、それが
+   *   面白かったことをいちばん強く表す数だから。
+   */
+  const sorted = candidateNovels.sort((a: any, b: any) => {
+    const byPoint = (pointMap[b.id]||0) - (pointMap[a.id]||0)
+    if (byPoint !== 0) return byPoint
+
+    const byContinued = (continuedForSort[b.id]||0) - (continuedForSort[a.id]||0)
+    if (byContinued !== 0) return byContinued
+
+    return String(b.updated_at||'').localeCompare(String(a.updated_at||''))
+  })
   const total  = sorted.length
   const paged  = sorted.slice(offset, offset + PAGE_SIZE)
   const authorIds = Array.from(new Set(paged.map((n: any) => n.author_id)))

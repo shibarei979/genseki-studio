@@ -329,15 +329,23 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
   }
 
   const [likeCountRes, viewDataRes, discoverCountRes, bookmarkCountRes] = await Promise.all([
-    supabase.from('likes').select('*',{count:'exact',head:true}).eq('novel_id', params.id),
+    /*
+     * ★ likes を直に数えない。
+     *   決まりが auth.uid() = user_id なので、
+     *   他人のいいねは返らず、いつも 0 に見えていた。
+     *   数だけを返す novel_stats から読む。
+     */
+    supabase.from('novel_stats').select('like_count, bookmark_count').eq('novel_id', params.id).maybeSingle(),
     supabase.from('novel_views').select('view_count').eq('novel_id', params.id).maybeSingle(),
     supabase.from('discovers').select('*',{count:'exact',head:true}).eq('novel_id', params.id).eq('is_pending', false),
-    supabase.from('bookmarks').select('*',{count:'exact',head:true}).eq('novel_id', params.id),
+    /* 保存も上の行に入っているので、別に数えない */
+    Promise.resolve({ count: 0 }),
   ])
-  const likeCount = likeCountRes.count
+  /* novel_stats はひとつの行で、いいねと保存の両方を返す */
+  const likeCount = Number((likeCountRes as any).data?.like_count ?? 0)
   const viewCount = viewDataRes.data?.view_count || 0
   const discoverCount = discoverCountRes.count
-  const bookmarkCount = bookmarkCountRes.count
+  const bookmarkCount = Number((likeCountRes as any).data?.bookmark_count ?? 0)
 
   // ドット絵帯：承認済み・自分の帯・（作者なら）承認待ち
   const isAuthorViewing = !!user && user.id === novel.author_id
