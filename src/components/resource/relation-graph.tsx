@@ -37,24 +37,6 @@ const BASE_SIZE = 400;
 const BASE_RADIUS = 142;
 
 /*
- * 広さの段。
- *
- * ★ 紐を長くしたい、という声から。
- *
- *   項目が増えると、丸どうしが近づいて紐が短くなる。
- *   短い紐が束になると、どれがどこへ繋がっているのか
- *   目で追えない。
- *
- *   図そのものを広げれば、紐は長くなる。
- */
-const SPREADS = [
-    { label: "狭い", value: 0.85 },
-    { label: "ふつう", value: 1 },
-    { label: "広い", value: 1.4 },
-    { label: "とても広い", value: 1.9 },
-];
-
-/*
  * 丸どうしの、いちばん近い間。
  *
  * ★ 丸の直径に、名前のぶんを足す。
@@ -98,9 +80,6 @@ export default function RelationGraph({
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-    /* 図の広さ。ふつうから始める */
-    const [spreadAt, setSpreadAt] = useState(1);
-
     /*
      * 図の大きさ。
      *
@@ -128,7 +107,21 @@ export default function RelationGraph({
      */
     const [isLegendOpen, setIsLegendOpen] = useState(false);
 
-    const spread = SPREADS[spreadAt].value;
+    /*
+     * 図の広さ。
+     *
+     * ★ 選ばせるのをやめ、いちばん広いところで固定した。
+     *
+     *   広さは「丸と丸の間の空き方」、大きさは「見え方」。
+     *   2 つ並ぶと、どちらを触ればよいのか分かりにくい。
+     *   間は広く取っておき、見え方は大きさで決めてもらう。
+     *
+     * ★ 数字を変えると、置いた場所が合わなくなる。
+     *   座標はこの広さの中の位置として控えてある。
+     *   狭くすると、外にあった丸が端に貼り付く。
+     *   変えるときは「整理する」で並べ直してもらうこと。
+     */
+    const spread = 1.9;
     const SIZE = Math.round(BASE_SIZE * spread);
     const CENTER = SIZE / 2;
     const RADIUS = BASE_RADIUS * spread;
@@ -408,36 +401,6 @@ export default function RelationGraph({
         }
     }
 
-    /*
-     * 広さを変える。
-     *
-     * ★ 置いた場所も、一緒に広げる。
-     *
-     *   図だけ広げて丸を置き去りにすると、
-     *   作った形が崩れて左上に固まる。
-     *   真ん中からの距離を、同じ割合で伸ばす。
-     */
-    function changeSpread(nextAt: number) {
-        const before = SPREADS[spreadAt].value;
-        const after = SPREADS[nextAt].value;
-        setSpreadAt(nextAt);
-
-        if (!onMove || before === after) return;
-
-        const ratio = after / before;
-        const beforeCenter = (BASE_SIZE * before) / 2;
-        const afterCenter = (BASE_SIZE * after) / 2;
-
-        for (const node of nodes) {
-            const saved = layout[node.id];
-            if (!saved) continue;
-            onMove(node.id, {
-                x: afterCenter + (saved.x - beforeCenter) * ratio,
-                y: afterCenter + (saved.y - beforeCenter) * ratio,
-            });
-        }
-    }
-
     const active = hoveredId ?? selectedId;
     const labels = Array.from(new Set(relations.map((relation) => relation.label)));
 
@@ -687,26 +650,7 @@ export default function RelationGraph({
 
             {onMove && (
                 <>
-                    {/* 広さ。紐の長さは、図の広さで決まる */}
                     <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                        <span className="text-[11px] text-faint">図の広さ</span>
-                        {SPREADS.map((one, index) => (
-                            <button
-                                key={one.label}
-                                type="button"
-                                onClick={() => changeSpread(index)}
-                                aria-pressed={index === spreadAt}
-                                className={[
-                                    "rounded-md border px-2.5 py-1 text-[11px]",
-                                    index === spreadAt
-                                        ? "border-forest bg-forest-tint/60 text-forest"
-                                        : "border-line text-muted hover:border-forest-line",
-                                ].join(" ")}
-                            >
-                                {one.label}
-                            </button>
-                        ))}
-
                         <button
                             type="button"
                             onClick={tidy}
