@@ -13,7 +13,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import Header from "@/components/layout/header";
 import EpisodeEditor from "@/components/workspace/episode-editor";
@@ -53,6 +53,7 @@ export default function WorkspaceClient({ workId }: Props) {
      * ここだけが変わる。見張っていないと気づけない。
      */
     const searchParams = useSearchParams();
+    const router = useRouter();
 
     /*
      * 蛍光ペンの足す先の名前。
@@ -399,6 +400,41 @@ export default function WorkspaceClient({ workId }: Props) {
 
         setSelectedId(episode.id);
     }
+
+    /*
+     * 「＋ 新しい話を追加」から来たとき。
+     *
+     * ★ 着いた先で 1 話作って、そのまま開く。
+     *
+     *   前は作品の一覧に送られ、作品を選び直し、
+     *   さらに「新規作成」を押していた。
+     *   どの作品かは分かっているのだから、
+     *   その手間は要らない。
+     *
+     * ★ 一度だけ走らせる。
+     *   話が読み終わるのを待つ。待たないと、
+     *   章がまだ空で最後の章に入らない。
+     */
+    const didAutoCreateRef = useRef(false);
+
+    useEffect(() => {
+        if (didAutoCreateRef.current) return;
+        if (searchParams.get("new") !== "1") return;
+        if (isWorkLoading || isEpisodesLoading) return;
+
+        didAutoCreateRef.current = true;
+
+        void (async () => {
+            await handleCreate();
+
+            /*
+             * 合図を消す。
+             * 残したまま画面を作り直すと、また作られる。
+             * 履歴は増やさない（replace）。
+             */
+            router.replace(`/workspace/${workId}`);
+        })();
+    });
 
     /**
      * 本文を保存したあと、自動で資料の候補を拾う。
