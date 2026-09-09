@@ -67,6 +67,8 @@ export default function ManuscriptSurface({
     const isVertical = settings.writing_mode === "vertical";
     const areaRef = useRef<HTMLTextAreaElement>(null);
     const gutterRef = useRef<HTMLDivElement>(null);
+    /** 本文の外枠。輪の見張りを、ここに付ける */
+    const boxRef = useRef<HTMLDivElement>(null);
 
     /**
      * 縦書きは右端が本文の先頭になる。
@@ -80,65 +82,90 @@ export default function ManuscriptSurface({
     }, [isVertical, settings.font_size, settings.line_height]);
 
     /*
-     * 縦書きのとき、指の上下の動きを横送りに変える。
+     * 縦書きのとき、輪の上下の動きを横送りに変える。
      *
-     * ★ 縦書きの本文は、行が右から左へ伸びる。
+     * ★ 枠の中に印があれば、どこでも効く。
      *
-     *   送るのは横だが、指も鼠も上下に動かす道具。
-     *   何もしないと、本文の上で回しても何も動かず、
-     *   代わりに頁ごと下へ流れてしまう。
+     *   見張りは本文欄ではなく、外側の枠に付ける。
+     *   本文欄だけに付けると、目盛りの帯や余白の上に
+     *   印があるときに効かない。
+     *
+     * ★ 動かす先は、その場で探す。
+     *
+     *   縦書きで横に動く箱が本文欄とは限らない。
+     *   印の下にある物から順に親をたどり、
+     *   横にはみ出している箱を見つけて、それを送る。
      *
      * ★ 端に着いたら、そこから先は頁に譲る。
-     *
-     *   止めてしまうと、本文の上に指があるあいだ
+     *   止めてしまうと、枠の中に印があるあいだ
      *   頁が動かせなくなる。
-     *   こちらが動かせたときだけ、頁への伝わりを止める。
      *
      * ★ 自前で付ける。
      *   React の onWheel では止められないことがある。
      *   passive: false を指しておく必要がある。
      */
     useEffect(() => {
-        const area = areaRef.current;
-        if (!area || !isVertical) return;
+        const box = boxRef.current;
+        if (!box || !isVertical) return;
+
+        /** 横にはみ出していて、まだ送る余地がある箱を探す */
+        function findScroller(from: EventTarget | null, toward: number) {
+            let node = from instanceof Element ? from : null;
+
+            while (node && boxRef.current?.contains(node)) {
+                const canScroll = node.scrollWidth - node.clientWidth > 1;
+
+                if (canScroll) {
+                    const left = node.scrollLeft;
+                    const max = node.scrollWidth - node.clientWidth;
+
+                    /* その向きに、まだ余地があるか */
+                    if (toward < 0 ? left > 0 : left < max) return node;
+                }
+
+                node = node.parentElement;
+            }
+            return null;
+        }
 
         function onWheel(event: WheelEvent) {
-            const box = areaRef.current;
-            if (!box) return;
-
             /* 横の動きは、そのまま任せる */
             if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
             if (event.deltaY === 0) return;
 
             /*
-             * 動く量。鼠によって単位が違う。
+             * 動く量。輪によって単位が違う。
              *
              *   0  そのまま画素
              *   1  行。1 行を 16 画素とみなす
              *   2  頁。見えている幅ぶん
              */
+            const width = boxRef.current?.clientWidth ?? 0;
             const step =
                 event.deltaMode === 1
                     ? event.deltaY * 16
                     : event.deltaMode === 2
-                      ? event.deltaY * box.clientWidth
+                      ? event.deltaY * width
                       : event.deltaY;
 
             /*
              * 読み進む向きは左。
              * 右端が本文の頭なので、送るほど scrollLeft は減る。
              */
-            const before = box.scrollLeft;
-            box.scrollLeft = before - step;
+            const target = findScroller(event.target, -step);
+            if (!target) return;
 
-            if (box.scrollLeft !== before) {
+            const before = target.scrollLeft;
+            target.scrollLeft = before - step;
+
+            if (target.scrollLeft !== before) {
                 event.preventDefault();
                 handleScroll();
             }
         }
 
-        area.addEventListener("wheel", onWheel, { passive: false });
-        return () => area.removeEventListener("wheel", onWheel);
+        box.addEventListener("wheel", onWheel, { passive: false });
+        return () => box.removeEventListener("wheel", onWheel);
     }, [isVertical, showLineNumbers]);
 
     /*
@@ -177,6 +204,7 @@ export default function ManuscriptSurface({
 
     return (
         <div
+            ref={boxRef}
             data-manuscript-theme={settings.theme}
             className={[
                 "manuscript-surface h-full w-full",
