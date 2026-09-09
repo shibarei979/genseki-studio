@@ -186,15 +186,40 @@ export default function ModeToggle({
         document.cookie =
             `genseki-home-mode=${next}; path=/; max-age=31536000; samesite=lax`;
 
-        const { error } = await createClient()
-            .from("profiles")
-            .update({ home_mode: next })
-            .eq("user_id", me);
+        /*
+         * ★ 表への控えを待たない。
+         *
+         *   待つと、通信の 1 往復ぶん切り替えが遅れる。
+         *   頁を組み立てる側はクッキーを先に見るので、
+         *   控えが着く前に読み直しても、もう新しい向きで出る。
+         *
+         *   控えは、別の端末で開いたときのために残すもの。
+         *   遅れて着いても困らない。
+         *
+         * ★ sendBeacon で送る。
+         *
+         *   頁を読み直すと、普通の頼みは途中で切られる。
+         *   これは離れたあとも最後まで届く決まりの送り方。
+         *   使えない機械では、これまでどおり直に書く。
+         */
+        let sent = false;
+        try {
+            sent = navigator.sendBeacon?.(
+                "/api/profile/home-mode",
+                new Blob([next], { type: "text/plain" }),
+            );
+        } catch {
+            sent = false;
+        }
 
-        if (error) {
-            setNow(isRead ? "read" : "write");
-            window.alert("切り替えられませんでした。時間をおいて試してください。");
-        } else {
+        if (!sent) {
+            void createClient()
+                .from("profiles")
+                .update({ home_mode: next })
+                .eq("user_id", me);
+        }
+
+        {
             /*
              * 頁を作り直す。
              *

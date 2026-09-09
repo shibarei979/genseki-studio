@@ -31,7 +31,24 @@ export default async function HomePage() {
             .eq("user_id", user.id)
             .maybeSingle();
 
-        if (profile?.home_mode === "read") return <ReaderHome />;
+        /*
+         * ★ クッキーのほうを先に見る。
+         *
+         *   切り替えの押し具は、表へ書く前にクッキーを書く。
+         *   表への書き込みは通信なので、待つと切り替えが遅い。
+         *
+         *   クッキーが先なら、押した直後に読み直しても
+         *   もう新しい向きで組み立てられる。
+         *   表のほうは、そのあと追いつけばよい。
+         *   （別の端末で開いたときのために控えている）
+         *
+         * ★ 食い違ったときは、クッキーが新しい。
+         *   その端末で、いま押したものだから。
+         */
+        const wanted =
+            cookies().get("genseki-home-mode")?.value ?? profile?.home_mode;
+
+        if (wanted === "read") return <ReaderHome />;
 
         return <HomeClient />;
     }
