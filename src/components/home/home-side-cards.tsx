@@ -23,7 +23,7 @@ import Link from "next/link";
 import { compareDate } from "@/types";
 import type { Contest, Episode, WorkWithStats } from "@/types";
 import { formatNumber } from "@/lib/utils/text";
-import { COVERS, hashOf } from "@/components/home/home-work-table";
+import { coverFor } from "@/components/home/home-work-table";
 import ContestBanner from "@/components/common/contest-banner";
 
 /** ホームで出すお知らせ。運営のものと組み込みのものを同じ形にして受ける */
@@ -107,11 +107,7 @@ export default function HomeSideCards({ contests, notices, works, episodes }: Pr
                                 <span
                                     className="h-14 w-10 shrink-0 rounded-[3px]"
                                     style={{
-                                        background:
-                                            COVERS[
-                                                hashOf(latest.title || latest.id) %
-                                                    COVERS.length
-                                            ].base,
+                                        background: coverFor(latest).base,
                                         boxShadow:
                                             "inset 0 0 0 1px rgba(0,0,0,0.07), inset 3px 0 0 rgba(0,0,0,0.10)",
                                     }}

@@ -187,6 +187,11 @@ function toWork(row: Record<string, unknown>): Work {
         author_note: (row.author_note as string) ?? "",
         cover_url: (row.cover_url as string | null) ?? null,
         cover_tile: (row.cover_tile as Work["cover_tile"]) ?? null,
+        /* 本棚での本の色。決めていなければ null（題名から決める） */
+        cover_color:
+            row.cover_color === null || row.cover_color === undefined
+                ? null
+                : Number(row.cover_color),
         /* 列を足したら、ここにも足さないと読めない */
         cover_is_ai: (row.cover_is_ai as boolean | null) ?? false,
         cover_stamp_corner:

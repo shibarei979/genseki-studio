@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 
-import { COVERS, hashOf } from '@/components/home/home-work-table'
+import { coverFor } from '@/components/home/home-work-table'
 import NovelPopup from '@/components/novel-popup'
 
 /**
@@ -68,7 +68,7 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
             */}
           <div className="ws_books">
             {works.map((work) => {
-                const cover = COVERS[hashOf(work.title || work.id) % COVERS.length]
+                const cover = coverFor(work)
 
                 return (
                     <div key={work.id} className="ws_slot">

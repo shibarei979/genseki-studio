@@ -163,6 +163,38 @@ export const COVERS = [
     { base: "#fffbf1", ink: "#4a4238" },
 ];
 
+/**
+ * その作品の、本の色を決める。
+ *
+ * ★ 作者が選んでいれば、それを使う。
+ * ★ 選んでいなければ、題名から決める。
+ *
+ *   でたらめに選ぶと、開くたびに色が変わって
+ *   自分の本を見失う。題名から決めれば、
+ *   同じ作品はいつも同じ色になる。
+ *
+ * ★ 色を決める所は、ここ 1 つにする。
+ *   同じ計算があちこちに散っていると、
+ *   作者が選んだ色が効く場所と効かない場所ができる。
+ */
+export function coverFor(work: {
+    id: string;
+    title?: string | null;
+    cover_color?: number | null;
+}) {
+    const picked = work.cover_color;
+
+    if (
+        typeof picked === "number" &&
+        picked >= 0 &&
+        picked < COVERS.length
+    ) {
+        return COVERS[picked];
+    }
+
+    return COVERS[hashOf(work.title || work.id) % COVERS.length];
+}
+
 interface Props {
     works: WorkWithStats[];
     episodes: Episode[];
@@ -393,8 +425,7 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                         const state = stateOf(work);
                         const chip = STATE_STYLE[state];
 
-                        const hash = hashOf(work.title || work.id);
-                        const cover = COVERS[hash % COVERS.length];
+                        const cover = coverFor(work);
 
                         const newest = [...own].sort(
                             (a, b) => b.ep_number - a.ep_number,
@@ -626,8 +657,7 @@ function Tile({
     const state = stateOf(work);
     const chip = STATE_STYLE[state];
 
-    const hash = hashOf(work.title || work.id);
-    const cover = COVERS[hash % COVERS.length];
+    const cover = coverFor(work);
 
     const updated = work.updated_at.slice(0, 10).replace(/-/g, "/");
     const amount =

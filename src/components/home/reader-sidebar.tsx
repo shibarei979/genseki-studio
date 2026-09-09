@@ -19,7 +19,7 @@
 
 import Link from "next/link";
 
-import { COVERS, hashOf } from "@/components/home/home-work-table";
+import { coverFor } from "@/components/home/home-work-table";
 import ContestBanner from "@/components/common/contest-banner";
 import type { Contest } from "@/types";
 
@@ -74,11 +74,11 @@ export default function ReaderSidebar({
                         <span
                             className="h-14 w-10 shrink-0 rounded-[3px]"
                             style={{
-                                background:
-                                    COVERS[
-                                        hashOf(reading.title || reading.novelId) %
-                                            COVERS.length
-                                    ].base,
+                                background: coverFor({
+                                    id: reading.novelId,
+                                    title: reading.title,
+                                    /* 読みかけの一覧は色まで持っていない。題名から決める */
+                                }).base,
                                 boxShadow:
                                     "inset 0 0 0 1px rgba(0,0,0,0.07), inset 3px 0 0 rgba(0,0,0,0.10)",
                             }}

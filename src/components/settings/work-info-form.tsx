@@ -23,6 +23,7 @@ import {
     WORK_FORMAT_LABEL,
 } from "@/types";
 import TagInput from "@/components/works/tag-input";
+import { COVERS } from "@/components/home/home-work-table";
 import {
     CATCHPHRASE_MAX_LENGTH,
     SUMMARY_MAX_LENGTH,
@@ -62,6 +63,16 @@ export default function WorkInfoForm({
 
     /* 表紙。あらすじの横に出る */
     const [coverUrl, setCoverUrl] = useState<string | null>(work.cover_url ?? null);
+
+    /*
+     * 本棚に並ぶときの、本の色。
+     *
+     * null は「おまかせ」。題名から決まる。
+     * 同じ題名なら、いつも同じ色になる。
+     */
+    const [coverColor, setCoverColor] = useState<number | null>(
+        work.cover_color ?? null,
+    );
 
     /*
      * 表紙に AI を使ったか。
@@ -243,6 +254,7 @@ export default function WorkInfoForm({
             cover_url: coverUrl,
             cover_is_ai: coverIsAi,
             cover_stamp_corner: stampCorner,
+            cover_color: coverColor,
         });
         setSavedMessage("保存しました");
         window.setTimeout(() => setSavedMessage(""), 2500);
@@ -587,6 +599,58 @@ export default function WorkInfoForm({
                                 )}
                             </div>
                         </div>
+                    </Field>
+
+                    {/*
+                      * 本棚での本の色。
+                      *
+                      * ★ 表紙の絵とは別のもの。
+                      *   絵は作品の頁に出る。こちらは棚に並んだときの色。
+                      *   絵を用意していない人でも、棚で見分けが付く。
+                      *
+                      * ★ 色は一覧から選ぶ。自由な色にはしない。
+                      *   棚に並んだときに、全体が濁る色が混ざる。
+                      *   どれを選んでも棚に馴染む 12 色だけにする。
+                      */}
+                    <Field label="本棚での本の色">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setCoverColor(null)}
+                                aria-pressed={coverColor === null}
+                                className={[
+                                    "rounded-md border px-3 py-2 text-[11.5px]",
+                                    coverColor === null
+                                        ? "border-forest bg-forest-tint/60 text-forest"
+                                        : "border-line text-muted hover:border-forest-line",
+                                ].join(" ")}
+                            >
+                                おまかせ
+                            </button>
+
+                            {COVERS.map((one, index) => (
+                                <button
+                                    key={one.base}
+                                    type="button"
+                                    onClick={() => setCoverColor(index)}
+                                    aria-pressed={coverColor === index}
+                                    aria-label={`${index + 1}番目の色`}
+                                    title={`${index + 1}番目の色`}
+                                    style={{ background: one.base }}
+                                    className={[
+                                        "h-9 w-7 rounded-[3px] border",
+                                        coverColor === index
+                                            ? "border-forest ring-2 ring-forest/40"
+                                            : "border-line hover:border-forest-line",
+                                    ].join(" ")}
+                                />
+                            ))}
+                        </div>
+
+                        <p className="mt-1.5 text-[11px] leading-relaxed text-faint">
+                            本棚に並んだときの、本の色です。おまかせにすると、
+                            題名から決まります（同じ作品はいつも同じ色）。
+                        </p>
                     </Field>
 
                     <Field label="作品の形" htmlFor="info-format">
