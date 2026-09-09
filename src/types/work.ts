@@ -305,6 +305,8 @@ export const GENRES = [
     "BL R18",
     "GL R18",
     "官能 R18",
+    "異世界 R18",
+    "現代 R18",
 
     "その他",
 
@@ -320,7 +322,7 @@ export const GENRES = [
 ] as const;
 
 /** 新しく選べるジャンル。昔のものは出さない */
-export const GENRES_SELECTABLE = GENRES.slice(0, 20);
+export const GENRES_SELECTABLE = GENRES.slice(0, 22);
 
 /**
  * R18 の作品でだけ選べるジャンル。
@@ -333,7 +335,13 @@ export const GENRES_SELECTABLE = GENRES.slice(0, 20);
  * どこへ入れるかは作者が決めるものなので、
  * 空にして選び直してもらう。
  */
-export const GENRES_R18_ONLY: string[] = ["BL R18", "GL R18", "官能 R18"];
+export const GENRES_R18_ONLY: string[] = [
+    "BL R18",
+    "GL R18",
+    "官能 R18",
+    "異世界 R18",
+    "現代 R18",
+];
 
 /** その年齢区分で選べるジャンル */
 export function selectableGenres(ageRating: AgeRating): string[] {
@@ -398,6 +406,9 @@ export const GENRE_COLOR: Record<string, string> = {
     "BL R18": "#4a90d9",
     "GL R18": "#d96fa8",
     "官能 R18": "#b03a5b",
+    /* R18 の棚は、元の色をそのまま使い、並びで見分ける */
+    "異世界 R18": "#3fa876",
+    "現代 R18": "#8a8f93",
     GL: "#e07aa8",
     その他: "#8a8f93",
     /* どれにも寄らない棚。落ち着いた青緑。その他の灰とは分ける */

@@ -1523,7 +1523,7 @@ function PostForm({
                                     </select>
                                     <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
                                         BL・GL は、どの年齢の区分でも選べます。
-                                        BL R18・GL R18・官能 R18 は、
+                                        {GENRES_R18_ONLY.join("・")} は、
                                         年齢の区分を R18 にすると出ます。
                                     </p>
                                 </div>

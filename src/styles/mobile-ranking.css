@@ -404,12 +404,20 @@
  * ============================================================
  */
 @media (min-width: 1024px) {
+    /*
+     * ★ !important が要る。
+     *
+     *   はみ出しと折り返しの指定は、
+     *   送る仕掛けが要素に直接書いている。
+     *   直接書かれたものは、CSS より強い。
+     *   付け忘れて、2 段にならなかった。
+     */
     .rk-genre .ss-track {
-        overflow-x: visible;
+        overflow-x: visible !important;
     }
 
     .rk-genre .ss-row {
-        flex-wrap: wrap;
+        flex-wrap: wrap !important;
         row-gap: 8px;
     }
 
@@ -418,6 +426,6 @@
      * 折り返してあるので、送る所が無い。
      */
     .rk-genre .ss-arrow {
-        display: none;
+        display: none !important;
     }
 }

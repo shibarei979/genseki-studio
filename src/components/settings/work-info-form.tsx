@@ -388,7 +388,7 @@ export default function WorkInfoForm({
                                 <p className="mt-1.5 text-[11px] text-faint">
                                     BL・GL は、どの年齢の区分でも選べます。
                                     <br />
-                                    BL R18・GL R18・官能 R18 は、年齢の区分を R18
+                                    {GENRES_R18_ONLY.join("・")} は、年齢の区分を R18
                                     にすると選べます。
                                 </p>
                             )

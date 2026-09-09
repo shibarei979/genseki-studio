@@ -47,7 +47,19 @@ function keepR18Out(query: unknown, genre: string, ratings: string[]) {
 
     return (query as any)
         .eq('is_r18', false)
-        .not('genre', 'in', '("官能","官能 R18","BL R18","GL R18")')
+        /*
+         * ★ 手で並べない。GENRES_R18_ONLY から作る。
+         *   棚を増やしたとき、ここへ足し忘れると
+         *   その棚だけ一般の並びに混ざる。
+         *
+         *   「官能」は昔の名前。いまは選べないが、
+         *   その名前で出している作品が残っている。
+         */
+        .not(
+            'genre',
+            'in',
+            `("官能",${GENRES_R18_ONLY.map(g => `"${g}"`).join(',')})`,
+        )
 }
 
 async function computeRanking(period: string, novelType: string, serial: string, genre: string, aiMode: string, offset: number, displaySize: number, showMore: boolean, ratings: string[] = ['all']): Promise<{ items: any[]; total: number }> {
