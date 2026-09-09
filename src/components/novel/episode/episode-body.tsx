@@ -76,6 +76,23 @@ const FRAME_WIDTH = 21 * 40 + 96
 const VERTICAL_CHARS = 40
 
 /**
+ * いちばん大きい文字（特大）の大きさ。
+ *
+ * 枠の高さは、この字で 40 字ぶん。
+ * 文字を小さくしても枠は変えない。
+ *
+ * ★ 枠が伸び縮みしないようにする。
+ *
+ *   高さを字の大きさに合わせて変えると、
+ *   大きさを選び直すたびに本文の箱が伸び縮みし、
+ *   読んでいた場所を見失う。
+ *
+ *   枠は据え置き、中の本文だけを 40 字ぶんに切って、
+ *   上（＝行の頭）に揃える。
+ */
+const VERTICAL_MAX_FONT = 21
+
+/**
  * 読む側の横書き用に、見た目だけ整える。
  *
  * 縦書きで書かれた原稿は、英数字が全角だったり
@@ -1318,7 +1335,17 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], s
            *
            *   小さい画面では、これまでどおり画面いっぱい。
            */
-          height:`min(calc(100vh - 96px), ${VERTICAL_CHARS * fontSize + 40}px)`,paddingBottom:4,
+          /*
+           * ★ 枠の高さは据え置き。
+           *
+           *   特大（21px）で 40 字ぶん。
+           *   文字を小さくしても、この枠は変わらない。
+           *
+           *   小さい画面では、これまでどおり画面いっぱい。
+           */
+          height:`min(calc(100vh - 96px), ${VERTICAL_CHARS * VERTICAL_MAX_FONT + 40}px)`,paddingBottom:4,
+          /* 本文は枠の上（行の頭）に揃える */
+          display:'flex',alignItems:'flex-start',
           /*
            * ★ 中身を右端へ寄せる。
            *
@@ -1342,7 +1369,18 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], s
           display:'inline-block',
           /* 上下の余白を詰める。左右はそのまま */
           padding:'20px 24px 20px 48px',
-          height:'calc(100% - 10px)',
+          /*
+           * ★ 中身の高さは、その文字での 40 字ぶん。
+           *
+           *   枠は特大に合わせて据え置きなので、
+           *   ここを 100% にすると、小さい文字のとき
+           *   1 行に 60 字も入ってしまう。
+           *
+           *   字数を決めるのは、こちらの高さ。
+           *   余ったぶんは枠の下に空く。
+           */
+          height:`${VERTICAL_CHARS * fontSize + 40}px`,
+          maxHeight:'calc(100% - 10px)',
           boxSizing:'border-box',
         }}>
           {/*
