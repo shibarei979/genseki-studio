@@ -34,6 +34,21 @@ interface Props {
 
 /** 図の広さ。もとの大きさ。広げるときは、これに倍率を掛ける */
 const BASE_SIZE = 400;
+
+/*
+ * 板の横と縦の比。
+ *
+ * ★ 横長にする。
+ *
+ *   前は正方形だった。枠は横に長いので、
+ *   正方形の図を入れると左右が大きく空く。
+ *   その空きぶん、図は縦に合わせて縮み、
+ *   文字が小さくなっていた。
+ *
+ *   枠と同じ形にすれば、空きが減り、
+ *   同じ枠でも大きく描ける。
+ */
+const ASPECT = 1.6;
 const BASE_RADIUS = 142;
 
 /*
@@ -191,9 +206,20 @@ export default function RelationGraph({
     const [spreadAt, setSpreadAt] = useState(1);
 
     const spread = SPREADS[spreadAt].value;
-    const SIZE = Math.round(BASE_SIZE * spread);
-    const CENTER = SIZE / 2;
-    const RADIUS = BASE_RADIUS * spread;
+    /*
+     * 板の大きさ。
+     *
+     * ★ 縦は今までどおり。横だけ広げる。
+     *   縦を変えると、置いた場所が縦にずれる。
+     *   横に広げるぶんには、右に余地ができるだけで
+     *   すでに置いた丸は動かない。
+     */
+    const HEIGHT = Math.round(BASE_SIZE * spread);
+    const WIDTH = Math.round(HEIGHT * ASPECT);
+    const CENTER_X = WIDTH / 2;
+    const CENTER_Y = HEIGHT / 2;
+    const RADIUS_X = BASE_RADIUS * spread * ASPECT;
+    const RADIUS_Y = BASE_RADIUS * spread;
     const [dragging, setDragging] = useState<Dragging | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
@@ -270,8 +296,9 @@ export default function RelationGraph({
         // 上から時計回りに並べる
         const angle = (Math.PI * 2 * index) / nodes.length - Math.PI / 2;
         positions.set(node.id, {
-            x: CENTER + Math.cos(angle) * RADIUS,
-            y: CENTER + Math.sin(angle) * RADIUS,
+            /* 板が横長なので、輪も横長にする */
+            x: CENTER_X + Math.cos(angle) * RADIUS_X,
+            y: CENTER_Y + Math.sin(angle) * RADIUS_Y,
         });
     });
 
@@ -356,8 +383,8 @@ export default function RelationGraph({
     function clampToBoard(point: { x: number; y: number }) {
         const margin = NODE_RADIUS + 4;
         return {
-            x: Math.min(SIZE - margin, Math.max(margin, point.x)),
-            y: Math.min(SIZE - margin, Math.max(margin, point.y)),
+            x: Math.min(WIDTH - margin, Math.max(margin, point.x)),
+            y: Math.min(HEIGHT - margin, Math.max(margin, point.y)),
         };
     }
 
@@ -369,25 +396,14 @@ export default function RelationGraph({
         const rect = svg.getBoundingClientRect();
 
         /*
-         * ★ 描かれているのは、枠の中の正方形。
+         * ★ 板と器の形は、そろえてある。
          *
-         *   図は正方形（SIZE × SIZE）で、枠は正方形とは限らない。
-         *   余ったところは上下か左右に空く。
-         *
-         *   枠の幅と高さでそのまま割ると、その空きぶんだけ
-         *   掴む位置がずれる。丸を掴んだつもりで、
-         *   少し離れた所を掴むことになる。
-         *
-         *   実際に描かれている正方形の一辺と、
-         *   その左上の位置を出してから割る。
+         *   板の比（ASPECT）を、そのまま器にも掛けてある。
+         *   余白が入らないので、枠の幅と高さで割ればよい。
          */
-        const side = Math.min(rect.width, rect.height);
-        const left = rect.left + (rect.width - side) / 2;
-        const top = rect.top + (rect.height - side) / 2;
-
         return {
-            x: ((event.clientX - left) / side) * SIZE,
-            y: ((event.clientY - top) / side) * SIZE,
+            x: ((event.clientX - rect.left) / rect.width) * WIDTH,
+            y: ((event.clientY - rect.top) / rect.height) * HEIGHT,
         };
     }
 
@@ -432,26 +448,31 @@ export default function RelationGraph({
              * いちばん内側（0）は、真ん中に 1 つだけ置く。
              */
             if (ring === 0) {
-                place.set(sorted[at].id, { x: CENTER, y: CENTER });
+                place.set(sorted[at].id, { x: CENTER_X, y: CENTER_Y });
                 at += 1;
                 ring += 1;
                 continue;
             }
 
-            const radius = Math.min(
-                CENTER - NODE_RADIUS - 8,
+            /*
+             * 輪の大きさ。板が横長なので、横と縦で別に持つ。
+             * 同じにすると、縦だけ先に端へ着いて詰まる。
+             */
+            const ry = Math.min(
+                CENTER_Y - NODE_RADIUS - 8,
                 (want * ring) / 1.6,
             );
+            const rx = Math.min(CENTER_X - NODE_RADIUS - 8, ry * ASPECT);
 
             /* この輪に入る数。詰めすぎない */
-            const room = Math.max(1, Math.floor((Math.PI * 2 * radius) / want));
+            const room = Math.max(1, Math.floor((Math.PI * (rx + ry)) / want));
             const count = Math.min(room, sorted.length - at);
 
             for (let i = 0; i < count; i += 1) {
                 const angle = (Math.PI * 2 * i) / count - Math.PI / 2;
                 place.set(sorted[at + i].id, {
-                    x: CENTER + Math.cos(angle) * radius,
-                    y: CENTER + Math.sin(angle) * radius,
+                    x: CENTER_X + Math.cos(angle) * rx,
+                    y: CENTER_Y + Math.sin(angle) * ry,
                 });
             }
 
@@ -459,7 +480,7 @@ export default function RelationGraph({
             ring += 1;
 
             /* 輪を増やしても入らないときは、そこで止める */
-            if (radius >= CENTER - NODE_RADIUS - 8 && count === 0) break;
+            if (ry >= CENTER_Y - NODE_RADIUS - 8 && count === 0) break;
         }
 
         untangle(place, new Set());
@@ -495,7 +516,7 @@ export default function RelationGraph({
             <div className="thin-scroll min-h-0 flex-1 overflow-auto">
             <svg
                 ref={svgRef}
-                viewBox={`0 0 ${SIZE} ${SIZE}`}
+                viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
                 className={[
                     "mx-auto block",
                     dragging ? "cursor-grabbing" : "",
@@ -509,10 +530,15 @@ export default function RelationGraph({
                  *
                  * ★ 50% が枠ぴったり。だから 2 倍して渡す。
                  */
+                /*
+                 * ★ 幅で決めて、高さは板の比に合わせる。
+                 *   枠は横に長いので、幅のほうが先に足りなくなる。
+                 * ★ 50% が枠ぴったり。だから 2 倍して渡す。
+                 */
                 style={{
-                    height: `${zoom * 2}%`,
-                    aspectRatio: "1 / 1",
-                    width: "auto",
+                    width: `${zoom * 2}%`,
+                    aspectRatio: `${ASPECT} / 1`,
+                    height: "auto",
                 }}
                 role="img"
                 aria-label="関係図"
@@ -570,8 +596,8 @@ export default function RelationGraph({
                     // 中心へ少し引き寄せて曲げる。直線だけだと線が重なって読めない
                     const midX = (from.x + to.x) / 2;
                     const midY = (from.y + to.y) / 2;
-                    const controlX = midX + (CENTER - midX) * 0.35;
-                    const controlY = midY + (CENTER - midY) * 0.35;
+                    const controlX = midX + (CENTER_X - midX) * 0.35;
+                    const controlY = midY + (CENTER_Y - midY) * 0.35;
 
                     return (
                         <g key={relation.id} opacity={isActive ? 1 : 0.15}>

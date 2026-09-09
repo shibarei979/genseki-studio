@@ -240,7 +240,11 @@ export default function RelationsView({
                                            *   枠が低いほど文字が小さくなる。
                                            *   縦に使える所は、図に回す。
                                            */
-                                          height: "min(820px, 82vh)",
+                                          /*
+                                           * ★ 板を横長にしたので、
+                                           *   高さは戻す。横幅を使って描く。
+                                           */
+                                          height: "min(640px, 72vh)",
                                       }
                                     : undefined
                             }
