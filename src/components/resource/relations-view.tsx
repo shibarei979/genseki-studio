@@ -214,7 +214,13 @@ export default function RelationsView({
                         <div
                             className={[
                                 "rounded-lg border border-line bg-surface p-4",
-                                mode === "graph" ? "thin-scroll overflow-auto" : "",
+                                /*
+                                 * ★ 枠の側では送らない。
+                                 *   送るのは図だけ（RelationGraph の中）。
+                                 *   ここで送ると、押し具や凡例まで流れて
+                                 *   見えなくなる。
+                                 */
+                                mode === "graph" ? "overflow-hidden" : "",
                             ].join(" ")}
                             style={
                                 mode === "graph"

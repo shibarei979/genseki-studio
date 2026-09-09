@@ -396,7 +396,20 @@ export default function RelationGraph({
     const labels = Array.from(new Set(relations.map((relation) => relation.label)));
 
     return (
-        <div>
+        <div className="flex h-full flex-col">
+            {/*
+              * 図だけを送る。
+              *
+              * ★ 押し具と凡例は、送らずに見えたままにする。
+              *
+              *   枠ごと送ると、広げたときに
+              *   「図の広さ」も「整理する」も凡例も、
+              *   図の下へ流れて見えなくなる。
+              *   使う道具が、使っている最中に隠れる。
+              *
+              *   送るのは図だけ。道具は下に貼り付ける。
+              */}
+            <div className="thin-scroll min-h-0 flex-1 overflow-auto">
             <svg
                 ref={svgRef}
                 viewBox={`0 0 ${SIZE} ${SIZE}`}
@@ -619,6 +632,7 @@ export default function RelationGraph({
                     );
                 })}
             </svg>
+            </div>
 
             {onMove && (
                 <>
