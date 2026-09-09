@@ -163,6 +163,22 @@ export default function WorkPostClient({ workId }: { workId: string }) {
      *   その部品ごと作り直され、知らせも消える。
      *   何が起きたのか分からないまま画面が変わる。
      */
+    /*
+     * 自動で進んできた話。
+     *
+     * ★ この話でだけ、いま出す前に一度聞く。
+     *
+     *   予約したあと画面が次の話へ移る。
+     *   移った先は日時の欄が空なので、押し具の名前も
+     *   「この話を投稿する」に変わっている。
+     *   それでも流れで押す人はいて、実際に
+     *   出すつもりのなかった話が公開された。
+     *
+     * ★ 自分で話を選んだときは聞かない。
+     *   その人は自分の意思でその話を開いている。
+     */
+    const [autoMovedId, setAutoMovedId] = useState<string | null>(null);
+
     const [postNotice, setPostNotice] = useState<{
         text: string;
         /** 次のまだ出していない話。あれば「次の話へ」を出す */
@@ -365,6 +381,11 @@ export default function WorkPostClient({ workId }: { workId: string }) {
      *   遡らされると、投稿の画面から出られなくなる。
      */
     function selectEpisode(episodeId: string) {
+        /*
+         * 自分で選び直したら、聞く印は外す。
+         * 入れるのは、予約のあと自動で進んだときだけ。
+         */
+        setAutoMovedId(null);
         setSelectedId(episodeId);
         router.replace(`/workspace/${workId}/post?ep=${episodeId}`);
     }
@@ -899,13 +920,18 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                         : "",
                                 });
 
-                                if (next) selectEpisode(next.id);
+                                if (next) {
+                                    setAutoMovedId(next.id);
+                                    selectEpisode(next.id);
+                                }
                             }}
                             work={work}
                             /*
                              * 最後に予約した話の時刻。
                              * 次の予定を組み立てるのに使う。
                              */
+                            /* この話へは自動で進んできたか。いま出す前に一度聞く */
+                            askBeforePublish={autoMovedId === selected.id}
                             lastScheduledAt={
                                 scheduled.length > 0
                                     ? scheduled[scheduled.length - 1].publish_at ?? null
@@ -991,9 +1017,17 @@ function PostForm({
     onPosted,
     work,
     lastScheduledAt,
+    askBeforePublish = false,
 }: {
     /** 最後に予約した話の時刻。次の予定を組み立てるのに使う */
     lastScheduledAt?: string | null;
+    /**
+     * いま出す前に、一度聞くか。
+     *
+     * 予約したあと自動で進んできた話にだけ立てる。
+     * 自分で選んだ話では聞かない。
+     */
+    askBeforePublish?: boolean;
     /**
      * 投稿し終えたとき。
      *
@@ -1209,6 +1243,28 @@ function PostForm({
                 onPosted?.({ scheduled: true, at: when });
             })();
             return;
+        }
+
+        /*
+         * ★ 自動で進んできた話だけ、一度聞く。
+         *
+         *   予約したあと画面が次の話へ移る。
+         *   移った先は日時の欄が空なので、
+         *   押すとその話は即座に公開される。
+         *   流れで押して、出すつもりのなかった話が出た人がいる。
+         *
+         *   自分で選んだ話では聞かない。
+         *   毎回聞かれると、普通に出したい人の邪魔になる。
+         */
+        if (askBeforePublish) {
+            if (
+                !window.confirm(
+                    `「${title.trim()}」を、いますぐ公開します。\n\n` +
+                        "予約したいときは、この下の「予約公開」に日時を入れてから押してください。",
+                )
+            ) {
+                return;
+            }
         }
 
         setError("");
