@@ -123,8 +123,7 @@ export default async function MypagePage() {
   const charCountMap: Record<string,number> = {}
 
   if (novelIds.length > 0) {
-    const [likesData, commentsData, viewsData, epsData, charData] = await Promise.all([
-      supabase.from('likes').select('novel_id').in('novel_id', novelIds),
+    const [commentsData, viewsData, epsData, charData] = await Promise.all([
       supabase.from('comments').select('novel_id').in('novel_id', novelIds),
       supabase.from('page_views').select('novel_id').eq('is_author', false).in('novel_id', novelIds),
       supabase.from('episodes').select('novel_id').in('novel_id', novelIds).eq('published', true),
@@ -136,43 +135,36 @@ export default async function MypagePage() {
       supabase.from('episodes').select('id, novel_id, char_count').in('novel_id', novelIds),
     ])
 
-    likesData.data?.forEach((l:any) => { novelLikeMap[l.novel_id] = (novelLikeMap[l.novel_id]||0)+1 })
     commentsData.data?.forEach((c:any) => { novelCommentMap[c.novel_id] = (novelCommentMap[c.novel_id]||0)+1 })
     viewsData.data?.forEach((v:any) => { novelViewMap[v.novel_id] = (novelViewMap[v.novel_id]||0)+1 })
     epsData.data?.forEach((e:any) => { novelEpCountMap[e.novel_id] = (novelEpCountMap[e.novel_id]||0)+1 })
     charData.data?.forEach((e:any) => { charCountMap[e.novel_id] = (charCountMap[e.novel_id]||0) + (e.char_count||0) })
 
     /*
-     * 話へのいいねも、作品のいいねに足す。
+     * いいねと保存は、novel_stats から読む。
      *
-     * ★ いいねの表は 2 つある。
+     * ★ 表を直に数えられない。
      *
-     *     likes           作品の頁の♡から入る
-     *     episode_likes   本文の下の♡から入る
+     *   likes の決まりは auth.uid() = user_id。
+     *   「自分が押したいいね」しか読めないので、
+     *   作者が自分の作品を数えても 0 しか返らない。
+     *   保存も同じ。
      *
-     *   読者は読み終えた所の♡を押す。作品の頁まで
-     *   戻って押す人は多くない。
-     *   likes だけを数えていたので、
-     *   読まれている作品でも 0 と出ていた。
+     *   novel_stats は数だけを返す入れ物で、
+     *   中の行の決まりを素通りする。
+     *   誰が押したかは漏れない。
      *
-     * ★ 同じ人が作品にも各話にも押せる。数は重なる。
-     *   「何回押されたか」であって「何人が押したか」ではない。
+     * ★ この数には話への♡も入っている。
+     *   読者が押すのは、たいてい本文の下の♡。
      */
-    const epIdToNovel: Record<string,string> = {}
-    charData.data?.forEach((e:any) => { epIdToNovel[e.id] = e.novel_id })
+    const { data: statRows } = await supabase
+      .from('novel_stats')
+      .select('novel_id, like_count')
+      .in('novel_id', novelIds)
 
-    const epIds = Object.keys(epIdToNovel)
-    if (epIds.length > 0) {
-      const { data: epLikes } = await supabase
-        .from('episode_likes')
-        .select('episode_id')
-        .in('episode_id', epIds)
-
-      epLikes?.forEach((row:any) => {
-        const novelId = epIdToNovel[row.episode_id]
-        if (novelId) novelLikeMap[novelId] = (novelLikeMap[novelId]||0) + 1
-      })
-    }
+    statRows?.forEach((row:any) => {
+      novelLikeMap[row.novel_id] = Number(row.like_count) || 0
+    })
   }
 
   /* 受け取ったミッションの印。小さいのでここで読む */
