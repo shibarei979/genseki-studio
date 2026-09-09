@@ -163,11 +163,20 @@ export default function WorkPostClient({ workId }: { workId: string }) {
      *   その部品ごと作り直され、知らせも消える。
      *   何が起きたのか分からないまま画面が変わる。
      */
-    const [postNotice, setPostNotice] = useState("");
+    const [postNotice, setPostNotice] = useState<{
+        text: string;
+        /** 次のまだ出していない話。あれば「次の話へ」を出す */
+        nextId: string | null;
+        nextLabel: string;
+    } | null>(null);
 
     useEffect(() => {
         if (!postNotice) return;
-        const timer = window.setTimeout(() => setPostNotice(""), 5000);
+        /*
+         * 消すまでの間を長めに取る。
+         * 「次の話へ」を押すかどうかを、読んで決める時間が要る。
+         */
+        const timer = window.setTimeout(() => setPostNotice(null), 12000);
         return () => window.clearTimeout(timer);
     }, [postNotice]);
 
@@ -342,6 +351,24 @@ export default function WorkPostClient({ workId }: { workId: string }) {
         setBulkDoing(0);
     }
 
+    /**
+     * 開く話を変える。
+     *
+     * ★ 住所（?ep=）も一緒に変える。
+     *
+     *   前は画面の中だけで切り替えていた。
+     *   読み直すと住所の話に戻るので、
+     *   「F5 したら前の話に戻る」と言われていた。
+     *
+     *   履歴は増やさない（replace）。
+     *   戻るを押したときに、話の選び直しを一つずつ
+     *   遡らされると、投稿の画面から出られなくなる。
+     */
+    function selectEpisode(episodeId: string) {
+        setSelectedId(episodeId);
+        router.replace(`/workspace/${workId}/post?ep=${episodeId}`);
+    }
+
     async function change(episodeId: string, patch: Partial<Episode>) {
         await getRepository().updateEpisode(episodeId, patch);
         await reload();
@@ -403,7 +430,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                     <li key={row.id}>
                                         <button
                                             type="button"
-                                            onClick={() => setSelectedId(row.id)}
+                                            onClick={() => selectEpisode(row.id)}
                                             className="flex w-full items-baseline gap-2 text-left hover:text-forest"
                                         >
                                             <span className="shrink-0 text-[10px] tabular-nums text-muted">
@@ -735,7 +762,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                         onClick={() =>
                                                             isPicking
                                                                 ? togglePicked(episode.id)
-                                                                : setSelectedId(episode.id)
+                                                                : selectEpisode(episode.id)
                                                         }
                                                         className={[
                                                             "block min-w-0 flex-1 rounded-md px-2.5 py-2 text-left",
@@ -789,9 +816,24 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                       * 次の話へ進んでも消えないよう、ここに出す。
                       */}
                     {postNotice && (
-                        <p className="mb-3 rounded-md border border-forest-line bg-forest-tint px-4 py-2.5 text-[12px] text-ink">
-                            {postNotice}
-                        </p>
+                        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-forest-line bg-forest-tint px-4 py-2.5">
+                            <p className="text-[12px] text-ink">{postNotice.text}</p>
+
+                            {postNotice.nextId && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const id = postNotice.nextId;
+                                        if (!id) return;
+                                        selectEpisode(id);
+                                        setPostNotice(null);
+                                    }}
+                                    className="rounded-md border border-forest bg-surface px-3 py-1 text-[11.5px] text-forest hover:bg-forest-tint"
+                                >
+                                    次の話へ（{postNotice.nextLabel}）
+                                </button>
+                            )}
+                        </div>
                     )}
 
                     {selected ? (
@@ -819,21 +861,21 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                 }
 
                                 /*
-                                 * 予約したときは、この画面に留まる。
+                                 * 予約したときは、この話に留まる。
                                  *
-                                 * ★ 何話も続けて予約する人がいる。
-                                 *   他の場所から数十話を移してきたときなど。
-                                 *   1 話ごとに戻されると、そのたびに
-                                 *   この画面まで来直すことになる。
+                                 * ★ 次の話へ勝手に移さない。
                                  *
-                                 * ★ 次のまだ出していない話へ、選び先を進める。
-                                 *   同じ話が開いたままだと、
-                                 *   予約できたのかどうかが分かりにくい。
-                                 */
-                                /*
-                                 * ★ 話の番号の順に見る。
-                                 *   並びが番号順とは限らないので、
-                                 *   先に揃えてから次を探す。
+                                 *   一度は移していた。何話も続けて予約する人の
+                                 *   手間を減らすためだが、危なかった。
+                                 *
+                                 *   移った先の話は予約が入っていないので、
+                                 *   日時の欄が空になり、同じ場所にある同じ押し具が
+                                 *   「予約する」から「いま出す」に変わる。
+                                 *   流れで押すと、その話が即座に公開される。
+                                 *   実際に、それで出てしまった人がいる。
+                                 *
+                                 *   進むかどうかは、読む人が決める。
+                                 *   知らせの中に「次の話へ」を置いた。
                                  */
                                 const next = [...episodes]
                                     .sort((a, b) => a.ep_number - b.ep_number)
@@ -844,21 +886,15 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                             !row.publish_at,
                                     );
 
-                                /*
-                                 * ★ ここでは読み直さない。
-                                 *   控えたときに change() が読み直している。
-                                 *   もう一度呼ぶと、二つの読み直しが競って
-                                 *   古い並びがあとから上書きすることがある。
-                                 */
-                                if (next) setSelectedId(next.id);
-
-                                setPostNotice(
-                                    info.at
-                                        ? `${formatAt(info.at)} に予約しました。${
-                                              next ? "次の話へ進みます。" : ""
-                                          }`
+                                setPostNotice({
+                                    text: info.at
+                                        ? `${formatAt(info.at)} に予約しました。`
                                         : "",
-                                );
+                                    nextId: next?.id ?? null,
+                                    nextLabel: next
+                                        ? `第${next.ep_number}話　${next.title || "無題"}`
+                                        : "",
+                                });
                             }}
                             work={work}
                             /*
