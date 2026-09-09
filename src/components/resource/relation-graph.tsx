@@ -397,53 +397,26 @@ export default function RelationGraph({
 
     return (
         <div>
-            {/*
-              * 図の窓。
-              *
-              * ★ 広げても、頁は縦に伸ばさない。
-              *
-              *   前は広げたぶんだけ下へ伸びていた。
-              *   関係図の下には凡例や一覧が続くので、
-              *   そこまで指を送るのが遠くなる。
-              *
-              *   窓の高さは決め打ちにして、
-              *   中を送って見る形にする。紙を覗く窓と同じ。
-              *
-              * ★ 窓の高さは、広げても変えない。
-              *   変えると頁の形が動いて、落ち着かない。
-              *
-              * ★ 掴んで動かしている間は、送りを止める。
-              *   丸を掴んだつもりで図ごと動くと、置けない。
-              */}
-            <div
-                className="thin-scroll mx-auto overflow-auto rounded-md border border-line bg-canvas"
-                style={{
-                    maxWidth: 460,
-                    /*
-                     * ★ 窓は正方形にする。
-                     *   中の図も正方形なので、形が違うと
-                     *   上下に余白が入り、掴む位置がずれる。
-                     */
-                    height: 460,
-                    touchAction: dragging ? "none" : "auto",
-                }}
-            >
             <svg
                 ref={svgRef}
                 viewBox={`0 0 ${SIZE} ${SIZE}`}
                 className={[
-                    "block",
+                    "mx-auto block",
                     dragging ? "cursor-grabbing" : "",
                 ].join(" ")}
                 /*
-                 * 中身の大きさ。
+                 * 図の大きさ。
                  *
-                 * 窓（460）より大きいときだけ、送りが出る。
-                 * 小さいときは窓いっぱいに収めて、余白を作らない。
+                 * ★ 広げたぶんだけ大きくする。
+                 *   縦と横は同じにする。形が違うと、
+                 *   掴む位置と丸の位置がずれる。
+                 *
+                 * ★ 送りは、これを囲っている白い枠が持つ。
+                 *   図の中に送りを作ると、枠と二重になる。
                  */
                 style={{
-                    width: Math.max(460, Math.round(460 * spread)),
-                    height: Math.max(460, Math.round(460 * spread)),
+                    width: Math.round(460 * spread),
+                    height: Math.round(460 * spread),
                 }}
                 role="img"
                 aria-label="関係図"
@@ -646,7 +619,6 @@ export default function RelationGraph({
                     );
                 })}
             </svg>
-            </div>
 
             {onMove && (
                 <>

@@ -195,7 +195,33 @@ export default function RelationsView({
                     </div>
 
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-                        <div className="rounded-lg border border-line bg-surface p-4">
+                        {/*
+                          * 図の枠。
+                          *
+                          * ★ 枠の高さは決め打ち。中を送って見る。
+                          *
+                          *   図を広げると、前はそのぶん枠ごと
+                          *   下へ伸びていた。図の下には凡例や
+                          *   説明が続くので、そこまで指を送るのが遠い。
+                          *   頁の形も、広さを変えるたびに動く。
+                          *
+                          *   枠は動かさず、中だけ送る。
+                          *
+                          * ★ 一覧のときは伸ばす。
+                          *   あちらは行が並ぶだけで、
+                          *   高さを切ると読みにくくなる。
+                          */}
+                        <div
+                            className={[
+                                "rounded-lg border border-line bg-surface p-4",
+                                mode === "graph" ? "thin-scroll overflow-auto" : "",
+                            ].join(" ")}
+                            style={
+                                mode === "graph"
+                                    ? { height: "min(620px, 70vh)" }
+                                    : undefined
+                            }
+                        >
                             {mode === "graph" ? (
                                 <RelationGraph
                                     entries={entries}
