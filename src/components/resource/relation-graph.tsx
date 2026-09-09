@@ -122,6 +122,38 @@ export default function RelationGraph({
     const [zoom, setZoom] = useState(50);
 
     /*
+     * 画面いっぱいに広げるか。
+     *
+     * ★ 枠は頁の一部なので、どうしても小さい。
+     *   人が 20 人を超えると、名前が読める大きさにならない。
+     *
+     * ★ 広げるのは器だけ。図の作りは変えない。
+     *   同じ部品がそのまま大きな器に入るので、
+     *   広げたときだけ別物になる、ということが起きない。
+     *
+     * ★ Esc で閉じる。
+     *   覆いを閉じる道が押し具だけだと、逃げ場が無い。
+     */
+    const [isFull, setIsFull] = useState(false);
+
+    useEffect(() => {
+        if (!isFull) return;
+
+        function onKey(event: KeyboardEvent) {
+            if (event.key === "Escape") setIsFull(false);
+        }
+
+        document.addEventListener("keydown", onKey);
+        /* 後ろの頁が動くと、どこを見ていたか分からなくなる */
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.removeEventListener("keydown", onKey);
+            document.body.style.overflow = "";
+        };
+    }, [isFull]);
+
+    /*
      * 凡例を開いているか。
      *
      * 畳んだ状態から始める。関係の名前は数が多く、
@@ -433,7 +465,7 @@ export default function RelationGraph({
     const active = hoveredId ?? selectedId;
     const labels = Array.from(new Set(relations.map((relation) => relation.label)));
 
-    return (
+    const body = (
         <div className="flex h-full flex-col">
             {/*
               * 図の置き場。
@@ -725,7 +757,7 @@ export default function RelationGraph({
                       */}
                     <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
                         <span className="text-[11px] text-faint">大きさ</span>
-                        {[25, 50, 75, 100, 150].map((one) => (
+                        {[25, 50, 75, 100].map((one) => (
                             <button
                                 key={one}
                                 type="button"
@@ -744,6 +776,14 @@ export default function RelationGraph({
                         <span className="text-[10.5px] text-faint">
                             50% で枠ぴったり
                         </span>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsFull((open) => !open)}
+                            className="rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
+                        >
+                            {isFull ? "元の大きさに戻す" : "画面いっぱいに広げる"}
+                        </button>
                     </div>
 
                     <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -829,6 +869,37 @@ export default function RelationGraph({
             <p className="mt-3 text-center text-xs text-faint">
                 実線は変化を記録した関係、破線はまだ記録がない関係です。
             </p>
+        </div>
+    );
+
+    if (!isFull) return body;
+
+    /*
+     * 画面いっぱい。
+     *
+     * ★ 中身は同じものをそのまま入れる。
+     *   別に作ると、広げたときだけ動きが違う、が起きる。
+     *
+     * ★ 覆いを押しても閉じない。
+     *   丸を掴んで端まで運んだとき、指が覆いに乗る。
+     *   そこで閉じると、置いた場所が消える。
+     */
+    return (
+        <div
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 800,
+                background: "var(--color-canvas)",
+                padding: 16,
+                display: "flex",
+                flexDirection: "column",
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="関係図（画面いっぱい）"
+        >
+            {body}
         </div>
     );
 }
