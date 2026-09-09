@@ -19,6 +19,37 @@ const PAGE_SIZE = 50
  * ratings は、その人が見てよい区分。
  * 呼ぶ側で決めて渡す。ここでは人を知らない。
  */
+/*
+ * 大人向けの棚を、一般の並びに混ぜない。
+ *
+ * ★ これまでは、R18 の作品を丸ごと外していた。
+ *
+ *   BL R18・GL R18・官能 R18 は、どの並びにも出ない。
+ *   BL の棚には全年齢と R15 だけが並び、
+ *   R18 のものはどこにも無い、という形だった。
+ *   分かれていないのではなく、片方が消えていた。
+ *
+ * ★ 直し方
+ *
+ *   その棚を選んだときだけ、そこを開く。
+ *   「全て」や「恋愛」を見ている人の目には入らない。
+ *
+ *   開くのは、年齢の区分で R18 を見てよい人だけ。
+ *   生年月日を入れていない人には、そもそも
+ *   age_rating の絞りで届かない。
+ */
+function keepR18Out(query: unknown, genre: string, ratings: string[]) {
+    /* 大人向けの棚を、その人が見てよいか */
+    const wantsR18 =
+        GENRES_R18_ONLY.includes(genre) && ratings.includes('r18')
+
+    if (wantsR18) return query
+
+    return (query as any)
+        .eq('is_r18', false)
+        .not('genre', 'in', '("官能","官能 R18","BL R18","GL R18")')
+}
+
 async function computeRanking(period: string, novelType: string, serial: string, genre: string, aiMode: string, offset: number, displaySize: number, showMore: boolean, ratings: string[] = ['all']): Promise<{ items: any[]; total: number }> {
   // キャッシュ内ではcookies非依存の素のクライアントを使用（ランキングは公開データのみ）
   const supabase: any = createSbClient(serverEnv.supabaseUrl, clientEnv.supabaseAnonKey)
@@ -29,11 +60,12 @@ async function computeRanking(period: string, novelType: string, serial: string,
   const MIN_VIEWS = 30 // 母数が少なすぎる作品を除外
 
   if (GROWTH_PERIODS.includes(period)) {
-    // 候補プール取得（公開済み・全年齢のみ・直近300件）
+    /* 候補プール取得（公開済み・直近300件）。大人向けは選んだときだけ */
     let poolQuery = supabase
       .from('novels')
       .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at')
-      .eq('published', true).eq('is_r18', false).not('genre', 'in', '("官能","官能 R18","BL R18","GL R18")').in('age_rating', ratings)
+      .eq('published', true).in('age_rating', ratings)
+    poolQuery = keepR18Out(poolQuery, genre, ratings) as typeof poolQuery
     if (aiMode === 'ai') poolQuery = (poolQuery as any).eq('ai_usage', 'full')
     else poolQuery = (poolQuery as any).neq('ai_usage', 'full')
     const { data: poolNovels } = await poolQuery
@@ -191,10 +223,11 @@ async function computeRanking(period: string, novelType: string, serial: string,
 
   let q = supabase.from('novels')
     .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at')
-    .in('id', likeIds).eq('published', true).eq('is_r18', false).not('genre', 'in', '("官能","官能 R18","BL R18","GL R18")').in('age_rating', ratings)
+    .in('id', likeIds).eq('published', true).in('age_rating', ratings)
   // AI作品ランキングと人間作品ランキングを分離
   if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
   else q = (q as any).neq('ai_usage', 'full')
+  q = keepR18Out(q, genre, ratings) as typeof q
   if (novelType !== '全て') q = (q as any).eq('novel_type', novelType)
   if (genre !== '全て') {
     /* こちらも、昔のジャンルを一緒に拾う */
@@ -546,9 +579,16 @@ export default async function RankingPage({ searchParams }: Props) {
    *   ランキングは R18 の作品を初めから外している。
    *   押しても必ず 0 件になる。
    */
+  /*
+   * ★ 大人向けの棚は、見てよい人にだけ出す。
+   *
+   *   生年月日を入れていない人、18 歳未満の人には出さない。
+   *   出しても中身が届かないので、押せる意味がない。
+   */
   const genres = [
     '全て',
     ...GENRES_SELECTABLE.filter(g => !GENRES_R18_ONLY.includes(g)),
+    ...(ratings.includes('r18') ? GENRES_R18_ONLY : []),
   ]
   const typeOptions   = [{ value:'全て',label:'全て' },{ value:'長編',label:'長編' },{ value:'短編',label:'短編' }]
   const serialOptions = [{ value:'all',label:'すべて' },{ value:'serial',label:'連載中' },{ value:'complete',label:'完結' },{ value:'new',label:'新作' }]
