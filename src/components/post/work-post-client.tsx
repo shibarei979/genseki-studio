@@ -399,15 +399,34 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                       */}
                     {!work.title?.trim() && (
                         <div className="mt-4 rounded-lg border border-[var(--color-danger)] bg-[var(--color-danger-tint)] px-4 py-3">
+                            {/*
+                              * ★ 「作品の」と書く。
+                              *
+                              *   前は「題名がありません」とだけ出していた。
+                              *   この画面には話の題名を入れる欄がある。
+                              *   そちらを埋めても消えないので、
+                              *   「入れたのに、無いと言われる」と読まれていた。
+                              *
+                              * ★ 行き先を添える。
+                              *   どこで付けるのかを書いても、
+                              *   探しに行くのは別の手間になる。
+                              */}
                             <p className="text-[13px] font-medium text-[var(--color-danger)]">
-                                題名がありません
+                                作品の題名がありません
                             </p>
                             <p className="mt-1 text-xs leading-relaxed text-ink">
-                                題名を付けるまで、この作品は公開されません。
-                                話を投稿しても、読者には出ません。
+                                この画面で入れるのは、話ごとの題名です。
+                                作品そのものの題名は、まだ空のままです。
                                 <br />
-                                作品の設定から、題名を付けてください。
+                                付けるまで、この作品は公開されません。
+                                話を投稿しても、読者には出ません。
                             </p>
+                            <Link
+                                href={`/workspace/${workId}/settings`}
+                                className="mt-2.5 inline-block rounded-md bg-[var(--color-danger)] px-3.5 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                            >
+                                作品の設定へ
+                            </Link>
                         </div>
                     )}
 
@@ -816,9 +835,30 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                             }
                         />
                     ) : (
-                        <p className="rounded-lg border border-dashed border-line py-24 text-center text-sm text-faint">
-                            まだ話がありません。
-                        </p>
+                        /*
+                          * ★ 次にすることを書く。
+                          *
+                          *   前は「まだ話がありません。」だけだった。
+                          *   投稿の画面に来た人は投稿しに来ているので、
+                          *   押し具が無いと「投稿ボタンはどこか」と探す。
+                          *   投稿する話がまだ無いことと、
+                          *   どこで書くのかを、その場に書く。
+                          */
+                        <div className="rounded-lg border border-dashed border-line py-20 text-center">
+                            <p className="text-sm text-faint">
+                                投稿できる話がまだありません。
+                            </p>
+                            <p className="mx-auto mt-2 max-w-[22rem] text-xs leading-relaxed text-muted">
+                                話を 1 つ書くと、ここに投稿の押し具が出ます。
+                                書いた話は、この画面で 1 話ずつ投稿します。
+                            </p>
+                            <Link
+                                href={`/workspace/${workId}`}
+                                className="mt-4 inline-block rounded-md bg-forest-dark px-5 py-2 text-sm font-medium text-white hover:opacity-90"
+                            >
+                                執筆室で書く
+                            </Link>
+                        </div>
                     )}
                 </main>
             </div>
