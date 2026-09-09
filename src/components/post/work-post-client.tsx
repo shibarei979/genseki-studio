@@ -115,7 +115,13 @@ export default function WorkPostClient({ workId }: { workId: string }) {
         for (const row of targets) {
             await repository.updateEpisode(row.id, {
                 is_published: publish,
+                /*
+                 * ★ 予約の時刻は両方とも消す。
+                 *   非公開に戻したとき scheduled_at が残っていると、
+                 *   その時刻は過ぎているので、すぐまた公開される。
+                 */
                 publish_at: null,
+                scheduled_at: null,
             });
         }
         setPicked([]);
@@ -1144,7 +1150,20 @@ function PostForm({
                 await onChange({
                     ...patch,
                     is_published: false,
+                    /*
+                     * ★ 予約の時刻は 2 つの列に持っている。必ず両方書く。
+                     *
+                     *   publish_at    この画面が書くもの
+                     *   scheduled_at  読む側と定時の見回りが見るもの
+                     *
+                     *   前はこちらだけ書いていた。
+                     *   scheduled_at に前の予約が残っていると、
+                     *   その時刻はもう過ぎているので、
+                     *   誰かが作品を開いた瞬間に公開されてしまう。
+                     *   「勝手に投稿された」の元。
+                     */
                     publish_at: when,
+                    scheduled_at: when,
                 });
                 onPosted?.({ scheduled: true, at: when });
             })();
@@ -1157,7 +1176,9 @@ function PostForm({
             await onChange({
                 ...patch,
                 is_published: true,
+                /* 出したら、予約の時刻は両方とも消す */
                 publish_at: null,
+                scheduled_at: null,
             });
             onPosted?.({ scheduled: false, at: null });
         })();
@@ -1771,7 +1792,9 @@ function PostForm({
                                         setAt("");
                                         onChange({
                                             is_published: false,
+                                            /* 取り消しも、両方とも消す */
                                             publish_at: null,
+                                            scheduled_at: null,
                                         });
                                     }}
                                     className="mt-2 text-[11px] text-[var(--color-danger)] hover:underline"

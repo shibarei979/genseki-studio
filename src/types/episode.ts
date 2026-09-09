@@ -42,8 +42,21 @@ export interface Episode {
     /**
      * 公開する日時。
      * 決めておくと、その時刻に公開になる。
+     *
+     * ★ 予約の時刻は 2 つの列に持っている。
+     *
+     *     publish_at    投稿画面が書くもの
+     *     scheduled_at  読む側と定時の見回りが見るもの
+     *
+     *   片方だけ書くと、もう片方に古い時刻が残る。
+     *   残った時刻が過ぎていると、その話は
+     *   誰かが作品を開いた瞬間に公開されてしまう。
+     *
+     *   必ず両方そろえて書く。消すときも両方。
      */
     publish_at?: string | null;
+    /** 公開する日時（読む側と見回りが見るほう）。publish_at と必ずそろえる */
+    scheduled_at?: string | null;
     /**
      * 読めるようになった日時。
      *
@@ -105,6 +118,7 @@ export type EpisodeUpdateInput = Partial<
         | "episode_summary"
         | "afterword"
         | "publish_at"
+        | "scheduled_at"
     >
 >;
 
