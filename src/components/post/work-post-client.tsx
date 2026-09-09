@@ -1099,17 +1099,29 @@ function PostForm({
             return;
         }
 
-        /* 先に書いたものを残す */
-        save({
+        /*
+         * ★ 控えは 1 回にまとめる。
+         *
+         *   前は「先に書いたものを残す」で 1 回、
+         *   そのあと公開の状態で 1 回、計 2 回書いていた。
+         *
+         *   親は 1 回ごとに話を読み直す。
+         *   先に頼んだほうの読み直しが、あとから返ってくると、
+         *   予約を入れる前の並びで画面を上書きしてしまう。
+         *   「予約を変えたのに変わらない」の元。
+         *
+         *   触る列は重ならないので、1 つの頼みで足りる。
+         */
+        const patch: Partial<Episode> = {
             title: title.trim(),
             preface: preface.trim() || null,
             episode_summary: summary.trim() || null,
             afterword: afterword.trim() || null,
             chapter_id: chapterId || null,
-            /* 挿絵も一緒に保存する。別に押させると忘れられる */
+            /* 挿絵も一緒に。別に押させると忘れられる */
             illust_url: illustUrl || null,
             illust_is_ai: illustIsAi,
-        });
+        };
 
         /* 時刻が入っていれば予約 */
         if (at) {
@@ -1125,19 +1137,12 @@ function PostForm({
 
             setError("");
 
-            /*
-             * ★ 控え終わるのを待ってから、次へ進む。
-             *
-             *   前は控えを頼んだ直後に onPosted を呼んでいた。
-             *   親はそこで話を読み直すが、控えがまだ表に
-             *   着いていないので、古い並びが返ってくる。
-             *   予約したのに一覧に出ない、次の話がずれる、
-             *   といった妙な動きは、これだった。
-             */
+            /* ★ 控え終わるのを待ってから、次へ進む */
             const when = floorTo5Min(target).toISOString();
 
             void (async () => {
                 await onChange({
+                    ...patch,
                     is_published: false,
                     publish_at: when,
                 });
@@ -1147,14 +1152,15 @@ function PostForm({
         }
 
         setError("");
-        /* 挿絵も一緒に保存する。別に押させると忘れられる */
-        onChange({
-            is_published: true,
-            publish_at: null,
-            illust_url: illustUrl || null,
-            illust_is_ai: illustIsAi,
-        });
-        onPosted?.({ scheduled: false, at: null });
+
+        void (async () => {
+            await onChange({
+                ...patch,
+                is_published: true,
+                publish_at: null,
+            });
+            onPosted?.({ scheduled: false, at: null });
+        })();
     }
 
     return (
