@@ -101,6 +101,33 @@ export default function RelationGraph({
     /* 図の広さ。ふつうから始める */
     const [spreadAt, setSpreadAt] = useState(1);
 
+    /*
+     * 図の大きさ。
+     *
+     * ★ 枠にぴったり収まる大きさを 50% とする。
+     *
+     *   いまの見え方が 50%。そこから大きくも小さくもできる。
+     *   50 より上にすると枠からはみ出すので、送って見る。
+     *   50 以下なら、送らずに全体が見える。
+     *
+     * ★ 広さとは別のもの。
+     *
+     *   広さ  丸と丸の間の空き方（並べ方）
+     *   大きさ 描かれるものの大きさ（見え方）
+     *
+     *   項目が多いときは、広さを広げて大きさを下げると
+     *   全体が見える。近くを読みたいときは大きさを上げる。
+     */
+    const [zoom, setZoom] = useState(50);
+
+    /*
+     * 凡例を開いているか。
+     *
+     * 畳んだ状態から始める。関係の名前は数が多く、
+     * 開いたままだと図の場所を奪う。
+     */
+    const [isLegendOpen, setIsLegendOpen] = useState(false);
+
     const spread = SPREADS[spreadAt].value;
     const SIZE = Math.round(BASE_SIZE * spread);
     const CENTER = SIZE / 2;
@@ -433,14 +460,28 @@ export default function RelationGraph({
               *
               * ★ 押し具と凡例は、下に貼り付けたまま。
               */}
-            <div className="min-h-0 flex-1">
+            <div className="thin-scroll min-h-0 flex-1 overflow-auto">
             <svg
                 ref={svgRef}
                 viewBox={`0 0 ${SIZE} ${SIZE}`}
                 className={[
-                    "block h-full w-full",
+                    "mx-auto block",
                     dragging ? "cursor-grabbing" : "",
                 ].join(" ")}
+                /*
+                 * ★ 高さで決めて、幅は正方形に合わせる。
+                 *
+                 *   幅と高さを別々に % で指定すると、
+                 *   枠の形によって図が歪む。丸が楕円になる。
+                 *   高さだけ決めて、幅は 1 対 1 で追わせる。
+                 *
+                 * ★ 50% が枠ぴったり。だから 2 倍して渡す。
+                 */
+                style={{
+                    height: `${zoom * 2}%`,
+                    aspectRatio: "1 / 1",
+                    width: "auto",
+                }}
                 role="img"
                 aria-label="関係図"
                 onPointerMove={(event) => {
@@ -675,6 +716,35 @@ export default function RelationGraph({
                         </button>
                     </div>
 
+                    {/*
+                      * 大きさ。
+                      *
+                      * ★ 50% で枠ぴったり。
+                      *   それより上は送って見る。下は全体が見える。
+                      */}
+                    <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
+                        <span className="text-[11px] text-faint">大きさ</span>
+                        {[25, 50, 75, 100, 150].map((one) => (
+                            <button
+                                key={one}
+                                type="button"
+                                onClick={() => setZoom(one)}
+                                aria-pressed={one === zoom}
+                                className={[
+                                    "rounded-md border px-2.5 py-1 text-[11px]",
+                                    one === zoom
+                                        ? "border-forest bg-forest-tint/60 text-forest"
+                                        : "border-line text-muted hover:border-forest-line",
+                                ].join(" ")}
+                            >
+                                {one}%
+                            </button>
+                        ))}
+                        <span className="text-[10.5px] text-faint">
+                            50% で枠ぴったり
+                        </span>
+                    </div>
+
                     <div className="mt-1.5 flex items-center justify-between gap-2">
                         <p className="text-[11px] text-faint">
                             丸をつまむと動かせます。置いた場所は覚えられます。
@@ -697,7 +767,27 @@ export default function RelationGraph({
              * 破線で見せる。図の中の線と形を揃えないと、
              * どれがどれか分からない。
              */}
-            <ul className="mt-4 flex flex-wrap justify-center gap-5">
+            {/*
+              * 凡例。
+              *
+              * ★ 畳んでおく。
+              *
+              *   関係の名前は作品によっては 40 を超える。
+              *   全部並べると 5 段になり、枠の 3 分の 1 を食う。
+              *   図に使える高さが、そのぶん減る。
+              *
+              *   ふだんは 1 段ぶんだけ出し、
+              *   見たい人が開く形にする。
+              *
+              * ★ 閉じているときも、いくつあるかは書く。
+              *   隠していることが分からないと、押されない。
+              */}
+            <ul
+                className={[
+                    "mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1.5",
+                    isLegendOpen ? "" : "max-h-[26px] overflow-hidden",
+                ].join(" ")}
+            >
                 {labels.map((label) => (
                     <li
                         key={label}
@@ -719,6 +809,21 @@ export default function RelationGraph({
                     </li>
                 ))}
             </ul>
+
+            {labels.length > 6 && (
+                <div className="mt-1.5 text-center">
+                    <button
+                        type="button"
+                        onClick={() => setIsLegendOpen((open) => !open)}
+                        aria-expanded={isLegendOpen}
+                        className="text-[11px] text-forest hover:underline"
+                    >
+                        {isLegendOpen
+                            ? "関係の名前を畳む"
+                            : `関係の名前をすべて見る（${labels.length}）`}
+                    </button>
+                </div>
+            )}
 
             <p className="mt-3 text-center text-xs text-faint">
                 実線は変化を記録した関係、破線はまだ記録がない関係です。
