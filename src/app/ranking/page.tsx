@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import { createClient as createSbClient } from '@supabase/supabase-js'
 import { unstable_cache } from 'next/cache'
+import { GENRES_SELECTABLE, GENRES_R18_ONLY, GENRE_LEGACY_MATCH } from '@/types'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import AdBanner from '@/components/layout/ad-banner'
@@ -94,7 +95,17 @@ async function computeRanking(period: string, novelType: string, serial: string,
       candidates = candidates.filter((n:any) => newbieAuthorSet.has(n.author_id))
     }
     if (genre !== '全て') {
-      candidates = candidates.filter((n:any) => n.genre === genre)
+      /*
+       * ★ 昔のジャンルで出している作品も拾う。
+       *
+       *   ファンタジーを 3 つに分けた日から、
+       *   古いジャンルのままの作品はどのジャンルでも
+       *   出てこなくなっていた。検索は拾っているので、
+       *   ランキングも同じ扱いにそろえる。
+       */
+      const legacy = GENRE_LEGACY_MATCH[genre] ?? []
+      const wanted = new Set([genre, ...legacy])
+      candidates = candidates.filter((n:any) => wanted.has(n.genre))
     }
 
     const rateScored = candidates.map((n:any) => {
@@ -185,7 +196,13 @@ async function computeRanking(period: string, novelType: string, serial: string,
   if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
   else q = (q as any).neq('ai_usage', 'full')
   if (novelType !== '全て') q = (q as any).eq('novel_type', novelType)
-  if (genre !== '全て') q = (q as any).eq('genre', genre)
+  if (genre !== '全て') {
+    /* こちらも、昔のジャンルを一緒に拾う */
+    const legacy = GENRE_LEGACY_MATCH[genre] ?? []
+    q = legacy.length > 0
+      ? (q as any).in('genre', [genre, ...legacy])
+      : (q as any).eq('genre', genre)
+  }
   if (serial === 'serial')   q = (q as any).eq('is_serial', true)
   if (serial === 'complete') q = (q as any).eq('is_serial', false)
   if (serial === 'new')      q = (q as any).gte('created_at', new Date(Date.now()-30*24*60*60*1000).toISOString())
@@ -511,7 +528,28 @@ export default async function RankingPage({ searchParams }: Props) {
     { value:'bookmark_rate',  label:'保存率' },
     { value:'newbie_focus',   label:'新人注目' },
   ]
-  const genres = ['全て','オールジャンル','異世界','ファンタジー','SF','恋愛','学園','ミステリー','ホラー','歴史・時代','日常','アクション','コメディ','文芸','その他']
+  /*
+   * 並べるジャンル。
+   *
+   * ★ 作品に付けられるものと、そろえる。
+   *
+   *   前はここに手で書いた古い一覧が入っていた。
+   *   「オールジャンル」「異世界」「ファンタジー」は
+   *   もう誰も選べないジャンルで、押しても 0 件。
+   *   逆に、いま選べる ハイファンタジー・異世界ファンタジー・
+   *   ローファンタジー・BL・GL は、ここに無いので絞れなかった。
+   *
+   *   GENRES_SELECTABLE から作れば、
+   *   ジャンルを足したときにここも一緒に増える。
+   *
+   * ★ R18 のジャンルは出さない。
+   *   ランキングは R18 の作品を初めから外している。
+   *   押しても必ず 0 件になる。
+   */
+  const genres = [
+    '全て',
+    ...GENRES_SELECTABLE.filter(g => !GENRES_R18_ONLY.includes(g)),
+  ]
   const typeOptions   = [{ value:'全て',label:'全て' },{ value:'長編',label:'長編' },{ value:'短編',label:'短編' }]
   const serialOptions = [{ value:'all',label:'すべて' },{ value:'serial',label:'連載中' },{ value:'complete',label:'完結' },{ value:'new',label:'新作' }]
 
