@@ -1138,8 +1138,8 @@ export default async function ReaderHome() {
               * 上から「まだ知らない作品」、下へ「自分に近いもの」。
               * 来た人がまず出会うのは、知らない一冊であってほしい。
               *
-              *   受賞 → おすすめ → 新着 → 最新話 → バナー
-              *   → 続きから読む → フォロー中 → 短編
+              *   受賞 → おすすめ → フォロー中 → 続きから読む
+              *   → 新着 → 最新話 → バナー → 短編
               *
               * ★ 受賞をいちばん上に置く。
               *   運営が手で選んだ棚なので、
@@ -1173,6 +1173,33 @@ export default async function ReaderHome() {
             />
 
             {/* その時の新着。点数では選ばず、新しい順に出す */}
+            {/*
+              * ★ 追っている作者と、読みかけを上へ出す。
+              *
+              *   前はいちばん下だった。
+              *   探しに来た人には関係がない、という並べ方だったが、
+              *   毎日来る人には、まずこの 2 つに用がある。
+              *   下まで指を送らないと届かないのは、
+              *   使いにくい。
+              *
+              * ★ 空のときは、そもそも出ない。
+              *   誰も追っていない人の画面では、
+              *   これまでどおり新着から始まる。
+              */}
+            <ReaderWorkList
+              title="フォロー中の作家の新着"
+              books={followedBooks}
+              moreHref="/search?sort=new"
+            />
+
+            {/* ひと息で読み切れる */}
+            <ReaderWorkList
+              title="続きから読む"
+              books={continueBooks}
+              /* 履歴のページはまだ無い。作品を探すへ送る */
+              moreHref="/search"
+            />
+
             <ReaderWorkList
               title="新着作品"
               books={freshBooks}
@@ -1195,20 +1222,6 @@ export default async function ReaderHome() {
               title="短編"
               books={shortBooks}
               moreHref="/search?type=短編"
-            />
-
-            <ReaderWorkList
-              title="フォロー中の作家の新着"
-              books={followedBooks}
-              moreHref="/search?sort=new"
-            />
-
-            {/* ひと息で読み切れる */}
-            <ReaderWorkList
-              title="続きから読む"
-              books={continueBooks}
-              /* 履歴のページはまだ無い。作品を探すへ送る */
-              moreHref="/search"
             />
 
 

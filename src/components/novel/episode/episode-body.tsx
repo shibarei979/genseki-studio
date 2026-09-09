@@ -60,6 +60,22 @@ const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', useRecommend: t
 const FRAME_WIDTH = 21 * 40 + 96
 
 /**
+ * 縦書きの 1 行に入れる字数。
+ *
+ * ★ 横書きと同じ 40 字にそろえる。
+ *
+ *   横書きは FRAME_WIDTH で 40 字に切ってある。
+ *   縦書きには上限が無く、画面の高さぶん字が入っていた。
+ *   高い画面では 1 行 60 字を超え、目が戻る所を見失う。
+ *
+ *   紙の本もおおむね 40 字前後で組んである。
+ *
+ * ★ 高さ ＝ 字数 × 文字の大きさ。
+ *   行間は列と列の間隔なので、1 行の字数には効かない。
+ */
+const VERTICAL_CHARS = 40
+
+/**
  * 読む側の横書き用に、見た目だけ整える。
  *
  * 縦書きで書かれた原稿は、英数字が全角だったり
@@ -1293,7 +1309,16 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], s
            *   縦書きは高さが行数になるので、
            *   高いほど 1 画面に入る量が増える。
            */
-          height:'calc(100vh - 96px)',paddingBottom:4,
+          /*
+           * ★ 高さに上限を置く。
+           *
+           *   縦書きは高さがそのまま 1 行の字数になる。
+           *   画面が高いほど字数が増え、読みにくくなる。
+           *   40 字ぶんで切る。
+           *
+           *   小さい画面では、これまでどおり画面いっぱい。
+           */
+          height:`min(calc(100vh - 96px), ${VERTICAL_CHARS * fontSize + 40}px)`,paddingBottom:4,
           /*
            * ★ 中身を右端へ寄せる。
            *
