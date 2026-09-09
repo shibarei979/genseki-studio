@@ -23,6 +23,19 @@ export interface Settings {
   useRecommend: boolean
   lineHeight: number
   writingMode: 'horizontal' | 'vertical'
+  /**
+   * 読む人が、自分で読み方向を選んだか。
+   *
+   * ★ 選んでいないあいだは、作者のすすめる向きに従う。
+   *
+   *   前は必ず横書きから始まっていた。
+   *   縦書きで書かれた作品でも毎回横書きで開き、
+   *   読む人がそのたびに切り替えていた。
+   *
+   * ★ 一度でも自分で選んだら、そちらを通す。
+   *   選んだのに次の作品で戻されるほうが、気持ちが悪い。
+   */
+  writingModeChosen?: boolean
 }
 
 const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'large', useRecommend: true, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -94,13 +107,37 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) {
-        const s = { ...DEFAULTS, ...JSON.parse(saved) } as Settings
-        setSettings(s)
-        onChange(s)
-      }
+      const base = saved
+        ? ({ ...DEFAULTS, ...JSON.parse(saved) } as Settings)
+        : { ...DEFAULTS }
+
+      /*
+       * 作者のすすめる向きを、初めの姿にする。
+       *
+       * ★ 読む人がまだ選んでいないときだけ。
+       *   選んだあとで作品ごとに戻されると、
+       *   自分で選んだ意味が無くなる。
+       *
+       * ★ 控えない。
+       *   ここで覚えると、次の作品にも持ち越す。
+       *   すすめる向きは作品ごとに違う。
+       */
+      const next: Settings =
+        base.writingModeChosen !== true && recommendedMode
+          ? {
+              ...base,
+              writingMode: recommendedMode,
+              /* 縦書きは、小さすぎる大きさだと列が潰れる */
+              ...(recommendedMode === 'vertical' && base.fontSize < 14
+                ? { fontSize: 14 }
+                : {}),
+            }
+          : base
+
+      setSettings(next)
+      onChange(next)
     } catch {}
-  }, [])
+  }, [recommendedMode])
 
   function update(partial: Partial<Settings>) {
     const next = { ...settings, ...partial }
@@ -179,7 +216,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                 <div style={{display:'flex',gap:6}}>
                   {/* horizontal = 横書き（縦スクロール）、vertical = 縦書き（横スクロール） */}
                   <span style={{position:'relative',display:'inline-block'}}>
-                    <button onClick={()=>update({writingMode:'horizontal'})} style={btnBase(settings.writingMode==='horizontal')}>
+                    <button onClick={()=>update({writingMode:'horizontal', writingModeChosen:true})} style={btnBase(settings.writingMode==='horizontal')}>
                       横書き
                     </button>
                     {recommendedMode === 'horizontal' && <RecommendMark/>}
@@ -188,6 +225,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                   <span style={{position:'relative',display:'inline-block'}}>
                     <button onClick={()=>update({
                       writingMode:'vertical',
+                      writingModeChosen:true,
                       /*
                        * ★ 縦書きにしたとき、小さすぎる大きさなら戻す。
                        *
