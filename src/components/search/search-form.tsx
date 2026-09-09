@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 /*
@@ -80,6 +80,8 @@ export default function SearchForm({
   defaultContest='', contests=[], defaultName=''
 }: Props) {
   const router = useRouter()
+  /* いまの住所。見せ方の指定を持ち越すのに使う */
+  const search = useSearchParams()
   /*
    * ★ BL・GL は誰にでも出す。
    *
@@ -190,6 +192,19 @@ export default function SearchForm({
         localStorage.setItem('exclude_history', JSON.stringify(neh))
       } catch {}
     }
+    /*
+     * ★ 見せ方（本／文字）は、そのまま持ち越す。
+     *
+     *   前は付け直していなかったので、
+     *   本の形で見ていた人が検索し直すたびに
+     *   文字の一覧へ戻されていた。
+     *
+     *   検索するのは探し方を変えるためで、
+     *   見せ方を変えるためではない。
+     */
+    const view = search.get('view')
+    if (view) params.set('view', view)
+
     router.push(`/search?${params.toString()}`)
   }
 

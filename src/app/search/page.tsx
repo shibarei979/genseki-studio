@@ -460,15 +460,31 @@ export default async function SearchPage({ searchParams }: Props) {
   const shelfView = viewParam === 'shelf'
 
   function buildUrl(params: Record<string, string>) {
+    /*
+     * ★ いま付いている指定を、丸ごと引き継ぐ。
+     *
+     *   前は q・exclude・genre・type・serial・tag・sort・view
+     *   の 8 つだけを書き写していた。
+     *
+     *   作品名・作者名・コンテスト・文字数・点数で絞っていた人が
+     *   「本」に切り替えると、それらが落ちて
+     *   絞る前の作品まで棚に並んでいた。
+     *   「検索した作品だけが置いてあるわけではない」の元。
+     *
+     *   書き写す形だと、絞り込みを足すたびに
+     *   ここへ足し忘れる。丸ごと引き継げば、足し忘れない。
+     *
+     * ★ 頁だけは落とす。
+     *   見せ方や並べ方を変えたのに 3 頁目のままだと、
+     *   何も無い頁に着くことがある。
+     */
     const base: Record<string, string> = {}
-    if (q)       base.q = q
-    if (exclude) base.exclude = exclude
-    if (genre)   base.genre = genre
-    if (type)    base.type = type
-    if (serial)  base.serial = serial
-    if (tagParam) base.tag = tagParam
-    if (sort)    base.sort = sort
-    if (viewParam) base.view = viewParam
+    for (const [key, value] of Object.entries(
+      searchParams as Record<string, string | undefined>,
+    )) {
+      if (key === 'page') continue
+      if (typeof value === 'string' && value) base[key] = value
+    }
     Object.assign(base, params)
     const qs = Object.entries(base).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
     return `/search${qs ? '?' + qs : ''}`
