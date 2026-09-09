@@ -163,6 +163,12 @@ export default function WorkPostClient({ workId }: { workId: string }) {
      *   その部品ごと作り直され、知らせも消える。
      *   何が起きたのか分からないまま画面が変わる。
      */
+    /*
+     * 進んだ先の欄に入れておく日時。
+     * 予約して自動で進んだときだけ入る。
+     */
+    const [carryAt, setCarryAt] = useState("");
+
     const [postNotice, setPostNotice] = useState<{
         text: string;
         /** 次のまだ出していない話。あれば「次の話へ」を出す */
@@ -819,19 +825,10 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                         <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-forest-line bg-forest-tint px-4 py-2.5">
                             <p className="text-[12px] text-ink">{postNotice.text}</p>
 
-                            {postNotice.nextId && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const id = postNotice.nextId;
-                                        if (!id) return;
-                                        selectEpisode(id);
-                                        setPostNotice(null);
-                                    }}
-                                    className="rounded-md border border-forest bg-surface px-3 py-1 text-[11.5px] text-forest hover:bg-forest-tint"
-                                >
-                                    次の話へ（{postNotice.nextLabel}）
-                                </button>
+                            {postNotice.nextLabel && (
+                                <span className="text-[11.5px] text-muted">
+                                    次の話へ進みました。{postNotice.nextLabel}。
+                                </span>
                             )}
                         </div>
                     )}
@@ -886,21 +883,57 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                             !row.publish_at,
                                     );
 
+                                /*
+                                 * ★ 次の話へ進む。ただし空手では行かせない。
+                                 *
+                                 *   一度、進んだ先の欄を空のままにしていた。
+                                 *   同じ場所の同じ押し具が
+                                 *   「予約する」から「いま出す」に変わり、
+                                 *   流れで押した人の話が即座に公開された。
+                                 *
+                                 *   次の予定を入れた状態で進む。
+                                 *   押しても予約のまま。
+                                 *   いま出したい人は、欄を空にすればよい。
+                                 */
+                                const carry = info.at
+                                    ? toLocalInput(
+                                          nextSlot(
+                                              info.at,
+                                              work.default_publish_time,
+                                              work.default_publish_days,
+                                          ).toISOString(),
+                                      )
+                                    : "";
+
                                 setPostNotice({
                                     text: info.at
                                         ? `${formatAt(info.at)} に予約しました。`
                                         : "",
-                                    nextId: next?.id ?? null,
+                                    nextId: null,
                                     nextLabel: next
-                                        ? `第${next.ep_number}話　${next.title || "無題"}`
+                                        ? `${formatAt(
+                                              nextSlot(
+                                                  info.at,
+                                                  work.default_publish_time,
+                                                  work.default_publish_days,
+                                              ).toISOString(),
+                                          )} を入れてあります`
                                         : "",
                                 });
+
+                                if (next) {
+                                    setCarryAt(carry);
+                                    selectEpisode(next.id);
+                                } else {
+                                    setCarryAt("");
+                                }
                             }}
                             work={work}
                             /*
                              * 最後に予約した話の時刻。
                              * 次の予定を組み立てるのに使う。
                              */
+                            initialAt={carryAt}
                             lastScheduledAt={
                                 scheduled.length > 0
                                     ? scheduled[scheduled.length - 1].publish_at ?? null
@@ -986,9 +1019,26 @@ function PostForm({
     onPosted,
     work,
     lastScheduledAt,
+    initialAt,
 }: {
     /** 最後に予約した話の時刻。次の予定を組み立てるのに使う */
     lastScheduledAt?: string | null;
+    /**
+     * 日時の欄に、初めから入れておく値。
+     *
+     * ★ 予約したあと自動で進んできたときだけ渡す。
+     *
+     *   進んだ先の欄が空だと、同じ場所にある同じ押し具が
+     *   「予約する」から「いま出す」に変わる。
+     *   流れで押すと即座に公開される。実際に出てしまった人がいる。
+     *
+     *   次の予定を入れておけば、押しても予約のまま。
+     *   いま出したい人は、欄を空にすればよい。
+     *
+     * ★ 自分で話を選んだときは渡さない。
+     *   その人は予約しに来たとは限らない。
+     */
+    initialAt?: string;
     /**
      * 投稿し終えたとき。
      *
@@ -1050,7 +1100,7 @@ function PostForm({
     const [illustUrl] = useState(episode.illust_url ?? "");
     const [illustIsAi] = useState(episode.illust_is_ai ?? false);
 
-    const [at, setAt] = useState(toLocalInput(episode.publish_at));
+    const [at, setAt] = useState(initialAt || toLocalInput(episode.publish_at));
     const [error, setError] = useState("");
 
     /* 詳細設定を開いているか。畳んで置く */
@@ -2052,7 +2102,20 @@ function PostForm({
                             width={18}
                             height={15}
                         />
-                        {isScheduled ? "予約を変える" : "この話を投稿する"}
+                        {/*
+                          * ★ 名前は、欄の中身で決める。
+                          *
+                          *   前は話の状態だけを見ていた。
+                          *   日時が入っているのに
+                          *   「この話を投稿する」と出ることがあり、
+                          *   押すと予約になる。逆も起きる。
+                          *   押す前に何が起きるか分からなかった。
+                          */}
+                        {at
+                            ? isScheduled
+                                ? "予約を変える"
+                                : "この話を予約する"
+                            : "この話を投稿する"}
                     </button>
                 )}
             </div>
