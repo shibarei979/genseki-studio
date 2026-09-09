@@ -438,14 +438,28 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         const texts: string[] = [];
         const failed: string[] = [];
         let hasPdf = false;
+        let hasDocx = false;
+        /* 読めなかった理由。分かるものは、そのまま出す */
+        const reasons: string[] = [];
 
         for (const file of list) {
             try {
                 const result = await readManuscriptFile(file);
                 texts.push(result.text.trim());
-                if (file.name.toLowerCase().endsWith(".pdf")) hasPdf = true;
-            } catch {
+
+                const name = file.name.toLowerCase();
+                if (name.endsWith(".pdf")) hasPdf = true;
+                if (name.endsWith(".docx")) hasDocx = true;
+            } catch (error) {
                 failed.push(file.name);
+                /*
+                 * ★ 理由を捨てない。
+                 *   .doc を選んだ人に「読めません」だけ返すと、
+                 *   どうすればよいか分からない。
+                 */
+                if (error instanceof Error && error.message) {
+                    reasons.push(error.message);
+                }
             }
         }
 
@@ -475,8 +489,15 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
         if (hasPdf) {
             parts.push("PDF は改行や段落が原稿どおりに戻らないことがあります。");
         }
+        if (hasDocx) {
+            parts.push(
+                "Word は見出しのところで話を切りました。太字やルビなどの飾りは外れます。",
+            );
+        }
         if (failed.length > 0) {
             parts.push(`読み込めませんでした：${failed.join("、")}`);
+            /* 同じ理由が並ばないよう、重なりを取る */
+            Array.from(new Set(reasons)).forEach((one) => parts.push(one));
         }
 
         setFileNotice(parts.join(" "));
@@ -953,7 +974,7 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                         )}
 
                         <p className="mt-2 text-[11px] leading-relaxed text-faint">
-                            TXT / MD / PDF に対応しています。
+                            TXT / MD / PDF / Word（.docx）に対応しています。
                             <br />
                             1話ずつ別のファイルにしている場合は、まとめて選ぶと
                             ファイルごとに1話として分かれます（名前の順に並びます）。

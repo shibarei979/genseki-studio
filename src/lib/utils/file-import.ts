@@ -3,13 +3,15 @@
  * 原石航路 Studio
  * ファイルからの原稿読み込み
  *
- * 対応: .txt / .md（文字コード自動判定）, .pdf
+ * 対応: .txt / .md（文字コード自動判定）, .pdf, .docx
  *
  * PDF は pdfjs-dist を動的 import で読む。
  * 初期表示に不要な重いライブラリを、
  * PDF を選んだ人にだけ読み込ませるため。
  * ============================================================
  */
+
+import { SPLIT_MARK } from "@/lib/utils/manuscript";
 
 export interface ImportedText {
     text: string;
@@ -203,11 +205,121 @@ export async function readPdfFile(file: File): Promise<ImportedText> {
     return { text: restoreLineBreaks(normalizeVerticalForms(joined)) };
 }
 
+/**
+ * Word（.docx）を読む。
+ *
+ * ★ 中身は zip。文章は word/document.xml に入っている。
+ *
+ *   すでに jszip を使っているので、
+ *   読み込むものを増やさずに済む。
+ *
+ * ★ 段落（w:p）を 1 行として拾う。
+ *
+ *     w:t     文字。前後の空白は xml:space が指すときだけ残す
+ *     w:br    行の切れ目
+ *     w:tab   字下げ。全角の空白に置き換える
+ *
+ * ★ 見出し（Heading）には、切り印を入れる。
+ *
+ *   何十話ぶんを 1 つの Word にまとめている人がいる。
+ *   Word の見出しで章立てしてあれば、
+ *   そこがそのまま話の切れ目になる。
+ *
+ *   見出しでない書き方をしている原稿は、
+ *   これまでどおり空行の数などで自動に切る。
+ *
+ * ★ 飾り（太字・色・ルビ）は捨てる。
+ *   こちらの本文は素の文字で持っている。
+ *   中途半端に持ち込むと、あとで直す手間が増える。
+ */
+async function readDocxFile(file: File): Promise<ImportedText> {
+    const JSZip = (await import("jszip")).default;
+    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+
+    const entry = zip.file("word/document.xml");
+    if (!entry) {
+        throw new Error("Word の中身を読めませんでした。ファイルが壊れているかもしれません。");
+    }
+
+    const xml = await entry.async("string");
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+
+    if (doc.getElementsByTagName("parsererror").length > 0) {
+        throw new Error("Word の中身を読めませんでした。");
+    }
+
+    const paragraphs: string[] = [];
+
+    const nodes = doc.getElementsByTagName("w:p");
+    for (let at = 0; at < nodes.length; at += 1) {
+        const paragraph = nodes[at];
+
+        /* 見出しかどうか */
+        let isHeading = false;
+        const styles = paragraph.getElementsByTagName("w:pStyle");
+        for (let i = 0; i < styles.length; i += 1) {
+            const value = styles[i].getAttribute("w:val") ?? "";
+            if (/^heading/i.test(value) || /^見出し/.test(value)) isHeading = true;
+        }
+
+        /* 中の字を、出てくる順に拾う */
+        let line = "";
+        const walk = (node: Node) => {
+            for (let i = 0; i < node.childNodes.length; i += 1) {
+                const child = node.childNodes[i];
+                if (child.nodeType !== 1) continue;
+
+                const element = child as Element;
+                const tag = element.tagName;
+
+                if (tag === "w:t") {
+                    line += element.textContent ?? "";
+                } else if (tag === "w:tab") {
+                    line += "\u3000";
+                } else if (tag === "w:br" || tag === "w:cr") {
+                    line += "\n";
+                } else {
+                    walk(element);
+                }
+            }
+        };
+        walk(paragraph);
+
+        if (isHeading && line.trim().length > 0 && paragraphs.length > 0) {
+            paragraphs.push(SPLIT_MARK);
+        }
+
+        paragraphs.push(line);
+    }
+
+    /*
+     * 段落を行として繋ぐ。
+     * 空の段落は、そのまま空行として残す。
+     * Word で 1 行あけてある所は、こちらでも 1 行あく。
+     */
+    const text = paragraphs.join("\n").replace(/\r\n?/g, "\n");
+
+    return { text: normalizeVerticalForms(text) };
+}
+
 /** 拡張子から読み方を選ぶ */
 export async function readManuscriptFile(file: File): Promise<ImportedText> {
     const name = file.name.toLowerCase();
     if (name.endsWith(".pdf")) return readPdfFile(file);
+    if (name.endsWith(".docx")) return readDocxFile(file);
+
+    /*
+     * ★ .doc（古い Word）は読めない。
+     *   zip ではなく独自の形で、中身を取り出せない。
+     *   Word で「.docx として保存し直す」よう伝える。
+     */
+    if (name.endsWith(".doc")) {
+        throw new Error(
+            "古い形式の Word（.doc）は読めません。Word で開いて、.docx として保存し直してください。",
+        );
+    }
+
     return readTextFile(file);
 }
 
-export const ACCEPTED_IMPORT_TYPES = ".txt,.md,.text,.pdf";
+export const ACCEPTED_IMPORT_TYPES = ".txt,.md,.text,.pdf,.docx";
