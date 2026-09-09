@@ -696,13 +696,19 @@ export default async function RankingPage({ searchParams }: Props) {
               </div>
             </div>
             {/* ジャンル：気分で探す風のボタン */}
-            <div className="rk-filter" style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:14}}>
+            {/*
+              * ★ rk-genre の印を付ける。
+              *
+              *   パソコンでは、この帯だけを 2 段に折り返す。
+              *   棚が 17 個あり、1 段では端が隠れる。
+              *   送れることに気づかない人には、
+              *   隠れた棚は無いのと同じになる。
+              *
+              *   携帯はこれまでどおり。狭いので、
+              *   全部を折り返すと段が増えすぎる。
+              */}
+            <div className="rk-filter rk-genre" style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,minWidth:60,flexShrink:0,paddingTop:8,lineHeight:1.3}}>ジャンル</div>
-              {/*
-                * 札は 15 個あり、画面の幅に収まらない。
-                * 折り返すと 2 段になって一覧が押し下げられるので、
-                * 横に送って見てもらう。矢印はその目印。
-                */}
               <SideScroller label="ジャンルを送る">
                 {genres.map(g => (
                   <Link key={g} href={buildUrl(period,novelType,serial,1,aiMode,g)} className={pillClass(genre===g)} style={pill(genre===g)}>
