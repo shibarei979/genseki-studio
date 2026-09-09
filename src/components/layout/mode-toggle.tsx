@@ -120,6 +120,20 @@ export default function ModeToggle({
          */
         setNow(next);
 
+        /*
+         * 入っている人にも、この端末に向きを覚えさせる。
+         *
+         * ★ 表を読むのは通信なので、頁を読み直したあと
+         *   少し遅れて届く。それまで柱と下の帯は
+         *   前の向きのまま出ていた。切り替えたのに
+         *   一瞬だけ元の並びが見えるのは、これ。
+         *
+         *   クッキーなら、読み直した直後にすぐ読める。
+         *   表の値が届いたら、そちらで上書きされる。
+         */
+        document.cookie =
+            `genseki-home-mode=${next}; path=/; max-age=31536000; samesite=lax`;
+
         const { error } = await createClient()
             .from("profiles")
             .update({ home_mode: next })
@@ -149,6 +163,34 @@ export default function ModeToggle({
     }
 
     return (
+        <>
+        {/*
+          * 切り替えているあいだ、画面を覆う。
+          *
+          * ★ 切り替えは頁を丸ごと読み直す。
+          *
+          *   ホームは向きによって別の部品を出すので、
+          *   作り直しだけでは古い部品が残る。
+          *   読み直す以上、前の画面が一瞬見えるのは避けられない。
+          *
+          *   見えないように覆う。地の色で塗るだけなので、
+          *   切り替わったことは分かり、途中は見えない。
+          *
+          * ★ 消すのは、こちらではなく読み直しのほう。
+          *   新しい頁が描かれた時点で、この覆いごと消える。
+          */}
+        {isBusy && (
+            <div
+                aria-hidden="true"
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 9999,
+                    background: 'var(--color-canvas, #f4f5f3)',
+                }}
+            />
+        )}
+
         <button
             type="button"
             onClick={() => void toggle()}
@@ -188,5 +230,6 @@ export default function ModeToggle({
 
             <span className="mode-toggle_knob" aria-hidden="true" />
         </button>
+        </>
     );
 }

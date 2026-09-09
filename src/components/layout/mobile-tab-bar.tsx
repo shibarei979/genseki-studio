@@ -82,12 +82,30 @@ export default function MobileTabBar() {
     const [isReader, setIsReader] = useState(false)
 
     useEffect(() => {
+        /*
+         * ★ まず、この端末に覚えてある向きを見る。
+         *
+         *   表を読むのは通信なので、頁が出てから少し遅れる。
+         *   それまで執筆向けの並びが出ていた。
+         *   読書向けに切り替えた直後、下の帯だけ
+         *   一瞬もとの並びに見えるのは、これ。
+         *
+         *   クッキーなら、すぐ読める。
+         */
+        const saved = document.cookie
+            .split('; ')
+            .find((one) => one.startsWith('genseki-home-mode='))
+            ?.split('=')[1]
+
+        if (saved) setIsReader(saved === 'read')
+
+        /* 表の値が本物。届いたら、そちらに合わせる */
         void (async () => {
             try {
                 const profile = await getRepository().getProfile()
                 setIsReader(profile?.home_mode === 'read')
             } catch {
-                /* 読めなくても、執筆向けの並びで足りる */
+                /* 読めなくても、覚えてある向きで足りる */
             }
         })()
     }, [])

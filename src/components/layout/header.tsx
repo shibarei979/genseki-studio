@@ -175,6 +175,22 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
             !(item.writerOnly && isReaderMode),
     );
     const [seenAt, setSeenAt] = useState<string | null>(null);
+
+    /*
+     * 「最後に開いた時刻」を読み終えたか。
+     *
+     * ★ 読む前に赤い丸を出さない。
+     *
+     *   この時刻は端末の中にあり、
+     *   画面が組み上がったあとでしか読めない。
+     *   読む前は空なので、お知らせが全部
+     *   新しいものとして数えられ、赤い丸が付く。
+     *
+     *   いつもは柱が居座っているので気付かない。
+     *   作家と読者を入れ替えると柱が作り直され、
+     *   そのたびに一瞬だけ丸が見えていた。
+     */
+    const [isSeenReady, setIsSeenReady] = useState(false);
     /** 運営が立てたお知らせ。無ければ既定のものを出す */
     const [notices, setNotices] = useState<
         {
@@ -275,6 +291,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
             }
         })();
         setSeenAt(window.localStorage.getItem(SEEN_KEY));
+        setIsSeenReady(true);
     }, []);
 
     // 外側を押したら閉じる
@@ -503,7 +520,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                             ].join(" ")}
                         >
                             <BellIcon />
-                            {badgeCount > 0 && (
+                            {isSeenReady && badgeCount > 0 && (
                                 /*
                                  * ★ 赤にする。
                                  *
