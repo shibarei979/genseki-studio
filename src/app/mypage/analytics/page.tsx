@@ -39,7 +39,19 @@ export default async function AnalyticsPage() {
     allEpisodes.forEach((e: any) => { epToNovel[e.id] = e.novel_id })
 
     const [{ data: pageViews }, { data: likes }, { data: bookmarks }, { data: comments }, { data: epLikes }, { data: epComments }] = await Promise.all([
-      epIds.length > 0 ? supabase.from('page_views').select('episode_id, user_id, viewed_at, device').eq('is_author', false).in('episode_id', epIds) : Promise.resolve({ data: [] }),
+      /*
+       * ★ visitor_id も取る。
+       *
+       *   ユニークは user_id だけで数えていた。
+       *   いま閲覧の 7〜8 割は入っていない人なので、
+       *   その人たちが一人も数えられず、0 人と出ていた。
+       *
+       * ★ 上限を書く。
+       *
+       *   書かないと 1,000 件で切られる。
+       *   読まれている作品ほど、途中までしか数えない。
+       */
+      epIds.length > 0 ? supabase.from('page_views').select('episode_id, user_id, visitor_id, viewed_at, device').eq('is_author', false).limit(100000).in('episode_id', epIds) : Promise.resolve({ data: [] }),
       supabase.from('likes').select('novel_id').in('novel_id', novelIds),
       supabase.from('bookmarks').select('novel_id').in('novel_id', novelIds),
       supabase.from('comments').select('novel_id, episode_id, body, user_id, created_at, rating').in('novel_id', novelIds).neq('user_id', user.id).order('created_at', { ascending: false }),
@@ -97,7 +109,14 @@ export default async function AnalyticsPage() {
       const st = statsMap[nId]
       st.views++
       st.episodeViews[pv.episode_id] = (st.episodeViews[pv.episode_id] || 0) + 1
-      if (pv.user_id) st.uniqueUsers.add(pv.user_id)
+      /*
+       * 何人が来たか。
+       *
+       * 入っている人は user_id、入っていない人は visitor_id。
+       * どちらも無い古い記録は数えない（誰か分からないので）。
+       */
+      const who = pv.user_id || pv.visitor_id
+      if (who) st.uniqueUsers.add(who)
       const dt = new Date(pv.viewed_at)
       const t = dt.getTime()
       const hour = dt.getHours()
