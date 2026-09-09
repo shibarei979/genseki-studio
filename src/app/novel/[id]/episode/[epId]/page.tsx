@@ -29,6 +29,7 @@ import EpisodeLikeButton from '@/components/novel/episode/episode-like-button'
 import ReadButton from '@/components/novel/episode/read-button'
 import EpisodeBody from '@/components/novel/episode/episode-body'
 import QuoteFromSelection from '@/components/novel/episode/quote-from-selection'
+import CopyAttribution from '@/components/novel/episode/copy-attribution'
 import VoicePlayer from '@/components/novel/episode/voice-player'
 import TypoReportButton from '@/components/novel/episode/typo-report-button'
 import ValidReadTracker from '@/components/novel/episode/valid-read-tracker'
@@ -300,6 +301,19 @@ export default async function EpisodePage({ params }: Props) {
       * 頁に 1 つでよいので、ここに置く。
       */}
     <QuoteFromSelection/>
+
+    {/*
+      * 写した本文に、出どころを添える。
+      *
+      * 写すこと自体は止めない。止められないし、
+      * 止めると引用も読み上げも使えなくなる。
+      * 持ち出されたものに、出どころが残るようにする。
+      */}
+    <CopyAttribution
+      workTitle={novel.title}
+      episodeTitle={episode.title}
+      authorName={author?.display_name}
+    />
     <div style={{minHeight:'100vh'}}>
       <Header />
 
