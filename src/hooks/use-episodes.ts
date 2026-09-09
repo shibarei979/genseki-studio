@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getRepository } from "@/lib/repository";
 import type { Episode, EpisodeUpdateInput } from "@/types";
@@ -50,6 +50,21 @@ export function useEpisodes(workId: string) {
         [reload],
     );
 
+    /*
+     * 並べ替えを、順番待ちにする。
+     *
+     * ★ 同時に 2 つ走ると、番号がぶつかる。
+     *
+     *   並べ替えは「大きい番号へ逃がす → 1 から振り直す」の
+     *   2 段構え。2 つが重なると、片方の 1 段目が
+     *   もう片方の 2 段目の途中に割り込む。
+     *   そこで同じ番号ができ、表に弾かれる。
+     *
+     *   数話まとめて章に入れたときに出ていた
+     *   「同じものがすでにあります」は、これだった。
+     */
+    const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+
     const reorderEpisodes = useCallback(
         async (orderedIds: string[]) => {
             // 先に画面を並べ替えてから保存する（ドラッグの手応えを優先）
@@ -70,7 +85,12 @@ export function useEpisodes(workId: string) {
              * 読み直したときに戻る。原因が分からない。
              */
             try {
-                await getRepository().reorderEpisodes(workId, orderedIds);
+                /* 前の並べ替えが終わってから始める */
+                const run = queueRef.current
+                    .catch(() => undefined)
+                    .then(() => getRepository().reorderEpisodes(workId, orderedIds));
+                queueRef.current = run;
+                await run;
             } catch (error) {
                 window.alert(
                     `並べ替えを保存できませんでした。\n${

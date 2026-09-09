@@ -49,6 +49,14 @@ interface Props {
     chapters?: Chapter[];
     /** 話を章へ入れる・外す */
     onAssignChapter?: (episodeId: string, chapterId: string | null) => void;
+    /**
+     * 数話まとめて章へ入れる。
+     *
+     * ★ 1 話ずつ onAssignChapter を呼ばない。
+     *   同時に走ると番号がぶつかり、
+     *   「同じものがすでにあります」で弾かれて並びが狂う。
+     */
+    onAssignChapterMany?: (episodeIds: string[], chapterId: string) => void;
     /** 章を作る。話を渡せば、その話を作った章に入れる */
     onCreateChapter?: (episodeId: string | null) => void;
     /** 章の名前を変える */
@@ -67,6 +75,7 @@ export default function EpisodeList({
     episodes,
     chapters = [],
     onAssignChapter,
+    onAssignChapterMany,
     onCreateChapter,
     onRenameChapter,
     onDeleteChapter,
@@ -1154,9 +1163,17 @@ export default function EpisodeList({
                                 type="button"
                                 disabled={fillPicked.length === 0}
                                 onClick={() => {
-                                    fillPicked.forEach((id) =>
-                                        onAssignChapter(id, fillingChapterId),
-                                    );
+                                    /* まとめて渡す。1 話ずつ呼ぶと番号がぶつかる */
+                                    if (onAssignChapterMany) {
+                                        onAssignChapterMany(
+                                            fillPicked,
+                                            fillingChapterId,
+                                        );
+                                    } else {
+                                        fillPicked.forEach((id) =>
+                                            onAssignChapter(id, fillingChapterId),
+                                        );
+                                    }
                                     setFillingChapterId(null);
                                     setFillPicked([]);
                                 }}

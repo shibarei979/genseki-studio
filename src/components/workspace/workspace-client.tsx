@@ -177,6 +177,62 @@ export default function WorkspaceClient({ workId }: Props) {
         await reorderEpisodes(next);
     }
 
+    /**
+     * 数話まとめて、章に入れる。
+     *
+     * ★ 1 話ずつ呼ばない。
+     *
+     *   前は選んだ数だけ assignChapterAndSort を同時に呼んでいた。
+     *   どれも同じ「いまの並び」を見て、それぞれ番号を振り直す。
+     *   走る順で結果が変わり、番号もぶつかった。
+     *   「同じものがすでにあります」と出て、並びが狂うのはこれ。
+     *
+     * ★ 章を入れ替えるのは全部いっぺんに。
+     *   番号を振り直すのは、最後に 1 回だけ。
+     *
+     * ★ 選んだ話どうしの前後は、いまの並びのまま保つ。
+     *   選んだ順ではない。画面で見えている順に置く。
+     */
+    async function assignChapterMany(
+        episodeIds: string[],
+        chapterId: string,
+    ) {
+        if (episodeIds.length === 0) return;
+
+        const picked = new Set(episodeIds);
+
+        /* 章を付け替える。ここは番号を触らないので、同時でよい */
+        await Promise.all(
+            episodeIds.map((id) =>
+                updateEpisode(id, { chapter_id: chapterId }),
+            ),
+        );
+
+        const order = episodes.map((one) => one.id);
+
+        /* いまの並びの順に、選んだ話を並べる */
+        const moving = order.filter((id) => picked.has(id));
+        const rest = order.filter((id) => !picked.has(id));
+
+        /*
+         * 置き場所。その章の、選ばれていない最後の話のうしろ。
+         * その章がまだ空なら、いまの場所のまま動かさない。
+         */
+        const lastInChapter = episodes
+            .filter((one) => one.chapter_id === chapterId && !picked.has(one.id))
+            .slice(-1)[0];
+
+        if (!lastInChapter) return;
+
+        const to = rest.indexOf(lastInChapter.id);
+        if (to < 0) return;
+
+        const next = [...rest];
+        next.splice(to + 1, 0, ...moving);
+
+        await reorderEpisodes(next);
+    }
+
     const {
         episodes,
         isLoading: isEpisodesLoading,
@@ -324,6 +380,23 @@ export default function WorkspaceClient({ workId }: Props) {
 
     async function handleCreate() {
         const episode = await createEpisode();
+
+        /*
+         * 章があれば、最後の章に入れておく。
+         *
+         * ★ 章を作って書いている人は、たいてい
+         *   いま書いている章の続きを書く。
+         *   入れないと、章の外に置かれたまま溜まり、
+         *   あとから何話もまとめて入れ直すことになる。
+         *
+         * ★ 違う章に入れたいときは、これまでどおり
+         *   「章に入れる」で移せる。
+         */
+        const lastChapter = chapters[chapters.length - 1];
+        if (lastChapter) {
+            await updateEpisode(episode.id, { chapter_id: lastChapter.id });
+        }
+
         setSelectedId(episode.id);
     }
 
@@ -557,6 +630,9 @@ export default function WorkspaceClient({ workId }: Props) {
                                 }
                                 onAssignChapter={(episodeId, chapterId) =>
                                     void assignChapterAndSort(episodeId, chapterId)
+                                }
+                                onAssignChapterMany={(ids, chapterId) =>
+                                    void assignChapterMany(ids, chapterId)
                                 }
                                 onDeleteMany={(ids) => {
                                     void (async () => {
