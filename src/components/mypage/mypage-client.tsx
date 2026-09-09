@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import ReadingSummary from '@/components/mypage/reading-summary'
 import IconCropper from '@/components/mypage/icon-cropper'
 import { useRouter } from 'next/navigation'
 import TypoReportsTab from '@/components/mypage/typo-reports-tab'
@@ -1357,6 +1358,16 @@ export default function MypageClient({
         </h1>
         <p style={{fontSize:14,color:'var(--color-text-muted)',marginTop:10,lineHeight:1.7}}>過去に閲覧した作品の履歴です。続きから読むことができます。</p>
       </div>
+
+      {/*
+        * その月に読んだ量。
+        *
+        * ★ 履歴の上に置く。
+        *   履歴は「何を読んだか」、こちらは「どれだけ読んだか」。
+        *   同じものの 2 つの見方なので、同じ場所に置く。
+        *   ここに置けば、タブを増やさずに済む。
+        */}
+      <ReadingSummary />
 
       {/* フィルターバー */}
       {historyItemsNow.length > 0 && (
