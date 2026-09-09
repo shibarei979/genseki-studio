@@ -15,7 +15,7 @@
 
 import { NextResponse } from "next/server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { publishDueEpisodes } from "@/lib/publish-due";
 
 /*
  * 作り置きしない。
@@ -42,97 +42,20 @@ export async function GET(request: Request) {
     }
 
     try {
-        const admin = createAdminClient();
-        const now = new Date().toISOString();
-
         /*
-         * 時間の来た予約を探す。
+         * 中身は publish-due.ts と同じもの。
          *
-         * 見るのは is_published。published は既定 true なので
-         * 「まだ出していない話」の目印にならない。
-         */
-        /*
-         * 予約の時刻は 2 か所にある。
+         * ★ 二か所に同じ手を書かない。
+         *   前はここだけが片付けをしていた。
+         *   ここが止まると誰も気づかないので、
+         *   ホームからも同じものを回すようにした。
          *
-         *   scheduled_at  こちらを本命として見る
-         *   publish_at    古い予約はこちらにしか入っていない
-         *
-         * 片方だけ見ていると、直す前に予約されたものが
-         * 永久に出ないまま残る。両方を拾う。
+         * ★ 間を空ける決まりは、ここでは邪魔になる。
+         *   定時に呼ばれる側なので、呼ばれたら必ず回す。
          */
-        const [byScheduled, byPublishAt] = await Promise.all([
-            admin
-                .from("episodes")
-                .select("id, novel_id")
-                .neq("is_published", true)
-                .not("scheduled_at", "is", null)
-                .lte("scheduled_at", now),
-            admin
-                .from("episodes")
-                .select("id, novel_id")
-                .neq("is_published", true)
-                .is("scheduled_at", null)
-                .not("publish_at", "is", null)
-                .lte("publish_at", now),
-        ]);
+        const published = await publishDueEpisodes({ force: true });
 
-        const error = byScheduled.error ?? byPublishAt.error;
-        const due = [...(byScheduled.data ?? []), ...(byPublishAt.data ?? [])];
-
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        if (!due || due.length === 0) {
-            return NextResponse.json({ published: 0 });
-        }
-
-        /* 印は 2 つあるので、両方そろえて立てる */
-        await admin
-            .from("episodes")
-            .update({
-                is_published: true,
-                published: true,
-                scheduled_at: null,
-                publish_at: null,
-                /* 予約から出したぶんも、投稿した日時を残す */
-                posted_at: new Date().toISOString(),
-            })
-            .in(
-                "id",
-                due.map((row) => row.id),
-            );
-
-        /*
-         * 作品のほうが下書きのままだと、話だけ出しても読めない。
-         * 1 話でも出たら、作品も公開にする。
-         */
-        const novelIds = Array.from(new Set(due.map((row) => row.novel_id)));
-        if (novelIds.length > 0) {
-            /*
-             * 公開の印は 2 つある。
-             *
-             *   published   古い印
-             *   visibility  いまの本命（draft / limited / public）
-             *
-             * published だけ立てても、visibility が draft のままだと
-             * 作品ページが読めない。両方そろえる。
-             */
-            await admin
-                .from("novels")
-                .update({ published: true, visibility: "public" })
-                .in("id", novelIds)
-                .eq("visibility", "draft");
-
-            /* 古い印だけ落ちているものも拾う */
-            await admin
-                .from("novels")
-                .update({ published: true })
-                .in("id", novelIds)
-                .eq("published", false);
-        }
-
-        return NextResponse.json({ published: due.length });
+        return NextResponse.json({ published });
     } catch (caught) {
         return NextResponse.json(
             {
