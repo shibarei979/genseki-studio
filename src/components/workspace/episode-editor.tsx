@@ -440,30 +440,39 @@ export default function EpisodeEditor({
                 {/*
                   * 題名のまわり。
                   *
-                  * ★ 入れる欄が何の欄かを、上に小さく書く。
-                  *   前は名前だけが 1 行あり、
-                  *   話の名前なのか作品の名前なのか分からなかった。
+                  * ★ 2 行に分け、それぞれに札を付ける。
                   *
-                  * ★ 作品の題名は、その横に薄く添える。
-                  *   どの作品を書いているのかが、画面の中で分かる。
-                  *   狭いときは端で切る。主役は話の名前のほう。
+                  *   前は「話のタイトル・白書の魔女」と 1 行に並べていた。
+                  *   狭い画面で折り返すと、
+                  *
+                  *     話のタイトル
+                  *     ・
+                  *     白書の魔女
+                  *     エンドロール
+                  *
+                  *   と縦に落ち、作品の題名が話の題名に見えていた。
+                  *
+                  * ★ 札は左に揃える。値は右。
+                  *   どちらが何の名前かが、線を引かなくても分かる。
+                  *
+                  * ★ 札は折り返させない。
+                  *   折り返すと、また同じ読み違いが起きる。
                   */}
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-1.5 text-[10px] leading-none">
-                        <span className="shrink-0 text-faint">話のタイトル</span>
+                <div className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2">
+                    {workTitle.trim() && (
+                        <>
+                            <span className="whitespace-nowrap text-[10px] leading-none text-faint">
+                                作品タイトル
+                            </span>
+                            <span className="min-w-0 truncate text-[11px] leading-none text-muted">
+                                {workTitle}
+                            </span>
+                        </>
+                    )}
 
-                        {workTitle.trim() && (
-                            <>
-                                <span aria-hidden="true" className="shrink-0 text-faint">
-                                    ・
-                                </span>
-                                <span className="min-w-0 truncate text-muted">
-                                    {workTitle}
-                                </span>
-                            </>
-                        )}
-                    </div>
-
+                    <span className="whitespace-nowrap text-[10px] leading-none text-faint">
+                        話のタイトル
+                    </span>
                     <input
                         type="text"
                         value={title}
