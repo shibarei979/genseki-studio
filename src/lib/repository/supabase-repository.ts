@@ -15,6 +15,7 @@
  */
 
 import type { BackupFile, BackupSummary } from "@/lib/backup/format";
+import { jstDay } from "@/lib/utils/jst";
 import type { Repository, StudioCounts } from "@/lib/repository/types";
 import { createClient } from "@/lib/supabase/client";
 import { defaultContest } from "@/types";
@@ -341,7 +342,8 @@ function toRoom(row: Record<string, unknown>): WritingRoom {
  * 並びの項目と日付が欠けていると画面が落ちるので、ここで埋める。
  */
 function toContest(row: Record<string, unknown>): Contest {
-    const today = new Date().toISOString().slice(0, 10);
+    /* 応募の締め切りも、日本時間の日で見る */
+    const today = jstDay();
 
     /**
      * 日どりを、欄に渡せる形にする。
@@ -2099,7 +2101,15 @@ export const supabaseRepository: Repository = {
     },
 
     async recordProgress(workId: string, totalChars: number): Promise<void> {
-        const today = new Date().toISOString().slice(0, 10);
+        /*
+         * ★ 日本時間で「その日」を出す。
+         *
+         *   toISOString() は協定世界時。10 文字で切ると、
+         *   日本の 0 時から 9 時までが前の日になる。
+         *   日付が変わってから投稿した話が
+         *   「昨日 2 話更新した」と数えられていた。
+         */
+        const today = jstDay();
 
         const { data: existing } = await db()
             .from("writing_logs")
