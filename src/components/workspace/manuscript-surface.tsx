@@ -17,6 +17,7 @@
 import type { CSSProperties } from "react";
 import { useEffect, useRef } from "react";
 
+import { useVerticalWheel } from "@/hooks/use-vertical-wheel";
 import type { DisplaySettings } from "@/types";
 import { LINE_HEIGHT_VALUE } from "@/types";
 
@@ -83,90 +84,9 @@ export default function ManuscriptSurface({
 
     /*
      * 縦書きのとき、輪の上下の動きを横送りに変える。
-     *
-     * ★ 枠の中に印があれば、どこでも効く。
-     *
-     *   見張りは本文欄ではなく、外側の枠に付ける。
-     *   本文欄だけに付けると、目盛りの帯や余白の上に
-     *   印があるときに効かない。
-     *
-     * ★ 動かす先は、その場で探す。
-     *
-     *   縦書きで横に動く箱が本文欄とは限らない。
-     *   印の下にある物から順に親をたどり、
-     *   横にはみ出している箱を見つけて、それを送る。
-     *
-     * ★ 端に着いたら、そこから先は頁に譲る。
-     *   止めてしまうと、枠の中に印があるあいだ
-     *   頁が動かせなくなる。
-     *
-     * ★ 自前で付ける。
-     *   React の onWheel では止められないことがある。
-     *   passive: false を指しておく必要がある。
+     * 中身は読む側と同じものを使う（use-vertical-wheel）。
      */
-    useEffect(() => {
-        const box = boxRef.current;
-        if (!box || !isVertical) return;
-
-        /** 横にはみ出していて、まだ送る余地がある箱を探す */
-        function findScroller(from: EventTarget | null, toward: number) {
-            let node = from instanceof Element ? from : null;
-
-            while (node && boxRef.current?.contains(node)) {
-                const canScroll = node.scrollWidth - node.clientWidth > 1;
-
-                if (canScroll) {
-                    const left = node.scrollLeft;
-                    const max = node.scrollWidth - node.clientWidth;
-
-                    /* その向きに、まだ余地があるか */
-                    if (toward < 0 ? left > 0 : left < max) return node;
-                }
-
-                node = node.parentElement;
-            }
-            return null;
-        }
-
-        function onWheel(event: WheelEvent) {
-            /* 横の動きは、そのまま任せる */
-            if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-            if (event.deltaY === 0) return;
-
-            /*
-             * 動く量。輪によって単位が違う。
-             *
-             *   0  そのまま画素
-             *   1  行。1 行を 16 画素とみなす
-             *   2  頁。見えている幅ぶん
-             */
-            const width = boxRef.current?.clientWidth ?? 0;
-            const step =
-                event.deltaMode === 1
-                    ? event.deltaY * 16
-                    : event.deltaMode === 2
-                      ? event.deltaY * width
-                      : event.deltaY;
-
-            /*
-             * 読み進む向きは左。
-             * 右端が本文の頭なので、送るほど scrollLeft は減る。
-             */
-            const target = findScroller(event.target, -step);
-            if (!target) return;
-
-            const before = target.scrollLeft;
-            target.scrollLeft = before - step;
-
-            if (target.scrollLeft !== before) {
-                event.preventDefault();
-                handleScroll();
-            }
-        }
-
-        box.addEventListener("wheel", onWheel, { passive: false });
-        return () => box.removeEventListener("wheel", onWheel);
-    }, [isVertical, showLineNumbers]);
+    useVerticalWheel(boxRef, isVertical, handleScroll);
 
     /*
      * 目盛りを本文と一緒に動かす。

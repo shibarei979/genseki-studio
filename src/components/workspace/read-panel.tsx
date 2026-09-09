@@ -18,6 +18,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import RenderedText from "@/components/manuscript/rendered-text";
+import { useVerticalWheel } from "@/hooks/use-vertical-wheel";
 import { toFullWidthLatin } from "@/lib/manuscript/notation";
 import { formatNumber } from "@/lib/utils/text";
 import type { DisplaySettings, Episode } from "@/types";
@@ -49,6 +50,12 @@ export default function ReadPanel({
             : episodes;
 
     const isVertical = settings.writing_mode === "vertical";
+
+    /*
+     * 通し読みも縦書きになる。
+     * 輪の上下を横送りに変える（書く側・読む側と同じもの）。
+     */
+    useVerticalWheel(bodyRef, isVertical);
     const totalChars = shown.reduce((sum, episode) => sum + episode.char_count, 0);
 
     // 開いたとき、いま書いている話まで送る

@@ -10,6 +10,7 @@ import { isDividerLine } from '@/components/novel/episode/mobile-episode-body'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 import MobileEpisodeBody from '@/components/novel/episode/mobile-episode-body'
 import { useQuote } from '@/components/novel/episode/quote-context'
+import { useVerticalWheel } from '@/hooks/use-vertical-wheel'
 
 interface Props {
   title: string
@@ -1219,6 +1220,18 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], s
       scrollRef.current.scrollLeft = scrollRef.current.scrollWidth
     }
   }, [body])
+
+  /*
+   * 輪の上下を、横送りに変える。
+   *
+   * ★ 読む側にも要る。
+   *   縦書きで読んでいる人から
+   *   「輪で送れなくて不便」と届いた。
+   *   横の帯を掴んで引くしか道がなかった。
+   *
+   * 中身は書く側と同じもの（use-vertical-wheel）。
+   */
+  useVerticalWheel(scrollRef, true)
 
   const sentences = splitIntoSentences(body)
 
