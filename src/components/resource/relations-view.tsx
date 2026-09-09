@@ -234,7 +234,13 @@ export default function RelationsView({
                                            *   左右が空く。そこは空けたままにする。
                                            *   図を横に伸ばすと、丸が歪む。
                                            */
-                                          height: "min(620px, 72vh)",
+                                          /*
+                                           * ★ 高くする。
+                                           *   図は枠に収めて描くので、
+                                           *   枠が低いほど文字が小さくなる。
+                                           *   縦に使える所は、図に回す。
+                                           */
+                                          height: "min(820px, 82vh)",
                                       }
                                     : undefined
                             }

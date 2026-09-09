@@ -64,7 +64,7 @@ const SPREADS = [
  * ★ 丸の直径に、名前のぶんを足す。
  *   名前は丸の下に出るので、縦に重なりやすい。
  */
-const MIN_GAP = 68;
+const MIN_GAP = 82;
 /*
  * 丸の大きさ。
  * 頭文字が読める大きさにする。小さいと点にしか見えない。
@@ -180,7 +180,15 @@ export default function RelationGraph({
      *   短くすると、外にあった丸が端に貼り付く。
      *   そのときは「整理する」で並べ直してもらう。
      */
-    const [spreadAt, setSpreadAt] = useState(3);
+    /*
+     * ★ 初めは「ふつう」。
+     *
+     *   長くするほど図は広がるが、枠に収めるぶん
+     *   全部が縮んで名前が読めなくなる。
+     *   まず読める大きさから始めて、
+     *   足りなければ伸ばしてもらう。
+     */
+    const [spreadAt, setSpreadAt] = useState(1);
 
     const spread = SPREADS[spreadAt].value;
     const SIZE = Math.round(BASE_SIZE * spread);
@@ -596,7 +604,7 @@ export default function RelationGraph({
                                         x={controlX}
                                         y={controlY + 3.5}
                                         textAnchor="middle"
-                                        fontSize="9.5"
+                                        fontSize="12"
                                         fill={colorOf(relation.label)}
                                     >
                                         {relation.label}
@@ -684,8 +692,8 @@ export default function RelationGraph({
                                     x={position.x}
                                     y={position.y + 5}
                                     textAnchor="middle"
-                                    fontSize="14"
-                                    fontWeight="500"
+                                    fontSize="18"
+                                    fontWeight="600"
                                     fill="var(--color-forest)"
                                 >
                                     {Array.from(node.name)[0] ?? "?"}
@@ -694,13 +702,24 @@ export default function RelationGraph({
 
                             <text
                                 x={position.x}
-                                y={position.y + NODE_RADIUS + 14}
+                                y={position.y + NODE_RADIUS + 17}
                                 textAnchor="middle"
-                                fontSize="10"
+                                /*
+                                 * ★ 枠に収めるほど、文字は縮む。
+                                 *
+                                 *   図は枠いっぱいに縮めて描くので、
+                                 *   紐を長くするほど文字も小さくなる。
+                                 *   名前が読めなければ、図の意味がない。
+                                 *
+                                 *   丸に対して字を大きくする。
+                                 *   重なりは、丸どうしの間（MIN_GAP）で防ぐ。
+                                 */
+                                fontSize="14"
+                                fontWeight="500"
                                 fill="var(--color-ink)"
                             >
-                                {node.name.length > 6
-                                    ? `${node.name.slice(0, 6)}…`
+                                {node.name.length > 8
+                                    ? `${node.name.slice(0, 8)}…`
                                     : node.name}
                             </text>
                         </g>
