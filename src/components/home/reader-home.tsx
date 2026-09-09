@@ -9,6 +9,7 @@ import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
 import FeaturedShowcase from '@/components/home/featured-showcase'
 import ReadingRecap from '@/components/home/reading-recap'
+import ShelfPauseOnHover from '@/components/home/shelf-pause-on-hover'
 import HomeBannerCarousel from '@/components/home/home-banner-carousel'
 import ReaderHero from '@/components/home/reader-hero'
 import ShelfNav from '@/components/home/shelf-nav'
@@ -1166,6 +1167,14 @@ export default async function ReaderHome() {
               */}
 
             <ReadingRecap />
+
+            {/*
+              * 本棚に印を置いているあいだ、送りを止める。
+              *
+              * 題名を読もうとした本が、読み終える前に
+              * 流れていってしまうのを防ぐ。
+              */}
+            <ShelfPauseOnHover />
 
 
             {/*
