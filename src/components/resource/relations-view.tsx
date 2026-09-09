@@ -224,7 +224,18 @@ export default function RelationsView({
                             ].join(" ")}
                             style={
                                 mode === "graph"
-                                    ? { height: "min(620px, 70vh)" }
+                                    ? {
+                                          /*
+                                           * ★ 高さは決め打ち。
+                                           *   図はこの中に収まるように縮む。
+                                           *   広さを変えても枠は動かない。
+                                           *
+                                           *   横に長い画面では、正方形の図の
+                                           *   左右が空く。そこは空けたままにする。
+                                           *   図を横に伸ばすと、丸が歪む。
+                                           */
+                                          height: "min(620px, 72vh)",
+                                      }
                                     : undefined
                             }
                         >

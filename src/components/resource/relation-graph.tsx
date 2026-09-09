@@ -276,10 +276,29 @@ export default function RelationGraph({
     function toGraphPoint(event: { clientX: number; clientY: number }) {
         const svg = svgRef.current;
         if (!svg) return null;
+
         const rect = svg.getBoundingClientRect();
+
+        /*
+         * ★ 描かれているのは、枠の中の正方形。
+         *
+         *   図は正方形（SIZE × SIZE）で、枠は正方形とは限らない。
+         *   余ったところは上下か左右に空く。
+         *
+         *   枠の幅と高さでそのまま割ると、その空きぶんだけ
+         *   掴む位置がずれる。丸を掴んだつもりで、
+         *   少し離れた所を掴むことになる。
+         *
+         *   実際に描かれている正方形の一辺と、
+         *   その左上の位置を出してから割る。
+         */
+        const side = Math.min(rect.width, rect.height);
+        const left = rect.left + (rect.width - side) / 2;
+        const top = rect.top + (rect.height - side) / 2;
+
         return {
-            x: ((event.clientX - rect.left) / rect.width) * SIZE,
-            y: ((event.clientY - rect.top) / rect.height) * SIZE,
+            x: ((event.clientX - left) / side) * SIZE,
+            y: ((event.clientY - top) / side) * SIZE,
         };
     }
 
@@ -398,39 +417,30 @@ export default function RelationGraph({
     return (
         <div className="flex h-full flex-col">
             {/*
-              * 図だけを送る。
+              * 図の置き場。
               *
-              * ★ 押し具と凡例は、送らずに見えたままにする。
+              * ★ 送らない。枠に収める。
               *
-              *   枠ごと送ると、広げたときに
-              *   「図の広さ」も「整理する」も凡例も、
-              *   図の下へ流れて見えなくなる。
-              *   使う道具が、使っている最中に隠れる。
+              *   前は広げたぶんだけ図を大きくして、
+              *   はみ出したところを送って見てもらっていた。
+              *   だが送らないと全体が見えないなら、
+              *   広く使える意味がない。関係図は
+              *   「全部を一目で見る」ための絵なので。
               *
-              *   送るのは図だけ。道具は下に貼り付ける。
+              *   図そのものは枠いっぱいに縮めて描く。
+              *   「広さ」は、丸と丸の間の空き方になる。
+              *   広げるほど丸は小さくなるが、全部見える。
+              *
+              * ★ 押し具と凡例は、下に貼り付けたまま。
               */}
-            <div className="thin-scroll min-h-0 flex-1 overflow-auto">
+            <div className="min-h-0 flex-1">
             <svg
                 ref={svgRef}
                 viewBox={`0 0 ${SIZE} ${SIZE}`}
                 className={[
-                    "mx-auto block",
+                    "block h-full w-full",
                     dragging ? "cursor-grabbing" : "",
                 ].join(" ")}
-                /*
-                 * 図の大きさ。
-                 *
-                 * ★ 広げたぶんだけ大きくする。
-                 *   縦と横は同じにする。形が違うと、
-                 *   掴む位置と丸の位置がずれる。
-                 *
-                 * ★ 送りは、これを囲っている白い枠が持つ。
-                 *   図の中に送りを作ると、枠と二重になる。
-                 */
-                style={{
-                    width: Math.round(460 * spread),
-                    height: Math.round(460 * spread),
-                }}
                 role="img"
                 aria-label="関係図"
                 onPointerMove={(event) => {
