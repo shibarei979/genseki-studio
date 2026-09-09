@@ -147,7 +147,9 @@ export default function ReadingSummary() {
                         style={{
                             display: 'flex',
                             flexWrap: 'wrap',
-                            gap: '18px 40px',
+                            /* 数字どうしも近づける。離すと関係が薄く見える */
+                            gap: '16px 32px',
+                            alignItems: 'baseline',
                             marginBottom: 20,
                         }}
                     >
@@ -157,11 +159,21 @@ export default function ReadingSummary() {
                     </div>
 
                     {/* 内訳 */}
+                    {/*
+                      * ★ 幅いっぱいに引き伸ばさない。
+                      *
+                      *   前は 2 つを半分ずつに割っていた。
+                      *   輪も名前も小さいので、間が大きく空いて
+                      *   割合の数字が右端まで飛んでいた。
+                      *
+                      *   中身の大きさに合わせて並べ、
+                      *   余ったところは空けたままにする。
+                      */}
                     <div
                         style={{
-                            display: 'grid',
-                            gap: 20,
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '24px 48px',
                             borderTop: '1px solid var(--color-brand-light)',
                             paddingTop: 18,
                         }}
@@ -241,7 +253,15 @@ function Ring({ title, rows }: { title: string; rows: [string, number][] }) {
     const total = rows.reduce((sum, one) => sum + one[1], 0)
     if (total === 0) return null
 
-    const R = 34
+    /*
+     * 輪の太さ。
+     *
+     * ★ 細いと、割合の差が読み取れない。
+     *   1 割と 2 割の違いが、線の長さでしか分からなくなる。
+     *   太くすると、面積として目に入る。
+     */
+    const R = 36
+    const WIDTH = 22
     const C = 2 * Math.PI * R
 
     let offset = 0
@@ -260,7 +280,7 @@ function Ring({ title, rows }: { title: string; rows: [string, number][] }) {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
+                <svg width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">
                     {rows.map(([name, value], index) => {
                         const length = (value / total) * C
                         const dash = `${length} ${C - length}`
@@ -270,21 +290,26 @@ function Ring({ title, rows }: { title: string; rows: [string, number][] }) {
                         return (
                             <circle
                                 key={name}
-                                cx="44"
-                                cy="44"
+                                cx="52"
+                                cy="52"
                                 r={R}
                                 fill="none"
                                 stroke={TONES[index % TONES.length]}
-                                strokeWidth="12"
+                                strokeWidth={WIDTH}
                                 strokeDasharray={dash}
                                 strokeDashoffset={start}
-                                transform="rotate(-90 44 44)"
+                                transform="rotate(-90 52 52)"
                             />
                         )
                     })}
                 </svg>
 
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0, minWidth: 0, flex: 1 }}>
+                {/*
+                  * ★ 割合は名前のすぐ横に置く。
+                  *   端まで飛ばすと、目が横に長く動く。
+                  *   名前が長いときは、名前のほうを切る。
+                  */}
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                     {rows.map(([name, value], index) => (
                         <li
                             key={name}
@@ -292,10 +317,9 @@ function Ring({ title, rows }: { title: string; rows: [string, number][] }) {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 7,
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 color: 'var(--color-text-muted)',
                                 lineHeight: 2,
-                                minWidth: 0,
                             }}
                         >
                             <span
@@ -310,8 +334,7 @@ function Ring({ title, rows }: { title: string; rows: [string, number][] }) {
                             />
                             <span
                                 style={{
-                                    flex: 1,
-                                    minWidth: 0,
+                                    maxWidth: 150,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
@@ -319,7 +342,14 @@ function Ring({ title, rows }: { title: string; rows: [string, number][] }) {
                             >
                                 {name}
                             </span>
-                            <span style={{ flexShrink: 0, color: 'var(--color-text-faint)' }}>
+                            <span
+                                style={{
+                                    flexShrink: 0,
+                                    color: 'var(--color-text)',
+                                    fontWeight: 600,
+                                    fontVariantNumeric: 'tabular-nums',
+                                }}
+                            >
                                 {Math.round((value / total) * 100)}%
                             </span>
                         </li>
