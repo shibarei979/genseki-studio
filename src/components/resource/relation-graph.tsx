@@ -37,6 +37,28 @@ const BASE_SIZE = 400;
 const BASE_RADIUS = 142;
 
 /*
+ * 紐の長さの段。
+ *
+ * ★ 数字は、丸と丸を離す割合。
+ *
+ *   1 のとき、丸 1 つぶんほど離れて並ぶ。
+ *   1.9 なら、その倍近く離れる。
+ *
+ * ★ 言葉は「短い／長い」にする。
+ *
+ *   前は「狭い／広い」と書いていた。
+ *   図そのものが広くなると読まれ、
+ *   大きさの押し具と区別が付かなかった。
+ *   動くのは紐の長さなので、そう呼ぶ。
+ */
+const SPREADS = [
+    { label: "短い", value: 0.85 },
+    { label: "ふつう", value: 1.15 },
+    { label: "長い", value: 1.5 },
+    { label: "とても長い", value: 1.9 },
+];
+
+/*
  * 丸どうしの、いちばん近い間。
  *
  * ★ 丸の直径に、名前のぶんを足す。
@@ -108,20 +130,27 @@ export default function RelationGraph({
     const [isLegendOpen, setIsLegendOpen] = useState(false);
 
     /*
-     * 図の広さ。
+     * 紐の長さ。
      *
-     * ★ 選ばせるのをやめ、いちばん広いところで固定した。
+     * ★ 丸と丸を、どれだけ離して並べるか。
      *
-     *   広さは「丸と丸の間の空き方」、大きさは「見え方」。
-     *   2 つ並ぶと、どちらを触ればよいのか分かりにくい。
-     *   間は広く取っておき、見え方は大きさで決めてもらう。
+     *   離すほど紐は長くなり、どこへ繋がっているか
+     *   目で追いやすい。近いほど図はまとまるが、
+     *   紐が束になって読めなくなる。
+     *
+     * ★ 見え方の大きさとは別。
+     *
+     *   紐の長さ  並べ方。丸どうしの離れ具合
+     *   大きさ    見え方。枠の中でどれだけ大きく描くか
      *
      * ★ 数字を変えると、置いた場所が合わなくなる。
-     *   座標はこの広さの中の位置として控えてある。
-     *   狭くすると、外にあった丸が端に貼り付く。
-     *   変えるときは「整理する」で並べ直してもらうこと。
+     *   座標は、この広さの中の位置として控えてある。
+     *   短くすると、外にあった丸が端に貼り付く。
+     *   そのときは「整理する」で並べ直してもらう。
      */
-    const spread = 1.9;
+    const [spreadAt, setSpreadAt] = useState(3);
+
+    const spread = SPREADS[spreadAt].value;
     const SIZE = Math.round(BASE_SIZE * spread);
     const CENTER = SIZE / 2;
     const RADIUS = BASE_RADIUS * spread;
@@ -650,7 +679,35 @@ export default function RelationGraph({
 
             {onMove && (
                 <>
+                    {/*
+                      * 紐の長さ。
+                      *
+                      * ★ 何が動くのかを、言葉で言う。
+                      *   「広さ」だと図全体の話に読める。
+                      */}
                     <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                        <span className="text-[11px] text-faint">紐の長さ</span>
+                        {SPREADS.map((one, index) => (
+                            <button
+                                key={one.label}
+                                type="button"
+                                onClick={() => setSpreadAt(index)}
+                                aria-pressed={index === spreadAt}
+                                className={[
+                                    "rounded-md border px-2.5 py-1 text-[11px]",
+                                    index === spreadAt
+                                        ? "border-forest bg-forest-tint/60 text-forest"
+                                        : "border-line text-muted hover:border-forest-line",
+                                ].join(" ")}
+                            >
+                                {one.label}
+                            </button>
+                        ))}
+
+                        <span className="text-[10.5px] text-faint">
+                            丸どうしの離れ具合
+                        </span>
+
                         <button
                             type="button"
                             onClick={tidy}
