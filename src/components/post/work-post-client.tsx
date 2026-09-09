@@ -809,6 +809,11 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                     ? scheduled[scheduled.length - 1].publish_at ?? null
                                     : null
                             }
+                            /*
+                             * まだ 1 話も出していないか。
+                             * 出す前だけ、作品の題名をここで直せるようにする。
+                             */
+                            canEditWorkTitle={posted === 0}
                             onChangeWorkInfo={(patch) =>
                                 void (async () => {
                                     await getRepository().updateWork(workId, patch);
@@ -880,6 +885,7 @@ function PostForm({
     onChangeWork,
     onChangeSettings,
     onChangeWorkInfo,
+    canEditWorkTitle = false,
     onPosted,
     work,
     lastScheduledAt,
@@ -906,6 +912,20 @@ function PostForm({
     onChangeSettings?: (patch: Partial<PublishSettings>) => void;
     /** 作品そのものを変える */
     onChangeWorkInfo?: (patch: Partial<Work>) => void;
+    /**
+     * 作品の題名を、この画面で直せるか。
+     *
+     * ★ まだ 1 話も出していないときだけ。
+     *
+     *   出す前は、題名がまだ決まりきっていない。
+     *   付いていないと公開にならないので、
+     *   ここで気づいた人がその場で直せるほうがよい。
+     *
+     *   1 話でも出したあとは、読者が題名で覚えている。
+     *   投稿のついでに書き換えられる場所ではない。
+     *   そのときは設定から直す。
+     */
+    canEditWorkTitle?: boolean;
     work: Work;
 }) {
     const [title, setTitle] = useState(episode.title);
@@ -935,6 +955,13 @@ function PostForm({
 
     const [at, setAt] = useState(toLocalInput(episode.publish_at));
     const [error, setError] = useState("");
+
+    /* 作品の題名。出す前だけ、ここで直せる */
+    const [workTitle, setWorkTitle] = useState(work.title ?? "");
+
+    useEffect(() => {
+        setWorkTitle(work.title ?? "");
+    }, [work.title]);
 
     /*
      * この話に置いてある挿絵の枚数。
@@ -1084,21 +1111,46 @@ function PostForm({
                           *   どの作品の話を出そうとしているのかも、
                           *   ここで分かるようになる。
                           */}
-                        <p className="mb-3.5 rounded-md border border-line bg-canvas px-3 py-2">
-                            <span className="block text-[10px] text-faint">
-                                作品の題名
-                            </span>
-                            <span
-                                className={[
-                                    "mt-0.5 block truncate text-[13px]",
-                                    work.title?.trim()
-                                        ? "text-ink"
-                                        : "text-[var(--color-danger)]",
-                                ].join(" ")}
+                        {canEditWorkTitle ? (
+                            <Field
+                                label="作品の題名"
+                                note="まだ出していないので、ここで直せます"
                             >
-                                {work.title?.trim() || "まだ付いていません"}
-                            </span>
-                        </p>
+                                <input
+                                    type="text"
+                                    value={workTitle}
+                                    maxLength={100}
+                                    onChange={(e) => setWorkTitle(e.target.value)}
+                                    /*
+                                     * 離れたときに控える。
+                                     * 一字ごとに送ると、表を叩きすぎる。
+                                     */
+                                    onBlur={() => {
+                                        const next = workTitle.trim();
+                                        if (next === (work.title ?? "").trim()) return;
+                                        onChangeWorkInfo?.({ title: next });
+                                    }}
+                                    placeholder="例：白書の魔女"
+                                    className={inputClass}
+                                />
+                            </Field>
+                        ) : (
+                            <p className="mb-3.5 rounded-md border border-line bg-canvas px-3 py-2">
+                                <span className="block text-[10px] text-faint">
+                                    作品の題名
+                                </span>
+                                <span
+                                    className={[
+                                        "mt-0.5 block truncate text-[13px]",
+                                        work.title?.trim()
+                                            ? "text-ink"
+                                            : "text-[var(--color-danger)]",
+                                    ].join(" ")}
+                                >
+                                    {work.title?.trim() || "まだ付いていません"}
+                                </span>
+                            </p>
+                        )}
 
                         <Field label="話タイトル" count={`${title.length} / 100`}>
                             <input
