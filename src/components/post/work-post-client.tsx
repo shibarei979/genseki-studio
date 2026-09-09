@@ -285,10 +285,25 @@ export default function WorkPostClient({ workId }: { workId: string }) {
      *
      * 出る順に並べる。近いものから見たい。
      */
+    /*
+     * 予約の一覧。
+     *
+     * ★ 時刻は 2 つの列にある。両方を見る。
+     *
+     *   publish_at    この画面が書く
+     *   scheduled_at  見回りが見る
+     *
+     *   ふだんは同じ値だが、片方だけ入っている行が
+     *   できたときに、publish_at だけを見ていると
+     *   一覧に出ないまま時間が来て公開される。
+     *   作者からは「勝手に出た」に見える。
+     */
     const scheduled = episodes
-        .filter((row) => !row.is_published && row.publish_at)
+        .filter((row) => !row.is_published && (row.publish_at || row.scheduled_at))
         .sort((a, b) =>
-            String(a.publish_at).localeCompare(String(b.publish_at)),
+            String(a.publish_at ?? a.scheduled_at).localeCompare(
+                String(b.publish_at ?? b.scheduled_at),
+            ),
         );
 
     /**
@@ -934,7 +949,9 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                             askBeforePublish={autoMovedId === selected.id}
                             lastScheduledAt={
                                 scheduled.length > 0
-                                    ? scheduled[scheduled.length - 1].publish_at ?? null
+                                    ? scheduled[scheduled.length - 1].publish_at ??
+                                      scheduled[scheduled.length - 1].scheduled_at ??
+                                      null
                                     : null
                             }
                             /*
@@ -1089,7 +1106,9 @@ function PostForm({
     const [illustUrl] = useState(episode.illust_url ?? "");
     const [illustIsAi] = useState(episode.illust_is_ai ?? false);
 
-    const [at, setAt] = useState(toLocalInput(episode.publish_at));
+    const [at, setAt] = useState(
+        toLocalInput(episode.publish_at ?? episode.scheduled_at),
+    );
     const [error, setError] = useState("");
 
     /* 詳細設定を開いているか。畳んで置く */
@@ -1134,7 +1153,10 @@ function PostForm({
         };
     }, [episode.id]);
 
-    const isScheduled = Boolean(episode.publish_at) && !episode.is_published;
+    /* 予約が入っているか。時刻はどちらの列にあってもよい */
+    const isScheduled =
+        Boolean(episode.publish_at || episode.scheduled_at) &&
+        !episode.is_published;
 
     /*
      * 書き換えたところがあるか。
@@ -2178,7 +2200,10 @@ function CheckMark({ isDone }: { isDone: boolean }) {
  */
 
 function StateChip({ episode }: { episode: Episode }) {
-    const isScheduled = Boolean(episode.publish_at) && !episode.is_published;
+    /* 予約が入っているか。時刻はどちらの列にあってもよい */
+    const isScheduled =
+        Boolean(episode.publish_at || episode.scheduled_at) &&
+        !episode.is_published;
 
     return (
         <span

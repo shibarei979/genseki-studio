@@ -65,21 +65,26 @@ export async function publishDueEpisodes(
          *   scheduled_at  こちらが本命
          *   publish_at    古い予約はこちらにしか入っていない
          *
-         * ★ neq("is_published", true) は null を弾く。
-         *   いまは null の話は無いが、増えたときに
-         *   永久に拾われなくなる。is で false を指す。
+         * ★ is_published が null の話も拾う。
+         *
+         *   neq("is_published", true) は null を弾く。
+         *   is("is_published", false) も null を弾く。
+         *   表の世界では「null は true でも false でもない」ため。
+         *
+         *   null の話が 1 つでもできると、その話は
+         *   永久に出ないまま残る。「null または false」で絞る。
          */
         const [byScheduled, byPublishAt] = await Promise.all([
             admin
                 .from("episodes")
                 .select("id, novel_id")
-                .is("is_published", false)
+                .or("is_published.is.null,is_published.eq.false")
                 .not("scheduled_at", "is", null)
                 .lte("scheduled_at", at),
             admin
                 .from("episodes")
                 .select("id, novel_id")
-                .is("is_published", false)
+                .or("is_published.is.null,is_published.eq.false")
                 .is("scheduled_at", null)
                 .not("publish_at", "is", null)
                 .lte("publish_at", at),
