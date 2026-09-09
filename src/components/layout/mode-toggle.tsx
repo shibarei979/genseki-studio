@@ -22,6 +22,42 @@ import { createClient } from "@/lib/supabase/client";
  * ============================================================
  */
 
+/**
+ * 切り替えたことを、読み直したあとの頁へ伝える札。
+ *
+ * ★ 読み直すと、ブラウザは前の場所まで巻き戻す。
+ *
+ *   読者の画面の途中で切り替えると、
+ *   新しい頁もその高さから始まる。
+ *   本棚の途中や、一覧の下から見え始める。
+ *
+ *   向きを変えたのだから、いちばん上から見せる。
+ */
+const JUMP_TOP_KEY = "genseki:mode-jump-top";
+
+/**
+ * 読み直したあと、いちばん上から始めるようにする。
+ *
+ * ★ 二重に手を打つ。
+ *
+ *   1  ブラウザの巻き戻しそのものを止める（scrollRestoration）
+ *   2  それでも戻される端末のために、札を置いて上へ動かす
+ *
+ *   1 だけだと効かない端末があり、
+ *   2 だけだと巻き戻しと競って、一瞬下が見える。
+ */
+function jumpTopAfterReload() {
+    try {
+        if (window.history.scrollRestoration) {
+            window.history.scrollRestoration = "manual";
+        }
+        window.sessionStorage.setItem(JUMP_TOP_KEY, "1");
+        window.scrollTo(0, 0);
+    } catch {
+        /* 覚えられなくても、切り替えそのものは進める */
+    }
+}
+
 export default function ModeToggle({
     mode,
     userId,
@@ -43,6 +79,21 @@ export default function ModeToggle({
      * 自分で確かめる。
      */
     const [me, setMe] = useState<string | null>(userId);
+
+    /*
+     * 切り替えで来たときは、いちばん上まで戻す。
+     *
+     * ★ 巻き戻しはブラウザが描いたあとに走る。
+     *   すぐ動かすと、そのあと元へ戻される。
+     *   一度描き終えるのを待ってから動かす。
+     */
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        if (!window.sessionStorage.getItem(JUMP_TOP_KEY)) return;
+
+        window.sessionStorage.removeItem(JUMP_TOP_KEY);
+        window.requestAnimationFrame(() => window.scrollTo(0, 0));
+    }, []);
 
     useEffect(() => {
         if (userId) { setMe(userId); return }
@@ -110,6 +161,7 @@ export default function ModeToggle({
              */
             document.cookie =
                 `genseki-home-mode=${next}; path=/; max-age=31536000; samesite=lax`;
+            jumpTopAfterReload();
             window.location.reload();
             return;
         }
@@ -156,6 +208,7 @@ export default function ModeToggle({
              *   切り替えは何度も押すものではないので、
              *   一瞬の待ちより、確実に変わるほうがよい。
              */
+            jumpTopAfterReload();
             window.location.reload();
         }
 
