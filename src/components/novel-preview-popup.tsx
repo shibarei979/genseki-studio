@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
+import { useVerticalWheel } from '@/hooks/use-vertical-wheel'
+
 interface Props {
   novel: {
     id: string
@@ -75,6 +77,22 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
     setTagsCut(el.scrollWidth > el.clientWidth + 2)
   }, [show, mounted, viewH, isMobile, novel.tags])
 
+  /*
+   * あらすじのます。
+   *
+   * 縦書きなので、開いたときは右端（書き出し）に寄せる。
+   * 輪の上下は、横送りに変える。
+   */
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  useVerticalWheel(gridRef, true)
+
+  useEffect(() => {
+    const box = gridRef.current
+    if (!box) return
+    box.scrollLeft = box.scrollWidth
+  }, [show, mounted, novel.summary, novel.catchcopy])
+
   const rawText = novel.catchcopy || novel.summary || ''
 
   function toVertical(text: string): string {
@@ -90,7 +108,24 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
   }
 
   const ROWS      = isMobile ? 17 : 20
+  /** 一度に見える列の数。ますの幅は、これで決まる */
   const TEXT_COLS = 5
+  /*
+   * 入れられる列の上限。
+   *
+   * ★ 前は 5 列（100 字）で切っていた。
+   *
+   *   あらすじは 300 字ほど書く人が多い。
+   *   3 分の 2 が読めないまま「…続く」で終わり、
+   *   読む作品を選ぶのに使えなかった。
+   *
+   *   ますの見た目は 5 列のまま、
+   *   中だけ伸ばして横に送れるようにする。
+   *
+   * ★ 上限は置く。長すぎると小窓が重くなる。
+   *   30 列（600 字）を超えるぶんは、これまでどおり「…続く」。
+   */
+  const MAX_COLS = 30
   /*
    * 縮め具合。
    *
@@ -123,11 +158,17 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
     }
     for (const ch of line.split('')) {
       processedChars.push(ch)
-      if (processedChars.length >= ROWS * TEXT_COLS) break
+      if (processedChars.length >= ROWS * MAX_COLS) break
     }
-    if (processedChars.length >= ROWS * TEXT_COLS) break
+    if (processedChars.length >= ROWS * MAX_COLS) break
   }
-  const textCells = Array.from({ length: ROWS * TEXT_COLS }, (_, i) => processedChars[i] ?? null)
+
+  /* 中に入れる列の数。足りなくても、ますは 5 列ぶん引く */
+  const cols = Math.max(
+    TEXT_COLS,
+    Math.ceil(processedChars.length / ROWS) || TEXT_COLS,
+  )
+  const textCells = Array.from({ length: ROWS * cols }, (_, i) => processedChars[i] ?? null)
 
   const mobileWidth = Math.round((CELL * TEXT_COLS + 36 + 24 + 32) * 1.3)
 
@@ -209,8 +250,24 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
                       <div key={row} style={{flex:1,height:CELL,borderBottom:row<ROWS-1?'1px solid var(--color-brand-border)':'none',borderRight:'1px solid var(--color-brand-border)'}}/>
                     ))}
                   </div>
-                  {Array.from({length: TEXT_COLS}, (_, col) => {
-                    const actualCol = TEXT_COLS - 1 - col
+                  {/*
+                    * ★ ますは 5 列ぶんだけ見せて、中は横に送る。
+                    *
+                    *   縦書きなので、右端が書き出し。
+                    *   開いたとき右端に寄せ、輪を回すと左へ送る。
+                    */}
+                  <div
+                    ref={gridRef}
+                    className="thin-scroll"
+                    style={{
+                      display:'flex',flexDirection:'row',
+                      width: CELL * TEXT_COLS,
+                      overflowX:'auto',overflowY:'hidden',
+                      flexShrink:0,
+                    }}
+                  >
+                  {Array.from({length: cols}, (_, col) => {
+                    const actualCol = cols - 1 - col
                     return (
                       <div key={col} style={{display:'flex',flexDirection:'column',borderRight:'1px solid var(--color-brand-border)'}}>
                         {Array.from({length: ROWS}, (_, row) => {
@@ -237,6 +294,7 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
                       </div>
                     )
                   })}
+                  </div>
                   <div style={{flex:1,display:'flex',flexDirection:'column'}}>
                     {Array.from({length: ROWS}, (_, row) => (
                       <div key={row} style={{flex:1,height:CELL,borderBottom:row<ROWS-1?'1px solid var(--color-brand-border)':'none'}}/>
@@ -244,7 +302,12 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
                   </div>
                 </div>
               </div>
-              {rawText.replace(/\n/g,'').length > ROWS * TEXT_COLS && (
+              {cols > TEXT_COLS && (
+                <div style={{fontSize:11,color:'var(--color-text-faint)',textAlign:'center',marginTop:6}}>
+                  ← 横に送ると続きが読めます
+                </div>
+              )}
+              {rawText.replace(/\n/g,'').length > ROWS * MAX_COLS && (
                 <div style={{fontSize:11,color:'var(--color-text-faint)',textAlign:'center',marginTop:6}}>…続く</div>
               )}
             </div>
