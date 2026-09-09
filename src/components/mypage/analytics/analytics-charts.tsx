@@ -303,6 +303,26 @@ export default function AnalyticsCharts({
             <div style={{marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:2}}>累計ユニークアクセス</div>
               <div style={{fontSize:22,fontWeight:700,color:'var(--color-text)'}}>{selected.uniqueCount.toLocaleString()} <span style={{fontSize:12,color:'var(--color-text-muted)',fontWeight:400}}>人</span></div>
+              {/*
+                * ★ 数え始めた日を書いておく。
+                *
+                *   訪れた人の札を配り始めたのが 9/7。
+                *   それより前の記録には札が無く、
+                *   誰として数えることもできない。
+                *
+                *   PV は昔ぶんも数えるので、断りが無いと
+                *   「PV は多いのにユニークが少ない、壊れている」
+                *   と読まれる。実際そう届いた。
+                *
+                * ★ 9 月いっぱいで消える。
+                *   10 月になれば、ほとんどの記録に札が付く。
+                *   要らない断りを残すと、画面が重くなる。
+                */}
+              {Date.now() < new Date('2026-10-01T00:00:00+09:00').getTime() && (
+                <div style={{fontSize:10.5,color:'var(--color-text-faint)',marginTop:4,lineHeight:1.7}}>
+                  9月7日から数えています。それ以前は、人数を数える印がありませんでした。
+                </div>
+              )}
             </div>
             <div style={{borderTop:'1px solid var(--color-brand-light)',paddingTop:12,display:'flex',flexDirection:'column',gap:10}}>
               {[['いいね',selected.likes,'var(--color-danger)'],['保存',selected.bookmarks,'var(--color-brand)'],['コメント',selected.comments,'var(--color-info)']].map(([l,v,c])=>(

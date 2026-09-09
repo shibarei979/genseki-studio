@@ -31,6 +31,8 @@ interface Props {
   novelId: string
   novelTitle: string
   authorName: string
+  /** 作者の id。自分の書き出しを閲覧数から外すのに使う */
+  authorId?: string | null
 }
 
 // ルビ・強調記法を除去してプレーンテキスト化
@@ -38,7 +40,7 @@ function toPlainText(text: string): string {
   return stripRuby(text || '')
 }
 
-export default function ExportButton({ novelId, novelTitle, authorName }: Props) {
+export default function ExportButton({ novelId, novelTitle, authorName, authorId = null }: Props) {
   const supabase = createClient()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -56,16 +58,62 @@ export default function ExportButton({ novelId, novelTitle, authorName }: Props)
     return (data as Episode[]) || []
   }
 
-  // PVに話数分を加算
+  /*
+   * まとめ読み・書き出しを、閲覧として残す。
+   *
+   * ★ 1 回の押しで、話数ぶんの記録が入る。
+   *
+   *   227 話の作品なら 227 件。
+   *   実際に全話ぶん読める形で渡しているので、
+   *   数えること自体は間違いではない。
+   *
+   *   ただ、これまでは印を何も付けていなかった。
+   *   そのせいで
+   *
+   *     ・作者が自分の作品を書き出しても、閲覧に混ざる
+   *     ・訪れた人の札が無く、人数として数えられない
+   *     ・どこから来た記録なのか分からない
+   *
+   *   実際、227 話の作品で「433 回・来た人 1 人」という
+   *   読めない数字になっていた。
+   *
+   * ★ 本文を開いたときと同じ印を付ける。
+   *   これで、人数にも数えられ、作者のぶんは外れる。
+   */
   async function addPageViews(episodes: Episode[]) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      /* 作品の id も残す。マイページはこれで数えている */
-      const rows = episodes.map(ep => ({ novel_id: novelId, episode_id: ep.id, user_id: user?.id || null }))
+
+      /* 訪れた人の札。中継が配っているものを、そのまま使う */
+      const visitorId = readCookie('gk-visitor')
+      const sessionId = readCookie('gk-session')
+
+      const rows = episodes.map(ep => ({
+        novel_id: novelId,
+        episode_id: ep.id,
+        user_id: user?.id || null,
+        visitor_id: visitorId,
+        session_id: sessionId,
+        /* 作者が自分の作品を書き出したぶんは、閲覧数から外す */
+        is_author: Boolean(user?.id) && Boolean(authorId) && user?.id === authorId,
+        is_bot: false,
+        /* どこから来た記録か。まとめ読みだと分かるようにする */
+        source: 'export',
+      }))
+
       if (rows.length > 0) {
         await supabase.from('page_views').insert(rows)
       }
     } catch (e) {}
+  }
+
+  /** 札を1つ読む。無ければ null */
+  function readCookie(name: string): string | null {
+    if (typeof document === 'undefined') return null
+    const found = document.cookie
+      .split('; ')
+      .find(one => one.startsWith(`${name}=`))
+    return found ? found.slice(name.length + 1) : null
   }
 
   async function exportTxt() {
