@@ -1071,6 +1071,35 @@ function PostForm({
                 {/* ---- 左：投稿する話 ---- */}
                 <div className="space-y-4">
                     <Card title="投稿する話">
+                        {/*
+                          * 作品の題名。
+                          *
+                          * ★ 直せない字として出す。
+                          *
+                          *   すぐ下に「話タイトル」の欄がある。
+                          *   どちらの題名を入れる所か分からず、
+                          *   話の題名を入れて「作品の題名が無い」と
+                          *   言われる人がいた。
+                          *
+                          *   どの作品の話を出そうとしているのかも、
+                          *   ここで分かるようになる。
+                          */}
+                        <p className="mb-3.5 rounded-md border border-line bg-canvas px-3 py-2">
+                            <span className="block text-[10px] text-faint">
+                                作品の題名
+                            </span>
+                            <span
+                                className={[
+                                    "mt-0.5 block truncate text-[13px]",
+                                    work.title?.trim()
+                                        ? "text-ink"
+                                        : "text-[var(--color-danger)]",
+                                ].join(" ")}
+                            >
+                                {work.title?.trim() || "まだ付いていません"}
+                            </span>
+                        </p>
+
                         <Field label="話タイトル" count={`${title.length} / 100`}>
                             <input
                                 type="text"
@@ -1184,16 +1213,6 @@ function PostForm({
                             />
                         </Field>
 
-                        <Field label="後書き（任意）">
-                            <textarea
-                                value={afterword}
-                                rows={2}
-                                onChange={(e) => setAfterword(e.target.value)}
-                                placeholder="本文のあとに出る言葉"
-                                className={inputClass}
-                            />
-                        </Field>
-
                         {/* 本文。ここでは直せない */}
                         <div className="rounded-md border border-line bg-surface px-4 py-3">
                             <p className="text-[11px] text-muted">
@@ -1211,6 +1230,75 @@ function PostForm({
                             >
                                 執筆画面で編集
                             </Link>
+                        </div>
+
+                        {/*
+                          * 後書きと、作品の形。
+                          *
+                          * ★ 本文のすぐ下に、横に並べる。
+                          *
+                          *   後書きは本文のあとに出る言葉なので、
+                          *   本文の下にあるほうが順として自然。
+                          *
+                          *   作品の形は右の柱に離れて置いてあったが、
+                          *   出す直前に一度だけ確かめるもの。
+                          *   本文と一緒に目に入る所へ移す。
+                          *
+                          * ★ 狭い画面では縦に落ちる。
+                          *   2 つを無理に並べると、選び具が潰れる。
+                          */}
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                            <Field label="後書き（任意）">
+                                <textarea
+                                    value={afterword}
+                                    rows={4}
+                                    onChange={(e) => setAfterword(e.target.value)}
+                                    placeholder="本文のあとに出る言葉"
+                                    className={inputClass}
+                                />
+                            </Field>
+
+                            <div>
+                                <span className="text-xs font-medium text-ink">
+                                    作品の形
+                                </span>
+
+                                <ul className="mt-1.5 space-y-1.5">
+                                    {(Object.keys(WORK_FORMAT_LABEL) as WorkFormat[]).map(
+                                        (key) => (
+                                            <li key={key}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        onChangeWorkInfo?.({ format: key })
+                                                    }
+                                                    aria-pressed={work.format === key}
+                                                    className={[
+                                                        "w-full rounded-md border px-3 py-2 text-left",
+                                                        work.format === key
+                                                            ? "border-forest bg-forest-tint/50"
+                                                            : "border-line hover:border-forest-line",
+                                                    ].join(" ")}
+                                                >
+                                                    <span className="block text-[12px] text-ink">
+                                                        {WORK_FORMAT_LABEL[key]}
+                                                    </span>
+                                                    <span className="mt-0.5 block text-[10px] text-faint">
+                                                        {WORK_FORMAT_DESCRIPTION[key]}
+                                                    </span>
+                                                </button>
+                                            </li>
+                                        ),
+                                    )}
+                                </ul>
+
+                                {!work.format && (
+                                    <p className="mt-2 text-[10px] leading-relaxed text-amber">
+                                        まだ選ばれていません。
+                                        選ばないと「長編」として扱われます。
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </Card>
 
@@ -1467,50 +1555,6 @@ function PostForm({
                                 </label>
                             )}
                         </div>
-                    </Card>
-
-                    {/*
-                     * 作品の形。
-                     *
-                     * 基本情報にもあるが、出す直前にここでも直せるようにする。
-                     * 出してから「長編になっている」と気づいても遅い。
-                     */}
-                    <Card title="作品の形">
-                        <ul className="space-y-1.5">
-                            {(Object.keys(WORK_FORMAT_LABEL) as WorkFormat[]).map(
-                                (key) => (
-                                    <li key={key}>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                onChangeWorkInfo?.({ format: key })
-                                            }
-                                            aria-pressed={work.format === key}
-                                            className={[
-                                                "w-full rounded-md border px-3 py-2 text-left",
-                                                work.format === key
-                                                    ? "border-forest bg-forest-tint/50"
-                                                    : "border-line hover:border-forest-line",
-                                            ].join(" ")}
-                                        >
-                                            <span className="block text-[12px] text-ink">
-                                                {WORK_FORMAT_LABEL[key]}
-                                            </span>
-                                            <span className="mt-0.5 block text-[10px] text-faint">
-                                                {WORK_FORMAT_DESCRIPTION[key]}
-                                            </span>
-                                        </button>
-                                    </li>
-                                ),
-                            )}
-                        </ul>
-
-                        {!work.format && (
-                            <p className="mt-2 text-[10px] leading-relaxed text-amber">
-                                まだ選ばれていません。
-                                選ばないと「長編」として扱われます。
-                            </p>
-                        )}
                     </Card>
 
                     {/*
