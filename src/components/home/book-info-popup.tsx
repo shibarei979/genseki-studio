@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import { getRepository } from "@/lib/repository";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -39,16 +38,30 @@ export default function BookInfoPopup() {
 
         void (async () => {
             try {
-                const me = await getRepository().getProfile();
-                const userId = (me as { user_id?: string } | null)?.user_id;
+                /*
+                 * ★ 誰かは、入っている本人から聞く。
+                 *
+                 *   getProfile() は誰のものかを返さない
+                 *   （id は "self" 固定）。
+                 *   そこから user_id を取ろうとして空になり、
+                 *   控えずに印だけ戻していた。
+                 *   丸が一瞬ついて消えるのは、これだった。
+                 */
+                const supabase = createClient();
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
 
-                if (userId) {
-                    await createClient()
+                if (user) {
+                    const { error } = await supabase
                         .from("profiles")
                         .update({ work_popup_style: "none" })
-                        .eq("user_id", userId);
-                    setIsSaved(true);
-                    return;
+                        .eq("user_id", user.id);
+
+                    if (!error) {
+                        setIsSaved(true);
+                        return;
+                    }
                 }
             } catch {
                 /* 落ちても、見開きは開いたまま */
@@ -80,63 +93,86 @@ export default function BookInfoPopup() {
                     <p className="bi_likes">0</p>
                     <a className="bi_read oct_fill" href="#">この本を読む　→</a>
 
-                    {/*
-                      * ★ 本の下に置く。
-                      *   読む押し具より小さく、薄い色にする。
-                      *
-                      * ★ 丸を押すと色が付く。
-                      *   何が起きたかが、色だけで分かる。
-                      */}
-                    <button
-                        type="button"
-                        onClick={turnOff}
-                        aria-pressed={isChecked}
+                </div>
+            </div>
+
+            {/*
+              * 「次から出さない」の印。
+              *
+              * ★ 本の外、その下に置く。
+              *
+              *   本の中に置くと、見開きの紙面に
+              *   設定の話が混ざる。読むための紙面なので、
+              *   そこに置くものではない。
+              *
+              * ★ 本は真ん中に置かれている。
+              *   高さの半分ぶん下げた所が、本の下端。
+              *   そこからさらに 14px 下げる。
+              *   本の大きさの決め方は book_info.css と同じ形にする。
+              */}
+            <div
+                style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: "50%",
+                    transform:
+                        "translateY(calc(min(620px, 82vh) / 2 + 14px))",
+                    display: "flex",
+                    justifyContent: "center",
+                    pointerEvents: "none",
+                }}
+            >
+                <button
+                    type="button"
+                    onClick={turnOff}
+                    aria-pressed={isChecked}
+                    style={{
+                        pointerEvents: "auto",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "6px 12px",
+                        borderRadius: 999,
+                        border: "none",
+                        background: "rgba(255, 255, 255, .82)",
+                        cursor: isChecked ? "default" : "pointer",
+                        color: "var(--color-text-muted)",
+                        fontSize: 11.5,
+                        lineHeight: 1.6,
+                        textAlign: "left",
+                    }}
+                >
+                    <span
+                        aria-hidden="true"
                         style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            flexShrink: 0,
+                            border: isChecked
+                                ? "1px solid var(--color-brand)"
+                                : "1px solid var(--color-brand-border)",
+                            background: isChecked
+                                ? "var(--color-brand)"
+                                : "transparent",
                             display: "flex",
                             alignItems: "center",
-                            gap: 8,
-                            margin: "14px auto 0",
-                            padding: "4px 6px",
-                            border: "none",
-                            background: "none",
-                            cursor: isChecked ? "default" : "pointer",
-                            color: "var(--color-text-faint)",
-                            fontSize: 11.5,
-                            lineHeight: 1.6,
-                            textAlign: "left",
+                            justifyContent: "center",
+                            color: "#fff",
+                            fontSize: 10,
+                            lineHeight: 1,
                         }}
                     >
-                        <span
-                            aria-hidden="true"
-                            style={{
-                                width: 16,
-                                height: 16,
-                                borderRadius: "50%",
-                                flexShrink: 0,
-                                border: isChecked
-                                    ? "1px solid var(--color-brand)"
-                                    : "1px solid var(--color-brand-border)",
-                                background: isChecked
-                                    ? "var(--color-brand)"
-                                    : "transparent",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "#fff",
-                                fontSize: 10,
-                                lineHeight: 1,
-                            }}
-                        >
-                            {isChecked ? "✓" : ""}
-                        </span>
+                        {isChecked ? "✓" : ""}
+                    </span>
 
-                        <span>
-                            {isSaved
-                                ? "次に開いたときから、この小窓は出しません（マイページの設定で戻せます）"
-                                : "次回からは小窓表示を非公開にしますか？"}
-                        </span>
-                    </button>
-                </div>
+                    <span>
+                        {isSaved
+                            ? "次に開いたときから、この小窓は出しません（マイページの設定で戻せます）"
+                            : "次回からは小窓表示を非公開にしますか？"}
+                    </span>
+                </button>
             </div>
         </div>
     );

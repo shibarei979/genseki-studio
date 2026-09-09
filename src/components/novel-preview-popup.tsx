@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useVerticalWheel } from '@/hooks/use-vertical-wheel'
-import { getRepository } from '@/lib/repository'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
@@ -342,13 +341,14 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
           onClick={() => {
             void (async () => {
               try {
-                const me = await getRepository().getProfile()
-                const userId = (me as { user_id?: string } | null)?.user_id
-                if (userId) {
-                  await createClient()
+                /* 誰かは、入っている本人から聞く。getProfile は返さない */
+                const supabase = createClient()
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user) {
+                  await supabase
                     .from('profiles')
                     .update({ work_popup_style: 'none' })
-                    .eq('user_id', userId)
+                    .eq('user_id', user.id)
                 }
               } catch {
                 /* 控えられなくても、いまは閉じる */
