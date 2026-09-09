@@ -187,7 +187,17 @@ export default function MypageClient({
   const unreadRankingNow  = extra?.unreadRanking ?? unreadRanking
   const missionStatsNow   = extra?.missionStats ?? missionStats
   const historyItemsNow   = extra?.historyItems ?? historyItems
-  const charCountMapNow   = extra?.charCountMap ?? charCountMap
+  /*
+   * 字数。
+   *
+   * ★ 置き換えではなく、重ねる。
+   *
+   *   最初に届くのは自分が書いた作品ぶん（頁の側で数える）。
+   *   あとから届くのは自分が読んだ作品ぶん（extra）。
+   *   置き換えると、あとから届いた時点で
+   *   自分の作品が 0 文字に戻る。
+   */
+  const charCountMapNow   = { ...charCountMap, ...(extra?.charCountMap ?? {}) }
   const likeMapNow        = extra?.likeMap ?? likeMap
   const firstEpMapNow     = extra?.firstEpMap ?? firstEpMap
   const bmAuthorMapNow    = extra?.bmAuthorMap ?? bmAuthorMap

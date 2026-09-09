@@ -110,18 +110,37 @@ export default async function MypagePage() {
   const novelViewMap: Record<string,number> = {}
   const novelEpCountMap: Record<string,number> = {}
 
+  /*
+   * 作品ごとの字数。
+   *
+   * ★ ここで数える。
+   *
+   *   前は /api/mypage/extra だけが数えていたが、
+   *   あちらが見ているのは「自分が読んだ作品」。
+   *   自分が書いた作品は入っていないので、
+   *   マイページの「最近の投稿作品」は 0 文字と出ていた。
+   */
+  const charCountMap: Record<string,number> = {}
+
   if (novelIds.length > 0) {
-    const [likesData, commentsData, viewsData, epsData] = await Promise.all([
+    const [likesData, commentsData, viewsData, epsData, charData] = await Promise.all([
       supabase.from('likes').select('novel_id').in('novel_id', novelIds),
       supabase.from('comments').select('novel_id').in('novel_id', novelIds),
       supabase.from('page_views').select('novel_id').eq('is_author', false).in('novel_id', novelIds),
       supabase.from('episodes').select('novel_id').in('novel_id', novelIds).eq('published', true),
+      /*
+       * 字数は下書きの話も足す。
+       * 「この作品に何文字書いたか」であって、
+       * 「読者が読める字数」ではない。
+       */
+      supabase.from('episodes').select('novel_id, char_count').in('novel_id', novelIds),
     ])
 
     likesData.data?.forEach((l:any) => { novelLikeMap[l.novel_id] = (novelLikeMap[l.novel_id]||0)+1 })
     commentsData.data?.forEach((c:any) => { novelCommentMap[c.novel_id] = (novelCommentMap[c.novel_id]||0)+1 })
     viewsData.data?.forEach((v:any) => { novelViewMap[v.novel_id] = (novelViewMap[v.novel_id]||0)+1 })
     epsData.data?.forEach((e:any) => { novelEpCountMap[e.novel_id] = (novelEpCountMap[e.novel_id]||0)+1 })
+    charData.data?.forEach((e:any) => { charCountMap[e.novel_id] = (charCountMap[e.novel_id]||0) + (e.char_count||0) })
   }
 
   /* 受け取ったミッションの印。小さいのでここで読む */
@@ -142,6 +161,7 @@ export default async function MypagePage() {
       novelCommentMap={novelCommentMap}
       novelViewMap={novelViewMap}
       novelEpCountMap={novelEpCountMap}
+      charCountMap={charCountMap}
     />
       {/*
         * どのページからでも、決まりや問い合わせへ行けるようにする。
