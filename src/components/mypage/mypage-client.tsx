@@ -375,11 +375,13 @@ export default function MypageClient({
    * 決めていない人は札。
    * 初めて来た人には、情報が多いほうが親切。
    */
-  const [popupStyle, setPopupStyle] = useState(
-    (profile as { work_popup_style?: string }).work_popup_style === 'book'
-      ? 'book'
-      : 'card',
-  )
+  const [popupStyle, setPopupStyle] = useState(() => {
+    const saved = (profile as { work_popup_style?: string }).work_popup_style
+    if (saved === 'book') return 'book'
+    /* 小窓を出さない。押したら、そのまま作品の頁へ行く */
+    if (saved === 'none') return 'none'
+    return 'card'
+  })
 
   async function savePopupStyle(next: string) {
     if (next === popupStyle) return
@@ -1756,12 +1758,29 @@ export default function MypageClient({
                     color:popupStyle==='book'?'var(--base-color-1)':'var(--color-text-muted)'}}>
                   本を開く
                 </button>
+                {/*
+                  * ★ 出さない、も選べるようにする。
+                  *
+                  *   小窓は作品を選ぶための道具だが、
+                  *   要らない人には一手増えるだけになる。
+                  *   小窓の中の「今後この小窓を出さない」からも、ここへ来る。
+                  */}
+                <button
+                  onClick={()=>savePopupStyle('none')}
+                  style={{padding:'8px 18px',fontSize:13,cursor:'pointer',border:'none',
+                    fontWeight:popupStyle==='none'?700:500,
+                    background:popupStyle==='none'?'var(--color-brand)':'var(--color-bg-card)',
+                    color:popupStyle==='none'?'var(--base-color-1)':'var(--color-text-muted)'}}>
+                  出さない
+                </button>
               </div>
 
               <p style={{fontSize:11,lineHeight:1.8,color:'var(--color-text-faint)',marginTop:8}}>
                 札は、あらすじやタグをまとめて読めます。
                 <br />
                 本を開くと、見開きであらすじを読めます。
+                <br />
+                出さないを選ぶと、作品を押したときそのまま作品の頁へ行きます。
               </p>
             </div>
           </div>

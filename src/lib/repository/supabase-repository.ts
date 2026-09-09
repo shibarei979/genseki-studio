@@ -443,7 +443,7 @@ export const supabaseRepository: Repository = {
              * いつも札のままになっていた。
              */
             work_popup_style:
-                (data.work_popup_style as "card" | "book" | null) ?? null,
+                (data.work_popup_style as "card" | "book" | "none" | null) ?? null,
             /*
              * アイコン。
              *

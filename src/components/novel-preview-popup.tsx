@@ -3,6 +3,8 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useVerticalWheel } from '@/hooks/use-vertical-wheel'
+import { getRepository } from '@/lib/repository'
+import { createClient } from '@/lib/supabase/client'
 
 interface Props {
   novel: {
@@ -319,7 +321,48 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
         </div>
 
         {/* ボタン */}
-        <div style={{padding:`${sz(10,5)}px ${sz(14,8)}px`,borderTop:'1px solid var(--color-brand-border)',background:'var(--color-bg)',display:'flex',gap:8,flexShrink:0}}>
+        <div style={{padding:`${sz(10,5)}px ${sz(14,8)}px`,borderTop:'1px solid var(--color-brand-border)',background:'var(--color-bg)',flexShrink:0}}>
+        {/*
+          * ★ 「今後は出さない」。
+          *
+          *   小窓は作品を選ぶための道具だが、
+          *   要らない人には一手増えるだけになる。
+          *   その人が自分で切れるようにする。
+          *
+          * ★ 押したら頁を読み直す。
+          *   小窓を出すかどうかは、画面が組み上がるときに
+          *   一度だけ読んでいる。読み直さないと、
+          *   次に押した作品でもまだ小窓が出て、
+          *   切ったのに効いていないように見える。
+          *
+          * ★ 戻す道を、その場で言う。
+          *   切りっぱなしにすると、戻し方が分からない。
+          */}
+        <button
+          onClick={() => {
+            void (async () => {
+              try {
+                const me = await getRepository().getProfile()
+                const userId = (me as { user_id?: string } | null)?.user_id
+                if (userId) {
+                  await createClient()
+                    .from('profiles')
+                    .update({ work_popup_style: 'none' })
+                    .eq('user_id', userId)
+                }
+              } catch {
+                /* 控えられなくても、いまは閉じる */
+              }
+              window.location.reload()
+            })()
+          }}
+          style={{display:'block',width:'100%',marginBottom:sz(8,4),padding:`${sz(6,4)}px`,
+            border:'none',background:'none',color:'var(--color-text-faint)',
+            fontSize:sz(11,10),cursor:'pointer',textDecoration:'underline'}}>
+          今後この小窓を出さない（マイページの設定で戻せます）
+        </button>
+
+        <div style={{display:'flex',gap:8}}>
           <button onClick={()=>close()}
             style={{flex:1,padding:`${sz(9,5)}px`,border:'1px solid var(--color-brand-border)',borderRadius:8,background:'var(--color-bg-card)',color:'var(--color-text-muted)',fontSize:sz(13,11),cursor:'pointer'}}>
             閉じる
@@ -329,6 +372,7 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
               fontWeight:700,fontSize:sz(14,12),borderRadius:8,textDecoration:'none',textAlign:'center'}}>
             作品を読む →
           </a>
+        </div>
         </div>
       </div>
 

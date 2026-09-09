@@ -28,6 +28,19 @@ export default function WorkPopupFlag() {
                 const saved = (profile as { work_popup_style?: string })
                     ?.work_popup_style
                 if (saved === 'book') style = 'book'
+
+                /*
+                 * ★ 「出さない」も、本棚には「札」として伝える。
+                 *
+                 *   home.js は「札」のときだけ見開きを開かず、
+                 *   React 側の小窓に任せる作り。
+                 *   そこへ任せてもらえれば、React 側が
+                 *   小窓を出さずに作品の頁へ送る。
+                 *
+                 *   home.js は触らない決まりなので、
+                 *   こちらで札に読み替える。
+                 */
+                if (saved === 'none') style = 'card'
             } catch {
                 /* 読めなければ札。押せないより出るほうがよい */
             }
