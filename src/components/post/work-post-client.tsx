@@ -148,6 +148,23 @@ export default function WorkPostClient({ workId }: { workId: string }) {
     }
     const [isLoading, setIsLoading] = useState(true);
 
+    /*
+     * 予約したことの知らせ。
+     *
+     * ★ 親が持つ。
+     *
+     *   投稿の側に置くと、次の話へ進んだ時点で
+     *   その部品ごと作り直され、知らせも消える。
+     *   何が起きたのか分からないまま画面が変わる。
+     */
+    const [postNotice, setPostNotice] = useState("");
+
+    useEffect(() => {
+        if (!postNotice) return;
+        const timer = window.setTimeout(() => setPostNotice(""), 5000);
+        return () => window.clearTimeout(timer);
+    }, [postNotice]);
+
     const reload = useCallback(async () => {
         const repository = getRepository();
         /* 互いに関わらないので、同時に頼む */
@@ -761,14 +778,26 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                 </aside>
 
                 <main className="min-w-0 flex-1">
+                    {/*
+                      * 予約したことの知らせ。
+                      * 次の話へ進んでも消えないよう、ここに出す。
+                      */}
+                    {postNotice && (
+                        <p className="mb-3 rounded-md border border-forest-line bg-forest-tint px-4 py-2.5 text-[12px] text-ink">
+                            {postNotice}
+                        </p>
+                    )}
+
                     {selected ? (
                         <PostForm
                             key={selected.id}
                             episode={selected}
                             chapters={chapters}
                             publish={publish}
-                            onChange={(patch) => void change(selected.id, patch)}
-                            onPosted={({ scheduled: didSchedule }) => {
+                            /* 約束を返す。控え終わるのを、投稿の側で待てるように */
+                            onChange={(patch) => change(selected.id, patch)}
+                            onPosted={(info) => {
+                                const didSchedule = info.scheduled;
                                 /*
                                  * いま出したときは、書いていた所へ戻る。
                                  *
@@ -795,15 +824,35 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                  *   同じ話が開いたままだと、
                                  *   予約できたのかどうかが分かりにくい。
                                  */
-                                const next = episodes.find(
-                                    (row) =>
-                                        row.ep_number > selected.ep_number &&
-                                        !row.is_published &&
-                                        !row.publish_at,
-                                );
+                                /*
+                                 * ★ 話の番号の順に見る。
+                                 *   並びが番号順とは限らないので、
+                                 *   先に揃えてから次を探す。
+                                 */
+                                const next = [...episodes]
+                                    .sort((a, b) => a.ep_number - b.ep_number)
+                                    .find(
+                                        (row) =>
+                                            row.ep_number > selected.ep_number &&
+                                            !row.is_published &&
+                                            !row.publish_at,
+                                    );
 
+                                /*
+                                 * ★ ここでは読み直さない。
+                                 *   控えたときに change() が読み直している。
+                                 *   もう一度呼ぶと、二つの読み直しが競って
+                                 *   古い並びがあとから上書きすることがある。
+                                 */
                                 if (next) setSelectedId(next.id);
-                                void reload();
+
+                                setPostNotice(
+                                    info.at
+                                        ? `${formatAt(info.at)} に予約しました。${
+                                              next ? "次の話へ進みます。" : ""
+                                          }`
+                                        : "",
+                                );
                             }}
                             work={work}
                             /*
@@ -907,11 +956,11 @@ function PostForm({
      *   予約は何話も続けて入れる作業なので、
      *   1 話ごとに戻されると、そのたびに来直すことになる。
      */
-    onPosted?: (info: { scheduled: boolean }) => void;
+    onPosted?: (info: { scheduled: boolean; at: string | null }) => void;
     episode: Episode;
     chapters: Chapter[];
     publish: PublishSettings | null;
-    onChange: (patch: Partial<Episode>) => void;
+    onChange: (patch: Partial<Episode>) => void | Promise<void>;
     /** 作品の公開範囲を変える */
     onChangeWork?: (visibility: PublishSettings["visibility"]) => void;
     /** 作品の設定を変える */
@@ -1075,11 +1124,25 @@ function PostForm({
             }
 
             setError("");
-            onChange({
-                is_published: false,
-                publish_at: floorTo5Min(target).toISOString(),
-            });
-            onPosted?.({ scheduled: true });
+
+            /*
+             * ★ 控え終わるのを待ってから、次へ進む。
+             *
+             *   前は控えを頼んだ直後に onPosted を呼んでいた。
+             *   親はそこで話を読み直すが、控えがまだ表に
+             *   着いていないので、古い並びが返ってくる。
+             *   予約したのに一覧に出ない、次の話がずれる、
+             *   といった妙な動きは、これだった。
+             */
+            const when = floorTo5Min(target).toISOString();
+
+            void (async () => {
+                await onChange({
+                    is_published: false,
+                    publish_at: when,
+                });
+                onPosted?.({ scheduled: true, at: when });
+            })();
             return;
         }
 
@@ -1091,7 +1154,7 @@ function PostForm({
             illust_url: illustUrl || null,
             illust_is_ai: illustIsAi,
         });
-        onPosted?.({ scheduled: false });
+        onPosted?.({ scheduled: false, at: null });
     }
 
     return (
