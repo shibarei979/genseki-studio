@@ -8,6 +8,7 @@ import WorkPopupFlag from '@/components/home/work-popup-flag'
 import ReaderSidebar from '@/components/home/reader-sidebar'
 import ReaderWorkList from '@/components/home/reader-work-list'
 import FeaturedShowcase from '@/components/home/featured-showcase'
+import ReadingRecap from '@/components/home/reading-recap'
 import HomeBannerCarousel from '@/components/home/home-banner-carousel'
 import ReaderHero from '@/components/home/reader-hero'
 import ShelfNav from '@/components/home/shelf-nav'
@@ -1149,6 +1150,23 @@ export default async function ReaderHome() {
               *   受賞が 1 つも無い日は枠ごと出ないので、
               *   そのときはおすすめが先頭に来る。
               */}
+
+            {/*
+
+              * 先月のまとめ。
+
+              *
+
+              * 月が変わって最初に来たときだけ、小窓で出す。
+
+              * 読む向きのホームにだけ置く。
+
+              * 書くだけの人に読書のまとめを出しても、意味がない。
+
+              */}
+
+            <ReadingRecap />
+
 
             {/*
               * 受賞作品の見せ場。

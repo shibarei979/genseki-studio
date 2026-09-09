@@ -59,10 +59,10 @@ const TONES = [
  * ★ 10 万字は目安。作品によって大きく違う。
  *   だから「約」と書く。
  */
-const BOOK_CHARS = 100000
+export const BOOK_CHARS = 100000
 
 /** 原稿用紙 1 枚ぶんの字数 */
-const SHEET_CHARS = 400
+export const SHEET_CHARS = 400
 
 function monthKey(date: Date) {
     return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).slice(0, 7)
@@ -340,7 +340,7 @@ function Figure({
  *
  * ★ 真ん中は空ける。合計を置く場所にもなる。
  */
-function Ring({ title, rows }: { title: string; rows: [string, number][] }) {
+export function Ring({ title, rows }: { title: string; rows: [string, number][] }) {
     const total = rows.reduce((sum, one) => sum + one[1], 0)
     if (total === 0) return null
 
