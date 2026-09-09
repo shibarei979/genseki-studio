@@ -51,6 +51,16 @@ interface Props {
     jumpToLine?: number | null;
     onJumped?: () => void;
     onSave: (patch: { title: string; body: string }) => Promise<void>;
+    /**
+     * 作品の題名。書く画面の上に、小さく出す。
+     *
+     * ★ どの作品を書いているのか、画面の中に無かった。
+     *   話を何十も持っていると、開いたときに
+     *   どれの続きなのか分からない。
+     *
+     * ★ ここでは直せない。題名は作品の設定の役目。
+     */
+    workTitle?: string;
     onToggleWritingMode: () => void;
     onOpenHistory: () => void;
     isHistoryOpen: boolean;
@@ -70,6 +80,7 @@ interface Props {
 
 export default function EpisodeEditor({
     episode,
+    workTitle = "",
     pickEntryId = null,
     illustPlacingId = null,
     illustPlacingUrl = null,
@@ -426,24 +437,52 @@ export default function EpisodeEditor({
              * 1 段に詰めると、右のボタンが画面の外へ出る。
              */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line px-3 py-2 sm:flex-nowrap sm:gap-2.5 sm:px-5 sm:py-2.5">
-                <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    aria-label="話のタイトル"
-                    placeholder="話の名前を入れてください"
-                    className={[
-                        "min-w-0 flex-1 border-b bg-transparent text-[14px] font-medium text-ink outline-none focus:border-forest-line",
-                        /*
-                         * 名前が空のときは、下線で気づかせる。
-                         *
-                         * 止めはしない。名前は書いているうちに決まることが多く、
-                         * 入り口で止めると書き始める気を削ぐ。
-                         * 投稿するときには必須にしてある。
-                         */
-                        title.trim() ? "border-transparent" : "border-amber",
-                    ].join(" ")}
-                />
+                {/*
+                  * 題名のまわり。
+                  *
+                  * ★ 入れる欄が何の欄かを、上に小さく書く。
+                  *   前は名前だけが 1 行あり、
+                  *   話の名前なのか作品の名前なのか分からなかった。
+                  *
+                  * ★ 作品の題名は、その横に薄く添える。
+                  *   どの作品を書いているのかが、画面の中で分かる。
+                  *   狭いときは端で切る。主役は話の名前のほう。
+                  */}
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-1.5 text-[10px] leading-none">
+                        <span className="shrink-0 text-faint">話のタイトル</span>
+
+                        {workTitle.trim() && (
+                            <>
+                                <span aria-hidden="true" className="shrink-0 text-faint">
+                                    ・
+                                </span>
+                                <span className="min-w-0 truncate text-muted">
+                                    {workTitle}
+                                </span>
+                            </>
+                        )}
+                    </div>
+
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        aria-label="話のタイトル"
+                        placeholder="話の名前を入れてください"
+                        className={[
+                            "mt-0.5 w-full border-b bg-transparent text-[14px] font-medium text-ink outline-none focus:border-forest-line",
+                            /*
+                             * 名前が空のときは、下線で気づかせる。
+                             *
+                             * 止めはしない。名前は書いているうちに決まることが多く、
+                             * 入り口で止めると書き始める気を削ぐ。
+                             * 投稿するときには必須にしてある。
+                             */
+                            title.trim() ? "border-transparent" : "border-amber",
+                        ].join(" ")}
+                    />
+                </div>
 
                 <div className="thin-scroll flex w-full shrink-0 items-center gap-2 overflow-x-auto text-[11px] text-muted lg:w-auto lg:gap-2.5">
                     <SaveIndicator state={state} savedAt={savedAt} />

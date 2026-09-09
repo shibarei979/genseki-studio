@@ -834,6 +834,8 @@ export default function WorkspaceClient({ workId }: Props) {
                             illustPlacingUrl={searchParams.get("illustUrl")}
                             key={selected.id}
                             episode={selected}
+                            /* どの作品を書いているのか、上に小さく出す */
+                            workTitle={work?.title ?? ""}
                             settings={settings}
                             jumpToLine={jumpLine}
                             onJumped={() => setJumpLine(null)}
