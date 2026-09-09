@@ -7,6 +7,7 @@
 
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { useAskText } from "@/hooks/use-ask-text";
@@ -464,8 +465,33 @@ export default function EpisodeEditor({
                             <span className="whitespace-nowrap text-[10px] leading-none text-faint">
                                 作品タイトル
                             </span>
-                            <span className="min-w-0 truncate text-[11px] leading-none text-muted">
-                                {workTitle}
+                            <span className="flex min-w-0 items-center gap-1.5">
+                                <span className="min-w-0 truncate text-[11px] leading-none text-muted">
+                                    {workTitle}
+                                </span>
+
+                                {/*
+                                  * 作品の題名を直しに行く道。
+                                  *
+                                  * ★ ここでは直せないようにしてある。
+                                  *   本文を書いている最中に作品そのものが
+                                  *   書き換わると、気づかないまま変わる。
+                                  *
+                                  * ★ 代わりに、直す場所へ送る押し具を置く。
+                                  *   直せないことだけ伝えて放り出すと、
+                                  *   どこで直すのかを探すことになる。
+                                  *
+                                  * ★ 同じ窓で開く。
+                                  *   別窓にすると、直したあと
+                                  *   こちらの画面は古い題名のまま残る。
+                                  *   本文は自動で控えてあるので、戻れば続きから書ける。
+                                  */}
+                                <Link
+                                    href={`/workspace/${episode.work_id}/settings`}
+                                    className="shrink-0 whitespace-nowrap rounded border border-line px-1.5 py-[1px] text-[10px] leading-none text-muted hover:border-forest-line hover:text-forest"
+                                >
+                                    変更
+                                </Link>
                             </span>
                         </>
                     )}
