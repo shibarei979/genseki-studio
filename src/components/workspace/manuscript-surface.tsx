@@ -80,6 +80,68 @@ export default function ManuscriptSurface({
     }, [isVertical, settings.font_size, settings.line_height]);
 
     /*
+     * 縦書きのとき、指の上下の動きを横送りに変える。
+     *
+     * ★ 縦書きの本文は、行が右から左へ伸びる。
+     *
+     *   送るのは横だが、指も鼠も上下に動かす道具。
+     *   何もしないと、本文の上で回しても何も動かず、
+     *   代わりに頁ごと下へ流れてしまう。
+     *
+     * ★ 端に着いたら、そこから先は頁に譲る。
+     *
+     *   止めてしまうと、本文の上に指があるあいだ
+     *   頁が動かせなくなる。
+     *   こちらが動かせたときだけ、頁への伝わりを止める。
+     *
+     * ★ 自前で付ける。
+     *   React の onWheel では止められないことがある。
+     *   passive: false を指しておく必要がある。
+     */
+    useEffect(() => {
+        const area = areaRef.current;
+        if (!area || !isVertical) return;
+
+        function onWheel(event: WheelEvent) {
+            const box = areaRef.current;
+            if (!box) return;
+
+            /* 横の動きは、そのまま任せる */
+            if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+            if (event.deltaY === 0) return;
+
+            /*
+             * 動く量。鼠によって単位が違う。
+             *
+             *   0  そのまま画素
+             *   1  行。1 行を 16 画素とみなす
+             *   2  頁。見えている幅ぶん
+             */
+            const step =
+                event.deltaMode === 1
+                    ? event.deltaY * 16
+                    : event.deltaMode === 2
+                      ? event.deltaY * box.clientWidth
+                      : event.deltaY;
+
+            /*
+             * 読み進む向きは左。
+             * 右端が本文の頭なので、送るほど scrollLeft は減る。
+             */
+            const before = box.scrollLeft;
+            box.scrollLeft = before - step;
+
+            if (box.scrollLeft !== before) {
+                event.preventDefault();
+                handleScroll();
+            }
+        }
+
+        area.addEventListener("wheel", onWheel, { passive: false });
+        return () => area.removeEventListener("wheel", onWheel);
+    }, [isVertical, showLineNumbers]);
+
+    /*
      * 目盛りを本文と一緒に動かす。
      * 別々に動くと、番号と行がずれて役に立たなくなる。
      */
