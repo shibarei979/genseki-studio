@@ -55,20 +55,25 @@ const READER_TABS = [
 /*
  * 帯を出さない道。
  *
- *   /workspace  書く画面。本文の邪魔になる
  *   /login      入る途中。迷わせない
  *   /admin      運営の画面。柱がある
  */
 const HIDE_ON = ['/login', '/auth', '/admin']
 
 /*
- * 本文を書く画面だけ、出さない。
+ * 作品を書いている道。
  *
- * ★ /workspace 全部を外してはいけない。
- *   設定・資料・下読みも同じ道の下にあり、
- *   丸ごと外すと、そこから戻る術が無くなる。
+ * ★ ここでは帯の中身を入れ替える。
+ *
+ *   前は書く画面で帯を隠していた。
+ *   本文の邪魔になるという理由だったが、
+ *   隠すと執筆・設定・資料・投稿の行き来が
+ *   画面の上の押し具だけになり、遠かった。
+ *
+ *   隠すのではなく、その作品の中の行き先に差し替える。
+ *   ホームや探すは、書いている最中に押すものではない。
  */
-const HIDE_PATTERN = /^\/workspace\/[^/]+\/post/
+const WORKSPACE_PATTERN = /^\/workspace\/([^/]+)/
 
 export default function MobileTabBar() {
     const pathname = usePathname() || '/'
@@ -152,17 +157,38 @@ export default function MobileTabBar() {
         }
     })
 
-    const TABS = isReader ? READER_TABS : WRITER_TABS
-
     if (HIDE_ON.some((path) => pathname.startsWith(path))) return null
-    if (HIDE_PATTERN.test(pathname)) return null
 
     /* 全画面で読む頁でも出さない */
     if (/\/read$/.test(pathname)) return null
 
+    /*
+     * 作品を書いているあいだは、その作品の中の行き先にする。
+     *
+     * ★ プレビューだけ別の頁で開く。
+     *   書きかけの画面を閉じさせない。
+     */
+    const inWorkspace = pathname.match(WORKSPACE_PATTERN)
+
+    const TABS = inWorkspace
+        ? ([
+              { href: `/workspace/${inWorkspace[1]}`, label: '執筆', icon: 'pen', exact: true },
+              { href: `/workspace/${inWorkspace[1]}/settings`, label: '設定', icon: 'gear' },
+              { href: `/workspace/${inWorkspace[1]}/resource`, label: '資料', icon: 'folder' },
+              { href: `/workspace/${inWorkspace[1]}/post`, label: '投稿', icon: 'send' },
+              { href: `/novel/${inWorkspace[1]}`, label: 'プレビュー', icon: 'eye', blank: true },
+          ] as const)
+        : isReader
+          ? READER_TABS
+          : WRITER_TABS
+
     return (
-        <nav ref={barRef} className="mtb" aria-label="主な行き先">
-            {TABS.map((tab) => {
+        <nav
+            ref={barRef}
+            className="mtb"
+            aria-label={inWorkspace ? 'この作品の行き先' : '主な行き先'}
+        >
+            {TABS.map((tab: any) => {
                 /*
                  * いま居る所を濃くする。
                  *
@@ -170,14 +196,20 @@ export default function MobileTabBar() {
                  * 前方一致にすると、どの道でもホームが濃くなる。
                  */
                 const isHere =
-                    tab.href === '/'
-                        ? pathname === '/'
-                        : pathname.startsWith(tab.href)
+                    tab.blank
+                        ? false
+                        : tab.exact
+                          ? pathname === tab.href
+                          : tab.href === '/'
+                            ? pathname === '/'
+                            : pathname.startsWith(tab.href)
 
                 return (
                     <Link
                         key={tab.href}
                         href={tab.href}
+                        target={tab.blank ? '_blank' : undefined}
+                        rel={tab.blank ? 'noopener' : undefined}
                         className={`mtb_item${isHere ? ' is-here' : ''}`}
                         aria-current={isHere ? 'page' : undefined}
                     >
@@ -246,6 +278,43 @@ function Icon({ name }: { name: string }) {
             return (
                 <svg {...common}>
                     <path d="m12 3.5 2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.7l5.9-.9L12 3.5Z" />
+                </svg>
+            )
+        /*
+         * ここから下は、作品を書いているときの絵。
+         *
+         * ★ ほかと同じ線の太さ・同じ大きさで描く。
+         *   1 つだけ濃いと、そこが目立って押されやすくなる。
+         */
+        case 'gear':
+            return (
+                <svg {...common}>
+                    <circle cx="12" cy="12" r="3.2" />
+                    <path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6" />
+                </svg>
+            )
+        case 'folder':
+            /* 資料。閉じた紙ばさみ。中に紙が 1 枚覗く */
+            return (
+                <svg {...common}>
+                    <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.5h7A1.5 1.5 0 0 1 19 9v8.5A1.5 1.5 0 0 1 17.5 19h-13A1.5 1.5 0 0 1 3 17.5Z" />
+                    <path d="M7.5 11.5h8" />
+                </svg>
+            )
+        case 'send':
+            /* 投稿。外へ送る紙飛行機 */
+            return (
+                <svg {...common}>
+                    <path d="M21 3 10.5 13.5" />
+                    <path d="M21 3l-6.8 18-3.7-7.5L3 9.8Z" />
+                </svg>
+            )
+        case 'eye':
+            /* プレビュー。読者の目 */
+            return (
+                <svg {...common}>
+                    <path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z" />
+                    <circle cx="12" cy="12" r="2.8" />
                 </svg>
             )
         case 'trophy':

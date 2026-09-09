@@ -45,18 +45,18 @@ export default function WorkspaceNav({ workId, current, episodeId }: Props) {
     return (
         <div className="space-y-2">
             {/*
-              * 携帯。5 つを横に並べる。
+              * 携帯では、ここに出さない。
               *
-              * ★ 畳まない。
+              * ★ 下の帯が、この 5 つを持っている。
+              *   作品を書いているあいだ、帯の中身は
+              *   執筆・設定・資料・投稿・プレビューに変わる。
+              *   上にも同じものを出すと二重になり、
+              *   本文の場所がそのぶん狭くなる。
               *
-              *   前は「いま居る所」を出し、押すと残りが開いた。
-              *   どこへ行けるのかを見るだけで一手かかっていた。
-              *
-              * ★ 言葉は短いまま。
-              *   5 つに割ると 1 つあたりの幅が狭い。
-              *   長い言葉を入れると折り返して段が崩れる。
+              * ★ 中身は残しておく。
+              *   帯が出ない端末や、帯を隠す設定にしたときの備え。
               */}
-            <div className="grid grid-cols-5 gap-1.5 lg:hidden">
+            <div className="hidden">
                 <NavButton
                     href={`/workspace/${workId}`}
                     label="執筆"
