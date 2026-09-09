@@ -163,12 +163,6 @@ export default function WorkPostClient({ workId }: { workId: string }) {
      *   その部品ごと作り直され、知らせも消える。
      *   何が起きたのか分からないまま画面が変わる。
      */
-    /*
-     * 進んだ先の欄に入れておく日時。
-     * 予約して自動で進んだときだけ入る。
-     */
-    const [carryAt, setCarryAt] = useState("");
-
     const [postNotice, setPostNotice] = useState<{
         text: string;
         /** 次のまだ出していない話。あれば「次の話へ」を出す */
@@ -827,7 +821,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
 
                             {postNotice.nextLabel && (
                                 <span className="text-[11.5px] text-muted">
-                                    次の話へ進みました。{postNotice.nextLabel}。
+                                    {postNotice.nextLabel}。
                                 </span>
                             )}
                         </div>
@@ -884,56 +878,34 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                     );
 
                                 /*
-                                 * ★ 次の話へ進む。ただし空手では行かせない。
+                                 * ★ 次の話へ進む。欄は空のまま。
                                  *
-                                 *   一度、進んだ先の欄を空のままにしていた。
-                                 *   同じ場所の同じ押し具が
-                                 *   「予約する」から「いま出す」に変わり、
-                                 *   流れで押した人の話が即座に公開された。
+                                 *   一度、次の予定を入れて進む形にしたが、
+                                 *   勝手に日時が入るのは要らない、となった。
                                  *
-                                 *   次の予定を入れた状態で進む。
-                                 *   押しても予約のまま。
-                                 *   いま出したい人は、欄を空にすればよい。
+                                 *   代わりに押し具の名前を、欄の中身で
+                                 *   決めるようにしてある。
+                                 *   欄が空なら「この話を投稿する」と出るので、
+                                 *   予約のつもりで押して即座に出る、
+                                 *   という取り違えは起きにくい。
                                  */
-                                const carry = info.at
-                                    ? toLocalInput(
-                                          nextSlot(
-                                              info.at,
-                                              work.default_publish_time,
-                                              work.default_publish_days,
-                                          ).toISOString(),
-                                      )
-                                    : "";
-
                                 setPostNotice({
                                     text: info.at
                                         ? `${formatAt(info.at)} に予約しました。`
                                         : "",
                                     nextId: null,
                                     nextLabel: next
-                                        ? `${formatAt(
-                                              nextSlot(
-                                                  info.at,
-                                                  work.default_publish_time,
-                                                  work.default_publish_days,
-                                              ).toISOString(),
-                                          )} を入れてあります`
+                                        ? `次の話へ進みました。日時を入れて予約してください`
                                         : "",
                                 });
 
-                                if (next) {
-                                    setCarryAt(carry);
-                                    selectEpisode(next.id);
-                                } else {
-                                    setCarryAt("");
-                                }
+                                if (next) selectEpisode(next.id);
                             }}
                             work={work}
                             /*
                              * 最後に予約した話の時刻。
                              * 次の予定を組み立てるのに使う。
                              */
-                            initialAt={carryAt}
                             lastScheduledAt={
                                 scheduled.length > 0
                                     ? scheduled[scheduled.length - 1].publish_at ?? null
@@ -1019,26 +991,9 @@ function PostForm({
     onPosted,
     work,
     lastScheduledAt,
-    initialAt,
 }: {
     /** 最後に予約した話の時刻。次の予定を組み立てるのに使う */
     lastScheduledAt?: string | null;
-    /**
-     * 日時の欄に、初めから入れておく値。
-     *
-     * ★ 予約したあと自動で進んできたときだけ渡す。
-     *
-     *   進んだ先の欄が空だと、同じ場所にある同じ押し具が
-     *   「予約する」から「いま出す」に変わる。
-     *   流れで押すと即座に公開される。実際に出てしまった人がいる。
-     *
-     *   次の予定を入れておけば、押しても予約のまま。
-     *   いま出したい人は、欄を空にすればよい。
-     *
-     * ★ 自分で話を選んだときは渡さない。
-     *   その人は予約しに来たとは限らない。
-     */
-    initialAt?: string;
     /**
      * 投稿し終えたとき。
      *
@@ -1100,7 +1055,7 @@ function PostForm({
     const [illustUrl] = useState(episode.illust_url ?? "");
     const [illustIsAi] = useState(episode.illust_is_ai ?? false);
 
-    const [at, setAt] = useState(initialAt || toLocalInput(episode.publish_at));
+    const [at, setAt] = useState(toLocalInput(episode.publish_at));
     const [error, setError] = useState("");
 
     /* 詳細設定を開いているか。畳んで置く */
