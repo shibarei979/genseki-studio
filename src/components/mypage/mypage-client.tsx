@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import ReadingSummary from '@/components/mypage/reading-summary'
+import { READER_MISSIONS, WRITER_MISSIONS } from '@/components/mypage/mission-client'
 import IconCropper from '@/components/mypage/icon-cropper'
 import { useRouter } from 'next/navigation'
 import TypoReportsTab from '@/components/mypage/typo-reports-tab'
@@ -519,7 +520,26 @@ export default function MypageClient({
    *   消えるのではなく、隠れるだけ。
    */
   const isWriterRole = !isReaderMode
-  const allMissionsDone = claimedMissionIds.length >= (isWriterRole ? 15 : 10)
+  /*
+   * いま出しているミッションを、全部やり終えたか。
+   *
+   * ★ 受け取った数では見ない。
+   *
+   *   前は「10 個受け取っていれば読む人は終わり」と
+   *   数だけで見ていた。書く向きで 10 個以上受け取った人が
+   *   読む向きに切り替えると、その時点で終わりと見なされ、
+   *   ミッションのタブごと消えていた。
+   *
+   *   いま並べているものが全部済んでいるか、で見る。
+   *   向きを切り替えても、数え方が食い違わない。
+   */
+  const shownMissionIds = (
+    isWriterRole ? [...READER_MISSIONS, ...WRITER_MISSIONS] : READER_MISSIONS
+  ).map(m => m.id)
+
+  const allMissionsDone = shownMissionIds.every(id =>
+    claimedMissionIds.includes(id),
+  )
   /*
    * 出すタブ。
    *   ミッションは、全部やり終えたら出さない（今までどおり）
