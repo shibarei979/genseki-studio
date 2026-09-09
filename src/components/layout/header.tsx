@@ -191,6 +191,22 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
      *   そのたびに一瞬だけ丸が見えていた。
      */
     const [isSeenReady, setIsSeenReady] = useState(false);
+
+    /*
+     * 知らせを全部そろえ終えたか。
+     *
+     * ★ 印は「無い」から始めて、あると分かったときだけ付ける。
+     *
+     *   途中の数で決めない。
+     *   便り・お知らせ・知らせは、それぞれ別に届く。
+     *   先に届いたぶんだけで数えると、
+     *   まだ「最後に開いた時刻」を知らないうちに
+     *   全部が新しいものとして数えられ、印が付く。
+     *
+     *   そろうまで待てば、付いたり消えたりしない。
+     */
+    const [isNoticeReady, setIsNoticeReady] = useState(false);
+    const [isLetterReady, setIsLetterReady] = useState(false);
     /** 運営が立てたお知らせ。無ければ既定のものを出す */
     const [notices, setNotices] = useState<
         {
@@ -254,6 +270,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                     link: row.link,
                 })),
             );
+            setIsNoticeReady(true);
 
             /*
              * 自分あての個別の便りも、ベルに混ぜる。
@@ -288,6 +305,14 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                 }
             } catch {
                 /* 読めなくても、お知らせだけは出す */
+            } finally {
+                /*
+                 * そろい終えた印。
+                 * 読めなかったときも立てる。
+                 * 立てないと、印が永久に出ない。
+                 */
+                setIsNoticeReady(true);
+                setIsLetterReady(true);
             }
         })();
         setSeenAt(window.localStorage.getItem(SEEN_KEY));
@@ -353,6 +378,25 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
         shown.filter((notice) => (notice.at || notice.date) > openedAt).length +
         letters.filter((letter) => (letter.at || "") > openedAt).length +
         alerts.filter((alert) => (alert.created_at || "") > openedAt).length;
+
+    /*
+     * 赤い印を出すか。
+     *
+     * ★ 「無い」から始めて、あると分かったときだけ付ける。
+     *
+     *   出しておいて、見られていたら消す作りだった。
+     *   そろう前は「最後に開いた時刻」も知らないので、
+     *   お知らせが全部新しいものとして数えられ、
+     *   頁を開くたびに一瞬だけ赤い印が出ていた。
+     *
+     *   作家と読者を入れ替えると柱が作り直されるので、
+     *   そのたびに目に見えていた。
+     *
+     * ★ 3 つがそろうまで待つ。
+     *   時刻・お知らせ・便り。どれか 1 つでも欠けていたら出さない。
+     */
+    const showBadge =
+        isSeenReady && isNoticeReady && isLetterReady && badgeCount > 0;
 
     function handleOpenNotice() {
         const next = !isNoticeOpen;
@@ -510,7 +554,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                         <button
                             type="button"
                             onClick={handleOpenNotice}
-                            aria-label={`通知${badgeCount > 0 ? `（未読${badgeCount}件）` : ""}`}
+                            aria-label={`通知${showBadge ? `（未読${badgeCount}件）` : ""}`}
                             aria-expanded={isNoticeOpen}
                             className={[
                                 "relative flex h-8 w-8 items-center justify-center rounded-full border",
@@ -520,7 +564,7 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                             ].join(" ")}
                         >
                             <BellIcon />
-                            {isSeenReady && badgeCount > 0 && (
+                            {showBadge && (
                                 /*
                                  * ★ 赤にする。
                                  *
