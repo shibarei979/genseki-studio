@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 
 import { coverFor } from '@/components/home/home-work-table'
 import NovelPopup from '@/components/novel-popup'
@@ -52,6 +53,58 @@ export interface ShelfWork {
 }
 
 export default function WorkShelf({ works }: { works: ShelfWork[] }) {
+    /*
+     * 板を、段いっぱいに伸ばす。
+     *
+     * ★ 板は本 1 冊ぶんの幅で敷いている。
+     *
+     *   隣り合う本の板がつながって 1 枚に見える作り。
+     *   1 冊しか無いときは、その 1 冊ぶんしか板が無く、
+     *   短い板が宙に浮いているように見える。
+     *
+     * ★ 足りないぶんを、空の枠で埋める。
+     *
+     *   何冊入るかは画面の幅で決まるので、
+     *   実際に測る。本は置かず、板だけを敷く。
+     *
+     * ★ 測れないあいだは埋めない。
+     *   数を決め打ちにすると、狭い画面で段が増える。
+     */
+    const booksRef = useRef<HTMLDivElement>(null)
+    const [fillers, setFillers] = useState(0)
+
+    useEffect(() => {
+        const box = booksRef.current
+        if (!box) return
+
+        function measure() {
+            const el = booksRef.current
+            if (!el) return
+
+            const style = window.getComputedStyle(el)
+            const columns = style.gridTemplateColumns.split(' ').filter(Boolean).length
+            if (columns <= 0) {
+                setFillers(0)
+                return
+            }
+
+            const rest = works.length % columns
+            setFillers(rest === 0 ? 0 : columns - rest)
+        }
+
+        measure()
+
+        const watcher =
+            typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+        watcher?.observe(box)
+        window.addEventListener('resize', measure)
+
+        return () => {
+            watcher?.disconnect()
+            window.removeEventListener('resize', measure)
+        }
+    }, [works.length])
+
     if (works.length === 0) return null
 
     return (
@@ -66,7 +119,7 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
             *   何冊入るかは画面の幅で変わる。
             *   その判断は CSS に任せ、板は 1 本の背景として敷く。
             */}
-          <div className="ws_books">
+          <div className="ws_books" ref={booksRef}>
             {works.map((work) => {
                 const cover = coverFor(work)
 
@@ -335,6 +388,14 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                     </div>
                 )
             })}
+
+            {/*
+              * 板だけの枠。
+              * 本も題名も置かない。段の残りを板で埋める。
+              */}
+            {Array.from({ length: fillers }, (_, at) => (
+                <div key={`filler-${at}`} className="ws_slot ws_slot--empty" aria-hidden="true" />
+            ))}
           </div>
         </div>
     )
