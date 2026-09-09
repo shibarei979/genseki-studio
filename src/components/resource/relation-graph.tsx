@@ -32,9 +32,35 @@ interface Props {
     onReset?: () => void;
 }
 
-const SIZE = 400;
-const CENTER = SIZE / 2;
-const RADIUS = 142;
+/** 図の広さ。もとの大きさ。広げるときは、これに倍率を掛ける */
+const BASE_SIZE = 400;
+const BASE_RADIUS = 142;
+
+/*
+ * 広さの段。
+ *
+ * ★ 紐を長くしたい、という声から。
+ *
+ *   項目が増えると、丸どうしが近づいて紐が短くなる。
+ *   短い紐が束になると、どれがどこへ繋がっているのか
+ *   目で追えない。
+ *
+ *   図そのものを広げれば、紐は長くなる。
+ */
+const SPREADS = [
+    { label: "狭い", value: 0.85 },
+    { label: "ふつう", value: 1 },
+    { label: "広い", value: 1.4 },
+    { label: "とても広い", value: 1.9 },
+];
+
+/*
+ * 丸どうしの、いちばん近い間。
+ *
+ * ★ 丸の直径に、名前のぶんを足す。
+ *   名前は丸の下に出るので、縦に重なりやすい。
+ */
+const MIN_GAP = 68;
 /*
  * 丸の大きさ。
  * 頭文字が読める大きさにする。小さいと点にしか見えない。
@@ -71,6 +97,14 @@ export default function RelationGraph({
     onReset,
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+    /* 図の広さ。ふつうから始める */
+    const [spreadAt, setSpreadAt] = useState(1);
+
+    const spread = SPREADS[spreadAt].value;
+    const SIZE = Math.round(BASE_SIZE * spread);
+    const CENTER = SIZE / 2;
+    const RADIUS = BASE_RADIUS * spread;
     const [dragging, setDragging] = useState<Dragging | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
@@ -152,6 +186,83 @@ export default function RelationGraph({
         });
     });
 
+    /*
+     * こちらが並べたものだけ、重なりをほどく。
+     * 掴んでいるものと、手で置いたものは動かさない。
+     */
+    const fixedIds = new Set<string>(
+        nodes
+            .filter((node) => layout[node.id] || dragging?.id === node.id)
+            .map((node) => node.id),
+    );
+    untangle(positions, fixedIds);
+
+    /*
+     * 重なりをほどく。
+     *
+     * ★ 近すぎる丸を、少しずつ押し離す。
+     *
+     *   円周に等間隔で置いても、項目が増えれば
+     *   丸と丸、丸と名前が重なる。
+     *   重なると、どれの名前なのか読めない。
+     *
+     * ★ 手で置いたものは動かさない。
+     *   置いた場所には意味がある。
+     *   動かすのは、こちらが並べたものだけ。
+     *
+     * ★ 何度も少しずつ。
+     *   一度に離すと、弾かれて端に貼り付く。
+     */
+    function untangle(
+        place: Map<string, { x: number; y: number }>,
+        fixed: Set<string>,
+    ) {
+        const ids = Array.from(place.keys());
+
+        for (let round = 0; round < 60; round += 1) {
+            let moved = false;
+
+            for (let a = 0; a < ids.length; a += 1) {
+                for (let b = a + 1; b < ids.length; b += 1) {
+                    const one = place.get(ids[a]);
+                    const two = place.get(ids[b]);
+                    if (!one || !two) continue;
+
+                    const dx = two.x - one.x;
+                    const dy = two.y - one.y;
+                    const gap = Math.hypot(dx, dy);
+
+                    const want = MIN_GAP * spread;
+                    if (gap >= want) continue;
+
+                    moved = true;
+
+                    /* 真上に重なっているときは、適当な向きへ逃がす */
+                    const angle = gap < 0.01 ? (a + b) * 1.7 : Math.atan2(dy, dx);
+                    const push = (want - gap) / 2;
+
+                    const stepX = Math.cos(angle) * push;
+                    const stepY = Math.sin(angle) * push;
+
+                    if (!fixed.has(ids[a])) {
+                        place.set(ids[a], clampToBoard({
+                            x: one.x - stepX,
+                            y: one.y - stepY,
+                        }));
+                    }
+                    if (!fixed.has(ids[b])) {
+                        place.set(ids[b], clampToBoard({
+                            x: two.x + stepX,
+                            y: two.y + stepY,
+                        }));
+                    }
+                }
+            }
+
+            if (!moved) break;
+        }
+    }
+
     /** 図の外へ出さない。掴んだまま端を越えると見失う */
     function clampToBoard(point: { x: number; y: number }) {
         const margin = NODE_RADIUS + 4;
@@ -172,6 +283,115 @@ export default function RelationGraph({
         };
     }
 
+    /*
+     * 整理する。
+     *
+     * ★ 繋がりの多いものを内側へ。
+     *
+     *   多くの相手と結ばれているものは、
+     *   図の真ん中にあるほうが紐が短く済む。
+     *   端に置くと、そこから長い紐が何本も伸びる。
+     *
+     * ★ 輪は、入るぶんだけ。
+     *   入りきらないぶんは外の輪へ回す。
+     *   詰め込むと、また重なる。
+     *
+     * ★ 最後にほどく。
+     *   輪に並べただけでは、輪と輪の間で重なる。
+     */
+    function tidy() {
+        if (!onMove) return;
+
+        const degree = new Map<string, number>();
+        for (const relation of relations) {
+            degree.set(relation.from_entry_id, (degree.get(relation.from_entry_id) ?? 0) + 1);
+            degree.set(relation.to_entry_id, (degree.get(relation.to_entry_id) ?? 0) + 1);
+        }
+
+        const sorted = [...nodes].sort(
+            (a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0),
+        );
+
+        const place = new Map<string, { x: number; y: number }>();
+        const want = MIN_GAP * spread;
+
+        let at = 0;
+        let ring = 0;
+
+        while (at < sorted.length) {
+            /*
+             * 内側から数えて ring 番目の輪。
+             * いちばん内側（0）は、真ん中に 1 つだけ置く。
+             */
+            if (ring === 0) {
+                place.set(sorted[at].id, { x: CENTER, y: CENTER });
+                at += 1;
+                ring += 1;
+                continue;
+            }
+
+            const radius = Math.min(
+                CENTER - NODE_RADIUS - 8,
+                (want * ring) / 1.6,
+            );
+
+            /* この輪に入る数。詰めすぎない */
+            const room = Math.max(1, Math.floor((Math.PI * 2 * radius) / want));
+            const count = Math.min(room, sorted.length - at);
+
+            for (let i = 0; i < count; i += 1) {
+                const angle = (Math.PI * 2 * i) / count - Math.PI / 2;
+                place.set(sorted[at + i].id, {
+                    x: CENTER + Math.cos(angle) * radius,
+                    y: CENTER + Math.sin(angle) * radius,
+                });
+            }
+
+            at += count;
+            ring += 1;
+
+            /* 輪を増やしても入らないときは、そこで止める */
+            if (radius >= CENTER - NODE_RADIUS - 8 && count === 0) break;
+        }
+
+        untangle(place, new Set());
+
+        for (const node of nodes) {
+            const point = place.get(node.id);
+            if (point) onMove(node.id, point);
+        }
+    }
+
+    /*
+     * 広さを変える。
+     *
+     * ★ 置いた場所も、一緒に広げる。
+     *
+     *   図だけ広げて丸を置き去りにすると、
+     *   作った形が崩れて左上に固まる。
+     *   真ん中からの距離を、同じ割合で伸ばす。
+     */
+    function changeSpread(nextAt: number) {
+        const before = SPREADS[spreadAt].value;
+        const after = SPREADS[nextAt].value;
+        setSpreadAt(nextAt);
+
+        if (!onMove || before === after) return;
+
+        const ratio = after / before;
+        const beforeCenter = (BASE_SIZE * before) / 2;
+        const afterCenter = (BASE_SIZE * after) / 2;
+
+        for (const node of nodes) {
+            const saved = layout[node.id];
+            if (!saved) continue;
+            onMove(node.id, {
+                x: afterCenter + (saved.x - beforeCenter) * ratio,
+                y: afterCenter + (saved.y - beforeCenter) * ratio,
+            });
+        }
+    }
+
     const active = hoveredId ?? selectedId;
     const labels = Array.from(new Set(relations.map((relation) => relation.label)));
 
@@ -181,9 +401,11 @@ export default function RelationGraph({
                 ref={svgRef}
                 viewBox={`0 0 ${SIZE} ${SIZE}`}
                 className={[
-                    "mx-auto block w-full max-w-[460px]",
+                    /* 広げたぶん、置き場も広げる。図が潰れると意味がない */
+                    'mx-auto block w-full',
                     dragging ? "cursor-grabbing" : "",
                 ].join(" ")}
+                style={{ maxWidth: Math.round(460 * spread) }}
                 role="img"
                 aria-label="関係図"
                 onPointerMove={(event) => {
@@ -387,20 +609,51 @@ export default function RelationGraph({
             </svg>
 
             {onMove && (
-                <div className="mt-1.5 flex items-center justify-between gap-2">
-                    <p className="text-[11px] text-faint">
-                        丸をつまむと動かせます。置いた場所は覚えられます。
-                    </p>
-                    {Object.keys(layout).length > 0 && (
+                <>
+                    {/* 広さ。紐の長さは、図の広さで決まる */}
+                    <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                        <span className="text-[11px] text-faint">図の広さ</span>
+                        {SPREADS.map((one, index) => (
+                            <button
+                                key={one.label}
+                                type="button"
+                                onClick={() => changeSpread(index)}
+                                aria-pressed={index === spreadAt}
+                                className={[
+                                    "rounded-md border px-2.5 py-1 text-[11px]",
+                                    index === spreadAt
+                                        ? "border-forest bg-forest-tint/60 text-forest"
+                                        : "border-line text-muted hover:border-forest-line",
+                                ].join(" ")}
+                            >
+                                {one.label}
+                            </button>
+                        ))}
+
                         <button
                             type="button"
-                            onClick={() => onReset?.()}
-                            className="shrink-0 text-[11px] text-forest hover:underline"
+                            onClick={tidy}
+                            className="rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
                         >
-                            並びを戻す
+                            整理する
                         </button>
-                    )}
-                </div>
+                    </div>
+
+                    <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <p className="text-[11px] text-faint">
+                            丸をつまむと動かせます。置いた場所は覚えられます。
+                        </p>
+                        {Object.keys(layout).length > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => onReset?.()}
+                                className="shrink-0 text-[11px] text-forest hover:underline"
+                            >
+                                並びを戻す
+                            </button>
+                        )}
+                    </div>
+                </>
             )}
 
             {/*
