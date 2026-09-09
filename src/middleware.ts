@@ -30,7 +30,27 @@ export async function middleware(request: NextRequest) {
     const host = request.headers.get("host") ?? "";
     const site = new URL(appConfig.siteUrl);
 
-    if (host && host !== site.host && host.endsWith(".vercel.app")) {
+    /*
+     * ★ 裏方の入口（/api）は送り返さない。
+     *
+     *   定時の見回りは、置き場が配る住所を叩く。
+     *   ここで送り返すと、見回りは付いて来ないので
+     *   中の処理が一度も走らない。
+     *
+     *   実際、予約が 2 日ぶん 15 件溜まった。
+     *   毎分きちんと来ていたのに、毎分 308 で追い返していた。
+     *
+     *   送り返すのは検索のためで、
+     *   /api は検索に載らない。外す。
+     */
+    const isBackstage = request.nextUrl.pathname.startsWith("/api/");
+
+    if (
+        !isBackstage &&
+        host &&
+        host !== site.host &&
+        host.endsWith(".vercel.app")
+    ) {
         const to = new URL(request.nextUrl.pathname + request.nextUrl.search, site);
         return NextResponse.redirect(to, 308);
     }
