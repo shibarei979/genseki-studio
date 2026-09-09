@@ -133,7 +133,7 @@ export default async function MypagePage() {
        * 「この作品に何文字書いたか」であって、
        * 「読者が読める字数」ではない。
        */
-      supabase.from('episodes').select('novel_id, char_count').in('novel_id', novelIds),
+      supabase.from('episodes').select('id, novel_id, char_count').in('novel_id', novelIds),
     ])
 
     likesData.data?.forEach((l:any) => { novelLikeMap[l.novel_id] = (novelLikeMap[l.novel_id]||0)+1 })
@@ -141,6 +141,38 @@ export default async function MypagePage() {
     viewsData.data?.forEach((v:any) => { novelViewMap[v.novel_id] = (novelViewMap[v.novel_id]||0)+1 })
     epsData.data?.forEach((e:any) => { novelEpCountMap[e.novel_id] = (novelEpCountMap[e.novel_id]||0)+1 })
     charData.data?.forEach((e:any) => { charCountMap[e.novel_id] = (charCountMap[e.novel_id]||0) + (e.char_count||0) })
+
+    /*
+     * 話へのいいねも、作品のいいねに足す。
+     *
+     * ★ いいねの表は 2 つある。
+     *
+     *     likes           作品の頁の♡から入る
+     *     episode_likes   本文の下の♡から入る
+     *
+     *   読者は読み終えた所の♡を押す。作品の頁まで
+     *   戻って押す人は多くない。
+     *   likes だけを数えていたので、
+     *   読まれている作品でも 0 と出ていた。
+     *
+     * ★ 同じ人が作品にも各話にも押せる。数は重なる。
+     *   「何回押されたか」であって「何人が押したか」ではない。
+     */
+    const epIdToNovel: Record<string,string> = {}
+    charData.data?.forEach((e:any) => { epIdToNovel[e.id] = e.novel_id })
+
+    const epIds = Object.keys(epIdToNovel)
+    if (epIds.length > 0) {
+      const { data: epLikes } = await supabase
+        .from('episode_likes')
+        .select('episode_id')
+        .in('episode_id', epIds)
+
+      epLikes?.forEach((row:any) => {
+        const novelId = epIdToNovel[row.episode_id]
+        if (novelId) novelLikeMap[novelId] = (novelLikeMap[novelId]||0) + 1
+      })
+    }
   }
 
   /* 受け取ったミッションの印。小さいのでここで読む */
