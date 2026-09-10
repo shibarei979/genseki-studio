@@ -122,33 +122,65 @@
  * ---------------------------------------------------------- */
 .gm_gem {
     display: block;
-    transition: opacity .5s ease;
+    flex-shrink: 0;
 }
 
-.gm_gem.is_big {
+/* 角が伸びるところを、目で追えるようにする */
+.gm_gem_shape {
+    transition: all .45s cubic-bezier(.2, .8, .3, 1);
+}
+
+/* 入り口の大きな石だけ、ゆっくり息をする */
+.gm_open .gm_gem {
     margin: 0 auto;
     animation: gm_gem_breathe 4.5s ease-in-out infinite;
 }
 
 @keyframes gm_gem_breathe {
-    0%, 100% { opacity: .85; transform: scale(1); }
-    50%      { opacity: 1;   transform: scale(1.035); }
+    0%, 100% { opacity: .8;  transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.04); }
+}
+
+/* 海の上では、目盛りの線を明るく */
+.gm.is_sea .gm_gem polygon[stroke="#ded4c1"],
+.gm.is_sea .gm_gem line {
+    stroke: rgba(232, 215, 182, .3);
 }
 
 /* ------------------------------------------------------------
  * 進み具合
  * ---------------------------------------------------------- */
+/*
+ * ★ ここに出ている 6 角形が、そのまま結果になる。
+ *   答えるたびに角が伸びるので、
+ *   何が育っているのかが目で分かる。
+ */
 .gm_progress {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin: 12px 0 26px;
+    gap: 14px;
+    margin: 10px 0 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
 }
 
 .gm_progress_text {
+    flex: 1;
+    min-width: 0;
+}
+
+.gm_progress_cap {
+    font-size: 11px;
+    letter-spacing: .18em;
+    color: var(--amber);
+    font-weight: 700;
+}
+
+.gm_progress_num {
+    margin-top: 4px;
     display: flex;
     align-items: baseline;
-    gap: 4px;
+    gap: 3px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -582,6 +614,45 @@
     border-radius: 2px;
     background: #fff;
     box-shadow: 0 4px 18px rgba(40, 35, 25, .07);
+}
+
+/*
+ * ★ どの角とどの角から生まれた一作かを、書く。
+ *   石の名前と題名だけを並べても、繋がらない。
+ */
+.gm_work_from {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.gm_work_from b {
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 18px;
+    letter-spacing: .12em;
+    color: var(--sea);
+}
+
+.gm_work_from span {
+    color: var(--amber);
+}
+
+.gm_work_from_tail {
+    color: var(--ink-soft) !important;
+    letter-spacing: .06em;
+}
+
+.gm_reveal_small {
+    margin-top: 10px;
+    font-size: 11px;
+    letter-spacing: .08em;
+    color: #7d8f9e;
 }
 
 .gm_work_tag {

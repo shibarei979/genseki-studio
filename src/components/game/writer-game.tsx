@@ -168,7 +168,7 @@ export default function WriterGame() {
 
                 {at >= 0 && at <= last && (
                     <>
-                        <Dots at={at} last={last} />
+                        <Dots at={at} last={last} score={totalScore()} />
 
                         {stageAt(at) === 'coin' ? (
                             <Coins
@@ -230,7 +230,7 @@ function Open({ onStart }: { onStart: () => void }) {
               * ★ まだ濁っている。
               *   10 問かけて澄んでいく。
               */}
-            <Gem grown={0} big />
+            <Gem score={EMPTY} size={120} />
 
             <p className="gm_open_lead">
                 あなたは、まだ誰にも知られていない新人作家。
@@ -254,76 +254,130 @@ function Open({ onStart }: { onStart: () => void }) {
 /**
  * 石。
  *
- * ★ 答えるほど、澄んでいく。
+ * ★ 進み具合の石と、結果の6角形は、同じもの。
  *
- *   進み具合を帯や点で出すより、
- *   自分の石が形になっていくほうが、手が止まらない。
- *   遊びの主役と、進み具合が同じものになる。
+ *   答えるたびに、6つの角が伸びていく。
+ *   その形が、そのまま最後の結果になる。
  *
- * ★ 面の数は変えない。明るさと、内側の光だけ変える。
- *   形が変わると、別の石に見える。
+ *   別々に描いていたときは、石が育っても
+ *   何が育っているのか分からなかった。
+ *   同じものにすれば、育つのが目に見える。
+ *
+ * ★ 角の名前は、遊んでいる間は出さない。
+ *   形だけ見せる。名前まで出すと点取りになる。
  */
-function Gem({ grown, big = false }: { grown: number; big?: boolean }) {
-    /* 0 から 1。10 問で 1 になる */
-    const level = Math.max(0, Math.min(1, grown))
-
-    const size = big ? 108 : 46
+function Gem({
+    score,
+    size = 46,
+    showNames = false,
+}: {
+    score: Score
+    size?: number
+    showNames?: boolean
+}) {
+    const pad = showNames ? size * 0.24 : size * 0.1
     const half = size / 2
-    const r = half - (big ? 8 : 4)
+    const r = half - pad
 
-    /* 六角。上が尖る向き */
-    const points = Array.from({ length: 6 }, (_, index) => {
+    const top = Math.max(...AXIS_ORDER.map((axis) => score[axis]), 1)
+
+    /* まだ何も答えていないときも、形が見えるように下駄をはかせる */
+    const grown = AXIS_ORDER.reduce((sum, axis) => sum + score[axis], 0)
+    const base = grown === 0 ? 0.3 : 0.16
+
+    function point(index: number, ratio: number) {
         const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2
-        return `${(half + Math.cos(angle) * r).toFixed(1)},${(half + Math.sin(angle) * r).toFixed(1)}`
+        return {
+            x: half + Math.cos(angle) * r * ratio,
+            y: half + Math.sin(angle) * r * ratio,
+        }
+    }
+
+    function ring(ratio: number) {
+        return AXIS_ORDER.map((_, index) => {
+            const p = point(index, ratio)
+            return `${p.x.toFixed(1)},${p.y.toFixed(1)}`
+        }).join(' ')
+    }
+
+    const shape = AXIS_ORDER.map((axis, index) => {
+        const p = point(index, base + (score[axis] / top) * (1 - base))
+        return `${p.x.toFixed(1)},${p.y.toFixed(1)}`
     }).join(' ')
 
-    /* 内側の面。少し小さい六角 */
-    const inner = Array.from({ length: 6 }, (_, index) => {
-        const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2
-        return `${(half + Math.cos(angle) * r * 0.52).toFixed(1)},${(half + Math.sin(angle) * r * 0.52).toFixed(1)}`
-    }).join(' ')
+    /* いちばん高い角 */
+    let bestAt = 0
+    AXIS_ORDER.forEach((axis, index) => {
+        if (score[axis] > score[AXIS_ORDER[bestAt]]) bestAt = index
+    })
 
     return (
         <svg
-            className={`gm_gem${big ? ' is_big' : ''}`}
+            className="gm_gem"
             width={size}
             height={size}
             viewBox={`0 0 ${size} ${size}`}
             aria-hidden="true"
         >
-            {/* 外側 */}
-            <polygon
-                points={points}
-                fill={`rgba(200, 148, 74, ${0.08 + level * 0.26})`}
-                stroke="#c8944a"
-                strokeWidth={big ? 1.6 : 1.2}
-                strokeOpacity={0.35 + level * 0.65}
-                strokeLinejoin="round"
-            />
+            <polygon points={ring(1)} fill="none" stroke="#ded4c1" strokeWidth="1" />
+            {showNames && (
+                <polygon points={ring(0.55)} fill="none" stroke="#ebe3d4" strokeWidth="1" />
+            )}
 
-            {/* 面の線 */}
-            {Array.from({ length: 6 }, (_, index) => {
-                const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2
+            {AXIS_ORDER.map((axis, index) => {
+                const p = point(index, 1)
                 return (
                     <line
-                        key={index}
+                        key={axis}
                         x1={half}
                         y1={half}
-                        x2={half + Math.cos(angle) * r}
-                        y2={half + Math.sin(angle) * r}
-                        stroke="#c8944a"
+                        x2={p.x}
+                        y2={p.y}
+                        stroke="#ebe3d4"
                         strokeWidth="1"
-                        strokeOpacity={0.12 + level * 0.4}
                     />
                 )
             })}
 
-            {/* 内側。澄むほど明るい */}
+            {/* その人の形。答えるたびに伸びる */}
             <polygon
-                points={inner}
-                fill={`rgba(240, 220, 180, ${0.05 + level * 0.5})`}
-                stroke="none"
+                className="gm_gem_shape"
+                points={shape}
+                fill="rgba(200, 148, 74, .3)"
+                stroke="#c8944a"
+                strokeWidth={showNames ? 1.8 : 1.5}
+                strokeLinejoin="round"
             />
+
+            {showNames && grown > 0 && (
+                <>
+                    {(() => {
+                        const p = point(
+                            bestAt,
+                            base + (score[AXIS_ORDER[bestAt]] / top) * (1 - base),
+                        )
+                        return <circle cx={p.x} cy={p.y} r="3.6" fill="#c8944a" />
+                    })()}
+
+                    {AXIS_ORDER.map((axis, index) => {
+                        const p = point(index, 1.26)
+                        return (
+                            <text
+                                key={axis}
+                                x={p.x}
+                                y={p.y}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                fontSize="10"
+                                fill={index === bestAt ? '#c8944a' : '#8b8377'}
+                                fontWeight={index === bestAt ? 700 : 400}
+                            >
+                                {AXIS_NAME[axis]}
+                            </text>
+                        )
+                    })}
+                </>
+            )}
         </svg>
     )
 }
@@ -332,19 +386,35 @@ function Gem({ grown, big = false }: { grown: number; big?: boolean }) {
  * 進み具合
  * ============================================================ */
 
-function Dots({ at, last }: { at: number; last: number }) {
+function Dots({
+    at,
+    last,
+    score,
+}: {
+    at: number
+    last: number
+    score: Score
+}) {
     const left = last + 1 - at
 
     return (
         <div className="gm_progress">
-            <Gem grown={at / (last + 1)} />
+            {/*
+              * ★ ここに出ている 6 角形が、そのまま結果になる。
+              *   答えるたびに角が伸びるので、
+              *   何が育っているのかが目で分かる。
+              */}
+            <Gem score={score} size={58} />
 
             <div className="gm_progress_text">
-                <span className="gm_progress_now">{at + 1}</span>
-                <span className="gm_progress_all"> / {last + 1}</span>
-                <span className="gm_progress_left">
-                    {left <= 1 ? '最後の選択' : `あと${left}つ`}
-                </span>
+                <p className="gm_progress_cap">原石を磨いています</p>
+                <p className="gm_progress_num">
+                    <span className="gm_progress_now">{at + 1}</span>
+                    <span className="gm_progress_all"> / {last + 1}</span>
+                    <span className="gm_progress_left">
+                        {left <= 1 ? '最後の選択' : `あと${left}つ`}
+                    </span>
+                </p>
             </div>
         </div>
     )
@@ -612,11 +682,25 @@ function ResultView({
                 </p>
             </div>
 
-            <Hexagon score={score} />
+            <Gem score={score} size={230} showNames />
 
             {/* この石で書ける一作 */}
             <div className="gm_work">
-                <p className="gm_work_tag">この原石で、あなたが書ける一作</p>
+                {/*
+                  * ★ どの角とどの角から生まれた一作かを、書く。
+                  *
+                  *   石の名前と題名だけを並べても、繋がらない。
+                  *   「余韻 × 世界 から」と挟むだけで、
+                  *   なぜこの題名なのかが通る。
+                  */}
+                <p className="gm_work_from">
+                    <b>{v.stone.name}</b>
+                    <span>×</span>
+                    <b>{v.support.name}</b>
+                    <span className="gm_work_from_tail">から生まれる</span>
+                </p>
+
+                <p className="gm_work_tag">あなたが書ける一作</p>
                 <p className="gm_work_title">{v.work.title}</p>
                 <div className="gm_work_note">
                     {v.work.note.map((line) => (
@@ -627,22 +711,41 @@ function ResultView({
 
             {/* 名前を出すところ */}
             <div className="gm_reveal">
-                <p className="gm_reveal_tag">原石を、航海に出す場所</p>
+                <p className="gm_reveal_tag">この一作を、航海に出しませんか</p>
 
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img className="gm_reveal_logo" src="/logo.svg" alt="原石航路" />
 
                 <p className="gm_reveal_lead">
-                    まだ知られていない作品を、
+                    まだ知られていない作品を、投稿したり、
                     <br />
-                    投稿したり、見つけたりできます。
+                    見つけたりできる場所です。
                 </p>
 
+                {/*
+                  * ★ 題名を持たせたまま、書く画面へ送る。
+                  *
+                  *   「登録する」ではなく「この題名で書き始める」。
+                  *   いま書きたくなっている気持ちを、
+                  *   そのまま次の画面へ運ぶ。
+                  *
+                  *   受け取る側が題名を使えなくても、
+                  *   ただの行き先として働く。
+                  */}
                 <div>
-                    <Link href="/post" className="gm_go">
-                        この一作を書きに行く
+                    <Link
+                        href={`/post?title=${encodeURIComponent(
+                            v.work.title.replace(/[『』]/g, ''),
+                        )}`}
+                        className="gm_go"
+                    >
+                        この題名で書き始める
                     </Link>
                 </div>
+
+                <p className="gm_reveal_small">
+                    題名は、あとから変えられます
+                </p>
 
                 <div>
                     <Link
@@ -672,121 +775,6 @@ function ResultView({
                     </button>
                 </div>
             </div>
-        </div>
-    )
-}
-
-/* ============================================================
- * 6角形
- *
- * ★ 頂点が、そのまま 6 つの結果に当たる。
- *
- *   どこが尖っているかを見れば、
- *   なぜその結果になったのかが分かる。
- *   数字は出さない。出すと点取りに戻る。
- *
- * ★ 目盛りは 2 本だけ。
- *   細かく引くと図面になり、余韻が消える。
- *
- * ★ いちばん高い角には、印を置く。
- *   自分の形が、一目で残るように。
- * ============================================================ */
-
-function Hexagon({ score }: { score: Score }) {
-    const SIZE = 210
-    const CENTER = SIZE / 2
-    const R = 66
-
-    const top = Math.max(...AXIS_ORDER.map((axis) => score[axis]), 1)
-
-    /** 何番目の角が、どこに来るか */
-    function point(index: number, ratio: number) {
-        const angle = (Math.PI * 2 * index) / AXIS_ORDER.length - Math.PI / 2
-        return {
-            x: CENTER + Math.cos(angle) * R * ratio,
-            y: CENTER + Math.sin(angle) * R * ratio,
-        }
-    }
-
-    function ring(ratio: number) {
-        return AXIS_ORDER.map((_, index) => {
-            const p = point(index, ratio)
-            return `${p.x.toFixed(1)},${p.y.toFixed(1)}`
-        }).join(' ')
-    }
-
-    const shape = AXIS_ORDER.map((axis, index) => {
-        /* 0 でも点として見えるよう、少しだけ下駄をはかせる */
-        const ratio = 0.14 + (score[axis] / top) * 0.86
-        const p = point(index, ratio)
-        return `${p.x.toFixed(1)},${p.y.toFixed(1)}`
-    }).join(' ')
-
-    /* いちばん高い角 */
-    let bestAt = 0
-    AXIS_ORDER.forEach((axis, index) => {
-        if (score[axis] > score[AXIS_ORDER[bestAt]]) bestAt = index
-    })
-
-    return (
-        <div className="gm_hex">
-            <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} aria-hidden="true">
-                {/* 目盛り。2 本だけ */}
-                <polygon points={ring(1)} fill="none" stroke="#ded4c1" strokeWidth="1" />
-                <polygon points={ring(0.55)} fill="none" stroke="#ebe3d4" strokeWidth="1" />
-
-                {/* 中心から各角への線 */}
-                {AXIS_ORDER.map((axis, index) => {
-                    const p = point(index, 1)
-                    return (
-                        <line
-                            key={axis}
-                            x1={CENTER}
-                            y1={CENTER}
-                            x2={p.x}
-                            y2={p.y}
-                            stroke="#ebe3d4"
-                            strokeWidth="1"
-                        />
-                    )
-                })}
-
-                {/* その人の形 */}
-                <polygon
-                    points={shape}
-                    fill="rgba(200, 148, 74, .26)"
-                    stroke="#c8944a"
-                    strokeWidth="1.8"
-                    strokeLinejoin="round"
-                />
-
-                {/* いちばん高い角に、印 */}
-                {(() => {
-                    const ratio =
-                        0.14 + (score[AXIS_ORDER[bestAt]] / top) * 0.86
-                    const p = point(bestAt, ratio)
-                    return <circle cx={p.x} cy={p.y} r="3.6" fill="#c8944a" />
-                })()}
-
-                {/* 角の名前 */}
-                {AXIS_ORDER.map((axis, index) => {
-                    const p = point(index, 1.3)
-                    return (
-                        <text
-                            key={axis}
-                            x={p.x}
-                            y={p.y}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            fontSize="10"
-                            fill={index === bestAt ? '#c8944a' : '#8b8377'}
-                            fontWeight={index === bestAt ? 700 : 400}
-                        >
-                            {AXIS_NAME[axis]}
-                        </text>
-                    )
-                })}
-            </svg>
         </div>
     )
 }

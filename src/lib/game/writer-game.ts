@@ -671,6 +671,14 @@ export interface Verdict {
     stone: Stone;
     /** ふたつ目。大吉のときだけ */
     second?: Stone;
+    /**
+     * 支えている石。
+     *
+     * ★ 一作は、いちばん高い角と 2 番目の角から決まる。
+     *   どの組から生まれた題名なのかを書かないと、
+     *   石の名前と題名が繋がらない。
+     */
+    support: Stone;
     /** 三つ以上並んでいるか */
     isMany: boolean;
     /** その石で書ける一作 */
@@ -708,6 +716,7 @@ export function judge(score: Score): Verdict {
         return {
             stone: STONES[first],
             second: STONES[second],
+            support: STONES[second],
             isMany: true,
             work: TRIPLE[total % TRIPLE.length],
             genre: "オールジャンル",
@@ -720,6 +729,7 @@ export function judge(score: Score): Verdict {
         return {
             stone: STONES[first],
             second: STONES[second],
+            support: STONES[second],
             isMany: false,
             work: twin ?? WORKS[`${first}-${second}`],
             genre: STONES[first].genre,
@@ -729,6 +739,7 @@ export function judge(score: Score): Verdict {
     /* ひとつ */
     return {
         stone: STONES[first],
+        support: STONES[second],
         isMany: false,
         work: WORKS[`${first}-${second}`],
         genre: STONES[first].genre,
