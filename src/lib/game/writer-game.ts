@@ -182,7 +182,7 @@ export const STAGES: Stage[] = [
             },
             {
                 label: "頭の中で、映像が流れました",
-                core: "謎",
+                core: "発見",
                 add: { world: 3, story: 2 },
             },
         ],
@@ -201,12 +201,12 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "書けなくても、机には座る",
-                core: "再生",
+                core: "再起",
                 add: { heat: 5 },
             },
             {
                 label: "他の人の作品を、片っ端から読む",
-                core: "発見",
+                core: "笑い",
                 add: { text: 2, world: 2 },
             },
             {
@@ -216,7 +216,7 @@ export const STAGES: Stage[] = [
             },
             {
                 label: "この物語のラストを、もう一度思い出す",
-                core: "復讐",
+                core: "夢",
                 add: { story: 4 },
             },
         ],
@@ -238,7 +238,7 @@ export const STAGES: Stage[] = [
             },
             {
                 label: "予定どおり進める",
-                core: "対立",
+                core: "笑い",
                 add: { story: 3, text: 2 },
             },
             {
@@ -248,7 +248,7 @@ export const STAGES: Stage[] = [
             },
             {
                 label: "なぜ人気が出たのか、考えてみる",
-                core: "謎",
+                core: "友情",
                 add: { reach: 3, chara: 1 },
             },
         ],
@@ -267,7 +267,7 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "書き方を変えず、出し続ける",
-                core: "再生",
+                core: "再起",
                 add: { heat: 4, text: 1 },
             },
             {
@@ -277,12 +277,12 @@ export const STAGES: Stage[] = [
             },
             {
                 label: "第1話だけ、もう一度作り直す",
-                core: "復讐",
+                core: "夢",
                 add: { text: 2, story: 2 },
             },
             {
                 label: "この話を面白いと思う人が、どこかにいると信じる",
-                core: "対立",
+                core: "友情",
                 add: { heat: 3, chara: 2 },
             },
         ],
