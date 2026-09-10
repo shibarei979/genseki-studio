@@ -73,12 +73,22 @@
  *   上に光、下に沈み、周りを落とす。
  */
 .gm.is_sea {
+    /*
+     * ★ 真ん中から広がる放射だけにしない。
+     *
+     *   上から下へ均一に暗くなる地は、
+     *   どこの生成物にも出る顔になる。
+     *
+     *   光を左上に寄せ、下half を深く沈める。
+     *   偏りがあると、絵として自然になる。
+     */
     background:
         var(--grain),
-        radial-gradient(100% 62% at 50% -6%, #2c4a68 0%, transparent 58%),
-        radial-gradient(120% 100% at 50% 50%, transparent 40%, rgba(0, 0, 0, .35) 100%),
-        linear-gradient(180deg, var(--sea-mid) 0%, var(--sea) 46%, var(--sea-deep) 100%);
-    background-blend-mode: overlay, normal, normal, normal;
+        radial-gradient(80% 50% at 22% -8%, rgba(70, 112, 150, .5) 0%, transparent 62%),
+        radial-gradient(90% 60% at 78% 8%, rgba(44, 74, 104, .34) 0%, transparent 60%),
+        radial-gradient(140% 110% at 50% 42%, transparent 32%, rgba(0, 0, 0, .42) 100%),
+        linear-gradient(180deg, #203a52 0%, var(--sea) 42%, var(--sea-deep) 100%);
+    background-blend-mode: overlay, normal, normal, normal, normal;
     color: #f3ece0;
 }
 
@@ -113,64 +123,133 @@
 /* ------------------------------------------------------------
  * 入り口
  *
- * ★ 何が出るかを、先に少し見せる。
- *   分からないものは、始めにくい。
+ * ★ 画面の真ん中に置く。
+ *
+ *   上に寄せると、下が丸ごと空いて置き忘れに見える。
+ *   縦に真ん中で受けて、下に水平線を一本引く。
+ *   空白が、海になる。
  * ---------------------------------------------------------- */
 .gm_open {
+    min-height: calc(100vh - 130px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    padding: 56px 0 40px;
+    padding: 20px 0 0;
 }
 
 .gm_open_over {
-    font-size: 11px;
-    letter-spacing: .24em;
+    font-size: 10.5px;
+    letter-spacing: .38em;
+    text-indent: .38em;
     color: #7d8f9e;
 }
 
 .gm_open_ask {
-    margin: 20px 0 18px;
+    margin: 22px 0 20px;
     font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 30px;
+    font-size: 32px;
     font-weight: 700;
-    letter-spacing: .1em;
-    line-height: 1.85;
+    letter-spacing: .12em;
+    text-indent: .12em;
+    line-height: 1.9;
     color: #f6f0e4;
 }
 
 .gm_open_lead {
-    font-size: 13.5px;
-    letter-spacing: .06em;
+    font-size: 13px;
+    letter-spacing: .1em;
     line-height: 2.1;
-    color: #a9bac8;
+    color: #9fb0be;
+}
+
+/*
+ * ★ 箱を並べない。
+ *   角丸の小箱を等間隔に置くと、
+ *   どこの画面でも見たことのある顔になる。
+ */
+.gm_open_rule {
+    width: 46px;
+    height: 1px;
+    margin: 34px 0 22px;
+    background: rgba(200, 148, 74, .55);
 }
 
 .gm_open_sample {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 8px;
-    margin: 30px auto 34px;
-    max-width: 380px;
+    gap: 6px 22px;
+    max-width: 340px;
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 14px;
+    letter-spacing: .1em;
+    line-height: 2;
+    color: #c4d0da;
 }
 
-.gm_open_chip {
-    padding: 7px 13px;
-    border: 1px solid rgba(232, 215, 182, .3);
-    border-radius: 2px;
-    font-size: 12px;
-    letter-spacing: .08em;
-    color: #cdd8e2;
-}
-
-.gm_open_chip i {
+.gm_open_sample i {
     font-style: normal;
+    margin: 0 .35em;
     color: var(--amber);
-    margin: 0 2px;
+    opacity: .85;
 }
 
-.gm_open_chip.is_more {
-    border-style: dashed;
-    color: #7d8f9e;
+.gm_open_more {
+    margin-top: 6px;
+    font-size: 10.5px;
+    letter-spacing: .24em;
+    color: #6f8393;
+}
+
+/*
+ * 押し具。
+ *
+ * ★ 光らせない。
+ *
+ *   影を後ろに散らした塗りの四角は、
+ *   どこの生成物にも出る顔になる。
+ *
+ *   細い枠と字だけにして、
+ *   触れたときに枠の中が満ちる形にする。
+ */
+.gm_start {
+    margin-top: 42px;
+    padding: 17px 54px;
+    border: 1px solid rgba(200, 148, 74, .6);
+    border-radius: 0;
+    background: transparent;
+    color: #e8d7b6;
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: .3em;
+    text-indent: .3em;
+    cursor: pointer;
+    transition: background .28s ease, color .28s ease, border-color .28s ease;
+}
+
+.gm_start:hover,
+.gm_start:focus-visible {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #16100a;
+    outline: none;
+}
+
+/*
+ * 水平線。
+ *
+ * ★ 海の絵を描かない。線を二本引くだけ。
+ *   そこが水面だと分かれば、下の空白が意味を持つ。
+ */
+.gm_horizon {
+    display: block;
+    width: min(400px, 84%);
+    height: 24px;
+    margin-top: 52px;
+    opacity: .9;
 }
 
 /* ------------------------------------------------------------
@@ -335,7 +414,7 @@
         linear-gradient(180deg, #fff 0%, #fffdf7 100%);
     background-blend-mode: multiply, normal;
     border: 1px solid var(--rule-soft);
-    border-radius: 2px;
+    border-radius: 0;
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(40, 35, 25, .04);
     transition:
@@ -759,7 +838,7 @@
     padding: 28px 30px;
     max-width: 560px;
     border: 1px solid var(--rule);
-    border-radius: 2px;
+    border-radius: 0;
     background:
         var(--grain),
         linear-gradient(180deg, #fff 0%, #fffdf6 100%);
@@ -1011,43 +1090,44 @@
 /* ------------------------------------------------------------
  * 押し具
  * ---------------------------------------------------------- */
+/*
+ * 押し具。
+ *
+ * ★ 光らせない。
+ *
+ *   影を後ろに散らした塗りの四角は、
+ *   どこの生成物にも出る顔になる。
+ *   輪郭を締めて、字で押させる。
+ */
 .gm_go {
-    position: relative;
     display: inline-block;
     margin-top: 18px;
-    padding: 16px 42px;
-    border: none;
-    border-radius: 2px;
-    background: linear-gradient(180deg, #d5a35a 0%, var(--amber) 55%, var(--amber-deep) 100%);
-    color: #1e1409;
-    font-size: 14.5px;
+    padding: 17px 46px;
+    border: 1px solid var(--amber);
+    border-radius: 0;
+    background: var(--amber);
+    color: #16100a;
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 15.5px;
     font-weight: 700;
-    letter-spacing: .1em;
+    letter-spacing: .22em;
+    text-indent: .22em;
     cursor: pointer;
     text-decoration: none;
-    transition: transform .18s cubic-bezier(.2, .8, .3, 1), box-shadow .18s ease;
-    box-shadow:
-        0 4px 18px rgba(200, 148, 74, .34),
-        inset 0 1px 0 rgba(255, 255, 255, .34);
+    transition: background .24s ease, color .24s ease;
 }
 
 .gm_go:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        0 9px 26px rgba(200, 148, 74, .42),
-        inset 0 1px 0 rgba(255, 255, 255, .4);
-}
-
-.gm_go:active {
-    transform: translateY(0);
+    background: transparent;
+    color: #e8d7b6;
 }
 
 .gm_sub {
     display: inline-block;
     margin-top: 0;
     padding: 12px 26px;
-    border: 1px solid rgba(232, 215, 182, .34);
-    border-radius: 2px;
+    border: 1px solid rgba(232, 215, 182, .3);
+    border-radius: 0;
     background: rgba(255, 255, 255, .03);
     color: #dcc9a6;
     font-size: 12.5px;

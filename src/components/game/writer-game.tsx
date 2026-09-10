@@ -335,7 +335,7 @@ export default function WriterGame() {
 function Open({ onStart }: { onStart: () => void }) {
     return (
         <div className="gm_open">
-            <p className="gm_open_over">10の選択・1分・登録なし</p>
+            <p className="gm_open_over">10の選択　1分　登録なし</p>
 
             <h1 className="gm_open_ask">
                 無名作家から、
@@ -348,31 +348,50 @@ function Open({ onStart }: { onStart: () => void }) {
             </p>
 
             {/*
-              * ★ 結果の形を、先に見せておく。
+              * ★ 箱を並べない。
               *
-              *   何が出るか分からないものは、始めにくい。
-              *   「異世界 × 冒険」という形だけ見せると、
-              *   自分は何が出るのだろう、と思ってもらえる。
+              *   角丸の小箱を等間隔に置くと、
+              *   どこの画面でも見たことのある顔になる。
               *
-              * ★ 中身は伏せる。組だけ。
+              *   罫を一本引いて、文字だけで並べる。
+              *   組の形が伝わればよく、押せる必要もない。
               */}
-            <div className="gm_open_sample">
-                {[
-                    ['異世界', '冒険'],
-                    ['現代', '喪失'],
-                    ['学園', '発見'],
-                    ['歴史', '対立'],
-                ].map(([a, b]) => (
-                    <span key={a} className="gm_open_chip">
-                        {a} <i>×</i> {b}
-                    </span>
-                ))}
-                <span className="gm_open_chip is_more">ほか96通り</span>
-            </div>
+            <div className="gm_open_rule" />
 
-            <button type="button" className="gm_go" onClick={onStart}>
+            <p className="gm_open_sample">
+                <span>異世界<i>×</i>冒険</span>
+                <span>現代<i>×</i>喪失</span>
+                <span>学園<i>×</i>発見</span>
+                <span>歴史<i>×</i>対立</span>
+            </p>
+
+            <p className="gm_open_more">ほか96通り</p>
+
+            <button type="button" className="gm_start" onClick={onStart}>
                 航海に出る
             </button>
+
+            {/*
+              * 水平線。
+              *
+              * ★ 下が空いたままだと、置き忘れに見える。
+              *   海の絵を描くのではなく、線を一本引く。
+              *   そこが水面だと分かれば、空白が意味を持つ。
+              */}
+            <svg className="gm_horizon" viewBox="0 0 400 24" aria-hidden="true">
+                <path
+                    d="M0 12 Q 25 6, 50 12 T 100 12 T 150 12 T 200 12 T 250 12 T 300 12 T 350 12 T 400 12"
+                    fill="none"
+                    stroke="rgba(200, 148, 74, .34)"
+                    strokeWidth="1"
+                />
+                <path
+                    d="M0 18 Q 30 13, 60 18 T 120 18 T 180 18 T 240 18 T 300 18 T 360 18 T 400 18"
+                    fill="none"
+                    stroke="rgba(200, 148, 74, .16)"
+                    strokeWidth="1"
+                />
+            </svg>
         </div>
     )
 }
