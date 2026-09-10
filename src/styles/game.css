@@ -86,61 +86,89 @@
  * ---------------------------------------------------------- */
 .gm_open {
     text-align: center;
-    padding: 52px 0 28px;
+    padding: 34px 0 30px;
 }
 
 .gm_open_lead {
-    font-size: 14px;
-    line-height: 2.3;
-    color: #cdd8e2;
+    margin-top: 26px;
+    font-size: 13px;
+    letter-spacing: .08em;
+    line-height: 2.2;
+    color: #a9bac8;
 }
 
 .gm_open_ask {
-    margin: 44px 0 40px;
+    margin: 16px 0 26px;
     font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 25px;
+    font-size: 27px;
     font-weight: 700;
-    letter-spacing: .1em;
-    line-height: 1.7;
+    letter-spacing: .12em;
+    line-height: 1.95;
+    color: #f6f0e4;
 }
 
-/*
- * 波の線。
- * 入り口の下に 1 本だけ引く。航路の印。
- */
-.gm_wave {
+.gm_open_note {
+    margin-bottom: 30px;
+    font-size: 11px;
+    letter-spacing: .2em;
+    color: #7d8f9e;
+}
+
+/* ------------------------------------------------------------
+ * 石
+ *
+ * ★ 答えるほど、澄んでいく。
+ *   進み具合と、遊びの主役が、同じものになる。
+ * ---------------------------------------------------------- */
+.gm_gem {
     display: block;
-    margin: 0 auto 40px;
-    opacity: .5;
+    transition: opacity .5s ease;
+}
+
+.gm_gem.is_big {
+    margin: 0 auto;
+    animation: gm_gem_breathe 4.5s ease-in-out infinite;
+}
+
+@keyframes gm_gem_breathe {
+    0%, 100% { opacity: .85; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.035); }
 }
 
 /* ------------------------------------------------------------
  * 進み具合
- *
- * ★ 帯ではなく、点で出す。
- *   あと何回かが、数えられるほうがよい。
  * ---------------------------------------------------------- */
-.gm_dots {
+.gm_progress {
     display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin: 14px 0 30px;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0 26px;
 }
 
-.gm_dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--rule);
+.gm_progress_text {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
 }
 
-.gm_dot.is_done {
-    background: var(--amber);
+.gm_progress_now {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--amber);
+    line-height: 1;
 }
 
-.gm_dot.is_now {
-    background: var(--amber);
-    box-shadow: 0 0 0 3px rgba(200, 148, 74, .22);
+.gm_progress_all {
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.gm_progress_left {
+    margin-left: 8px;
+    font-size: 11px;
+    letter-spacing: .12em;
+    color: var(--ink-soft);
 }
 
 /* ------------------------------------------------------------
@@ -150,8 +178,14 @@
     animation: gm_in .34s ease both;
 }
 
+/*
+ * ★ 横から入る。
+ *
+ *   下から出ると「読み込み中」に見える。
+ *   横から差し替わると、頁がめくれたように見える。
+ */
 @keyframes gm_in {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateX(18px); }
     to   { opacity: 1; transform: none; }
 }
 
@@ -454,17 +488,15 @@
 /* ------------------------------------------------------------
  * 結果
  *
- * ★ 答えは小さく、原石航路は大きく。
+ * ★ 読ませるところは紙、名前を出すところだけ濃く。
  *
- *   条件を読ませてから、名前を出す。
- *   先に名前を出すと、条件が言い訳に見える。
- *
- * ★ 答えは海の上、名前は紙の上。
- *   色が変わるところが、落ちになる。
+ *   前は結果ぜんぶを濃い地に置いていた。
+ *   細い字を並べると読みづらい。
+ *   明暗を逆にして、最後の濃い帯を落ちにする。
  * ---------------------------------------------------------- */
 .gm_result {
     text-align: center;
-    padding-top: 10px;
+    padding-top: 6px;
     animation: gm_rise .5s ease both;
 }
 
@@ -476,101 +508,49 @@
 .gm_answer_tag {
     font-size: 11px;
     letter-spacing: .3em;
-    color: #8ea0b0;
+    color: var(--ink-soft);
 }
 
 /*
  * 石の名前。
  *
- * ★ 遊びの中で、いちばん大きい字にする。
+ * ★ 遊びの中で、いちばん大きい字。
  *   ここを持って帰ってもらう。
- *   「私の原石は余韻」と言えることが、すべて。
  *
- * ★ 漢字二字なので、字間を大きく空ける。
- *   詰めると、ただの単語に見える。
+ * ★ 漢字二字は、詰めると単語に見える。
  *   離すと、石を並べたように見える。
  */
 .gm_stone_name {
-    margin-top: 14px;
+    margin-top: 12px;
     font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 54px;
+    font-size: 58px;
     font-weight: 700;
-    letter-spacing: .3em;
-    /* 字間ぶん、右に寄るのを戻す */
-    text-indent: .3em;
-    line-height: 1.35;
-    color: #f6f0e4;
-    text-shadow: 0 2px 22px rgba(200, 148, 74, .35);
+    letter-spacing: .32em;
+    text-indent: .32em;
+    line-height: 1.3;
+    color: var(--sea);
+    animation: gm_stone_in .8s cubic-bezier(.2, .8, .3, 1) both .1s;
 }
 
-/* ふたつ持ちは、少し小さくして 1 行に収める */
+@keyframes gm_stone_in {
+    from { opacity: 0; letter-spacing: .9em; text-indent: .9em; }
+    to   { opacity: 1; letter-spacing: .32em; text-indent: .32em; }
+}
+
 .gm_stone_name.is_twin {
-    font-size: 38px;
+    font-size: 40px;
     letter-spacing: .2em;
     text-indent: .2em;
 }
 
 .gm_and {
     display: inline-block;
-    margin: 0 .28em;
+    margin: 0 .3em;
     font-size: 18px;
     letter-spacing: 0;
+    text-indent: 0;
     color: var(--amber);
-    vertical-align: .22em;
-}
-
-.gm_rare {
-    margin-top: 12px;
-    color: var(--amber) !important;
-    font-weight: 700;
-}
-
-/* ------------------------------------------------------------
- * この石で書ける一作
- *
- * ★ 石だけだと「へえ」で終わる。
- *   何が書けるかまで言われると、書きたくなる。
- * ---------------------------------------------------------- */
-.gm_work {
-    margin: 30px auto 0;
-    max-width: 420px;
-    padding: 22px 20px;
-    border: 1px solid rgba(232, 215, 182, .28);
-    border-radius: 3px;
-    background: rgba(255, 255, 255, .04);
-}
-
-.gm_work_tag {
-    font-size: 10.5px;
-    letter-spacing: .22em;
-    color: #8ea0b0;
-}
-
-.gm_work_title {
-    margin-top: 10px;
-    font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: .04em;
-    line-height: 1.8;
-    color: #f3ece0;
-}
-
-.gm_work_note {
-    margin-top: 10px;
-}
-
-.gm_work_note p {
-    font-size: 12.5px;
-    line-height: 2;
-    color: #b6c4d1;
-}
-
-.gm_reveal_lead {
-    margin-top: 12px;
-    font-size: 13px;
-    line-height: 2;
-    color: var(--ink-soft);
+    vertical-align: .24em;
 }
 
 .gm_answer_lines {
@@ -579,21 +559,71 @@
 }
 
 .gm_answer_lines p {
-    font-size: 13px;
+    font-size: 13.5px;
     line-height: 2.1;
-    color: #b6c4d1;
+    color: var(--ink);
+}
+
+.gm_rare {
+    margin-top: 12px;
+    color: #9a6f2c !important;
+    font-weight: 700;
+}
+
+/* ------------------------------------------------------------
+ * この石で書ける一作
+ * ---------------------------------------------------------- */
+.gm_work {
+    margin: 30px auto 0;
+    max-width: 420px;
+    padding: 24px 22px;
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--amber);
+    border-radius: 2px;
+    background: #fff;
+    box-shadow: 0 4px 18px rgba(40, 35, 25, .07);
+}
+
+.gm_work_tag {
+    font-size: 10.5px;
+    letter-spacing: .22em;
+    color: var(--ink-soft);
+}
+
+.gm_work_title {
+    margin-top: 12px;
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    line-height: 1.85;
+    color: var(--sea);
+}
+
+.gm_work_note {
+    margin-top: 12px;
+}
+
+.gm_work_note p {
+    font-size: 12.5px;
+    line-height: 2.05;
+    color: var(--ink-soft);
 }
 
 /* ------------------------------------------------------------
  * 名前を出すところ
+ *
+ * ★ ここだけ濃い。落ちになる。
  * ---------------------------------------------------------- */
 .gm_reveal {
-    margin: 34px -22px 0;
-    padding: 40px 26px 44px;
-    background: var(--paper);
-    color: var(--ink);
+    margin: 40px -22px 0;
+    padding: 44px 26px 48px;
+    background:
+        radial-gradient(120% 80% at 50% 0%, #24405a 0%, transparent 62%),
+        linear-gradient(180deg, var(--sea) 0%, var(--sea-deep) 100%);
+    color: #f3ece0;
     text-align: center;
-    animation: gm_reveal_in .7s ease both .25s;
+    animation: gm_reveal_in .8s ease both .3s;
 }
 
 @keyframes gm_reveal_in {
@@ -603,91 +633,23 @@
 
 .gm_reveal_tag {
     font-size: 11.5px;
-    letter-spacing: .24em;
+    letter-spacing: .26em;
     color: var(--amber);
     font-weight: 700;
 }
 
-/*
- * ロゴ。
- *
- * ★ ここだけ大きく出す。
- *   遊びの中でいちばん大きいものが、
- *   このサイトの名前になるようにする。
- */
 .gm_reveal_logo {
     display: block;
-    width: min(280px, 76%);
+    width: min(300px, 78%);
     height: auto;
-    margin: 18px auto 4px;
+    margin: 20px auto 6px;
+    filter: brightness(0) invert(1);
+    opacity: .96;
 }
 
-.gm_why {
-    list-style: none;
-    margin: 22px auto 0;
-    padding: 0;
-    max-width: 340px;
-    text-align: left;
-}
-
-.gm_why li {
-    position: relative;
-    padding: 9px 0 9px 22px;
+.gm_reveal_lead {
+    margin-top: 14px;
     font-size: 13px;
-    line-height: 1.9;
-    border-bottom: 1px solid var(--rule);
-}
-
-.gm_why li:last-child {
-    border-bottom: none;
-}
-
-/* 頭に、小さな琥珀の点 */
-.gm_why li::before {
-    content: "";
-    position: absolute;
-    left: 4px;
-    top: 17px;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--amber);
-}
-
-/* 紙の上に置く押し具は、暗い字にする */
-.gm_reveal .gm_sub {
-    border-color: var(--rule);
-    color: var(--ink-soft);
-}
-
-.gm_reveal .gm_sub:hover {
-    background: rgba(200, 148, 74, .08);
-}
-
-.gm_reveal .gm_quiet {
-    color: var(--ink-soft);
-}
-
-/* ------------------------------------------------------------
- * 誘い
- * ---------------------------------------------------------- */
-.gm_invite {
-    margin-top: 40px;
-    text-align: center;
-}
-
-.gm_invite_ask {
-    font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 19px;
-    font-weight: 700;
-    letter-spacing: .07em;
-    line-height: 1.9;
-    color: #f3ece0;
-}
-
-.gm_invite_sub {
-    margin-top: 12px;
-    font-size: 12.5px;
     line-height: 2.1;
     color: #b6c4d1;
 }
@@ -772,6 +734,8 @@
     .gm_stage,
     .gm_result,
     .gm_reveal,
+    .gm_stone_name,
+    .gm_gem.is_big,
     .gm_hex svg {
         animation: none;
     }

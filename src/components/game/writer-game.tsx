@@ -144,7 +144,15 @@ export default function WriterGame() {
         setAt(-1)
     }
 
-    const isSea = at === -1 || at > last
+    /*
+     * 海の色にするのは、入り口と鑑定中だけ。
+     *
+     * ★ 結果は紙に置く。
+     *   濃い地に細い字を並べると、読みづらい。
+     *   読ませるところは明るく、
+     *   名前を出すところだけ濃くする。
+     */
+    const isSea = at === -1 || at === last + 1
 
     return (
         <div className={`gm${isSea ? ' is_sea' : ''}`}>
@@ -212,25 +220,29 @@ export default function WriterGame() {
 function Open({ onStart }: { onStart: () => void }) {
     return (
         <div className="gm_open">
+            {/*
+              * 磨かれる前の石。
+              *
+              * ★ 遊びの主役を、最初に一度見せておく。
+              *   最後に「あなたの原石は」と言われたとき、
+              *   この石のことだと分かる。
+              *
+              * ★ まだ濁っている。
+              *   10 問かけて澄んでいく。
+              */}
+            <Gem grown={0} big />
+
             <p className="gm_open_lead">
                 あなたは、まだ誰にも知られていない新人作家。
-                <br />
-                これから10個の選択によって、
-                <br />
-                あなたの&ldquo;作家人生&rdquo;が決まります。
             </p>
 
-            <p className="gm_open_ask">あなたは、どこへ辿り着く？</p>
+            <h1 className="gm_open_ask">
+                その手の中に、
+                <br />
+                どんな原石がありますか。
+            </h1>
 
-            {/* 航路の印。線を 1 本だけ */}
-            <svg className="gm_wave" width="120" height="10" viewBox="0 0 120 10" aria-hidden="true">
-                <path
-                    d="M0 5 Q 15 0, 30 5 T 60 5 T 90 5 T 120 5"
-                    fill="none"
-                    stroke="#e8d7b6"
-                    strokeWidth="1.2"
-                />
-            </svg>
+            <p className="gm_open_note">10の選択でわかります・1分</p>
 
             <button type="button" className="gm_go" onClick={onStart}>
                 航海に出る
@@ -239,23 +251,101 @@ function Open({ onStart }: { onStart: () => void }) {
     )
 }
 
+/**
+ * 石。
+ *
+ * ★ 答えるほど、澄んでいく。
+ *
+ *   進み具合を帯や点で出すより、
+ *   自分の石が形になっていくほうが、手が止まらない。
+ *   遊びの主役と、進み具合が同じものになる。
+ *
+ * ★ 面の数は変えない。明るさと、内側の光だけ変える。
+ *   形が変わると、別の石に見える。
+ */
+function Gem({ grown, big = false }: { grown: number; big?: boolean }) {
+    /* 0 から 1。10 問で 1 になる */
+    const level = Math.max(0, Math.min(1, grown))
+
+    const size = big ? 108 : 46
+    const half = size / 2
+    const r = half - (big ? 8 : 4)
+
+    /* 六角。上が尖る向き */
+    const points = Array.from({ length: 6 }, (_, index) => {
+        const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2
+        return `${(half + Math.cos(angle) * r).toFixed(1)},${(half + Math.sin(angle) * r).toFixed(1)}`
+    }).join(' ')
+
+    /* 内側の面。少し小さい六角 */
+    const inner = Array.from({ length: 6 }, (_, index) => {
+        const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2
+        return `${(half + Math.cos(angle) * r * 0.52).toFixed(1)},${(half + Math.sin(angle) * r * 0.52).toFixed(1)}`
+    }).join(' ')
+
+    return (
+        <svg
+            className={`gm_gem${big ? ' is_big' : ''}`}
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
+            aria-hidden="true"
+        >
+            {/* 外側 */}
+            <polygon
+                points={points}
+                fill={`rgba(200, 148, 74, ${0.08 + level * 0.26})`}
+                stroke="#c8944a"
+                strokeWidth={big ? 1.6 : 1.2}
+                strokeOpacity={0.35 + level * 0.65}
+                strokeLinejoin="round"
+            />
+
+            {/* 面の線 */}
+            {Array.from({ length: 6 }, (_, index) => {
+                const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2
+                return (
+                    <line
+                        key={index}
+                        x1={half}
+                        y1={half}
+                        x2={half + Math.cos(angle) * r}
+                        y2={half + Math.sin(angle) * r}
+                        stroke="#c8944a"
+                        strokeWidth="1"
+                        strokeOpacity={0.12 + level * 0.4}
+                    />
+                )
+            })}
+
+            {/* 内側。澄むほど明るい */}
+            <polygon
+                points={inner}
+                fill={`rgba(240, 220, 180, ${0.05 + level * 0.5})`}
+                stroke="none"
+            />
+        </svg>
+    )
+}
+
 /* ============================================================
  * 進み具合
  * ============================================================ */
 
 function Dots({ at, last }: { at: number; last: number }) {
+    const left = last + 1 - at
+
     return (
-        <div className="gm_dots" aria-label={`${at + 1} / ${last + 1}`}>
-            {Array.from({ length: last + 1 }, (_, index) => (
-                <span
-                    key={index}
-                    className={[
-                        'gm_dot',
-                        index < at ? 'is_done' : '',
-                        index === at ? 'is_now' : '',
-                    ].join(' ')}
-                />
-            ))}
+        <div className="gm_progress">
+            <Gem grown={at / (last + 1)} />
+
+            <div className="gm_progress_text">
+                <span className="gm_progress_now">{at + 1}</span>
+                <span className="gm_progress_all"> / {last + 1}</span>
+                <span className="gm_progress_left">
+                    {left <= 1 ? '最後の選択' : `あと${left}つ`}
+                </span>
+            </div>
         </div>
     )
 }
