@@ -78,8 +78,26 @@ export default function TagInput({ tags, onChange, id = "tag-input" }: Props) {
                                 addTag(draft);
                             }
                             if (e.key === "Escape") setIsOpen(false);
-                            // 何も入力していないときの Backspace で末尾を消す
-                            if (e.key === "Backspace" && draft === "" && tags.length > 0) {
+                            /*
+                             * 何も入力していないときの Backspace で、末尾を 1 つ消す。
+                             *
+                             * ★ 押しっぱなしでは消さない（e.repeat）。
+                             *
+                             *   文字を消そうとして押し続けると、
+                             *   欄が空になったあとも連打が続き、
+                             *   タグが後ろから次々に消えていた。
+                             *   打ち込んだタグは後ろに並ぶので、
+                             *   そちらだけが全部消えたように見える。
+                             *
+                             *   消すなら、押し直してもらう。
+                             *   1 回押して 1 つ、が分かりやすい。
+                             */
+                            if (
+                                e.key === "Backspace" &&
+                                !e.repeat &&
+                                draft === "" &&
+                                tags.length > 0
+                            ) {
                                 removeTag(tags[tags.length - 1]);
                             }
                         }}
