@@ -27,6 +27,7 @@ import "@/styles/mobile-header.css";
 /* 携帯の作品ページ */
 import "@/styles/mobile-novel.css";
 import "@/styles/mobile-tab-bar.css";
+import "@/styles/mobile-workspace.css";
 /* 携帯の「作品を探す」 */
 import "@/styles/mobile-search.css";
 /* 携帯の「ランキング」 */

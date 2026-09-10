@@ -116,6 +116,20 @@ export default function ManuscriptSurface({
     const style: CSSProperties = {
         fontSize: `${scaled}px`,
         lineHeight: LINE_HEIGHT_VALUE[settings.line_height],
+        /*
+         * ★ 選ばれた値を、CSS 側にも渡す。
+         *
+         *   携帯の縦書きでは、列が狭いと押した所に
+         *   カーソルが立たない。CSS 側で下限を引き上げるが、
+         *   そのときに「その人が選んだ値」を知らないと、
+         *   大きい字を選んでいる人まで縮めてしまう。
+         *
+         *   max(下限, その人の値) にするために、ここで渡す。
+         */
+        ["--ms-font-size" as string]: `${scaled}px`,
+        ["--ms-line-height" as string]: String(
+            LINE_HEIGHT_VALUE[settings.line_height],
+        ),
         writingMode: isVertical ? "vertical-rl" : "horizontal-tb",
         // upright は指定しない。英数字まで 1 文字ずつ立ってしまい
         // 日本語の縦組みの慣習から外れるため
