@@ -594,11 +594,11 @@ export default async function RankingPage({ searchParams }: Props) {
     { value:'quarterly', label:'四半期' },
     { value:'yearly',    label:'年間' },
     { value:'all',       label:'累計' },
-    { value:'rising',    label:'注目度' },
+    { value:'rising',    label:'急上昇' },
     { value:'discover_rate',  label:'発掘率' },
     { value:'read_rate',      label:'読了率' },
     { value:'bookmark_rate',  label:'保存率' },
-    { value:'newbie_focus',   label:'新人注目' },
+    { value:'newbie_focus',   label:'新人' },
   ]
   /*
    * 並べるジャンル。
@@ -717,8 +717,8 @@ export default async function RankingPage({ searchParams }: Props) {
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,minWidth:60,flexShrink:0,paddingTop:5,lineHeight:1.3}}>特集</div>
               <div className="rk-chips" style={{display:'flex',gap:6,rowGap:10,flexWrap:'wrap',alignItems:'center',flex:1,minWidth:0}}>
                 <Link href={buildUrl(['rising','newbie_focus'].includes(period)?'weekly':period,novelType,serial)} className={pillClass(!['rising','newbie_focus'].includes(period))} style={pill(!['rising','newbie_focus'].includes(period))}>総合</Link>
-                <Link href={buildUrl('rising',novelType,serial)} className={pillClass(period==='rising')} style={pill(period==='rising')}>注目度</Link>
-                <Link href={buildUrl('newbie_focus',novelType,serial)} className={pillClass(period==='newbie_focus')} style={pill(period==='newbie_focus')}>新人注目</Link>
+                <Link href={buildUrl('rising',novelType,serial)} className={pillClass(period==='rising')} style={pill(period==='rising')}>急上昇</Link>
+                <Link href={buildUrl('newbie_focus',novelType,serial)} className={pillClass(period==='newbie_focus')} style={pill(period==='newbie_focus')}>新人</Link>
                 <span style={{width:1,height:18,background:'var(--color-brand-border)',margin:'0 4px',flexShrink:0}}/>
                 {typeOptions.map(o => (
                   <Link key={o.value} href={buildUrl(period,o.value,serial)} className={pillClass(novelType===o.value)} style={pill(novelType===o.value,true)}>
@@ -824,7 +824,17 @@ export default async function RankingPage({ searchParams }: Props) {
                           <span>更新：{fmtDate(n.last_updated)}</span>
                         )}
                         {isGrowthRanking ? (
-                          <span style={{background:'var(--color-brand-light)',color:'var(--color-brand)',fontWeight:700,padding:'1px 8px',borderRadius:10,fontSize:11}}>{n.rateLabel} {n.ratePercent}%</span>
+                          /*
+                            * ★ 0.0% のときは出さない。
+                            *
+                            *   まだ誰も押していない作品に
+                            *   「注目度 0.0%」と貼ると、
+                            *   数が無いことをわざわざ知らせるだけになる。
+                            *   何も貼らないほうがよい。
+                            */
+                          Number(n.ratePercent) > 0 ? (
+                            <span style={{background:'var(--color-brand-light)',color:'var(--color-brand)',fontWeight:700,padding:'1px 8px',borderRadius:10,fontSize:11}}>{n.rateLabel} {n.ratePercent}%</span>
+                          ) : null
                         ) : (
                           !n.hideStats && <span style={{color:'var(--color-text-muted)',fontWeight:600}}>{period==='rising' ? `${scoreLabel} ${fmtNum(n.score)}` : `${fmtNum(n.score)} ${scoreLabel}`}</span>
                         )}

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 const PERIOD_LABEL: Record<string, string> = {
-  daily: '日間', weekly: '週間', monthly: '月間', quarterly: '四半期', yearly: '年間', all: '累計', rising: '注目度',
+  daily: '日間', weekly: '週間', monthly: '月間', quarterly: '四半期', yearly: '年間', all: '累計', rising: '急上昇',
 }
 
 interface Row { id: string; novel_id: string; period: string; rank: number; from_time: string; to_time: string; created_at: string }
