@@ -306,7 +306,7 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
     order_num: (c.sort_order as number) ?? 0,
     /* 部の 2 段を保つ */
     parent_id: (c.parent_id as string | null) ?? null,
-  })).sort((a, b) => a.order_num - b.order_num)
+  }))
 
   const epIds = (episodes || []).map(e => e.id)
   let epLikeCounts: Record<string,number>    = {}
@@ -414,6 +414,51 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
   const totalCount = episodes?.length ?? 0
 
   const allEpisodes = episodes || []
+  /*
+   * 章の並び。
+   *
+   * ★ 中に入っている、いちばん最初の話で決める。
+   *
+   *   前は章を作った順（sort_order）で並べていた。
+   *   序章をあとから作ると、第一章より後ろに出る。
+   *   目次の並びと、読む順が食い違っていた。
+   *
+   *   読む順は話の番号で決まる。目次もそれに従う。
+   *
+   * ★ 話の入っていない章は、作った順のまま。
+   *   比べる相手が無いので、動かしようがない。
+   *   大きい章（部）は、その下の章のいちばん小さい番号で見る。
+   */
+  const firstEpOf: Record<string, number> = {}
+  for (const ep of allEpisodes) {
+    if (!ep.chapter_id) continue
+    const now = firstEpOf[ep.chapter_id]
+    if (now === undefined || ep.ep_number < now) firstEpOf[ep.chapter_id] = ep.ep_number
+  }
+
+  /* 部は、その下の章のいちばん小さい番号を引き継ぐ */
+  for (const ch of chapters) {
+    if (firstEpOf[ch.id] !== undefined) continue
+    const children = chapters.filter((c) => c.parent_id === ch.id)
+    const numbers = children
+      .map((c) => firstEpOf[c.id])
+      .filter((n): n is number => n !== undefined)
+    if (numbers.length > 0) firstEpOf[ch.id] = Math.min(...numbers)
+  }
+
+  chapters.sort((a, b) => {
+    const one = firstEpOf[a.id]
+    const two = firstEpOf[b.id]
+
+    /* 話の入っていない章は、後ろへ回す */
+    if (one === undefined && two === undefined) return a.order_num - b.order_num
+    if (one === undefined) return 1
+    if (two === undefined) return -1
+
+    if (one !== two) return one - two
+    return a.order_num - b.order_num
+  })
+
   const hasChapters = (chapters || []).length > 0
   const unassignedEpisodes = allEpisodes.filter(ep => !ep.chapter_id)
   const chapterGroups = (chapters || []).map(ch => ({
