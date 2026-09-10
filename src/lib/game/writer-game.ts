@@ -38,6 +38,8 @@ export interface Choice {
     note?: string;
     /** その札を選んだときに足す点 */
     add: Partial<Score>;
+    /** 本の背として出すときの色 */
+    cover?: { base: string; ink: string };
 }
 
 export interface Stage {
@@ -52,6 +54,14 @@ export interface Stage {
     choices: Choice[];
     /** 札の見せ方 */
     look?: "note" | "book" | "comment" | "plain";
+    /**
+     * 数字が伸びる見せ場。
+     *
+     * 初投稿とバズの 2 か所。
+     * 数を出しておいてから問うと、
+     * 同じ問いでも「自分に起きたこと」になる。
+     */
+    meter?: { to: number; unit: string; sub?: string };
 }
 
 export const STAGES: Stage[] = [
@@ -91,18 +101,22 @@ export const STAGES: Stage[] = [
             {
                 label: "魔王を倒した俺は、今日から喫茶店を始めます",
                 add: { light: 3, web: 2 },
+                cover: { base: "#f0e2c4", ink: "#6a4a1e" },
             },
             {
                 label: "夏の終わり、君の名前を忘れる",
                 add: { bunge: 2, screen: 2 },
+                cover: { base: "#dfe9ef", ink: "#2d4a5e" },
             },
             {
                 label: "月面都市第七埠頭",
                 add: { screen: 2, comic: 2 },
+                cover: { base: "#23303f", ink: "#dfe6ee" },
             },
             {
                 label: "彼女が死んだ日のことを、僕だけが覚えている",
                 add: { bunge: 3, screen: 1 },
+                cover: { base: "#efe4e6", ink: "#5e3a40" },
             },
         ],
     },
@@ -110,11 +124,8 @@ export const STAGES: Stage[] = [
     {
         tag: "STAGE 3",
         title: "初投稿",
-        lines: [
-            "投稿しました。",
-            "24時間後——",
-            "47 PV　♡ 3　感想 1",
-        ],
+        lines: ["投稿しました。", "24時間後——"],
+        meter: { to: 47, unit: "PV", sub: "♡ 3　感想 1" },
         ask: "さて、どうしますか。",
         choices: [
             {
@@ -210,7 +221,8 @@ export const STAGES: Stage[] = [
     {
         tag: "STAGE 8",
         title: "作品が、突然読まれた",
-        lines: ["47 PV", "824 PV", "12,491 PV", "いま、30分だけ自由に動けます。"],
+        lines: ["朝、起きたら。"],
+        meter: { to: 12491, unit: "PV", sub: "いま、30分だけ自由に動けます" },
         ask: "何をしますか。",
         choices: [
             { label: "次の話を書く", add: { web: 3, light: 1 } },

@@ -1,0 +1,673 @@
+/*
+ * ============================================================
+ * 原石航路
+ * 作家人生ゲーム
+ *
+ * ★ 世界を 3 色で組む。
+ *
+ *     夜の海   #17293a  入り口と結果。閉じた場所
+ *     紙       #fdfaf1  出来事。開いた場所
+ *     琥珀     #c8944a  選ぶもの。手を伸ばす先
+ *
+ *   本文のサイトと同じ色から取っている。
+ *   遊び終わって戻ったときに、地続きに見える。
+ *
+ * ★ 濃い所と明るい所を、交互に出す。
+ *
+ *     入り口（海）→ 10 の出来事（紙）→ 結果（海）
+ *
+ *   ずっと同じ明るさだと、10 問が長く感じる。
+ *   海に出て、日誌を書いて、港に着く。
+ *
+ * ★ 動きは控えめに。
+ *
+ *   紙が 1 枚めくれるくらい。
+ *   派手に動かすと、選ぶことより動きが目に残る。
+ *   動きを減らす設定の人には、出さない。
+ * ============================================================
+ */
+
+.gm {
+    --sea: #17293a;
+    --sea-deep: #0f1d2a;
+    --paper: #fdfaf1;
+    --amber: #c8944a;
+    --amber-soft: #e8d7b6;
+    --ink: #2b2b28;
+    --ink-soft: #6f6a5f;
+    --rule: #ddd3c0;
+
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: inherit;
+}
+
+/* 入り口と結果は、海の色 */
+.gm.is_sea {
+    background:
+        radial-gradient(120% 80% at 50% 0%, #24405a 0%, transparent 60%),
+        linear-gradient(180deg, var(--sea) 0%, var(--sea-deep) 100%);
+    color: #f3ece0;
+}
+
+/* ------------------------------------------------------------
+ * ロゴ
+ * ---------------------------------------------------------- */
+.gm_head {
+    display: flex;
+    justify-content: center;
+    padding: 22px 0 4px;
+}
+
+.gm_head img {
+    height: 46px;
+    width: auto;
+}
+
+/* 海の上では、ロゴを白く抜く */
+.gm.is_sea .gm_head img {
+    filter: brightness(0) invert(1);
+    opacity: .92;
+}
+
+.gm_main {
+    flex: 1;
+    width: 100%;
+    max-width: 540px;
+    margin: 0 auto;
+    padding: 8px 22px 72px;
+}
+
+/* ------------------------------------------------------------
+ * 入り口
+ * ---------------------------------------------------------- */
+.gm_open {
+    text-align: center;
+    padding: 52px 0 28px;
+}
+
+.gm_open_lead {
+    font-size: 14px;
+    line-height: 2.3;
+    color: #cdd8e2;
+}
+
+.gm_open_ask {
+    margin: 44px 0 40px;
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 25px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    line-height: 1.7;
+}
+
+/*
+ * 波の線。
+ * 入り口の下に 1 本だけ引く。航路の印。
+ */
+.gm_wave {
+    display: block;
+    margin: 0 auto 40px;
+    opacity: .5;
+}
+
+/* ------------------------------------------------------------
+ * 進み具合
+ *
+ * ★ 帯ではなく、点で出す。
+ *   あと何回かが、数えられるほうがよい。
+ * ---------------------------------------------------------- */
+.gm_dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 14px 0 30px;
+}
+
+.gm_dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--rule);
+}
+
+.gm_dot.is_done {
+    background: var(--amber);
+}
+
+.gm_dot.is_now {
+    background: var(--amber);
+    box-shadow: 0 0 0 3px rgba(200, 148, 74, .22);
+}
+
+/* ------------------------------------------------------------
+ * 出来事
+ * ---------------------------------------------------------- */
+.gm_stage {
+    animation: gm_in .34s ease both;
+}
+
+@keyframes gm_in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.gm_tag {
+    font-size: 10.5px;
+    letter-spacing: .24em;
+    color: var(--amber);
+    font-weight: 700;
+}
+
+.gm_title {
+    margin-top: 6px;
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 23px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    line-height: 1.5;
+}
+
+/* 題の下の細い罫。左に琥珀、あとは薄く */
+.gm_rule {
+    margin: 14px 0 20px;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        var(--amber) 0 42px,
+        var(--rule) 42px 100%
+    );
+}
+
+.gm_lines p {
+    font-size: 14px;
+    line-height: 2.15;
+    color: var(--ink);
+}
+
+.gm_ask {
+    margin-top: 14px;
+    font-size: 14.5px;
+    font-weight: 700;
+    line-height: 2;
+}
+
+/* ------------------------------------------------------------
+ * 選ぶもの
+ * ---------------------------------------------------------- */
+.gm_choices {
+    display: grid;
+    gap: 11px;
+    margin-top: 22px;
+}
+
+.gm_choice {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    width: 100%;
+    padding: 16px 18px;
+    text-align: left;
+    font-size: 14.5px;
+    line-height: 1.75;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.gm_choice:hover,
+.gm_choice:focus-visible {
+    transform: translateY(-2px);
+    border-color: var(--amber-soft);
+    box-shadow: 0 6px 16px rgba(40, 35, 25, .09);
+    outline: none;
+}
+
+.gm_choice:active {
+    transform: translateY(0);
+}
+
+/* A B C D の印 */
+.gm_mark {
+    flex-shrink: 0;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    border: 1px solid var(--amber-soft);
+    color: var(--amber);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- 机の上のメモ --- */
+.gm_choice.is_note {
+    background: #fffdf3;
+    border-color: #eee4cd;
+    box-shadow: 2px 2px 0 rgba(40, 35, 25, .05);
+}
+
+/* --- 本の背 --- */
+.gm_books {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.gm_book {
+    position: relative;
+    width: 72px;
+    height: 232px;
+    padding: 16px 8px;
+    border: none;
+    border-radius: 2px 4px 4px 2px;
+    cursor: pointer;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 12.5px;
+    line-height: 1.55;
+    letter-spacing: .06em;
+    text-align: left;
+    transition: transform .18s ease, box-shadow .18s ease;
+    box-shadow: 2px 3px 8px rgba(40, 35, 25, .16);
+}
+
+.gm_book:hover,
+.gm_book:focus-visible {
+    transform: translateY(-10px);
+    box-shadow: 3px 8px 18px rgba(40, 35, 25, .22);
+    outline: none;
+}
+
+/* 背表紙の上下に入る、細い箔 */
+.gm_book::before,
+.gm_book::after {
+    content: "";
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    height: 1px;
+    background: currentColor;
+    opacity: .34;
+}
+
+.gm_book::before { top: 10px; }
+.gm_book::after  { bottom: 10px; }
+
+/* 棚板 */
+.gm_shelf {
+    height: 9px;
+    margin: 0 auto;
+    max-width: 340px;
+    border-radius: 0 0 3px 3px;
+    background: linear-gradient(180deg, #d3a468 0%, #b7854b 100%);
+    box-shadow: 0 2px 5px rgba(40, 35, 25, .18);
+}
+
+/* --- 届いた感想 --- */
+.gm_choice.is_comment {
+    border-radius: 14px 14px 14px 4px;
+    background: #f4f7fa;
+    border-color: #dce6ef;
+}
+
+.gm_who {
+    display: block;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    margin-bottom: 3px;
+}
+
+/* ------------------------------------------------------------
+ * 数字が伸びる所（初投稿・バズ）
+ * ---------------------------------------------------------- */
+.gm_meter {
+    margin: 18px 0 4px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.gm_meter_num {
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: var(--ink);
+    line-height: 1.1;
+}
+
+.gm_meter_unit {
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: .2em;
+}
+
+.gm_meter_sub {
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    letter-spacing: .1em;
+}
+
+/* ------------------------------------------------------------
+ * 100 の振り分け
+ * ---------------------------------------------------------- */
+.gm_coin {
+    margin: 22px 0 6px;
+}
+
+.gm_coin_row {
+    margin-bottom: 20px;
+}
+
+.gm_coin_top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    margin-bottom: 7px;
+}
+
+.gm_coin_val {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.gm_coin input[type="range"] {
+    width: 100%;
+    appearance: none;
+    height: 5px;
+    border-radius: 5px;
+    background: var(--rule);
+    outline: none;
+}
+
+.gm_coin input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--amber);
+    border: 3px solid #fff;
+    box-shadow: 0 1px 4px rgba(40, 35, 25, .3);
+    cursor: pointer;
+}
+
+.gm_coin input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--amber);
+    border: 3px solid #fff;
+    cursor: pointer;
+}
+
+.gm_rest {
+    text-align: center;
+    font-size: 12.5px;
+    letter-spacing: .06em;
+    color: var(--ink-soft);
+}
+
+.gm_rest.is_ok {
+    color: var(--amber);
+    font-weight: 700;
+}
+
+/* ------------------------------------------------------------
+ * 鑑定中
+ * ---------------------------------------------------------- */
+.gm_wait {
+    text-align: center;
+    padding: 96px 0;
+}
+
+.gm_stone {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 26px;
+    border-radius: 50%;
+    border: 1px solid rgba(232, 215, 182, .5);
+    border-top-color: var(--amber);
+    animation: gm_spin 1.1s linear infinite;
+}
+
+@keyframes gm_spin {
+    to { transform: rotate(360deg); }
+}
+
+.gm_wait p {
+    font-size: 13px;
+    letter-spacing: .18em;
+    color: #cdd8e2;
+}
+
+/* ------------------------------------------------------------
+ * 結果 — 鑑定書
+ * ---------------------------------------------------------- */
+.gm_card {
+    margin-top: 12px;
+    padding: 34px 26px 30px;
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 4px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .34);
+    text-align: center;
+    animation: gm_rise .5s ease both;
+}
+
+@keyframes gm_rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* 紙の縁に、二重の罫を引く */
+.gm_card_in {
+    border: 1px solid var(--amber-soft);
+    padding: 26px 18px 24px;
+}
+
+.gm_seal {
+    width: 66px;
+    height: 66px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    border: 1px solid var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    background: #fff;
+}
+
+.gm_kind {
+    font-size: 10.5px;
+    letter-spacing: .3em;
+    color: var(--amber);
+    font-weight: 700;
+}
+
+.gm_name {
+    margin-top: 8px;
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    line-height: 1.55;
+}
+
+.gm_card p {
+    font-size: 13.5px;
+    line-height: 2.1;
+    color: var(--ink);
+}
+
+.gm_hint {
+    margin-top: 18px;
+    padding: 13px 15px;
+    background: #fff;
+    border-left: 3px solid var(--amber);
+    font-size: 13px;
+    line-height: 1.95;
+    text-align: left;
+}
+
+/* 軸の内訳。数字は出さない */
+.gm_axes {
+    margin-top: 22px;
+    text-align: left;
+}
+
+.gm_axis {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 9px;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+}
+
+.gm_axis_name {
+    width: 76px;
+    flex-shrink: 0;
+}
+
+.gm_axis_bar {
+    flex: 1;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--rule);
+    overflow: hidden;
+}
+
+.gm_axis_fill {
+    height: 100%;
+    background: var(--amber);
+    border-radius: 4px;
+}
+
+/* ------------------------------------------------------------
+ * 誘い
+ * ---------------------------------------------------------- */
+.gm_invite {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.gm_invite_ask {
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    line-height: 1.9;
+    color: #f3ece0;
+}
+
+.gm_invite_sub {
+    margin-top: 12px;
+    font-size: 12.5px;
+    line-height: 2.1;
+    color: #b6c4d1;
+}
+
+/* ------------------------------------------------------------
+ * 押し具
+ * ---------------------------------------------------------- */
+.gm_go {
+    display: inline-block;
+    margin-top: 22px;
+    padding: 15px 40px;
+    border: none;
+    border-radius: 2px;
+    background: var(--amber);
+    color: #23180a;
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform .16s ease, box-shadow .16s ease;
+    box-shadow: 0 3px 14px rgba(200, 148, 74, .3);
+}
+
+.gm_go:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(200, 148, 74, .4);
+}
+
+.gm_sub {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 12px 28px;
+    border: 1px solid rgba(232, 215, 182, .42);
+    border-radius: 2px;
+    background: transparent;
+    color: #e8d7b6;
+    font-size: 13px;
+    letter-spacing: .06em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .16s ease;
+}
+
+.gm_sub:hover {
+    background: rgba(232, 215, 182, .1);
+}
+
+/* 紙の上に置く控えめな押し具 */
+.gm_quiet {
+    display: inline-block;
+    margin-top: 26px;
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    font-size: 12px;
+    letter-spacing: .06em;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.gm.is_sea .gm_quiet {
+    color: #8ea0b0;
+}
+
+/* ------------------------------------------------------------
+ * 狭い画面
+ * ---------------------------------------------------------- */
+@media (max-width: 420px) {
+    .gm_main { padding: 8px 16px 60px; }
+    .gm_open_ask { font-size: 21px; }
+    .gm_title { font-size: 20px; }
+    .gm_book { width: 60px; height: 200px; font-size: 11.5px; }
+    .gm_meter_num { font-size: 34px; }
+}
+
+/* ------------------------------------------------------------
+ * 動きを減らす設定の人には、動かさない
+ * ---------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .gm_stage,
+    .gm_card {
+        animation: none;
+    }
+
+    .gm_choice:hover,
+    .gm_book:hover,
+    .gm_go:hover {
+        transform: none;
+    }
+
+    .gm_stone {
+        animation: none;
+    }
+}

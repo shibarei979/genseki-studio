@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 
 import WriterGame from "@/components/game/writer-game";
 
+/*
+ * 見た目は、この頁でだけ読み込む。
+ * 全体の layout に足すと、遊ばない人にも配られる。
+ */
+import "@/styles/game.css";
+
 /**
  * ============================================================
  * 原石航路

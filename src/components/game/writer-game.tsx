@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
     AXIS_NAME,
@@ -17,24 +17,25 @@ import {
  * 原石航路
  * 作家人生ゲーム
  *
- * ★ 住所を直に叩いて来る一枚の頁。
+ * ★ 住所を直に叩いて来る、一枚の頁。
  *
  *   案内も、下の帯も出さない。上にロゴだけ。
  *   遊んでいる間は、原石航路の話をしない。
  *   終わってから、初めて誘う。
  *
+ * ★ 濃い所と明るい所を、交互に出す。
+ *
+ *     入り口（海）→ 10 の出来事（紙）→ 鑑定（海）→ 結果（紙の札）
+ *
+ *   ずっと同じ明るさだと、10 問が長い。
+ *   海に出て、日誌を書いて、港に着く。
+ *
  * ★ 点は最後まで見せない。
- *
  *   途中で見えると、答えではなく点を選び始める。
- *
- * ★ 戻れるようにする。
- *
- *   押し間違えたまま最後まで行くのは、後味が悪い。
- *   ただし、点は選び直したぶんだけ計算し直す。
  * ============================================================
  */
 
-/* STAGE 5 は札ではなく、100 を振り分ける。ここに割り込ませる */
+/* 100 を振り分ける出来事を、5 番目に挟む */
 const COIN_AT = 4
 
 const COIN_KINDS: { key: string; label: string; add: Partial<Score> }[] = [
@@ -46,25 +47,33 @@ const COIN_KINDS: { key: string; label: string; add: Partial<Score> }[] = [
 
 const EMPTY: Score = { light: 0, comic: 0, bunge: 0, screen: 0, web: 0 }
 
+const FLAT = { work: 25, art: 25, research: 25, ad: 25 }
+
+const MARKS = ['A', 'B', 'C', 'D']
+
 export default function WriterGame() {
-    /* -1 は入り口。STAGES.length + 1 まで進むと結果 */
+    /* -1 入り口 ／ 0〜last 出来事 ／ last+1 鑑定中 ／ last+2 結果 */
     const [at, setAt] = useState(-1)
 
-    /* 選んだ札。戻ったときに計算し直すため、番号で覚える */
     const [picked, setPicked] = useState<Record<number, number>>({})
+    const [coins, setCoins] = useState<Record<string, number>>({ ...FLAT })
 
-    /* 振り分けた 100 */
-    const [coins, setCoins] = useState<Record<string, number>>({
-        work: 25,
-        art: 25,
-        research: 25,
-        ad: 25,
-    })
-
-    /* 出来事の総数。札の 9 つ ＋ 振り分けの 1 つ */
     const last = STAGES.length
 
-    /** いま出す出来事。COIN_AT の位置だけ、振り分けを挟む */
+    /*
+     * 鑑定の間。
+     *
+     * ★ すぐ出さない。
+     *   10 個選んだ答えが一瞬で出ると、
+     *   決めてもらった気がしない。
+     *   1.6 秒だけ、石を見てもらう。
+     */
+    useEffect(() => {
+        if (at !== last + 1) return
+        const timer = window.setTimeout(() => setAt(last + 2), 1600)
+        return () => window.clearTimeout(timer)
+    }, [at, last])
+
     function stageAt(index: number): Stage | 'coin' | null {
         if (index < 0 || index > last) return null
         if (index === COIN_AT) return 'coin'
@@ -76,8 +85,7 @@ export default function WriterGame() {
         const score: Score = { ...EMPTY }
 
         for (const [key, choiceAt] of Object.entries(picked)) {
-            const index = Number(key)
-            const stage = stageAt(index)
+            const stage = stageAt(Number(key))
             if (!stage || stage === 'coin') continue
 
             const choice = stage.choices[choiceAt]
@@ -89,15 +97,11 @@ export default function WriterGame() {
         }
 
         /*
-         * 振り分けた 100 を点に直す。
-         *
-         * ★ 25 を境にする。多く置いたぶんだけ足す。
-         *   全部を均せば、どの軸にも少しずつ乗る。
-         *   偏らせた人は、その軸だけ強く出る。
+         * 振り分けた 100 を、点に直す。
+         * 25 を境に、多く置いたぶんだけ強く出る。
          */
         for (const kind of COIN_KINDS) {
-            const put = coins[kind.key] ?? 0
-            const weight = (put - 25) / 25
+            const weight = ((coins[kind.key] ?? 0) - 25) / 25
 
             for (const axis of Object.keys(kind.add) as Axis[]) {
                 const value = kind.add[axis] ?? 0
@@ -113,497 +117,433 @@ export default function WriterGame() {
         setAt(at + 1)
     }
 
-    /* ---------- 入り口 ---------- */
-    if (at === -1) {
-        return (
-            <Shell>
-                <div style={{ textAlign: 'center', padding: '40px 0 20px' }}>
-                    <p style={S.lead}>
-                        あなたは、まだ誰にも知られていない新人作家。
-                    </p>
-                    <p style={S.lead}>
-                        これから10個の選択によって、
-                        <br />
-                        あなたの&ldquo;作家人生&rdquo;が決まります。
-                    </p>
-
-                    <p
-                        style={{
-                            ...S.big,
-                            margin: '36px 0 32px',
-                        }}
-                    >
-                        あなたはどこへ辿り着く？
-                    </p>
-
-                    <button type="button" onClick={() => setAt(0)} style={S.primary}>
-                        始める
-                    </button>
-                </div>
-            </Shell>
-        )
+    function restart() {
+        setPicked({})
+        setCoins({ ...FLAT })
+        setAt(-1)
     }
 
-    /* ---------- 結果 ---------- */
-    if (at > last) {
-        const score = totalScore()
-        const result = judge(score)
+    const isSea = at === -1 || at > last
 
-        const shareText = [
-            `私は${result.emoji}「${result.name}」でした。`,
-            '',
-            '無名作家からスタートしたら、あなたは何になる？',
-            '#原石航路作家ゲーム',
-        ].join('\n')
-
-        const shareUrl = 'https://gensekikoro.com/game'
-
-        return (
-            <Shell>
-                <div style={{ textAlign: 'center', paddingTop: 24 }}>
-                    <p style={S.small}>原石を鑑定しました</p>
-
-                    <p style={{ fontSize: 52, lineHeight: 1.2, margin: '10px 0 4px' }}>
-                        {result.emoji}
-                    </p>
-
-                    <h2 style={S.resultName}>{result.name}</h2>
-
-                    <div style={{ margin: '22px auto 0', maxWidth: 460 }}>
-                        {result.lines.map((line) => (
-                            <p key={line} style={S.body}>
-                                {line}
-                            </p>
-                        ))}
-                    </div>
-
-                    {/* 内訳。ここで初めて点を見せる */}
-                    <div style={{ margin: '26px auto 0', maxWidth: 380, textAlign: 'left' }}>
-                        {(Object.keys(AXIS_NAME) as Axis[]).map((axis) => {
-                            const value = score[axis]
-                            const top = Math.max(...(Object.values(score) as number[]), 1)
-                            return (
-                                <div key={axis} style={{ marginBottom: 8 }}>
-                                    <div style={S.axisRow}>
-                                        <span>{AXIS_NAME[axis]}</span>
-                                    </div>
-                                    <div style={S.barBack}>
-                                        <div
-                                            style={{
-                                                ...S.barFill,
-                                                width: `${Math.round((value / top) * 100)}%`,
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-
-                    <p style={{ ...S.body, marginTop: 22, fontWeight: 600 }}>
-                        {result.hint}
-                    </p>
-
-                    {/* ここから、はじめて原石航路の話をする */}
-                    <div style={S.invite}>
-                        <p style={{ ...S.big, marginBottom: 10 }}>
-                            あなたの中にある「原石」、
-                            <br />
-                            眠らせたままにしますか？
-                        </p>
-
-                        <p style={{ ...S.small, marginBottom: 20, lineHeight: 2 }}>
-                            原石航路では、まだ知られていない作品を
-                            <br />
-                            投稿したり、見つけたりできます。
-                        </p>
-
-                        <Link href="/post" style={S.primary}>
-                            自分の物語を航海に出す
-                        </Link>
-
-                        <Link
-                            href={`/search?genre=${encodeURIComponent(result.genre)}`}
-                            style={S.ghost}
-                        >
-                            同じ手ざわりの作品を見てみる
-                        </Link>
-                    </div>
-
-                    <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                            shareText,
-                        )}&url=${encodeURIComponent(shareUrl)}`}
-                        target="_blank"
-                        rel="noopener"
-                        style={{ ...S.ghost, marginTop: 26 }}
-                    >
-                        結果を X に出す
-                    </a>
-
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setPicked({})
-                            setCoins({ work: 25, art: 25, research: 25, ad: 25 })
-                            setAt(-1)
-                        }}
-                        style={S.quiet}
-                    >
-                        もう一度やる
-                    </button>
-                </div>
-            </Shell>
-        )
-    }
-
-    /* ---------- 100 の振り分け ---------- */
-    const stage = stageAt(at)
-
-    if (stage === 'coin') {
-        const put = COIN_KINDS.reduce((sum, one) => sum + (coins[one.key] ?? 0), 0)
-        const rest = 100 - put
-
-        return (
-            <Shell>
-                <Progress at={at} last={last} />
-
-                <p style={S.tag}>STAGE 5</p>
-                <h2 style={S.title}>突然、10万円が手に入った</h2>
-
-                <p style={S.body}>創作のために、自由に振り分けてください。</p>
-
-                <div style={{ margin: '24px 0 8px' }}>
-                    {COIN_KINDS.map((kind) => (
-                        <div key={kind.key} style={{ marginBottom: 18 }}>
-                            <div style={S.axisRow}>
-                                <span>{kind.label}</span>
-                                <span style={{ fontWeight: 700 }}>{coins[kind.key] ?? 0}</span>
-                            </div>
-                            <input
-                                type="range"
-                                min={0}
-                                max={100}
-                                step={5}
-                                value={coins[kind.key] ?? 0}
-                                onChange={(e) =>
-                                    setCoins((now) => ({
-                                        ...now,
-                                        [kind.key]: Number(e.target.value),
-                                    }))
-                                }
-                                style={{ width: '100%' }}
-                            />
-                        </div>
-                    ))}
-                </div>
-
-                <p
-                    style={{
-                        ...S.small,
-                        textAlign: 'center',
-                        color: rest === 0 ? 'var(--color-forest)' : 'var(--color-text-faint)',
-                    }}
-                >
-                    {rest === 0
-                        ? 'ちょうど100です'
-                        : rest > 0
-                          ? `あと ${rest} 残っています`
-                          : `${-rest} 多すぎます`}
-                </p>
-
-                <div style={{ textAlign: 'center', marginTop: 18 }}>
-                    <button
-                        type="button"
-                        onClick={() => setAt(at + 1)}
-                        disabled={rest !== 0}
-                        style={{
-                            ...S.primary,
-                            opacity: rest === 0 ? 1 : 0.4,
-                            cursor: rest === 0 ? 'pointer' : 'default',
-                        }}
-                    >
-                        決めた
-                    </button>
-                </div>
-
-                <Back at={at} setAt={setAt} />
-            </Shell>
-        )
-    }
-
-    if (!stage) return null
-
-    /* ---------- ふつうの出来事 ---------- */
     return (
-        <Shell>
-            <Progress at={at} last={last} />
+        <div className={`gm${isSea ? ' is_sea' : ''}`}>
+            <header className="gm_head">
+                <Link href="/" aria-label="原石航路">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/logo.svg" alt="原石航路" />
+                </Link>
+            </header>
 
-            <p style={S.tag}>{stage.tag}</p>
-            <h2 style={S.title}>{stage.title}</h2>
+            <main className="gm_main">
+                {at === -1 && <Open onStart={() => setAt(0)} />}
 
-            <div style={{ margin: '14px 0 22px' }}>
-                {stage.lines.map((line) => (
-                    <p key={line} style={S.body}>
-                        {line}
-                    </p>
-                ))}
-                {stage.ask && (
-                    <p style={{ ...S.body, fontWeight: 700, marginTop: 12 }}>{stage.ask}</p>
-                )}
-            </div>
+                {at >= 0 && at <= last && (
+                    <>
+                        <Dots at={at} last={last} />
 
-            <div style={{ display: 'grid', gap: 10 }}>
-                {stage.choices.map((choice, index) => (
-                    <button
-                        key={choice.label}
-                        type="button"
-                        onClick={() => choose(index)}
-                        style={{
-                            ...S.card,
-                            ...(stage.look === 'book' ? S.cardBook : null),
-                            ...(stage.look === 'comment' ? S.cardComment : null),
-                            ...(stage.look === 'note' ? S.cardNote : null),
-                        }}
-                    >
-                        {stage.look === 'comment' && (
-                            <span style={S.cardHead}>読者さんより</span>
+                        {stageAt(at) === 'coin' ? (
+                            <Coins
+                                coins={coins}
+                                setCoins={setCoins}
+                                onNext={() => setAt(at + 1)}
+                            />
+                        ) : (
+                            <StageView
+                                key={at}
+                                stage={stageAt(at) as Stage}
+                                onChoose={choose}
+                            />
                         )}
-                        {choice.label}
-                    </button>
-                ))}
-            </div>
 
-            <Back at={at} setAt={setAt} />
-        </Shell>
+                        {at > 0 && (
+                            <div style={{ textAlign: 'center' }}>
+                                <button
+                                    type="button"
+                                    className="gm_quiet"
+                                    onClick={() => setAt(at - 1)}
+                                >
+                                    ひとつ戻る
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {at === last + 1 && (
+                    <div className="gm_wait">
+                        <div className="gm_stone" />
+                        <p>原石を鑑定しています</p>
+                    </div>
+                )}
+
+                {at === last + 2 && (
+                    <ResultView score={totalScore()} onRestart={restart} />
+                )}
+            </main>
+        </div>
     )
 }
 
 /* ============================================================
- * 器と、小さな部品
+ * 入り口
  * ============================================================ */
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Open({ onStart }: { onStart: () => void }) {
     return (
-        <div style={S.page}>
-            {/*
-              * ★ ロゴだけ。案内は置かない。
-              *   遊んでいる最中に、サイトの話をしない。
-              */}
-            <header style={S.header}>
-                <Link href="/" aria-label="原石航路">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/logo.svg" alt="原石航路" style={{ height: 44, width: 'auto' }} />
-                </Link>
-            </header>
+        <div className="gm_open">
+            <p className="gm_open_lead">
+                あなたは、まだ誰にも知られていない新人作家。
+                <br />
+                これから10個の選択によって、
+                <br />
+                あなたの&ldquo;作家人生&rdquo;が決まります。
+            </p>
 
-            <main style={S.main}>{children}</main>
-        </div>
-    )
-}
+            <p className="gm_open_ask">あなたはどこへ辿り着く？</p>
 
-function Progress({ at, last }: { at: number; last: number }) {
-    return (
-        <div style={S.progressBack}>
-            <div
-                style={{
-                    ...S.progressFill,
-                    width: `${Math.round((at / (last + 1)) * 100)}%`,
-                }}
-            />
-        </div>
-    )
-}
+            {/* 航路の印。線を 1 本だけ */}
+            <svg className="gm_wave" width="120" height="10" viewBox="0 0 120 10" aria-hidden="true">
+                <path
+                    d="M0 5 Q 15 0, 30 5 T 60 5 T 90 5 T 120 5"
+                    fill="none"
+                    stroke="#e8d7b6"
+                    strokeWidth="1.2"
+                />
+            </svg>
 
-function Back({ at, setAt }: { at: number; setAt: (n: number) => void }) {
-    if (at <= 0) return null
-    return (
-        <div style={{ textAlign: 'center' }}>
-            <button type="button" onClick={() => setAt(at - 1)} style={S.quiet}>
-                ひとつ戻る
+            <button type="button" className="gm_go" onClick={onStart}>
+                航海に出る
             </button>
         </div>
     )
 }
 
 /* ============================================================
- * 見た目
- *
- * ★ サイトの色をそのまま使う。
- *   別の作りに見せると、戻ってきたときに繋がらない。
+ * 進み具合
  * ============================================================ */
 
-const S: Record<string, React.CSSProperties> = {
-    page: {
-        minHeight: '100vh',
-        background: 'var(--color-bg)',
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    header: {
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '18px 0 6px',
-    },
-    main: {
-        width: '100%',
-        maxWidth: 560,
-        margin: '0 auto',
-        padding: '10px 20px 60px',
-        flex: 1,
-    },
+function Dots({ at, last }: { at: number; last: number }) {
+    return (
+        <div className="gm_dots" aria-label={`${at + 1} / ${last + 1}`}>
+            {Array.from({ length: last + 1 }, (_, index) => (
+                <span
+                    key={index}
+                    className={[
+                        'gm_dot',
+                        index < at ? 'is_done' : '',
+                        index === at ? 'is_now' : '',
+                    ].join(' ')}
+                />
+            ))}
+        </div>
+    )
+}
 
-    progressBack: {
-        height: 3,
-        background: 'var(--color-brand-light)',
-        borderRadius: 3,
-        margin: '10px 0 26px',
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        background: 'var(--color-brand)',
-        transition: 'width .3s ease',
-    },
+/* ============================================================
+ * 出来事
+ * ============================================================ */
 
-    tag: {
-        fontSize: 11,
-        letterSpacing: '.16em',
-        color: 'var(--color-text-faint)',
-        marginBottom: 4,
-    },
-    title: {
-        fontSize: 21,
-        fontWeight: 700,
-        letterSpacing: '.04em',
-        color: 'var(--color-text)',
-        fontFamily: 'garamond, "Hiragino Mincho ProN", serif',
-    },
+function StageView({
+    stage,
+    onChoose,
+}: {
+    stage: Stage
+    onChoose: (index: number) => void
+}) {
+    return (
+        <div className="gm_stage">
+            <p className="gm_tag">{stage.tag}</p>
+            <h2 className="gm_title">{stage.title}</h2>
+            <div className="gm_rule" />
 
-    lead: {
-        fontSize: 14.5,
-        lineHeight: 2.1,
-        color: 'var(--color-text-muted)',
-    },
-    body: {
-        fontSize: 14,
-        lineHeight: 2,
-        color: 'var(--color-text)',
-    },
-    small: {
-        fontSize: 12,
-        color: 'var(--color-text-muted)',
-        lineHeight: 1.9,
-    },
-    big: {
-        fontSize: 19,
-        fontWeight: 700,
-        letterSpacing: '.05em',
-        color: 'var(--color-text)',
-        lineHeight: 1.8,
-        fontFamily: 'garamond, "Hiragino Mincho ProN", serif',
-    },
+            <div className="gm_lines">
+                {stage.lines.map((line) => (
+                    <p key={line}>{line}</p>
+                ))}
+            </div>
 
-    card: {
-        display: 'block',
-        width: '100%',
-        textAlign: 'left',
-        padding: '15px 17px',
-        borderRadius: 12,
-        border: '1px solid var(--color-brand-border)',
-        background: 'var(--color-bg-card)',
-        color: 'var(--color-text)',
-        fontSize: 14,
-        lineHeight: 1.8,
-        cursor: 'pointer',
-    },
-    cardNote: {
-        /* 机の上のメモ。少し傾ける */
-        borderRadius: 4,
-        background: '#fffdf4',
-        boxShadow: '2px 2px 0 rgba(40,35,25,.06)',
-    },
-    cardBook: {
-        /* 本の背。左に色の帯 */
-        borderLeft: '6px solid var(--color-brand)',
-        borderRadius: '4px 12px 12px 4px',
-    },
-    cardComment: {
-        /* 届いた感想。吹き出しに寄せる */
-        borderRadius: '12px 12px 12px 3px',
-    },
-    cardHead: {
-        display: 'block',
-        fontSize: 10.5,
-        color: 'var(--color-text-faint)',
-        marginBottom: 3,
-    },
+            {stage.meter && <Meter to={stage.meter.to} unit={stage.meter.unit} sub={stage.meter.sub} />}
 
-    primary: {
-        display: 'inline-block',
-        padding: '13px 34px',
-        borderRadius: 24,
-        border: 'none',
-        background: 'var(--color-brand)',
-        color: 'var(--color-text-inverse)',
-        fontSize: 14.5,
-        fontWeight: 700,
-        cursor: 'pointer',
-        textDecoration: 'none',
-    },
-    ghost: {
-        display: 'inline-block',
-        marginTop: 12,
-        padding: '11px 26px',
-        borderRadius: 24,
-        border: '1px solid var(--color-brand-border)',
-        background: 'transparent',
-        color: 'var(--color-brand)',
-        fontSize: 13,
-        fontWeight: 600,
-        cursor: 'pointer',
-        textDecoration: 'none',
-    },
-    quiet: {
-        display: 'inline-block',
-        marginTop: 22,
-        border: 'none',
-        background: 'none',
-        color: 'var(--color-text-faint)',
-        fontSize: 12,
-        cursor: 'pointer',
-        textDecoration: 'underline',
-    },
+            {stage.ask && <p className="gm_ask">{stage.ask}</p>}
 
-    resultName: {
-        fontSize: 22,
-        fontWeight: 700,
-        letterSpacing: '.04em',
-        color: 'var(--color-text)',
-        fontFamily: 'garamond, "Hiragino Mincho ProN", serif',
-    },
+            {stage.look === 'book' ? (
+                <>
+                    <div className="gm_books">
+                        {stage.choices.map((choice, index) => (
+                            <button
+                                key={choice.label}
+                                type="button"
+                                className="gm_book"
+                                onClick={() => onChoose(index)}
+                                style={{
+                                    background: choice.cover?.base ?? '#f2ede2',
+                                    color: choice.cover?.ink ?? '#4a4238',
+                                }}
+                            >
+                                {choice.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="gm_shelf" />
+                </>
+            ) : (
+                <div className="gm_choices">
+                    {stage.choices.map((choice, index) => (
+                        <button
+                            key={choice.label}
+                            type="button"
+                            onClick={() => onChoose(index)}
+                            className={[
+                                'gm_choice',
+                                stage.look === 'note' ? 'is_note' : '',
+                                stage.look === 'comment' ? 'is_comment' : '',
+                            ].join(' ')}
+                        >
+                            <span className="gm_mark" aria-hidden="true">
+                                {MARKS[index]}
+                            </span>
+                            <span>
+                                {stage.look === 'comment' && (
+                                    <span className="gm_who">読者さんより</span>
+                                )}
+                                {choice.label}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
 
-    axisRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontSize: 12,
-        color: 'var(--color-text-muted)',
-        marginBottom: 4,
-    },
-    barBack: {
-        height: 6,
-        borderRadius: 6,
-        background: 'var(--color-brand-light)',
-        overflow: 'hidden',
-    },
-    barFill: {
-        height: '100%',
-        background: 'var(--color-brand)',
-    },
+/**
+ * 数字が伸びる所。
+ *
+ * ★ 出しておいてから問う。
+ *   同じ問いでも「自分に起きたこと」になる。
+ *
+ * ★ 動きを減らす設定の人には、最後の数だけ出す。
+ */
+function Meter({ to, unit, sub }: { to: number; unit: string; sub?: string }) {
+    const [now, setNow] = useState(0)
+    const raf = useRef<number | null>(null)
 
-    invite: {
-        marginTop: 40,
-        paddingTop: 30,
-        borderTop: '1px solid var(--color-brand-border)',
-    },
+    useEffect(() => {
+        const quiet =
+            typeof window !== 'undefined' &&
+            window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+        if (quiet) {
+            setNow(to)
+            return
+        }
+
+        const started = Date.now()
+        const span = 900
+
+        function tick() {
+            const ratio = Math.min(1, (Date.now() - started) / span)
+            /* 終わりに近づくほど、ゆっくり止まる */
+            const eased = 1 - Math.pow(1 - ratio, 3)
+            setNow(Math.round(to * eased))
+            if (ratio < 1) raf.current = requestAnimationFrame(tick)
+        }
+
+        raf.current = requestAnimationFrame(tick)
+        return () => {
+            if (raf.current) cancelAnimationFrame(raf.current)
+        }
+    }, [to])
+
+    return (
+        <div className="gm_meter">
+            <div className="gm_meter_num">{now.toLocaleString()}</div>
+            <div className="gm_meter_unit">{unit}</div>
+            {sub && <div className="gm_meter_sub">{sub}</div>}
+        </div>
+    )
+}
+
+/* ============================================================
+ * 100 の振り分け
+ * ============================================================ */
+
+function Coins({
+    coins,
+    setCoins,
+    onNext,
+}: {
+    coins: Record<string, number>
+    setCoins: (next: Record<string, number>) => void
+    onNext: () => void
+}) {
+    const put = COIN_KINDS.reduce((sum, one) => sum + (coins[one.key] ?? 0), 0)
+    const rest = 100 - put
+
+    return (
+        <div className="gm_stage">
+            <p className="gm_tag">STAGE 5</p>
+            <h2 className="gm_title">突然、10万円が手に入った</h2>
+            <div className="gm_rule" />
+
+            <div className="gm_lines">
+                <p>創作のために、自由に振り分けてください。</p>
+            </div>
+
+            <div className="gm_coin">
+                {COIN_KINDS.map((kind) => (
+                    <div key={kind.key} className="gm_coin_row">
+                        <div className="gm_coin_top">
+                            <span>{kind.label}</span>
+                            <span className="gm_coin_val">{coins[kind.key] ?? 0}</span>
+                        </div>
+                        <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={5}
+                            value={coins[kind.key] ?? 0}
+                            aria-label={kind.label}
+                            onChange={(e) =>
+                                setCoins({ ...coins, [kind.key]: Number(e.target.value) })
+                            }
+                        />
+                    </div>
+                ))}
+            </div>
+
+            <p className={`gm_rest${rest === 0 ? ' is_ok' : ''}`}>
+                {rest === 0
+                    ? 'ちょうど100です'
+                    : rest > 0
+                      ? `あと ${rest}`
+                      : `${-rest} 多すぎます`}
+            </p>
+
+            <div style={{ textAlign: 'center' }}>
+                <button
+                    type="button"
+                    className="gm_go"
+                    onClick={onNext}
+                    disabled={rest !== 0}
+                    style={{
+                        opacity: rest === 0 ? 1 : 0.35,
+                        cursor: rest === 0 ? 'pointer' : 'default',
+                        boxShadow: rest === 0 ? undefined : 'none',
+                    }}
+                >
+                    これでいく
+                </button>
+            </div>
+        </div>
+    )
+}
+
+/* ============================================================
+ * 結果
+ * ============================================================ */
+
+function ResultView({
+    score,
+    onRestart,
+}: {
+    score: Score
+    onRestart: () => void
+}) {
+    const result = judge(score)
+    const top = Math.max(...(Object.values(score) as number[]), 1)
+
+    const shareText = [
+        `私は${result.emoji}「${result.name}」でした。`,
+        '',
+        '無名作家からスタートしたら、あなたは何になる？',
+        '#原石航路作家ゲーム',
+    ].join('\n')
+
+    return (
+        <div>
+            {/* 鑑定書 */}
+            <div className="gm_card">
+                <div className="gm_card_in">
+                    <div className="gm_seal">{result.emoji}</div>
+
+                    <p className="gm_kind">鑑定結果</p>
+                    <h2 className="gm_name">{result.name}</h2>
+
+                    <div style={{ marginTop: 18 }}>
+                        {result.lines.map((line) => (
+                            <p key={line}>{line}</p>
+                        ))}
+                    </div>
+
+                    <div className="gm_axes">
+                        {(Object.keys(AXIS_NAME) as Axis[]).map((axis) => (
+                            <div key={axis} className="gm_axis">
+                                <span className="gm_axis_name">{AXIS_NAME[axis]}</span>
+                                <span className="gm_axis_bar">
+                                    <span
+                                        className="gm_axis_fill"
+                                        style={{
+                                            width: `${Math.round((score[axis] / top) * 100)}%`,
+                                        }}
+                                    />
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <p className="gm_hint">{result.hint}</p>
+                </div>
+            </div>
+
+            {/* ここから、はじめて原石航路の話をする */}
+            <div className="gm_invite">
+                <p className="gm_invite_ask">
+                    あなたの中にある「原石」、
+                    <br />
+                    眠らせたままにしますか？
+                </p>
+
+                <p className="gm_invite_sub">
+                    原石航路では、まだ知られていない作品を
+                    <br />
+                    投稿したり、見つけたりできます。
+                </p>
+
+                <div>
+                    <Link href="/post" className="gm_go">
+                        自分の物語を航海に出す
+                    </Link>
+                </div>
+
+                <div>
+                    <Link
+                        href={`/search?genre=${encodeURIComponent(result.genre)}`}
+                        className="gm_sub"
+                    >
+                        同じ手ざわりの作品を見てみる
+                    </Link>
+                </div>
+
+                <div>
+                    <a
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                            shareText,
+                        )}&url=${encodeURIComponent('https://gensekikoro.com/game')}`}
+                        target="_blank"
+                        rel="noopener"
+                        className="gm_sub"
+                    >
+                        結果を X に出す
+                    </a>
+                </div>
+
+                <div>
+                    <button type="button" className="gm_quiet" onClick={onRestart}>
+                        もう一度やる
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
 }
