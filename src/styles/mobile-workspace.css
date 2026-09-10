@@ -55,7 +55,44 @@
     }
 }
 
+/*
+ * ============================================================
+ * 字の大きさを、端末に勝手に変えさせない
+ *
+ * ★ iPhone には、読みやすいようにと字を膨らませる仕組みがある。
+ *
+ *   描かれた大きさと、指定した大きさが食い違うと、
+ *   押した位置から字を割り出す計算がずれる。
+ *   列の先頭では小さく、下へ行くほど積もる。
+ *
+ * ★ 書く画面では、指定どおりに描かせる。
+ *   読む画面には掛けない。あちらは膨らんでも困らない。
+ * ============================================================
+ */
+.manuscript-surface,
+.manuscript-surface textarea {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 @media (max-width: 1023px) {
+    /*
+     * 上下の余白を薄くする。
+     *
+     * ★ 縦書きでは、上下の余白が列に沿った向きになる。
+     *
+     *   いまは 32px。16px の字なら、ちょうど 2 文字ぶん。
+     *   当たり判定がこの余白を数え落とすと、
+     *   そのぶん頭からずれる。「数文字ぶん」と合う。
+     *
+     *   余白は外側の枠で取れるので、
+     *   入力欄そのものからは削る。
+     */
+    .manuscript-surface textarea.manuscript-vertical {
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+    }
+
     /*
      * 列の間。
      *
@@ -111,13 +148,33 @@
     }
 
     /*
-     * カーソルを太く。
+     * カーソルを、見えるようにする。
      *
-     * ★ 立った場所が見えないと、
-     *   立っていないのか、見えていないのかが分からない。
-     *   縦書きでは横一本の線になるので、細いと消える。
+     * ★ 縦書きのカーソルは横一本の線で、太さは変えられない。
+     *   色だけで、できるだけ目立たせる。
+     *
+     * ★ 紙の色によって、見える色が違う。
+     *   暗い紙では青緑が沈むので、明るいほうへ寄せる。
      */
     .manuscript-surface .manuscript-vertical {
-        caret-color: var(--color-forest);
+        caret-color: #0f8f7d;
+    }
+
+    [data-manuscript-theme="night"] .manuscript-surface .manuscript-vertical,
+    [data-manuscript-theme="black"] .manuscript-surface .manuscript-vertical {
+        caret-color: #7fe8d8;
+    }
+
+    /*
+     * 書いている欄が、いまどこかを示す。
+     *
+     * ★ カーソルそのものは細くて見えない。
+     *   欄の縁を光らせて、そこに書き込めることを伝える。
+     *
+     * ★ 触れている間だけ。ふだんは静かにしておく。
+     */
+    .manuscript-surface textarea:focus {
+        outline: none;
+        box-shadow: inset 0 0 0 1px var(--color-forest-line);
     }
 }
