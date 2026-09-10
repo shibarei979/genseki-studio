@@ -26,24 +26,62 @@ import "@/styles/game.css";
  *   遊びの入り口なので、原石航路の説明は書かない。
  * ============================================================
  */
-export const metadata: Metadata = {
-    title: "無名作家から、はじまる10の選択",
-    description:
-        "10の選択で、あなたが本当に書ける一作が決まります。異世界 × 冒険、現代 × 喪失、学園 × 発見——全100通り。1分・登録なし。",
-    openGraph: {
-        title: "無名作家から、はじまる10の選択",
-        description:
-            "最後に、あなたが本当に書ける一作が出ます。全100通り。1分・登録なし。",
-        url: "https://gensekikoro.com/game",
-        siteName: "原石航路",
-        type: "website",
-    },
-    twitter: {
-        card: "summary_large_image",
-        title: "無名作家から、はじまる10の選択",
-        description: "あなたが本当に書ける一作は？　全100通り。1分・登録なし。",
-    },
-};
+/*
+ * ★ 結果を貼ったときの絵を、その場で描く。
+ *
+ *   ?p=現代&c=再生 が付いていれば、その二語を焼き込む。
+ *   付いていなければ、遊びの表紙を出す。
+ *
+ *   文字だけの共有は流れない。
+ *   広まっている診断は、結果が絵として貼られている。
+ */
+export function generateMetadata({
+    searchParams,
+}: {
+    searchParams: { p?: string; c?: string; t?: string };
+}): Metadata {
+    const place = searchParams.p ?? "";
+    const core = searchParams.c ?? "";
+    const title = searchParams.t ?? "";
+
+    const hasResult = Boolean(place && core);
+
+    const og = new URLSearchParams();
+    if (hasResult) {
+        og.set("p", place);
+        og.set("c", core);
+        if (title) og.set("t", title);
+    }
+
+    const image = `https://gensekikoro.com/game/og?${og.toString()}`;
+
+    const head = hasResult
+        ? `私が書けるのは「${place} × ${core}」でした`
+        : "無名作家から、はじまる10の選択";
+
+    const body = hasResult
+        ? `${title ? `『${title}』　` : ""}あなたは何を書ける？　全100通り・1分・登録なし`
+        : "10の選択で、あなたが本当に書ける一作が決まります。全100通り・1分・登録なし。";
+
+    return {
+        title: head,
+        description: body,
+        openGraph: {
+            title: head,
+            description: body,
+            url: "https://gensekikoro.com/game",
+            siteName: "原石航路",
+            type: "website",
+            images: [{ url: image, width: 1200, height: 630 }],
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: head,
+            description: body,
+            images: [image],
+        },
+    };
+}
 
 export default function Page() {
     return <WriterGame />;

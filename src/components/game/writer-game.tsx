@@ -72,6 +72,34 @@ const FLAT = { work: 25, art: 25, research: 25, ad: 25 }
 
 const MARKS = ['A', 'B', 'C', 'D']
 
+/**
+ * 記録を送る。
+ *
+ * ★ 待たない。落ちても黙って進む。
+ *   記録は運営の都合で、遊ぶ人には関係がない。
+ *
+ * ★ 1 回の遊びごとの札だけ持つ。誰かは残さない。
+ */
+let playId = ''
+
+function mark(kind: string, more: Record<string, unknown> = {}) {
+    if (!playId) {
+        playId =
+            Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+    }
+
+    try {
+        void fetch('/api/game', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playId, kind, ...more }),
+            keepalive: true,
+        })
+    } catch {
+        /* 記録できなくても、遊びは続く */
+    }
+}
+
 export default function WriterGame() {
     /* -1 入り口 ／ 0〜last 出来事 ／ last+1 鑑定中 ／ last+2 結果 */
     const [at, setAt] = useState(-1)
@@ -123,7 +151,13 @@ export default function WriterGame() {
             if (choice.core) core[choice.core] = (core[choice.core] ?? 0) + 1
         }
 
-        return { place, core }
+        /* 答えた道筋。同点のときの決め手になる */
+        const salt = (Object.values(picked) as number[]).reduce(
+            (sum, one) => sum + one,
+            0,
+        )
+
+        return { place, core, salt }
     }
 
     /** 点を、はじめから数え直す */
@@ -159,11 +193,14 @@ export default function WriterGame() {
     }
 
     function choose(choiceAt: number) {
+        mark('step', { at: at + 1 })
         setPicked((now) => ({ ...now, [at]: choiceAt }))
         setAt(at + 1)
     }
 
     function restart() {
+        mark('again')
+        playId = ''
         setPicked({})
         setCoins({ ...FLAT })
         setAt(-1)
@@ -194,7 +231,14 @@ export default function WriterGame() {
               *   次の問いに移ったことが分からない。
               */}
             <main className="gm_main" aria-live="polite">
-                {at === -1 && <Open onStart={() => setAt(0)} />}
+                {at === -1 && (
+                    <Open
+                        onStart={() => {
+                            mark('start')
+                            setAt(0)
+                        }}
+                    />
+                )}
 
                 {at >= 0 && at <= last && (
                     <>
@@ -778,10 +822,28 @@ function ResultView({
     onRestart,
 }: {
     score: Score
-    votes: { place: Record<string, number>; core: Record<string, number> }
+    votes: {
+        place: Record<string, number>
+        core: Record<string, number>
+        salt: number
+    }
     onRestart: () => void
 }) {
-    const v = judge(score, votes.place, votes.core)
+    const v = judge(score, votes.place, votes.core, votes.salt)
+
+    /*
+     * 結果まで来たことを、一度だけ残す。
+     *
+     * ★ 画面が組み直されるたびに送らない。
+     *   同じ遊びが何度も数えられる。
+     */
+    const marked = useRef(false)
+
+    useEffect(() => {
+        if (marked.current) return
+        marked.current = true
+        mark('result', { place: v.place, core: v.core })
+    }, [v.place, v.core])
 
     const shareText = [
         `私が書けるのは「${v.place} × ${v.core}」でした。`,
@@ -874,6 +936,7 @@ function ResultView({
                             v.work.title.replace(/[『』]/g, ''),
                         )}`}
                         className="gm_go"
+                        onClick={() => mark('write', { place: v.place, core: v.core })}
                     >
                         この題名で書き始める
                     </Link>
@@ -891,12 +954,23 @@ function ResultView({
                     </Link>
 
                     <a
+                        /*
+                          * ★ 住所に、出た組を付ける。
+                          *   その住所を貼ると、二語を焼き込んだ絵が出る。
+                          */
                         href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
                             shareText,
-                        )}&url=${encodeURIComponent('https://gensekikoro.com/game')}`}
+                        )}&url=${encodeURIComponent(
+                            `https://gensekikoro.com/game?p=${encodeURIComponent(
+                                v.place,
+                            )}&c=${encodeURIComponent(v.core)}&t=${encodeURIComponent(
+                                v.work.title.replace(/[『』]/g, ''),
+                            )}`,
+                        )}`}
                         target="_blank"
                         rel="noopener"
                         className="gm_sub"
+                        onClick={() => mark('share', { place: v.place, core: v.core })}
                     >
                         Xにつぶやく
                     </a>

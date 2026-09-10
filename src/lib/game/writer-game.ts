@@ -137,18 +137,22 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "題名とあらすじを、書き直す",
+                place: "異世界",
                 add: { reach: 4 },
             },
             {
                 label: "とにかく、次の話を書く",
+                place: "学園",
                 add: { heat: 4 },
             },
             {
                 label: "第1話を、もう一度書き直す",
+                place: "幻想",
                 add: { text: 3, heat: 1 },
             },
             {
                 label: "読んでくれた3人のことを、考える",
+                place: "田舎",
                 add: { chara: 2, reach: 1, text: 1 },
             },
         ],
@@ -212,7 +216,7 @@ export const STAGES: Stage[] = [
             },
             {
                 label: "この物語のラストを、もう一度思い出す",
-                core: "喪失",
+                core: "復讐",
                 add: { story: 4 },
             },
         ],
@@ -278,7 +282,7 @@ export const STAGES: Stage[] = [
             },
             {
                 label: "この話を面白いと思う人が、どこかにいると信じる",
-                core: "発見",
+                core: "対立",
                 add: { heat: 3, chara: 2 },
             },
         ],
@@ -295,7 +299,7 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "キャラクター",
-                place: "学園",
+                place: "現代",
                 add: { chara: 4 },
             },
             {
@@ -305,12 +309,12 @@ export const STAGES: Stage[] = [
             },
             {
                 label: "世界観",
-                place: "幻想",
+                place: "職場",
                 add: { world: 4 },
             },
             {
                 label: "この作品が伝えたいこと",
-                place: "職場",
+                place: "辺境",
                 add: { text: 4 },
             },
         ],
@@ -325,7 +329,7 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "このキャラ、一生推す",
-                place: "異世界",
+                place: "学園",
                 add: { chara: 4, heat: 1 },
             },
             {
@@ -340,7 +344,7 @@ export const STAGES: Stage[] = [
             },
             {
                 label: "この作品から、全部が始まった",
-                place: "辺境",
+                place: "歴史",
                 add: { world: 3, story: 2 },
             },
         ],
@@ -414,21 +418,43 @@ const GENRE_OF: Record<Place, string> = {
     田舎: "文芸",
 };
 
-function topOf<T extends string>(votes: Record<string, number>, all: readonly T[]): T {
-    let best = all[0];
-    for (const one of all) {
-        if ((votes[one] ?? 0) > (votes[best] ?? 0)) best = one;
-    }
-    return best;
+/**
+ * いちばん票の多いものを返す。
+ *
+ * ★ 同点のときは、答えた道筋で決める。
+ *
+ *   前は一覧の先頭を返していた。
+ *   票は 3〜4 しかないので同点だらけになり、
+ *   先頭の「異世界」「冒険」に吸い寄せられていた。
+ *
+ *   全部の組み合わせを数えたところ、
+ *   異世界が 43.8%、幻想・職場・田舎は 0%。
+ *   出る組は 100 のうち 63 通りしかなかった。
+ *
+ *   同じ答えなら、いつも同じ結果になる。
+ *   でたらめではなく、道筋で決まる。
+ */
+function topOf<T extends string>(
+    votes: Record<string, number>,
+    all: readonly T[],
+    salt: number,
+): T {
+    let most = 0;
+    for (const one of all) most = Math.max(most, votes[one] ?? 0);
+
+    const tied = all.filter((one) => (votes[one] ?? 0) === most);
+    return tied[salt % tied.length];
 }
 
 export function judge(
     score: Score,
     placeVotes: Record<string, number>,
     coreVotes: Record<string, number>,
+    /** 答えた道筋。同点のときの決め手にする */
+    salt = 0,
 ): Verdict {
-    const place = topOf(placeVotes, PLACES);
-    const core = topOf(coreVotes, CORES);
+    const place = topOf(placeVotes, PLACES, salt);
+    const core = topOf(coreVotes, CORES, salt + 3);
 
     let best: Axis = AXIS_ORDER[0];
     for (const axis of AXIS_ORDER) {
