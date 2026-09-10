@@ -193,7 +193,7 @@ export default function WriterGame() {
 
                 {at >= 0 && at <= last && (
                     <>
-                        <Dots at={at} last={last} score={totalScore()} />
+                        <Dots at={at} last={last} />
 
                         {stageAt(at) === 'coin' ? (
                             <Coins
@@ -249,29 +249,40 @@ export default function WriterGame() {
 function Open({ onStart }: { onStart: () => void }) {
     return (
         <div className="gm_open">
-            {/*
-              * 磨かれる前の石。
-              *
-              * ★ 遊びの主役を、最初に一度見せておく。
-              *   最後に「あなたの原石は」と言われたとき、
-              *   この石のことだと分かる。
-              *
-              * ★ まだ濁っている。
-              *   10 問かけて澄んでいく。
-              */}
-            <Gem score={EMPTY} size={120} />
-
-            <p className="gm_open_lead">
-                あなたは、まだ誰にも知られていない新人作家。
-            </p>
+            <p className="gm_open_over">10の選択・1分・登録なし</p>
 
             <h1 className="gm_open_ask">
-                その手の中に、
+                無名作家から、
                 <br />
-                どんな原石がありますか。
+                はじまる10の選択。
             </h1>
 
-            <p className="gm_open_note">10の選択でわかります・1分</p>
+            <p className="gm_open_lead">
+                最後に、あなたが本当に書ける一作が出ます。
+            </p>
+
+            {/*
+              * ★ 結果の形を、先に見せておく。
+              *
+              *   何が出るか分からないものは、始めにくい。
+              *   「異世界 × 冒険」という形だけ見せると、
+              *   自分は何が出るのだろう、と思ってもらえる。
+              *
+              * ★ 中身は伏せる。組だけ。
+              */}
+            <div className="gm_open_sample">
+                {[
+                    ['異世界', '冒険'],
+                    ['現代', '喪失'],
+                    ['学園', '発見'],
+                    ['歴史', '対立'],
+                ].map(([a, b]) => (
+                    <span key={a} className="gm_open_chip">
+                        {a} <i>×</i> {b}
+                    </span>
+                ))}
+                <span className="gm_open_chip is_more">ほか96通り</span>
+            </div>
 
             <button type="button" className="gm_go" onClick={onStart}>
                 航海に出る
@@ -415,36 +426,64 @@ function Gem({
  * 進み具合
  * ============================================================ */
 
-function Dots({
-    at,
-    last,
-    score,
-}: {
-    at: number
-    last: number
-    score: Score
-}) {
-    const left = last + 1 - at
+function Dots({ at, last }: { at: number; last: number }) {
+    const all = last + 1
+    const left = all - at
 
     return (
-        <div className="gm_progress">
+        <div className="gm_route">
             {/*
-              * ★ ここに出ている 6 角形が、そのまま結果になる。
-              *   答えるたびに角が伸びるので、
-              *   何が育っているのかが目で分かる。
+              * 航路。
+              *
+              * ★ 石をやめた。
+              *
+              *   遊んでいる最中に 6 角形を出すと、
+              *   点を見ながら答えることになる。
+              *   進み具合は、進み具合だけを出せばよい。
+              *
+              * ★ 線と印。名前どおりの形にする。
+              *   どこまで来たか、あと何回かが、一目で分かる。
               */}
-            <Gem score={score} size={58} />
+            <svg
+                className="gm_route_line"
+                viewBox="0 0 300 22"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+            >
+                {/* 通ってきた道 */}
+                <line x1="6" y1="11" x2="294" y2="11" stroke="#e2d9c8" strokeWidth="1.5" />
+                <line
+                    x1="6"
+                    y1="11"
+                    x2={6 + (288 * at) / all}
+                    y2="11"
+                    stroke="#c8944a"
+                    strokeWidth="1.5"
+                    strokeDasharray="4 4"
+                />
 
-            <div className="gm_progress_text">
-                <p className="gm_progress_cap">原石を磨いています</p>
-                <p className="gm_progress_num">
-                    <span className="gm_progress_now">{at + 1}</span>
-                    <span className="gm_progress_all"> / {last + 1}</span>
-                    <span className="gm_progress_left">
-                        {left <= 1 ? '最後の選択' : `あと${left}つ`}
-                    </span>
-                </p>
-            </div>
+                {/* 節目 */}
+                {Array.from({ length: all }, (_, index) => (
+                    <circle
+                        key={index}
+                        cx={6 + (288 * index) / all}
+                        cy="11"
+                        r={index === at ? 4 : 2}
+                        fill={index <= at ? '#c8944a' : '#e2d9c8'}
+                    />
+                ))}
+
+                {/* 港 */}
+                <circle cx="294" cy="11" r="3" fill="none" stroke="#c8944a" strokeWidth="1.4" />
+            </svg>
+
+            <p className="gm_route_text">
+                <span className="gm_route_now">{at + 1}</span>
+                <span className="gm_route_all"> / {all}</span>
+                <span className="gm_route_left">
+                    {left <= 1 ? '最後の選択' : `港まで、あと${left}つ`}
+                </span>
+            </p>
         </div>
     )
 }
@@ -709,17 +748,35 @@ function ResultView({
                 </div>
             </div>
 
-            {/* 名前を出すところ */}
+            {/*
+              * 名前を出すところ。
+              *
+              * ★ 上の結果を、下で受け直す。
+              *
+              *   前は上下がまったく別の話に見えた。
+              *   下でもう一度、同じ題名を呼ぶ。
+              *   そうすると、切れずに続きとして読める。
+              */}
             <div className="gm_reveal">
-                <p className="gm_reveal_tag">この一作を、航海に出しませんか</p>
+                <svg className="gm_wave" viewBox="0 0 120 10" aria-hidden="true">
+                    <path
+                        d="M0 5 Q 15 0, 30 5 T 60 5 T 90 5 T 120 5"
+                        fill="none"
+                        stroke="#c8944a"
+                        strokeWidth="1.2"
+                    />
+                </svg>
+
+                <p className="gm_reveal_title">{v.work.title}</p>
+                <p className="gm_reveal_tag">この一作を、書いてみませんか</p>
 
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img className="gm_reveal_logo" src="/logo.svg" alt="原石航路" />
 
                 <p className="gm_reveal_lead">
-                    まだ知られていない作品を、投稿したり、
+                    まだ知られていない作品が、
                     <br />
-                    見つけたりできる場所です。
+                    見つけてもらえる場所です。
                 </p>
 
                 <div>

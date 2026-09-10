@@ -83,121 +83,105 @@
 
 /* ------------------------------------------------------------
  * 入り口
+ *
+ * ★ 何が出るかを、先に少し見せる。
+ *   分からないものは、始めにくい。
  * ---------------------------------------------------------- */
 .gm_open {
     text-align: center;
-    padding: 34px 0 30px;
+    padding: 56px 0 40px;
 }
 
-.gm_open_lead {
-    margin-top: 26px;
-    font-size: 13px;
-    letter-spacing: .08em;
-    line-height: 2.2;
-    color: #a9bac8;
+.gm_open_over {
+    font-size: 11px;
+    letter-spacing: .24em;
+    color: #7d8f9e;
 }
 
 .gm_open_ask {
-    margin: 16px 0 26px;
+    margin: 20px 0 18px;
     font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 27px;
+    font-size: 30px;
     font-weight: 700;
-    letter-spacing: .12em;
-    line-height: 1.95;
+    letter-spacing: .1em;
+    line-height: 1.85;
     color: #f6f0e4;
 }
 
-.gm_open_note {
-    margin-bottom: 30px;
-    font-size: 11px;
-    letter-spacing: .2em;
+.gm_open_lead {
+    font-size: 13.5px;
+    letter-spacing: .06em;
+    line-height: 2.1;
+    color: #a9bac8;
+}
+
+.gm_open_sample {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 30px auto 34px;
+    max-width: 380px;
+}
+
+.gm_open_chip {
+    padding: 7px 13px;
+    border: 1px solid rgba(232, 215, 182, .3);
+    border-radius: 2px;
+    font-size: 12px;
+    letter-spacing: .08em;
+    color: #cdd8e2;
+}
+
+.gm_open_chip i {
+    font-style: normal;
+    color: var(--amber);
+    margin: 0 2px;
+}
+
+.gm_open_chip.is_more {
+    border-style: dashed;
     color: #7d8f9e;
 }
 
 /* ------------------------------------------------------------
- * 石
+ * 航路
  *
- * ★ 答えるほど、澄んでいく。
- *   進み具合と、遊びの主役が、同じものになる。
+ * ★ 石をやめた。
+ *   進み具合は、進み具合だけを出す。
  * ---------------------------------------------------------- */
-.gm_gem {
+.gm_route {
+    margin: 12px 0 26px;
+}
+
+.gm_route_line {
     display: block;
-    flex-shrink: 0;
+    width: 100%;
+    height: 22px;
 }
 
-/* 角が伸びるところを、目で追えるようにする */
-.gm_gem_shape {
-    transition: all .45s cubic-bezier(.2, .8, .3, 1);
-}
-
-/* 入り口の大きな石だけ、ゆっくり息をする */
-.gm_open .gm_gem {
-    margin: 0 auto;
-    animation: gm_gem_breathe 4.5s ease-in-out infinite;
-}
-
-@keyframes gm_gem_breathe {
-    0%, 100% { opacity: .8;  transform: scale(1); }
-    50%      { opacity: 1;   transform: scale(1.04); }
-}
-
-/* 海の上では、目盛りの線を明るく */
-.gm.is_sea .gm_gem polygon[stroke="#ded4c1"],
-.gm.is_sea .gm_gem line {
-    stroke: rgba(232, 215, 182, .3);
-}
-
-/* ------------------------------------------------------------
- * 進み具合
- * ---------------------------------------------------------- */
-/*
- * ★ ここに出ている 6 角形が、そのまま結果になる。
- *   答えるたびに角が伸びるので、
- *   何が育っているのかが目で分かる。
- */
-.gm_progress {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 10px 0 24px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--rule);
-}
-
-.gm_progress_text {
-    flex: 1;
-    min-width: 0;
-}
-
-.gm_progress_cap {
-    font-size: 11px;
-    letter-spacing: .18em;
-    color: var(--amber);
-    font-weight: 700;
-}
-
-.gm_progress_num {
-    margin-top: 4px;
+.gm_route_text {
     display: flex;
     align-items: baseline;
-    gap: 3px;
+    gap: 4px;
+    margin-top: 4px;
     font-variant-numeric: tabular-nums;
 }
 
-.gm_progress_now {
-    font-size: 19px;
+.gm_route_now {
+    font-size: 17px;
     font-weight: 700;
     color: var(--amber);
     line-height: 1;
 }
 
-.gm_progress_all {
+.gm_route_all {
     font-size: 12px;
     color: var(--ink-soft);
 }
 
-.gm_progress_left {
-    margin-left: 8px;
+.gm_route_left {
+    margin-left: auto;
     font-size: 11px;
     letter-spacing: .12em;
     color: var(--ink-soft);
@@ -713,8 +697,8 @@
  * ★ ここだけ濃い。落ちになる。
  * ---------------------------------------------------------- */
 .gm_reveal {
-    margin: 40px -22px 0;
-    padding: 44px 26px 48px;
+    margin: 34px -22px 0;
+    padding: 34px 26px 48px;
     background:
         radial-gradient(120% 80% at 50% 0%, #24405a 0%, transparent 62%),
         linear-gradient(180deg, var(--sea) 0%, var(--sea-deep) 100%);
@@ -726,6 +710,28 @@
 @keyframes gm_reveal_in {
     from { opacity: 0; }
     to   { opacity: 1; }
+}
+
+/*
+ * ★ 上の結果を、下で受け直す。
+ *   同じ題名をもう一度呼ぶと、切れずに続きになる。
+ */
+.gm_wave {
+    display: block;
+    width: 110px;
+    height: 10px;
+    margin: 0 auto 22px;
+    opacity: .7;
+}
+
+.gm_reveal_title {
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    line-height: 1.8;
+    color: #f6f0e4;
+    margin-bottom: 8px;
 }
 
 .gm_reveal_tag {
@@ -853,7 +859,6 @@
     .gm_result,
     .gm_reveal,
     .gm_pair,
-    .gm_gem.is_big,
     .gm_hex svg {
         animation: none;
     }
