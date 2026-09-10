@@ -67,6 +67,15 @@ export default function MobileHeader() {
      * 全画面で読む頁でも出さない。
      * 読むことだけの頁なので、飾りは要らない。
      */
+
+    /*
+     * ★ ミニゲームでは出さない。
+     *
+     *   住所を直に叩いて来てもらう一枚の頁で、
+     *   サイトの案内は載せない。
+     *   遊び終わってから、初めて原石航路の話をする。
+     */
+    if (pathname.startsWith('/game')) return null;
     if (/\/read$/.test(pathname)) return null;
 
     return (

@@ -159,6 +159,15 @@ export default function MobileTabBar() {
 
     if (HIDE_ON.some((path) => pathname.startsWith(path))) return null
 
+
+    /*
+     * ★ ミニゲームでは出さない。
+     *
+     *   住所を直に叩いて来てもらう一枚の頁で、
+     *   サイトの案内は載せない。
+     *   遊び終わってから、初めて原石航路の話をする。
+     */
+    if (pathname.startsWith('/game')) return null;
     /* 全画面で読む頁でも出さない */
     if (/\/read$/.test(pathname)) return null
 
