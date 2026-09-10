@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import ReadingSummary from '@/components/mypage/reading-summary'
+import ReadingSummaryBoundary from '@/components/mypage/reading-summary-boundary'
 import { READER_MISSIONS, WRITER_MISSIONS } from '@/components/mypage/mission-client'
 import IconCropper from '@/components/mypage/icon-cropper'
 import { useRouter } from 'next/navigation'
@@ -1428,7 +1429,13 @@ export default function MypageClient({
         *   同じものの 2 つの見方なので、同じ場所に置く。
         *   ここに置けば、タブを増やさずに済む。
         */}
-      <ReadingSummary />
+      {/*
+        * ★ ここで落ちても、履歴は出す。
+        *
+        *   まとめは添え物で、履歴が本体。
+        *   添え物のせいで本体が開けなくなるのは、割に合わない。
+        */}
+      <ReadingSummaryBoundary />
 
       {/* フィルターバー */}
       {historyItemsNow.length > 0 && (

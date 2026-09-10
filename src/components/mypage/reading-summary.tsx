@@ -376,6 +376,25 @@ export function Ring({
     rows: Slice[]
 }) {
     /*
+     * ★ 届いた形が古くても落ちない。
+     *
+     *   入口は［名前, 字数］の組を返していた時期がある。
+     *   画面だけ新しくして入口が古いままだと、
+     *   name も chars も無い値を触って落ちる。
+     *   その場合は、組から作り直す。
+     */
+    const safe: Slice[] = Array.isArray(rows)
+        ? rows.map((one) =>
+              Array.isArray(one)
+                  ? { name: String(one[0]), chars: Number(one[1]) || 0, episodes: 0 }
+                  : {
+                        name: String((one as Slice)?.name ?? ''),
+                        chars: Number((one as Slice)?.chars) || 0,
+                        episodes: Number((one as Slice)?.episodes) || 0,
+                    },
+          )
+        : []
+    /*
      * 並べる元。
      *
      * ★ 字数だけだと、長い作品を 1 つ読んだ人が
@@ -387,7 +406,7 @@ export function Ring({
     /* 全部出すか、上位だけにするか */
     const [isOpen, setIsOpen] = useState(false)
 
-    const sorted = [...rows].sort((a, b) => b[by] - a[by])
+    const sorted = [...safe].sort((a, b) => b[by] - a[by])
     const total = sorted.reduce((sum, one) => sum + one[by], 0)
     if (total === 0) return null
 
