@@ -29,27 +29,56 @@
 
 .gm {
     --sea: #17293a;
-    --sea-deep: #0f1d2a;
+    --sea-mid: #1d3348;
+    --sea-deep: #0d1926;
     --paper: #fdfaf1;
+    --paper-warm: #f8f2e4;
     --amber: #c8944a;
+    --amber-deep: #a8762f;
     --amber-soft: #e8d7b6;
-    --ink: #2b2b28;
+    --ink: #262622;
     --ink-soft: #6f6a5f;
     --rule: #ddd3c0;
+    --rule-soft: #ece4d5;
+
+    /*
+     * 紙の目。
+     *
+     * ★ 平らな色の上に字が乗っているうちは、安く見える。
+     *
+     *   ごく薄い斑を敷くだけで、地が「紙」になる。
+     *   絵として見えてはいけない。
+     *   目を凝らして、やっと分かるくらいで止める。
+     */
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
 
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background: var(--paper);
+    background:
+        var(--grain),
+        linear-gradient(180deg, var(--paper) 0%, var(--paper-warm) 100%);
+    background-blend-mode: multiply, normal;
     color: var(--ink);
     font-family: inherit;
+    /* 大きな字の詰まりを整える */
+    font-feature-settings: "palt" 1;
 }
 
-/* 入り口と結果は、海の色 */
+/*
+ * 入り口と鑑定中は、海の色。
+ *
+ * ★ 三段に分ける。
+ *   二色だと帯に見える。
+ *   上に光、下に沈み、周りを落とす。
+ */
 .gm.is_sea {
     background:
-        radial-gradient(120% 80% at 50% 0%, #24405a 0%, transparent 60%),
-        linear-gradient(180deg, var(--sea) 0%, var(--sea-deep) 100%);
+        var(--grain),
+        radial-gradient(100% 62% at 50% -6%, #2c4a68 0%, transparent 58%),
+        radial-gradient(120% 100% at 50% 50%, transparent 40%, rgba(0, 0, 0, .35) 100%),
+        linear-gradient(180deg, var(--sea-mid) 0%, var(--sea) 46%, var(--sea-deep) 100%);
+    background-blend-mode: overlay, normal, normal, normal;
     color: #f3ece0;
 }
 
@@ -226,14 +255,20 @@
     line-height: 1.5;
 }
 
-/* 題の下の細い罫。左に琥珀、あとは薄く */
+/*
+ * 題の下の罫。
+ *
+ * ★ 左に琥珀、あとは薄く。
+ *   端まで同じ濃さで引くと、線が主張しすぎる。
+ */
 .gm_rule {
-    margin: 14px 0 20px;
+    margin: 15px 0 21px;
     height: 1px;
     background: linear-gradient(
         90deg,
-        var(--amber) 0 42px,
-        var(--rule) 42px 100%
+        var(--amber) 0 40px,
+        var(--rule) 40px 62%,
+        transparent 100%
     );
 }
 
@@ -258,28 +293,55 @@
 /* ------------------------------------------------------------
  * 選ぶもの
  * ---------------------------------------------------------- */
+/*
+ * ★ 札を、少しずつ遅らせて出す。
+ *
+ *   4 枚が同時に出ると、紙が現れたようには見えない。
+ *   40 ミリ秒ずつずらすと、置かれたように見える。
+ */
 .gm_choices {
     display: grid;
     gap: 11px;
-    margin-top: 22px;
+    margin-top: 24px;
+}
+
+.gm_choices > * {
+    animation: gm_card_in .42s cubic-bezier(.2, .8, .3, 1) both;
+}
+
+.gm_choices > *:nth-child(1) { animation-delay: .06s; }
+.gm_choices > *:nth-child(2) { animation-delay: .11s; }
+.gm_choices > *:nth-child(3) { animation-delay: .16s; }
+.gm_choices > *:nth-child(4) { animation-delay: .21s; }
+
+@keyframes gm_card_in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
 }
 
 .gm_choice {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 13px;
+    gap: 14px;
     width: 100%;
-    padding: 16px 18px;
+    padding: 17px 19px;
     text-align: left;
     font-size: 14.5px;
-    line-height: 1.75;
+    line-height: 1.8;
     color: var(--ink);
-    background: #fff;
-    border: 1px solid var(--rule);
-    border-radius: 3px;
+    background:
+        var(--grain),
+        linear-gradient(180deg, #fff 0%, #fffdf7 100%);
+    background-blend-mode: multiply, normal;
+    border: 1px solid var(--rule-soft);
+    border-radius: 2px;
     cursor: pointer;
-    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    box-shadow: 0 1px 2px rgba(40, 35, 25, .04);
+    transition:
+        transform .18s cubic-bezier(.2, .8, .3, 1),
+        box-shadow .18s ease,
+        border-color .18s ease;
 }
 
 /*
@@ -298,10 +360,29 @@
 
 .gm_choice:hover,
 .gm_choice:focus-visible {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
     border-color: var(--amber-soft);
-    box-shadow: 0 6px 16px rgba(40, 35, 25, .09);
-    outline: none;
+    box-shadow:
+        0 10px 24px rgba(40, 35, 25, .1),
+        0 2px 6px rgba(40, 35, 25, .05);
+}
+
+/* 触れた札の左に、細い線が入る */
+.gm_choice::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--amber);
+    opacity: 0;
+    transition: opacity .18s ease;
+}
+
+.gm_choice:hover::before,
+.gm_choice:focus-visible::before {
+    opacity: 1;
 }
 
 .gm_choice:active {
@@ -311,16 +392,25 @@
 /* A B C D の印 */
 .gm_mark {
     flex-shrink: 0;
-    width: 25px;
-    height: 25px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     border: 1px solid var(--amber-soft);
-    color: var(--amber);
-    font-size: 11px;
+    color: var(--amber-deep);
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 12px;
     font-weight: 700;
+    letter-spacing: .04em;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background .18s ease, color .18s ease;
+}
+
+.gm_choice:hover .gm_mark {
+    background: var(--amber);
+    color: #fff;
+    border-color: var(--amber);
 }
 
 /* --- 机の上のメモ --- */
@@ -583,11 +673,13 @@
  *   抽象語だと、題名と繋がらなかった。
  */
 .gm_pair {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 14px;
-    margin-top: 12px;
+    gap: 16px;
+    margin-top: 14px;
+    padding: 0 0 18px;
     animation: gm_pair_in .7s cubic-bezier(.2, .8, .3, 1) both .1s;
 }
 
@@ -598,7 +690,7 @@
 
 .gm_pair_word {
     font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 40px;
+    font-size: 42px;
     font-weight: 700;
     letter-spacing: .1em;
     text-indent: .1em;
@@ -607,8 +699,38 @@
 }
 
 .gm_pair_cross {
-    font-size: 20px;
+    font-size: 19px;
     color: var(--amber);
+    opacity: .8;
+}
+
+/*
+ * 二語の下に、菱形を挟んだ罫。
+ *
+ * ★ ただの下線だと、見出しの飾りに見える。
+ *   真ん中に小さな菱形を置くと、刷り物の顔になる。
+ */
+.gm_pair::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 116px;
+    height: 7px;
+    transform: translateX(-50%);
+    background:
+        linear-gradient(var(--rule), var(--rule)) left  center / 46px 1px no-repeat,
+        linear-gradient(var(--rule), var(--rule)) right center / 46px 1px no-repeat;
+}
+
+.gm_pair_mark {
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    width: 7px;
+    height: 7px;
+    transform: translateX(-50%) rotate(45deg);
+    background: var(--amber);
 }
 
 /* ------------------------------------------------------------
@@ -617,19 +739,62 @@
  * ★ 縦に積むと、形を見たあと、もう一度下へ目を移す。
  *   横に並べれば、一度に目に入る。
  * ---------------------------------------------------------- */
+/*
+ * 結果の札。
+ *
+ * ★ 海図に寄せる。
+ *
+ *   四隅に短い罫を置き、内側にもう一本引く。
+ *   ただの箱が、刷られた紙になる。
+ *
+ * ★ 上の琥珀の太線はやめた。
+ *   一本だけ太いと、そこだけ現代的に浮く。
+ */
 .gm_pane {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 22px;
-    margin: 26px auto 0;
-    padding: 24px 26px;
+    gap: 24px;
+    margin: 28px auto 0;
+    padding: 28px 30px;
     max-width: 560px;
     border: 1px solid var(--rule);
-    border-top: 3px solid var(--amber);
     border-radius: 2px;
-    background: #fff;
-    box-shadow: 0 4px 18px rgba(40, 35, 25, .07);
+    background:
+        var(--grain),
+        linear-gradient(180deg, #fff 0%, #fffdf6 100%);
+    background-blend-mode: multiply, normal;
+    box-shadow:
+        0 10px 30px rgba(40, 35, 25, .09),
+        0 2px 6px rgba(40, 35, 25, .04);
     text-align: left;
+}
+
+/* 内側の罫 */
+.gm_pane::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 1px solid var(--rule-soft);
+    pointer-events: none;
+}
+
+/* 四隅の印 */
+.gm_pane::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    pointer-events: none;
+    background:
+        linear-gradient(var(--amber), var(--amber)) left    top    / 12px 1px no-repeat,
+        linear-gradient(var(--amber), var(--amber)) left    top    / 1px 12px no-repeat,
+        linear-gradient(var(--amber), var(--amber)) right   top    / 12px 1px no-repeat,
+        linear-gradient(var(--amber), var(--amber)) right   top    / 1px 12px no-repeat,
+        linear-gradient(var(--amber), var(--amber)) left    bottom / 12px 1px no-repeat,
+        linear-gradient(var(--amber), var(--amber)) left    bottom / 1px 12px no-repeat,
+        linear-gradient(var(--amber), var(--amber)) right   bottom / 12px 1px no-repeat,
+        linear-gradient(var(--amber), var(--amber)) right   bottom / 1px 12px no-repeat;
+    opacity: .55;
 }
 
 .gm_pane_left {
@@ -754,14 +919,34 @@
  *   縦に積むと、そのぶん帯が伸びる。
  */
 .gm_reveal {
-    margin: 30px -22px 0;
-    padding: 28px 26px 34px;
+    position: relative;
+    margin: 34px -22px 0;
+    padding: 32px 26px 36px;
     background:
-        radial-gradient(120% 80% at 50% 0%, #24405a 0%, transparent 62%),
-        linear-gradient(180deg, var(--sea) 0%, var(--sea-deep) 100%);
+        var(--grain),
+        radial-gradient(100% 66% at 50% -4%, #2c4a68 0%, transparent 58%),
+        linear-gradient(180deg, var(--sea-mid) 0%, var(--sea) 50%, var(--sea-deep) 100%);
+    background-blend-mode: overlay, normal, normal;
     color: #f3ece0;
     text-align: center;
     animation: gm_reveal_in .8s ease both .3s;
+}
+
+/* 縁に、細い金の線を一本 */
+.gm_reveal::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(200, 148, 74, .5) 30%,
+        rgba(200, 148, 74, .5) 70%,
+        transparent 100%
+    );
 }
 
 @keyframes gm_reveal_in {
@@ -827,44 +1012,55 @@
  * 押し具
  * ---------------------------------------------------------- */
 .gm_go {
+    position: relative;
     display: inline-block;
     margin-top: 18px;
-    padding: 15px 40px;
+    padding: 16px 42px;
     border: none;
     border-radius: 2px;
-    background: var(--amber);
-    color: #23180a;
+    background: linear-gradient(180deg, #d5a35a 0%, var(--amber) 55%, var(--amber-deep) 100%);
+    color: #1e1409;
     font-size: 14.5px;
     font-weight: 700;
-    letter-spacing: .08em;
+    letter-spacing: .1em;
     cursor: pointer;
     text-decoration: none;
-    transition: transform .16s ease, box-shadow .16s ease;
-    box-shadow: 0 3px 14px rgba(200, 148, 74, .3);
+    transition: transform .18s cubic-bezier(.2, .8, .3, 1), box-shadow .18s ease;
+    box-shadow:
+        0 4px 18px rgba(200, 148, 74, .34),
+        inset 0 1px 0 rgba(255, 255, 255, .34);
 }
 
 .gm_go:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(200, 148, 74, .4);
+    box-shadow:
+        0 9px 26px rgba(200, 148, 74, .42),
+        inset 0 1px 0 rgba(255, 255, 255, .4);
+}
+
+.gm_go:active {
+    transform: translateY(0);
 }
 
 .gm_sub {
     display: inline-block;
     margin-top: 0;
-    padding: 12px 28px;
-    border: 1px solid rgba(232, 215, 182, .42);
+    padding: 12px 26px;
+    border: 1px solid rgba(232, 215, 182, .34);
     border-radius: 2px;
-    background: transparent;
-    color: #e8d7b6;
-    font-size: 13px;
-    letter-spacing: .06em;
+    background: rgba(255, 255, 255, .03);
+    color: #dcc9a6;
+    font-size: 12.5px;
+    letter-spacing: .08em;
     cursor: pointer;
     text-decoration: none;
-    transition: background .16s ease;
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
 }
 
 .gm_sub:hover {
-    background: rgba(232, 215, 182, .1);
+    background: rgba(232, 215, 182, .09);
+    border-color: rgba(232, 215, 182, .55);
+    color: #f3ece0;
 }
 
 /* 紙の上に置く控えめな押し具 */
@@ -924,6 +1120,7 @@
  * 動きを減らす設定の人には、動かさない
  * ---------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
+    .gm_choices > *,
     .gm_arrive_line,
     .gm_route_ship,
     .gm_stage,

@@ -800,6 +800,7 @@ function ResultView({
                 <span className="gm_pair_word">{v.place}</span>
                 <span className="gm_pair_cross">×</span>
                 <span className="gm_pair_word">{v.core}</span>
+                <span className="gm_pair_mark" aria-hidden="true" />
             </h2>
 
             <p className="gm_pair_note">
