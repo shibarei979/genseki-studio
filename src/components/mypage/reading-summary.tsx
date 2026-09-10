@@ -108,6 +108,20 @@ export default function ReadingSummary() {
     const [months, setMonths] = useState<Record<string, Month> | null>(null)
     const [at, setAt] = useState(() => monthKey(new Date()))
 
+    /*
+     * 月で見るか、年で見るか。
+     *
+     * ★ 入口は月ごとに返してくる。
+     *   年はその 12 か月を足して作る。
+     *   入口を変えずに済むので、
+     *   数え方が二重にならない。
+     *
+     * ★ ジャンルと作者の内訳も足し合わせる。
+     *   月ごとに上位が入れ替わるので、
+     *   年で見ると「一年で何を読んだか」が出る。
+     */
+    const [span, setSpan] = useState<'month' | 'year'>('month')
+
     useEffect(() => {
         let alive = true
         void (async () => {
@@ -124,8 +138,13 @@ export default function ReadingSummary() {
         }
     }, [])
 
-    /* 月を送る。記録の無い月も出す。0 と分かるほうがよい */
+    /* 送る。記録の無いところも出す。0 と分かるほうがよい */
     function step(direction: -1 | 1) {
+        if (span === 'year') {
+            setAt(String(Number(at.slice(0, 4)) + direction))
+            return
+        }
+
         const [year, month] = at.split('-').map(Number)
         const next = new Date(year, month - 1 + direction, 1)
         setAt(
@@ -133,21 +152,99 @@ export default function ReadingSummary() {
         )
     }
 
+    /* 月と年を切り替える。いま見ている所の年を引き継ぐ */
+    function changeSpan(next: 'month' | 'year') {
+        if (next === span) return
+
+        if (next === 'year') {
+            setAt(at.slice(0, 4))
+        } else {
+            const thisMonth = monthKey(new Date())
+            /* その年の今月。違う年なら 1 月から */
+            setAt(
+                at === thisMonth.slice(0, 4) ? thisMonth : `${at.slice(0, 4)}-01`,
+            )
+        }
+
+        setSpan(next)
+    }
+
     if (!months) return null
 
-    const now = months[at]
-    const isThisMonth = at >= monthKey(new Date())
+    /*
+     * その年ぶんを足し合わせる。
+     * 作品数だけは足せない（同じ作品を別の月に読むと二重になる）ので、
+     * 足したうえで「のべ」として出す。
+     */
+    function sumYear(year: string): Month | undefined {
+        const keys = Object.keys(months ?? {}).filter((key) =>
+            key.startsWith(`${year}-`),
+        )
+        if (keys.length === 0) return undefined
+
+        const genres: Record<string, Slice> = {}
+        const authors: Record<string, Slice> = {}
+        let chars = 0
+        let works = 0
+        let episodes = 0
+
+        for (const key of keys) {
+            const one = months?.[key]
+            if (!one) continue
+
+            chars += one.chars
+            works += one.works
+            episodes += one.episodes
+
+            for (const row of one.genres ?? []) {
+                if (!genres[row.name]) {
+                    genres[row.name] = { name: row.name, chars: 0, episodes: 0 }
+                }
+                genres[row.name].chars += row.chars
+                genres[row.name].episodes += row.episodes
+            }
+
+            for (const row of one.authors ?? []) {
+                if (!authors[row.name]) {
+                    authors[row.name] = { name: row.name, chars: 0, episodes: 0 }
+                }
+                authors[row.name].chars += row.chars
+                authors[row.name].episodes += row.episodes
+            }
+        }
+
+        return {
+            chars,
+            works,
+            episodes,
+            genres: Object.values(genres),
+            authors: Object.values(authors),
+        }
+    }
+
+    const now = span === 'year' ? sumYear(at) : months[at]
+
+    const isNow =
+        span === 'year'
+            ? at >= String(new Date().getFullYear())
+            : at >= monthKey(new Date())
 
     /*
-     * 先月の文字数。
+     * ひとつ前の文字数。
      *
      * 増えたか減ったかが分かると、続ける手応えになる。
-     * 先月の記録が無ければ出さない。
+     * 前の記録が無ければ出さない。
      */
-    const [year, month] = at.split('-').map(Number)
-    const back = new Date(year, month - 2, 1)
-    const beforeKey = `${back.getFullYear()}-${String(back.getMonth() + 1).padStart(2, '0')}`
-    const before = months[beforeKey]?.chars ?? null
+    let before: number | null = null
+
+    if (span === 'year') {
+        before = sumYear(String(Number(at) - 1))?.chars ?? null
+    } else {
+        const [year, month] = at.split('-').map(Number)
+        const back = new Date(year, month - 2, 1)
+        const beforeKey = `${back.getFullYear()}-${String(back.getMonth() + 1).padStart(2, '0')}`
+        before = months[beforeKey]?.chars ?? null
+    }
 
     return (
         <div
@@ -177,10 +274,41 @@ export default function ReadingSummary() {
                         fontFamily: 'garamond, "Hiragino Mincho ProN", serif',
                     }}
                 >
-                    {monthLabel(at)}の読書
+                    {span === 'year' ? `${at}年` : monthLabel(at)}の読書
                 </span>
 
-                <span style={{ display: 'flex', gap: 6 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {/*
+                      * 月で見るか、年で見るか。
+                      * 押し具にせず、字の切り替えにする。
+                      * 送りの矢印より前に出るものではない。
+                      */}
+                    <span style={{ display: 'flex', gap: 8 }}>
+                        {(['month', 'year'] as const).map((key) => (
+                            <button
+                                key={key}
+                                type="button"
+                                onClick={() => changeSpan(key)}
+                                aria-pressed={span === key}
+                                style={{
+                                    border: 'none',
+                                    background: 'none',
+                                    padding: 0,
+                                    cursor: 'pointer',
+                                    fontSize: 11.5,
+                                    color:
+                                        span === key
+                                            ? 'var(--color-brand)'
+                                            : 'var(--color-text-faint)',
+                                    fontWeight: span === key ? 700 : 400,
+                                    textDecoration: span === key ? 'none' : 'underline',
+                                }}
+                            >
+                                {key === 'month' ? '月ごと' : '年ごと'}
+                            </button>
+                        ))}
+                    </span>
+
                     <button
                         type="button"
                         onClick={() => step(-1)}
@@ -193,11 +321,11 @@ export default function ReadingSummary() {
                         type="button"
                         onClick={() => step(1)}
                         aria-label="次の月"
-                        disabled={isThisMonth}
+                        disabled={isNow}
                         style={{
                             ...arrowStyle,
-                            opacity: isThisMonth ? 0.35 : 1,
-                            cursor: isThisMonth ? 'default' : 'pointer',
+                            opacity: isNow ? 0.35 : 1,
+                            cursor: isNow ? 'default' : 'pointer',
                         }}
                     >
                         ›
@@ -207,7 +335,7 @@ export default function ReadingSummary() {
 
             {!now ? (
                 <p style={{ fontSize: 13, color: 'var(--color-text-faint)', lineHeight: 1.8 }}>
-                    この月は、まだ読んだ記録がありません。
+                    {span === 'year' ? 'この年' : 'この月'}は、まだ読んだ記録がありません。
                 </p>
             ) : (
                 <>
@@ -286,11 +414,14 @@ export default function ReadingSummary() {
                                     borderTop: '1px solid var(--color-brand-light)',
                                 }}
                             >
-                                <Figure label="作品数" value={String(now.works)} />
+                                <Figure
+                                    label={span === 'year' ? '作品数（のべ）' : '作品数'}
+                                    value={String(now.works)}
+                                />
                                 <Figure label="話数" value={String(now.episodes)} />
                                 {before !== null && (
                                     <Figure
-                                        label="先月とくらべて"
+                                        label={span === 'year' ? '前の年とくらべて' : '先月とくらべて'}
                                         value={
                                             (now.chars >= before ? '+' : '−') +
                                             Math.abs(now.chars - before).toLocaleString()
@@ -313,6 +444,13 @@ export default function ReadingSummary() {
                         }}
                     >
                         同じ話を読み返しても、文字数は増えません。1話につき1回だけ数えています。
+                        {span === 'year' && (
+                            <>
+                                <br />
+                                年ごとの作品数は、月ごとの数を足したものです。
+                                同じ作品を別の月に読むと、2 回数えます。
+                            </>
+                        )}
                         <br />
                         入っていない状態で読んだぶんは、記録に残りません。
                     </p>
