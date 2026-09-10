@@ -1026,7 +1026,13 @@ export default function MypageClient({
 
       if (epIds.length > 0) {
         const [{ data: pvs }, { data: els }, { data: cms }] = await Promise.all([
-          supabase.from('page_views').select('episode_id').eq('is_author', false).in('episode_id', epIds),
+          /*
+           * ★ 見回りの機械を外す。
+           *   ここだけ外していなかった。作品によっては
+           *   9 割が機械で、話ごとの数だけ大きく出ていた。
+           *   印の無い古い記録は、人として残す。
+           */
+          supabase.from('page_views').select('episode_id').eq('is_author', false).or('is_bot.is.null,is_bot.eq.false').in('episode_id', epIds),
           supabase.from('episode_likes').select('episode_id').in('episode_id', epIds),
           supabase.from('comments').select('episode_id').in('episode_id', epIds),
         ])

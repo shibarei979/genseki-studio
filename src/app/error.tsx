@@ -34,6 +34,31 @@ export default function Error({
 }) {
     useEffect(() => {
         /*
+         * ★ こちらへも知らせる。
+         *
+         *   Vercel の記録は、見に行かないと分からない。
+         *   落ちたことを、その場で残す。
+         */
+        try {
+            void fetch("/api/error", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: `${error.name}: ${error.message}`,
+                    digest: error.digest,
+                    kind: "render",
+                    path:
+                        typeof window !== "undefined"
+                            ? window.location.pathname
+                            : "",
+                }),
+                keepalive: true,
+            });
+        } catch {
+            /* 知らせられなくても、画面は出す */
+        }
+
+        /*
          * 記録には残す。
          *
          * 画面に出さないぶん、ここが唯一の手がかりになる。

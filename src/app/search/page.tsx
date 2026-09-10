@@ -332,7 +332,19 @@ export default async function SearchPage({ searchParams }: Props) {
   // 閲覧数（page_views）
   const viewMap: Record<string, number> = {}
   if (novelIds.length > 0 && sort === 'view') {
-    const { data: views } = await supabase.from('page_views').select('novel_id').in('novel_id', novelIds)
+    /*
+     * ★ 作者自身と見回りの機械を外す。
+     *
+     *   外していなかったので、「閲覧の多い順」が
+     *   機械によく回られた作品の順になっていた。
+     *   印の無い古い記録は、人として残す。
+     */
+    const { data: views } = await supabase
+      .from('page_views')
+      .select('novel_id')
+      .eq('is_author', false)
+      .or('is_bot.is.null,is_bot.eq.false')
+      .in('novel_id', novelIds)
     views?.forEach((v: any) => { viewMap[v.novel_id] = (viewMap[v.novel_id] || 0) + 1 })
   }
 

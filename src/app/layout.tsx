@@ -46,6 +46,7 @@ import "@/styles/home/book_info.css";
 import "@/styles/home/responsive.css";
 import "@/styles/home/reader-layout.css";
 import MobileTabBar from "@/components/layout/mobile-tab-bar";
+import ErrorWatch from "@/components/layout/error-watch";
 import MobileHeader from "@/components/layout/mobile-header";
 
 const notoSans = Noto_Sans_JP({
@@ -224,6 +225,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   * 携帯だけのヘッダー。
                   * 同じ幅で、既存のヘッダーは CSS 側で出さない。
                   */}
+                {/*
+                  * 落ちたことを、こちらへ知らせる。
+                  * 読者から声が届く前に、気づけるようにする。
+                  */}
+                <ErrorWatch />
+
                 <MobileHeader />
 
                 <AuthGate>{children}</AuthGate>
