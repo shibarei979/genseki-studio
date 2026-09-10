@@ -544,62 +544,91 @@
 }
 
 /*
- * 石の名前。
+ * 舞台 × 芯。
  *
  * ★ 遊びの中で、いちばん大きい字。
- *   ここを持って帰ってもらう。
- *
- * ★ 漢字二字は、詰めると単語に見える。
- *   離すと、石を並べたように見える。
+ *   二つ並べるだけで、どんな話かが伝わる言葉にする。
+ *   抽象語だと、題名と繋がらなかった。
  */
-.gm_stone_name {
+.gm_pair {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
     margin-top: 12px;
+    animation: gm_pair_in .7s cubic-bezier(.2, .8, .3, 1) both .1s;
+}
+
+@keyframes gm_pair_in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.gm_pair_word {
     font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 58px;
+    font-size: 40px;
     font-weight: 700;
-    letter-spacing: .32em;
-    text-indent: .32em;
+    letter-spacing: .1em;
+    text-indent: .1em;
     line-height: 1.3;
     color: var(--sea);
-    animation: gm_stone_in .8s cubic-bezier(.2, .8, .3, 1) both .1s;
 }
 
-@keyframes gm_stone_in {
-    from { opacity: 0; letter-spacing: .9em; text-indent: .9em; }
-    to   { opacity: 1; letter-spacing: .32em; text-indent: .32em; }
-}
-
-.gm_stone_name.is_twin {
-    font-size: 40px;
-    letter-spacing: .2em;
-    text-indent: .2em;
-}
-
-.gm_and {
-    display: inline-block;
-    margin: 0 .3em;
-    font-size: 18px;
-    letter-spacing: 0;
-    text-indent: 0;
+.gm_pair_cross {
+    font-size: 20px;
     color: var(--amber);
-    vertical-align: .24em;
 }
 
-.gm_answer_lines {
-    margin: 18px auto 0;
-    max-width: 400px;
+/* ------------------------------------------------------------
+ * 6角形と、一作を横に並べる
+ *
+ * ★ 縦に積むと、形を見たあと、もう一度下へ目を移す。
+ *   横に並べれば、一度に目に入る。
+ * ---------------------------------------------------------- */
+.gm_pane {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin: 24px auto 0;
+    padding: 22px;
+    max-width: 520px;
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--amber);
+    border-radius: 2px;
+    background: #fff;
+    box-shadow: 0 4px 18px rgba(40, 35, 25, .07);
+    text-align: left;
 }
 
-.gm_answer_lines p {
-    font-size: 13.5px;
-    line-height: 2.1;
-    color: var(--ink);
+.gm_pane_left {
+    flex-shrink: 0;
+    text-align: center;
 }
 
-.gm_rare {
-    margin-top: 12px;
-    color: #9a6f2c !important;
-    font-weight: 700;
+.gm_pane_cap {
+    margin-top: 2px;
+    font-size: 10.5px;
+    letter-spacing: .18em;
+    color: var(--ink-soft);
+}
+
+.gm_pane_right {
+    flex: 1;
+    min-width: 0;
+}
+
+.gm_work_best {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+}
+
+.gm_work_best b {
+    color: var(--amber);
+    font-size: 13px;
+    letter-spacing: .06em;
 }
 
 /* ------------------------------------------------------------
@@ -672,10 +701,7 @@
 }
 
 .gm_work_note {
-    margin-top: 12px;
-}
-
-.gm_work_note p {
+    margin-top: 10px;
     font-size: 12.5px;
     line-height: 2.05;
     color: var(--ink-soft);
@@ -790,6 +816,27 @@
 /* ------------------------------------------------------------
  * 狭い画面
  * ---------------------------------------------------------- */
+/* 狭い画面では、縦に落とす */
+@media (max-width: 560px) {
+    .gm_pane {
+        flex-direction: column;
+        gap: 14px;
+        text-align: center;
+    }
+
+    .gm_pane_right {
+        width: 100%;
+    }
+
+    .gm_work_best {
+        text-align: center;
+    }
+
+    .gm_pair_word {
+        font-size: 32px;
+    }
+}
+
 @media (max-width: 420px) {
     .gm_main { padding: 8px 16px 60px; }
     .gm_open_ask { font-size: 21px; }
@@ -805,7 +852,7 @@
     .gm_stage,
     .gm_result,
     .gm_reveal,
-    .gm_stone_name,
+    .gm_pair,
     .gm_gem.is_big,
     .gm_hex svg {
         animation: none;

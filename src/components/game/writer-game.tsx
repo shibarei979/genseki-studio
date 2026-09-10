@@ -101,6 +101,31 @@ export default function WriterGame() {
         return STAGES[index > COIN_AT ? index - 1 : index]
     }
 
+    /**
+     * 舞台と芯の票を、はじめから数え直す。
+     *
+     * ★ 6 つの角とは別に数える。
+     *   角は「どう書く人か」、票は「何が書けるか」。
+     *   混ぜると、どちらも曖昧になる。
+     */
+    function votes() {
+        const place: Record<string, number> = {}
+        const core: Record<string, number> = {}
+
+        for (const [key, choiceAt] of Object.entries(picked)) {
+            const stage = stageAt(Number(key))
+            if (!stage || stage === 'coin') continue
+
+            const choice = stage.choices[choiceAt]
+            if (!choice) continue
+
+            if (choice.place) place[choice.place] = (place[choice.place] ?? 0) + 1
+            if (choice.core) core[choice.core] = (core[choice.core] ?? 0) + 1
+        }
+
+        return { place, core }
+    }
+
     /** 点を、はじめから数え直す */
     function totalScore(): Score {
         const score: Score = { ...EMPTY }
@@ -206,7 +231,11 @@ export default function WriterGame() {
                 )}
 
                 {at === last + 2 && (
-                    <ResultView score={totalScore()} onRestart={restart} />
+                    <ResultView
+                        score={totalScore()}
+                        votes={votes()}
+                        onRestart={restart}
+                    />
                 )}
             </main>
         </div>
@@ -626,86 +655,57 @@ function Coins({
 
 function ResultView({
     score,
+    votes,
     onRestart,
 }: {
     score: Score
+    votes: { place: Record<string, number>; core: Record<string, number> }
     onRestart: () => void
 }) {
-    const v = judge(score)
+    const v = judge(score, votes.place, votes.core)
 
-    /* 石の名前。ふたつ持ちなら「余韻 と 世界」 */
-    const stoneName = v.second
-        ? `${v.stone.name} と ${v.second.name}`
-        : v.stone.name
-
-    /*
-     * つぶやく文。
-     *
-     * ★ 石の名前だけで伝わるようにする。
-     *   「私の原石は余韻でした」。それだけで、
-     *   読んだ人は自分の石を知りたくなる。
-     */
     const shareText = [
-        `私が持っている原石は「${stoneName}」でした。`,
+        `私が書けるのは「${v.place} × ${v.core}」でした。`,
         v.work.title,
         '',
-        '無名作家からスタート。あなたの原石は？',
+        '無名作家からスタート。あなたは何を書ける？',
         '#原石航路',
     ].join('\n')
 
     return (
         <div className="gm_result">
-            <p className="gm_answer_tag">あなたが持っている原石は</p>
+            <p className="gm_answer_tag">あなたが書けるのは</p>
 
-            {/* 石の名前。ここがいちばん大きい */}
-            <h2 className={`gm_stone_name${v.second ? ' is_twin' : ''}`}>
-                {v.second ? (
-                    <>
-                        {v.stone.name}
-                        <span className="gm_and">と</span>
-                        {v.second.name}
-                    </>
-                ) : (
-                    v.stone.name
-                )}
+            {/* 舞台 × 芯。ここがいちばん大きい */}
+            <h2 className="gm_pair">
+                <span className="gm_pair_word">{v.place}</span>
+                <span className="gm_pair_cross">×</span>
+                <span className="gm_pair_word">{v.core}</span>
             </h2>
 
-            <div className="gm_answer_lines">
-                <p>{v.stone.what}</p>
-                {v.second && <p>{v.second.what}</p>}
-                <p className="gm_rare">
-                    {v.isMany
-                        ? '三つ以上を同じ強さで持っている人は、ほとんどいません。'
-                        : v.second
-                          ? 'ふたつ持っている人は、多くありません。'
-                          : v.stone.rare}
-                </p>
-            </div>
+            {/*
+              * ★ 6角形と、一作を横に並べる。
+              *
+              *   縦に積むと、形を見たあと、もう一度
+              *   下へ目を移すことになる。
+              *   横に並べれば、形と題名が一度に目に入る。
+              *
+              * ★ 狭い画面では、縦に落ちる。
+              */}
+            <div className="gm_pane">
+                <div className="gm_pane_left">
+                    <Gem score={score} size={210} showNames />
+                    <p className="gm_pane_cap">あなたの書き方</p>
+                </div>
 
-            <Gem score={score} size={230} showNames />
+                <div className="gm_pane_right">
+                    <p className="gm_work_tag">あなたが書ける一作</p>
+                    <p className="gm_work_title">{v.work.title}</p>
+                    <p className="gm_work_note">{v.work.note}</p>
 
-            {/* この石で書ける一作 */}
-            <div className="gm_work">
-                {/*
-                  * ★ どの角とどの角から生まれた一作かを、書く。
-                  *
-                  *   石の名前と題名だけを並べても、繋がらない。
-                  *   「余韻 × 世界 から」と挟むだけで、
-                  *   なぜこの題名なのかが通る。
-                  */}
-                <p className="gm_work_from">
-                    <b>{v.stone.name}</b>
-                    <span>×</span>
-                    <b>{v.support.name}</b>
-                    <span className="gm_work_from_tail">から生まれる</span>
-                </p>
-
-                <p className="gm_work_tag">あなたが書ける一作</p>
-                <p className="gm_work_title">{v.work.title}</p>
-                <div className="gm_work_note">
-                    {v.work.note.map((line) => (
-                        <p key={line}>{line}</p>
-                    ))}
+                    <p className="gm_work_best">
+                        いちばん強いのは <b>{AXIS_NAME[v.best]}</b>
+                    </p>
                 </div>
             </div>
 
@@ -722,16 +722,6 @@ function ResultView({
                     見つけたりできる場所です。
                 </p>
 
-                {/*
-                  * ★ 題名を持たせたまま、書く画面へ送る。
-                  *
-                  *   「登録する」ではなく「この題名で書き始める」。
-                  *   いま書きたくなっている気持ちを、
-                  *   そのまま次の画面へ運ぶ。
-                  *
-                  *   受け取る側が題名を使えなくても、
-                  *   ただの行き先として働く。
-                  */}
                 <div>
                     <Link
                         href={`/post?title=${encodeURIComponent(
@@ -743,16 +733,14 @@ function ResultView({
                     </Link>
                 </div>
 
-                <p className="gm_reveal_small">
-                    題名は、あとから変えられます
-                </p>
+                <p className="gm_reveal_small">題名は、あとから変えられます</p>
 
                 <div>
                     <Link
                         href={`/search?genre=${encodeURIComponent(v.genre)}`}
                         className="gm_sub"
                     >
-                        同じ原石の作品を読んでみる
+                        {v.place}の作品を読んでみる
                     </Link>
                 </div>
 

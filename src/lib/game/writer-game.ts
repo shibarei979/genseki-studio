@@ -1,3 +1,4 @@
+import { CORES, PLACES, WORKS, type Core, type Place, type Work } from "@/lib/game/works-100";
 /**
  * ============================================================
  * 原石航路
@@ -36,6 +37,15 @@ export type Score = Record<Axis, number>;
 export interface Choice {
     label: string;
     add: Partial<Score>;
+    /**
+     * この札が入れる票。
+     *
+     * ★ 6 つの角（書き方）とは別に、
+     *   舞台（どこの話か）と芯（何の話か）に票を入れる。
+     *   その二つで、書ける一作が決まる。
+     */
+    place?: Place;
+    core?: Core;
     /** 本の背として出すときの色 */
     cover?: { base: string; ink: string };
 }
@@ -63,18 +73,22 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "この主人公、絶対に面白い",
+                core: "成長",
                 add: { chara: 4, heat: 1 },
             },
             {
                 label: "誰も知らない世界を作りたい",
+                core: "発見",
                 add: { world: 4, story: 1 },
             },
             {
                 label: "このラストだけは絶対に書きたい",
+                core: "喪失",
                 add: { story: 4, text: 1 },
             },
             {
                 label: "この一文から始めたい",
+                core: "恋",
                 add: { text: 4, chara: 1 },
             },
         ],
@@ -89,21 +103,25 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "魔王を倒した俺は、今日から喫茶店を始めます",
+                place: "異世界",
                 add: { chara: 3, reach: 2 },
                 cover: { base: "#f0e2c4", ink: "#6a4a1e" },
             },
             {
                 label: "夏の終わり、君の名前を忘れる",
+                place: "現代",
                 add: { text: 3, story: 1 },
                 cover: { base: "#dfe9ef", ink: "#2d4a5e" },
             },
             {
                 label: "月面都市第七埠頭",
+                place: "近未来",
                 add: { world: 4 },
                 cover: { base: "#23303f", ink: "#dfe6ee" },
             },
             {
                 label: "彼女が死んだ日のことを、僕だけが覚えている",
+                place: "都市",
                 add: { story: 3, text: 1 },
                 cover: { base: "#efe4e6", ink: "#5e3a40" },
             },
@@ -145,18 +163,22 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "この主人公、めっちゃ好きです",
+                core: "恋",
                 add: { chara: 4 },
             },
             {
                 label: "続きまだですか？",
+                core: "冒険",
                 add: { reach: 3, heat: 2 },
             },
             {
                 label: "最後の一文が、ずっと頭に残っています",
+                core: "喪失",
                 add: { text: 4 },
             },
             {
                 label: "頭の中で、映像が流れました",
+                core: "謎",
                 add: { world: 3, story: 2 },
             },
         ],
@@ -175,18 +197,22 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "書けなくても、机には座る",
+                core: "再生",
                 add: { heat: 5 },
             },
             {
                 label: "他の人の作品を、片っ端から読む",
+                core: "発見",
                 add: { text: 2, world: 2 },
             },
             {
                 label: "読者に「少し休みます」と伝える",
+                core: "日常",
                 add: { reach: 3, chara: 1 },
             },
             {
                 label: "この物語のラストを、もう一度思い出す",
+                core: "喪失",
                 add: { story: 4 },
             },
         ],
@@ -203,18 +229,22 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "その子の出番を増やす",
+                core: "成長",
                 add: { chara: 3, reach: 2 },
             },
             {
                 label: "予定どおり進める",
+                core: "対立",
                 add: { story: 3, text: 2 },
             },
             {
                 label: "その子の物語を、別に立てる",
+                core: "冒険",
                 add: { world: 4 },
             },
             {
                 label: "なぜ人気が出たのか、考えてみる",
+                core: "謎",
                 add: { reach: 3, chara: 1 },
             },
         ],
@@ -233,18 +263,22 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "書き方を変えず、出し続ける",
+                core: "再生",
                 add: { heat: 4, text: 1 },
             },
             {
                 label: "誰かに読んでくださいと、声をかける",
+                core: "日常",
                 add: { reach: 4 },
             },
             {
                 label: "第1話だけ、もう一度作り直す",
+                core: "復讐",
                 add: { text: 2, story: 2 },
             },
             {
                 label: "この話を面白いと思う人が、どこかにいると信じる",
+                core: "発見",
                 add: { heat: 3, chara: 2 },
             },
         ],
@@ -261,18 +295,22 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "キャラクター",
+                place: "学園",
                 add: { chara: 4 },
             },
             {
                 label: "ストーリー",
+                place: "歴史",
                 add: { story: 4 },
             },
             {
                 label: "世界観",
+                place: "幻想",
                 add: { world: 4 },
             },
             {
                 label: "この作品が伝えたいこと",
+                place: "職場",
                 add: { text: 4 },
             },
         ],
@@ -287,18 +325,22 @@ export const STAGES: Stage[] = [
         choices: [
             {
                 label: "このキャラ、一生推す",
+                place: "異世界",
                 add: { chara: 4, heat: 1 },
             },
             {
                 label: "人生でいちばん、続きを待った作品",
+                place: "都市",
                 add: { reach: 3, heat: 2 },
             },
             {
                 label: "何年経っても、忘れられない",
+                place: "田舎",
                 add: { text: 4, story: 1 },
             },
             {
                 label: "この作品から、全部が始まった",
+                place: "辺境",
                 add: { world: 3, story: 2 },
             },
         ],
@@ -308,326 +350,6 @@ export const STAGES: Stage[] = [
 /* ============================================================
  * 結果
  * ============================================================ */
-
-/* ============================================================
- * 石
- *
- * ★ 名前は漢字二字でそろえる。
- *   並べたときに粒が揃い、石らしく見える。
- *   「私の原石は余韻」と言えることが、いちばん大事。
- *
- * ★ 褒めるが、安くしない。
- *   「すごい」ではなく「持っている人は多くない」。
- *   事実として言えることだけ書く。
- * ============================================================
- */
-
-export interface Stone {
-    /** 漢字二字 */
-    name: string;
-    /** その石が何か。1 行 */
-    what: string;
-    /** なぜ珍しいか。1 行 */
-    rare: string;
-    /** 同じ手ざわりの作品を探す行き先 */
-    genre: string;
-}
-
-export const STONES: Record<Axis, Stone> = {
-    chara: {
-        name: "人物",
-        what: "読み終えたあとも、その人だけが残る。",
-        rare: "筋より先に人が立つ物語を書ける人は、多くありません。",
-        genre: "異世界ファンタジー",
-    },
-    world: {
-        name: "世界",
-        what: "説明していないところに、空気がある。",
-        rare: "書いていない部分まで信じさせられる人は、多くありません。",
-        genre: "ハイファンタジー",
-    },
-    text: {
-        name: "余韻",
-        what: "読み終えたあとから、始まる。",
-        rare: "削って残すことができる人は、多くありません。",
-        genre: "文芸",
-    },
-    story: {
-        name: "構成",
-        what: "終わりから逆算して、道を引ける。",
-        rare: "最後の一場面を持ったまま書き切れる人は、多くありません。",
-        genre: "ミステリー",
-    },
-    reach: {
-        name: "発信",
-        what: "書いたものを、届くところまで運べる。",
-        rare: "書くことと届けることを、同じ仕事だと思える人は多くありません。",
-        genre: "恋愛",
-    },
-    heat: {
-        name: "熱量",
-        what: "読まれなくても、机に座り続けられる。",
-        rare: "これを持っている人だけが、三年後も書いています。",
-        genre: "オールジャンル",
-    },
-};
-
-/* ============================================================
- * その石で書ける一作
- *
- * ★ いちばん高い角と、2 番目の角の組で決める。
- *
- *   石だけだと「へえ」で終わる。
- *   その石で何が書けるかまで言われると、
- *   書きたくなる。書きたくなった状態のまま、
- *   書く場所へ送るのが、この遊びの狙い。
- *
- * ★ 30 通り。6 つの石 × 残り 5 つ。
- *   自分のために作られた、と思える数にする。
- * ============================================================
- */
-
-export interface Work {
-    title: string;
-    /** どういう話か。2 行 */
-    note: string[];
-}
-
-const key = (a: Axis, b: Axis) => `${a}-${b}`;
-
-export const WORKS: Record<string, Work> = {
-    /* ---- 人物 ---- */
-    [key("chara", "world")]: {
-        title: "『この街の誰も、あの子を知らない』",
-        note: ["世界のほうが先にあり、その中に一人だけ立っている。", "街を書けば書くほど、その子が浮かび上がる話。"],
-    },
-    [key("chara", "text")]: {
-        title: "『さよならを、言わなかった人の話』",
-        note: ["別れの場面を書かずに、別れを書く。", "その人が何を言わなかったかで、全部が伝わる話。"],
-    },
-    [key("chara", "story")]: {
-        title: "『最後に嘘をつくのは、私です』",
-        note: ["終わりを知っているのは、書き手とその人だけ。", "読者が気づいた瞬間に、人物が反転する話。"],
-    },
-    [key("chara", "reach")]: {
-        title: "『毎週火曜日、彼女は嘘をつく』",
-        note: ["一話ごとに小さな謎が終わり、大きな謎が残る。", "続きを待たせる形が、そのまま人物の魅力になる話。"],
-    },
-    [key("chara", "heat")]: {
-        title: "『何度でも、この人を書く』",
-        note: ["一人の人物を、長く、しつこく追いかける。", "書き続けた時間そのものが、その人を厚くする話。"],
-    },
-
-    /* ---- 世界 ---- */
-    [key("world", "chara")]: {
-        title: "『滅びた国の、最後の郵便配達人』",
-        note: ["失われた世界を、一人の仕事を通して見せる。", "世界の広さが、その人の孤独になる話。"],
-    },
-    [key("world", "text")]: {
-        title: "『水没都市の図書館』",
-        note: ["起きたことを説明せず、残ったものだけを書く。", "読者が世界を組み立て終えたとき、読み終わる話。"],
-    },
-    [key("world", "story")]: {
-        title: "『第七層より下の地図はない』",
-        note: ["世界の仕組みそのものが、謎の仕掛けになっている。", "降りるほど、この世界の理由が見えてくる話。"],
-    },
-    [key("world", "reach")]: {
-        title: "『月面都市第七埠頭』",
-        note: ["一話ごとに、新しい区画へ入っていく。", "世界を見せることが、そのまま引きになる話。"],
-    },
-    [key("world", "heat")]: {
-        title: "『百年かけて、この島を書く』",
-        note: ["一つの土地を、時代を変えて何度も書く。", "長く書くほど、世界が本物になっていく話。"],
-    },
-
-    /* ---- 余韻 ---- */
-    [key("text", "chara")]: {
-        title: "『夏の終わり、君の名前を忘れる』",
-        note: ["忘れていく側から書く。失われる過程そのものを書く。", "最後の一行のために、全部がある話。"],
-    },
-    [key("text", "world")]: {
-        title: "『誰もいない町の、雨の音』",
-        note: ["人を出さずに、人がいた気配だけを書く。", "読み終えてから、寂しさが来る話。"],
-    },
-    [key("text", "story")]: {
-        title: "『彼女が死んだ日のことを、僕だけが覚えている』",
-        note: ["構成で伏せて、最後の数行で全部を反転させる。", "二度目に読むと、別の話になる話。"],
-    },
-    [key("text", "reach")]: {
-        title: "『一日一通、届かない手紙』",
-        note: ["短い話を、毎日ひとつずつ。", "積み重なったとき、初めて意味が立ち上がる話。"],
-    },
-    [key("text", "heat")]: {
-        title: "『十年、同じ場面を書き直している』",
-        note: ["書き直すことそのものを、物語にする。", "削るほど強くなる、あなたの手つきが出る話。"],
-    },
-
-    /* ---- 構成 ---- */
-    [key("story", "chara")]: {
-        title: "『三人が、同じ夜を別々に語る』",
-        note: ["同じ出来事を、三人ぶん重ねる。", "重なった瞬間に、誰が嘘をついたか分かる話。"],
-    },
-    [key("story", "world")]: {
-        title: "『この世界には、二度目がある』",
-        note: ["世界の仕掛けが、そのまま物語の構造になる。", "仕組みが分かった瞬間に、全部の意味が変わる話。"],
-    },
-    [key("story", "text")]: {
-        title: "『最終話から、はじめてください』",
-        note: ["終わりを先に見せて、そこへ向かって進む。", "分かっているのに止められない話。"],
-    },
-    [key("story", "reach")]: {
-        title: "『毎話、必ず誰かが嘘をつく』",
-        note: ["一話ごとに小さな解決と、新しい謎。", "止まれない形を、意図して作れる話。"],
-    },
-    [key("story", "heat")]: {
-        title: "『長い長い、たった一日の話』",
-        note: ["一日を、何十話もかけて書く。", "書き切ったこと自体が、読者への贈り物になる話。"],
-    },
-
-    /* ---- 発信 ---- */
-    [key("reach", "chara")]: {
-        title: "『推してた配信者が、隣に引っ越してきた』",
-        note: ["一話目で全部が分かり、二話目から離れられない。", "人物の強さが、そのまま拡散していく話。"],
-    },
-    [key("reach", "world")]: {
-        title: "『魔王を倒した俺は、今日から喫茶店を始めます』",
-        note: ["世界の設定が、そのまま笑いと引きになる。", "題名だけで読みたくなる形を、あなたは作れる。"],
-    },
-    [key("reach", "text")]: {
-        title: "『三行で、泣かせます』",
-        note: ["短い話を、届く形で置いていく。", "刺さった一編が、あなたを見つけさせる話。"],
-    },
-    [key("reach", "story")]: {
-        title: "『次回、主人公が死にます』",
-        note: ["予告そのものを仕掛けにする。", "読者が来る理由を、構成で作れる話。"],
-    },
-    [key("reach", "heat")]: {
-        title: "『毎日20時、必ず更新します』",
-        note: ["約束を守り続けることが、そのまま作品になる。", "続けた日数が、あなたの武器になる話。"],
-    },
-
-    /* ---- 熱量 ---- */
-    [key("heat", "chara")]: {
-        title: "『この子が報われるまで、やめない』",
-        note: ["報われない人物を、報われるまで書き続ける。", "書き手の執念が、そのまま読者の応援になる話。"],
-    },
-    [key("heat", "world")]: {
-        title: "『まだ誰も来ていない大陸』",
-        note: ["誰も読んでいない場所を、一人で作り続ける。", "後から来た人が、驚く話。"],
-    },
-    [key("heat", "text")]: {
-        title: "『書けない夜のことを、書く』",
-        note: ["書けなかった時間そのものを、作品にする。", "同じ夜を知っている人に、必ず届く話。"],
-    },
-    [key("heat", "story")]: {
-        title: "『百話目で、はじめて明かします』",
-        note: ["長く書くことでしか作れない仕掛けを、置く。", "そこまで来た人だけが受け取れる話。"],
-    },
-    [key("heat", "reach")]: {
-        title: "『31PVの日から、数えています』",
-        note: ["読まれなかった日を、隠さずに書く。", "同じ場所にいる人が、集まってくる話。"],
-    },
-};
-
-/* ============================================================
- * 大吉 — 石をふたつ持っている人
- *
- * ★ 20 通り。組み合わせ 15 と、三つ以上並んだとき 5。
- *   ふつうの結果と別の表にするのは、
- *   言い方を変えるため。
- *   「持っている」ではなく「ふたつ持っている」。
- * ============================================================
- */
-
-const pairKey = (a: Axis, b: Axis) =>
-    [a, b].sort().join("+");
-
-export const TWIN: Record<string, Work> = {
-    [pairKey("chara", "world")]: {
-        title: "『神々の住む街で、パン屋をしています』",
-        note: ["大きな世界と、小さな一人。", "その落差だけで、読者は最後まで来ます。"],
-    },
-    [pairKey("chara", "text")]: {
-        title: "『あなたのことを、少しずつ忘れます』",
-        note: ["人物の輪郭が、余韻の中に溶けていく。", "静かなのに、いちばん残る形です。"],
-    },
-    [pairKey("chara", "story")]: {
-        title: "『わたしが犯人だと、最初に言いました』",
-        note: ["人物への愛着と、構成の仕掛けが噛み合う。", "騙されて、なお好きになる話。"],
-    },
-    [pairKey("chara", "reach")]: {
-        title: "『毎週、この子に会いに来てください』",
-        note: ["人物の強さと、届ける形。", "いちばん多くの人に届く組み合わせです。"],
-    },
-    [pairKey("chara", "heat")]: {
-        title: "『十年後も、この人を書いています』",
-        note: ["一人の人物と、長く付き合う覚悟。", "シリーズになる形です。"],
-    },
-    [pairKey("world", "text")]: {
-        title: "『沈んだ都市の、最後の一行』",
-        note: ["世界の広さと、言葉の少なさ。", "書かないことで書く、いちばん難しい形です。"],
-    },
-    [pairKey("world", "story")]: {
-        title: "『この世界の法則を、七話で証明します』",
-        note: ["世界の仕組みが、そのまま謎になる。", "設定好きが最後まで読む形です。"],
-    },
-    [pairKey("world", "reach")]: {
-        title: "『第七層へようこそ』",
-        note: ["世界を見せることが、そのまま引きになる。", "一話ごとに新しい景色が出る形です。"],
-    },
-    [pairKey("world", "heat")]: {
-        title: "『この大陸を、ひとりで書き切ります』",
-        note: ["広い世界と、続ける力。", "大作になる組み合わせです。"],
-    },
-    [pairKey("text", "story")]: {
-        title: "『最後の三行のために、二十万字を書きました』",
-        note: ["構成で伏せ、余韻で落とす。", "読み終えた人が、二度目を始める形です。"],
-    },
-    [pairKey("text", "reach")]: {
-        title: "『毎晩、三行だけ置いていきます』",
-        note: ["短さと、届ける形。", "一編が刺さって、あなたが見つかる形です。"],
-    },
-    [pairKey("text", "heat")]: {
-        title: "『書き直した回数だけ、静かになる』",
-        note: ["削る手つきと、続ける力。", "遅く見えて、いちばん遠くまで行く形です。"],
-    },
-    [pairKey("story", "reach")]: {
-        title: "『次回、すべてが引っくり返ります』",
-        note: ["仕掛けと、届ける形。", "読者が読者を連れてくる形です。"],
-    },
-    [pairKey("story", "heat")]: {
-        title: "『百話かけて、ひとつの嘘を回収します』",
-        note: ["長さでしか作れない仕掛けを置ける。", "完結したときに、いちばん強くなる形です。"],
-    },
-    [pairKey("reach", "heat")]: {
-        title: "『千日、休まずに書きます』",
-        note: ["届ける力と、続ける力。", "才能ではなく習慣で勝つ、いちばん堅い形です。"],
-    },
-};
-
-/** 三つ以上が並んだとき。5 通り */
-export const TRIPLE: Work[] = [
-    {
-        title: "『まだ名前のない、大きな話』",
-        note: ["どれか一つに寄っていません。", "型に押し込めないものを、あなたは書けます。"],
-    },
-    {
-        title: "『全部入りの、長い航海』",
-        note: ["人も、世界も、仕掛けも、同じ強さで持っている。", "長く書くほど、強くなる形です。"],
-    },
-    {
-        title: "『これは、あなたにしか書けません』",
-        note: ["組み合わせが珍しすぎて、似た作品がありません。", "参考にできるものが無い、ということでもあります。"],
-    },
-    {
-        title: "『はじまりの一冊』",
-        note: ["どこから書き始めても、形になります。", "迷うとしたら、それは弱さではなく幅です。"],
-    },
-    {
-        title: "『次の世代が、真似をする話』",
-        note: ["いま在るどれとも違う形を、作れます。", "最初の一人になる可能性があります。"],
-    },
-];
 
 export const AXIS_NAME: Record<Axis, string> = {
     chara: "キャラクター",
@@ -649,99 +371,75 @@ export const AXIS_ORDER: Axis[] = [
 ];
 
 /**
- * 点から、結果を決める。
+ * 結果を決める。
  *
- * ★ 返すのは「石」と「その石で書ける一作」。
+ * ★ 二つの物差しを、別々に見る。
  *
- *   石だけだと「へえ」で終わる。
- *   その石で何が書けるかまで言われると、書きたくなる。
- *   書きたくなった状態のまま、書く場所へ送る。
+ *     6 つの角   どう書く人か（形として見せる）
+ *     舞台 × 芯  何が書けるか（一作として見せる）
  *
- * ★ ふたつ並んだら、大吉。
+ *   前は 6 つの角から題名まで決めていた。
+ *   「余韻」と『雨の音』が、どう繋がるのか
+ *   遊んだ人には分からなかった。
  *
- *   いちばん高い角と 2 番目の差が 2 以内。
- *   どちらも持っている、と言い切れる範囲。
+ *   「異世界 × 冒険」なら、二つ並べるだけで伝わる。
  *
- * ★ 三つ以上並んだら、別の言い方をする。
- *   ふたつと同じ扱いにすると、
- *   いちばん珍しい人が、いちばん雑に扱われる。
+ * ★ 票が同じなら、先に出たほうを取る。
+ *   珍しさで選び直すと、答えた札と食い違って見える。
  */
 export interface Verdict {
-    /** いちばん高い石 */
-    stone: Stone;
-    /** ふたつ目。大吉のときだけ */
-    second?: Stone;
-    /**
-     * 支えている石。
-     *
-     * ★ 一作は、いちばん高い角と 2 番目の角から決まる。
-     *   どの組から生まれた題名なのかを書かないと、
-     *   石の名前と題名が繋がらない。
-     */
-    support: Stone;
-    /** 三つ以上並んでいるか */
-    isMany: boolean;
-    /** その石で書ける一作 */
+    /** どこの話か */
+    place: Place;
+    /** 何の話か */
+    core: Core;
+    /** その組で書ける一作 */
     work: Work;
+    /** いちばん高い角。書き方の言葉 */
+    best: Axis;
     /** 同じ手ざわりの作品を探す行き先 */
     genre: string;
 }
 
-/*
- * 同点のときに、どちらを上にするか。
- *
- * 珍しいほうを上にする。
- * 多いほうを出すと、みな同じ結果になる。
- */
-const RARITY: Axis[] = ["text", "story", "world", "heat", "reach", "chara"];
+/** ジャンルの行き先。舞台から決める */
+const GENRE_OF: Record<Place, string> = {
+    異世界: "異世界ファンタジー",
+    現代: "日常",
+    学園: "学園",
+    歴史: "歴史・時代",
+    近未来: "SF",
+    辺境: "ハイファンタジー",
+    都市: "ミステリー",
+    幻想: "ローファンタジー",
+    職場: "文芸",
+    田舎: "文芸",
+};
 
-function sortAxes(score: Score): Axis[] {
-    return [...AXIS_ORDER].sort((a, b) => {
-        if (score[b] !== score[a]) return score[b] - score[a];
-        return RARITY.indexOf(a) - RARITY.indexOf(b);
-    });
+function topOf<T extends string>(votes: Record<string, number>, all: readonly T[]): T {
+    let best = all[0];
+    for (const one of all) {
+        if ((votes[one] ?? 0) > (votes[best] ?? 0)) best = one;
+    }
+    return best;
 }
 
-export function judge(score: Score): Verdict {
-    const order = sortAxes(score);
-    const [first, second, third] = order;
+export function judge(
+    score: Score,
+    placeVotes: Record<string, number>,
+    coreVotes: Record<string, number>,
+): Verdict {
+    const place = topOf(placeVotes, PLACES);
+    const core = topOf(coreVotes, CORES);
 
-    const gap = score[first] - score[second];
-    const gap2 = score[first] - score[third];
-
-    /* 三つ以上が並んでいる */
-    if (gap2 <= 2) {
-        /* 点の合計で、どの言い方を出すかを決める。いつも同じにしない */
-        const total = AXIS_ORDER.reduce((sum, axis) => sum + score[axis], 0);
-        return {
-            stone: STONES[first],
-            second: STONES[second],
-            support: STONES[second],
-            isMany: true,
-            work: TRIPLE[total % TRIPLE.length],
-            genre: "オールジャンル",
-        };
+    let best: Axis = AXIS_ORDER[0];
+    for (const axis of AXIS_ORDER) {
+        if (score[axis] > score[best]) best = axis;
     }
 
-    /* ふたつ並んでいる */
-    if (gap <= 2) {
-        const twin = TWIN[[first, second].sort().join("+")];
-        return {
-            stone: STONES[first],
-            second: STONES[second],
-            support: STONES[second],
-            isMany: false,
-            work: twin ?? WORKS[`${first}-${second}`],
-            genre: STONES[first].genre,
-        };
-    }
-
-    /* ひとつ */
     return {
-        stone: STONES[first],
-        support: STONES[second],
-        isMany: false,
-        work: WORKS[`${first}-${second}`],
-        genre: STONES[first].genre,
+        place,
+        core,
+        work: WORKS[`${place}-${core}`] ?? WORKS["現代-日常"],
+        best,
+        genre: GENRE_OF[place],
     };
 }
