@@ -750,20 +750,62 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                          * 話だけを並べると、どこの話か分からない。
                          */}
                         <div className="thin-scroll max-h-[calc(100vh-340px)] overflow-y-auto p-2">
-                            {[
-                                { id: null, label: "" },
-                                ...chapters.map((chapter, index) => ({
-                                    id: chapter.id,
-                                    label: formatChapterLabel(chapter, index),
-                                })),
-                            ].map((group) => {
-                                const own = episodes.filter(
-                                    (row) => (row.chapter_id ?? null) === group.id,
-                                );
+                            {/*
+                              * ★ 話の順に沿って並べ、章が変わったところで見出しを出す。
+                              *
+                              *   前は「章に入っていない話」を必ず先頭に置き、
+                              *   そのあと章を作った順に並べていた。
+                              *
+                              *   序章をあとから作ると、いちばん最初に出す話が
+                              *   いちばん下に来る。執筆室では正しく並ぶのに、
+                              *   ここと目次だけ逆になっていた。
+                              *
+                              *   読む順は話の番号で決まる。それに従えば、
+                              *   どの画面でも同じ並びになる。
+                              */}
+                            {(() => {
+                                const groups: {
+                                    id: string | null;
+                                    label: string;
+                                    own: Episode[];
+                                }[] = [];
+
+                                for (const episode of episodes) {
+                                    const id = episode.chapter_id ?? null;
+                                    const last = groups[groups.length - 1];
+
+                                    if (last && last.id === id) {
+                                        last.own.push(episode);
+                                        continue;
+                                    }
+
+                                    /*
+                                     * 見出しの番号は、章の並び順のまま。
+                                     * 出てきた順で数え直すと、
+                                     * 章の設定で付けた番号と食い違う。
+                                     */
+                                    const at = chapters.findIndex((one) => one.id === id);
+                                    const chapter = at >= 0 ? chapters[at] : null;
+
+                                    groups.push({
+                                        id,
+                                        label: chapter
+                                            ? formatChapterLabel(chapter, at)
+                                            : "",
+                                        own: [episode],
+                                    });
+                                }
+
+                                return groups;
+                            })().map((group, groupAt) => {
+                                const own = group.own;
                                 if (own.length === 0) return null;
 
                                 return (
-                                    <div key={group.id ?? "loose"} className="mb-1">
+                                    <div
+                                        key={`${group.id ?? "loose"}-${groupAt}`}
+                                        className="mb-1"
+                                    >
                                         {group.label && (
                                             <p className="px-2 py-1.5 text-[11px] font-medium text-ink">
                                                 {group.label}
