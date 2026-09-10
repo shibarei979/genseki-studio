@@ -133,39 +133,12 @@ export default function WriterGame() {
         return score
     }
 
-    /*
-     * 選んだあと、一言返してから次へ行く。
-     *
-     * ★ 押して即座に次だと、手ごたえが無い。
-     *   「あなたはそういう人だ」と短く返されると、
-     *   自分がどういう人かを考え始める。
-     *   それが最後の問いに効く。
-     *
-     * ★ 1.1 秒。長いと待たされ、短いと読めない。
-     */
-    const [echo, setEcho] = useState<string | null>(null)
-
     function choose(choiceAt: number) {
-        const stage = stageAt(at)
-        const line =
-            stage && stage !== 'coin' ? stage.choices[choiceAt]?.echo : ''
-
         setPicked((now) => ({ ...now, [at]: choiceAt }))
-
-        if (line) {
-            setEcho(line)
-            window.setTimeout(() => {
-                setEcho(null)
-                setAt(at + 1)
-            }, 1100)
-            return
-        }
-
         setAt(at + 1)
     }
 
     function restart() {
-        setEcho(null)
         setPicked({})
         setCoins({ ...FLAT })
         setAt(-1)
@@ -189,9 +162,7 @@ export default function WriterGame() {
                     <>
                         <Dots at={at} last={last} />
 
-                        {echo ? (
-                            <p className="gm_echo">{echo}</p>
-                        ) : stageAt(at) === 'coin' ? (
+                        {stageAt(at) === 'coin' ? (
                             <Coins
                                 coins={coins}
                                 setCoins={setCoins}
@@ -205,7 +176,7 @@ export default function WriterGame() {
                             />
                         )}
 
-                        {at > 0 && !echo && (
+                        {at > 0 && (
                             <div style={{ textAlign: 'center' }}>
                                 <button
                                     type="button"
@@ -249,7 +220,7 @@ function Open({ onStart }: { onStart: () => void }) {
                 あなたの&ldquo;作家人生&rdquo;が決まります。
             </p>
 
-            <p className="gm_open_ask">あなたはどこへ辿り着く？</p>
+            <p className="gm_open_ask">あなたは、どこへ辿り着く？</p>
 
             {/* 航路の印。線を 1 本だけ */}
             <svg className="gm_wave" width="120" height="10" viewBox="0 0 120 10" aria-hidden="true">
@@ -500,72 +471,95 @@ function ResultView({
     score: Score
     onRestart: () => void
 }) {
-    const result = judge(score)
+    const v = judge(score)
+
+    /* 石の名前。ふたつ持ちなら「余韻 と 世界」 */
+    const stoneName = v.second
+        ? `${v.stone.name} と ${v.second.name}`
+        : v.stone.name
 
     /*
      * つぶやく文。
      *
-     * ★ 型の名前だけでなく、言い切りの一行を入れる。
-     *   名前だけだと「へえ」で終わる。
-     *   一行あると、読んだ人が自分の答えを知りたくなる。
+     * ★ 石の名前だけで伝わるようにする。
+     *   「私の原石は余韻でした」。それだけで、
+     *   読んだ人は自分の石を知りたくなる。
      */
     const shareText = [
-        `${result.emoji}「${result.name}」でした。`,
-        result.catch,
+        `私が持っている原石は「${stoneName}」でした。`,
+        v.work.title,
         '',
-        '無名作家からスタートしたら、あなたは何になる？',
-        '#原石航路作家ゲーム',
+        '無名作家からスタート。あなたの原石は？',
+        '#原石航路',
     ].join('\n')
 
     return (
-        <div>
-            {/* 鑑定書 */}
-            <div className="gm_card">
-                <div className="gm_card_in">
-                    <div className="gm_seal">{result.emoji}</div>
+        <div className="gm_result">
+            <p className="gm_answer_tag">あなたが持っている原石は</p>
 
-                    <p className="gm_kind">鑑定結果</p>
-                    <h2 className="gm_name">{result.name}</h2>
-                    <p className="gm_catch">{result.catch}</p>
+            {/* 石の名前。ここがいちばん大きい */}
+            <h2 className={`gm_stone_name${v.second ? ' is_twin' : ''}`}>
+                {v.second ? (
+                    <>
+                        {v.stone.name}
+                        <span className="gm_and">と</span>
+                        {v.second.name}
+                    </>
+                ) : (
+                    v.stone.name
+                )}
+            </h2>
 
-                    <div style={{ marginTop: 18 }}>
-                        {result.lines.map((line) => (
-                            <p key={line}>{line}</p>
-                        ))}
-                    </div>
+            <div className="gm_answer_lines">
+                <p>{v.stone.what}</p>
+                {v.second && <p>{v.second.what}</p>}
+                <p className="gm_rare">
+                    {v.isMany
+                        ? '三つ以上を同じ強さで持っている人は、ほとんどいません。'
+                        : v.second
+                          ? 'ふたつ持っている人は、多くありません。'
+                          : v.stone.rare}
+                </p>
+            </div>
 
-                    <Hexagon score={score} />
+            <Hexagon score={score} />
 
-                    <p className="gm_hint">{result.hint}</p>
+            {/* この石で書ける一作 */}
+            <div className="gm_work">
+                <p className="gm_work_tag">この原石で、あなたが書ける一作</p>
+                <p className="gm_work_title">{v.work.title}</p>
+                <div className="gm_work_note">
+                    {v.work.note.map((line) => (
+                        <p key={line}>{line}</p>
+                    ))}
                 </div>
             </div>
 
-            {/* ここから、はじめて原石航路の話をする */}
-            <div className="gm_invite">
-                <p className="gm_invite_ask">
-                    あなたの中にある「原石」、
-                    <br />
-                    眠らせたままにしますか？
-                </p>
+            {/* 名前を出すところ */}
+            <div className="gm_reveal">
+                <p className="gm_reveal_tag">原石を、航海に出す場所</p>
 
-                <p className="gm_invite_sub">
-                    原石航路では、まだ知られていない作品を
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="gm_reveal_logo" src="/logo.svg" alt="原石航路" />
+
+                <p className="gm_reveal_lead">
+                    まだ知られていない作品を、
                     <br />
                     投稿したり、見つけたりできます。
                 </p>
 
                 <div>
                     <Link href="/post" className="gm_go">
-                        自分の物語を航海に出す
+                        この一作を書きに行く
                     </Link>
                 </div>
 
                 <div>
                     <Link
-                        href={`/search?genre=${encodeURIComponent(result.genre)}`}
+                        href={`/search?genre=${encodeURIComponent(v.genre)}`}
                         className="gm_sub"
                     >
-                        同じ手ざわりの作品を見てみる
+                        同じ原石の作品を読んでみる
                     </Link>
                 </div>
 

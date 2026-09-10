@@ -27,11 +27,11 @@ import "@/styles/game.css";
  * ============================================================
  */
 export const metadata: Metadata = {
-    title: "無名作家からスタート。あなたは何作家になる？",
+    title: "無名作家からスタート。あなたに合う場所はどこ？",
     description:
-        "10個の選択で、あなたの作家人生が決まります。コミカライズ原作者？ WEBヒット作家？ それとも――",
+        "10個の選択で、あなたの作家人生が決まります。あなたが書き続けられる場所は、どんな場所でしょうか。",
     openGraph: {
-        title: "無名作家からスタート。あなたは何作家になる？",
+        title: "無名作家からスタート。あなたに合う場所はどこ？",
         description:
             "10個の選択で、あなたの作家人生が決まります。あなたはどこへ辿り着く？",
         url: "https://gensekikoro.com/game",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: "summary_large_image",
-        title: "無名作家からスタート。あなたは何作家になる？",
+        title: "無名作家からスタート。あなたに合う場所はどこ？",
         description: "10個の選択で、あなたの作家人生が決まります。",
     },
 };
