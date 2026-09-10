@@ -423,7 +423,7 @@ function Gem({
     /*
      * ★ 名前のぶんを、外に空ける。
      *
-     *   角の名前が 5 文字あるので、
+     *   角の名前が 6 文字あるので、
      *   細く取ると図からはみ出す。
      */
     const pad = showNames ? size * 0.3 : size * 0.1
@@ -906,7 +906,7 @@ function ResultView({
             <div className="gm_pane">
                 <div className="gm_pane_left">
                     <Gem score={score} size={210} showNames />
-                    <p className="gm_pane_cap">10の選択で、見ていたもの</p>
+                    <p className="gm_pane_cap">あなたの書き方</p>
                 </div>
 
                 <div className="gm_pane_right">
@@ -919,16 +919,14 @@ function ResultView({
                     </div>
 
                     {/*
-                      * ★ 何のことか分かる言い方にする。
+                      * ★ 「いちばん強いのは」と言い切らない。
                       *
-                      *   「いちばん強いのは発信力」と言われても、
-                      *   出た作品との関係が分からない。
-                      *   選ぶときに何を見ていたか、と言い直す。
+                      *   強さの順位ではなく、
+                      *   10 の選択で何を選び続けたか、という話。
                       */}
                     <p className="gm_work_best">
-                        選ぶとき、あなたがいちばん見ていたのは
+                        あなたが選び続けたのは
                         <b>{AXIS_NAME[v.best]}</b>
-                        ことでした
                     </p>
                 </div>
             </div>
