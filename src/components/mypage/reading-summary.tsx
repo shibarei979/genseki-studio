@@ -21,13 +21,25 @@ import { useEffect, useState } from 'react'
  * ============================================================
  */
 
+export interface Slice {
+    name: string
+    chars: number
+    episodes: number
+}
+
 interface Month {
     chars: number
     works: number
     episodes: number
-    genres: [string, number][]
-    authors: [string, number][]
+    genres: Slice[]
+    authors: Slice[]
 }
+
+/** 並べる元。字数か、話数か */
+export type SortKey = 'chars' | 'episodes'
+
+/** 畳んでいるとき、いくつまで出すか */
+const TOP_N = 3
 
 /*
  * 輪の色。
@@ -340,17 +352,50 @@ function Figure({
  *
  * ★ 真ん中は空ける。合計を置く場所にもなる。
  */
-export function Ring({ title, rows }: { title: string; rows: [string, number][] }) {
-    const total = rows.reduce((sum, one) => sum + one[1], 0)
+export function Ring({
+    title,
+    rows,
+}: {
+    title: string
+    rows: Slice[]
+}) {
+    /*
+     * 並べる元。
+     *
+     * ★ 字数だけだと、長い作品を 1 つ読んだ人が
+     *   そのジャンルばかり読んでいるように見える。
+     *   話数でも並べられるようにする。
+     */
+    const [by, setBy] = useState<SortKey>('chars')
+
+    /* 全部出すか、上位だけにするか */
+    const [isOpen, setIsOpen] = useState(false)
+
+    const sorted = [...rows].sort((a, b) => b[by] - a[by])
+    const total = sorted.reduce((sum, one) => sum + one[by], 0)
     if (total === 0) return null
 
     /*
-     * 輪の太さ。
-     *
-     * ★ 細いと、割合の差が読み取れない。
-     *   1 割と 2 割の違いが、線の長さでしか分からなくなる。
-     *   太くすると、面積として目に入る。
+     * 畳んでいるときは、上位だけ出して残りをまとめる。
+     * まとめる所は、こちら側で決める。
+     * 入口は全部返してくるので、開けばすべて見える。
      */
+    const shown: Slice[] = isOpen
+        ? sorted
+        : (() => {
+              const head = sorted.slice(0, TOP_N)
+              const rest = sorted.slice(TOP_N)
+              if (rest.length === 0) return head
+              return [
+                  ...head,
+                  {
+                      name: 'その他',
+                      chars: rest.reduce((sum, one) => sum + one.chars, 0),
+                      episodes: rest.reduce((sum, one) => sum + one.episodes, 0),
+                  },
+              ]
+          })()
+
     const R = 36
     const WIDTH = 22
     const C = 2 * Math.PI * R
@@ -361,26 +406,64 @@ export function Ring({ title, rows }: { title: string; rows: [string, number][] 
         <div>
             <div
                 style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: 'var(--color-text)',
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 8,
                     marginBottom: 10,
+                    flexWrap: 'wrap',
                 }}
             >
-                {title}
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text)' }}>
+                    {title}
+                </span>
+
+                {/*
+                  * 並べる元。
+                  * 押し具にせず、字の切り替えにする。
+                  * 内訳の見出しの横で、押し具が主役になるのは重い。
+                  */}
+                {(['chars', 'episodes'] as SortKey[]).map((key) => (
+                    <button
+                        key={key}
+                        type="button"
+                        onClick={() => setBy(key)}
+                        aria-pressed={by === key}
+                        style={{
+                            border: 'none',
+                            background: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            fontSize: 11,
+                            color:
+                                by === key
+                                    ? 'var(--color-brand)'
+                                    : 'var(--color-text-faint)',
+                            fontWeight: by === key ? 700 : 400,
+                            textDecoration: by === key ? 'none' : 'underline',
+                        }}
+                    >
+                        {key === 'chars' ? '文字数順' : '話数順'}
+                    </button>
+                ))}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <svg width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">
-                    {rows.map(([name, value], index) => {
-                        const length = (value / total) * C
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                <svg
+                    width="104"
+                    height="104"
+                    viewBox="0 0 104 104"
+                    aria-hidden="true"
+                    style={{ flexShrink: 0 }}
+                >
+                    {shown.map((one, index) => {
+                        const length = (one[by] / total) * C
                         const dash = `${length} ${C - length}`
                         const start = -offset
                         offset += length
 
                         return (
                             <circle
-                                key={name}
+                                key={one.name}
                                 cx="52"
                                 cy="52"
                                 r={R}
@@ -395,57 +478,76 @@ export function Ring({ title, rows }: { title: string; rows: [string, number][] 
                     })}
                 </svg>
 
-                {/*
-                  * ★ 割合は名前のすぐ横に置く。
-                  *   端まで飛ばすと、目が横に長く動く。
-                  *   名前が長いときは、名前のほうを切る。
-                  */}
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                    {rows.map(([name, value], index) => (
-                        <li
-                            key={name}
+                <div style={{ minWidth: 0 }}>
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                        {shown.map((one, index) => (
+                            <li
+                                key={one.name}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 7,
+                                    fontSize: 12,
+                                    color: 'var(--color-text-muted)',
+                                    lineHeight: 2,
+                                }}
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    style={{
+                                        width: 9,
+                                        height: 9,
+                                        borderRadius: 2,
+                                        flexShrink: 0,
+                                        background: TONES[index % TONES.length],
+                                    }}
+                                />
+                                <span
+                                    style={{
+                                        maxWidth: 150,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    {one.name}
+                                </span>
+                                <span
+                                    style={{
+                                        flexShrink: 0,
+                                        color: 'var(--color-text)',
+                                        fontWeight: 600,
+                                        fontVariantNumeric: 'tabular-nums',
+                                    }}
+                                >
+                                    {Math.round((one[by] / total) * 100)}%
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+
+                    {sorted.length > TOP_N && (
+                        <button
+                            type="button"
+                            onClick={() => setIsOpen((open) => !open)}
+                            aria-expanded={isOpen}
                             style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 7,
-                                fontSize: 12,
-                                color: 'var(--color-text-muted)',
-                                lineHeight: 2,
+                                marginTop: 4,
+                                border: 'none',
+                                background: 'none',
+                                padding: 0,
+                                cursor: 'pointer',
+                                fontSize: 11,
+                                color: 'var(--color-forest)',
+                                textDecoration: 'underline',
                             }}
                         >
-                            <span
-                                aria-hidden="true"
-                                style={{
-                                    width: 9,
-                                    height: 9,
-                                    borderRadius: 2,
-                                    flexShrink: 0,
-                                    background: TONES[index % TONES.length],
-                                }}
-                            />
-                            <span
-                                style={{
-                                    maxWidth: 150,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            >
-                                {name}
-                            </span>
-                            <span
-                                style={{
-                                    flexShrink: 0,
-                                    color: 'var(--color-text)',
-                                    fontWeight: 600,
-                                    fontVariantNumeric: 'tabular-nums',
-                                }}
-                            >
-                                {Math.round((value / total) * 100)}%
-                            </span>
-                        </li>
-                    ))}
-                </ul>
+                            {isOpen
+                                ? '上位だけにする'
+                                : `すべて見る（${sorted.length}）`}
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     )

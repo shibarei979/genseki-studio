@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { BOOK_CHARS, Ring } from '@/components/mypage/reading-summary'
+import { BOOK_CHARS, Ring, type Slice } from '@/components/mypage/reading-summary'
 
 /**
  * ============================================================
@@ -37,8 +37,8 @@ interface Month {
     chars: number
     works: number
     episodes: number
-    genres: [string, number][]
-    authors: [string, number][]
+    genres: Slice[]
+    authors: Slice[]
 }
 
 function keyOf(date: Date) {

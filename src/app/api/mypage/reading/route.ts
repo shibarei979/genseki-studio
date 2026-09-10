@@ -25,8 +25,16 @@ import { createClient } from "@/lib/supabase/server";
 /** 読み込む上限。多すぎると重い */
 const MAX_ROWS = 20000;
 
-/** 内訳に出す数。残りは「その他」へまとめる */
-const TOP_N = 3;
+/*
+ * ★ 内訳は、まとめずに全部返す。
+ *
+ *   前は上位 3 つに絞り、残りを「その他」にしていた。
+ *   その他が 5 割を超えることが多く、
+ *   何を読んだのか、そこで途切れていた。
+ *
+ *   まとめるかどうかは、見る側で決める。
+ *   出す数を変えるたびに、こちらを直さずに済む。
+ */
 
 export async function GET(request: Request) {
     const supabase = await createClient();
@@ -114,8 +122,9 @@ export async function GET(request: Request) {
             chars: number;
             works: Set<string>;
             episodes: number;
-            genres: Record<string, number>;
-            authors: Record<string, number>;
+            /* 名前ごとに、字数と話数の両方を数える */
+            genres: Record<string, { chars: number; episodes: number }>;
+            authors: Record<string, { chars: number; episodes: number }>;
         }
     > = {};
 
@@ -152,20 +161,27 @@ export async function GET(request: Request) {
         bucket.works.add(row.novel_id);
 
         const genre = novel?.genre || "その他";
-        bucket.genres[genre] = (bucket.genres[genre] ?? 0) + chars;
+        if (!bucket.genres[genre]) bucket.genres[genre] = { chars: 0, episodes: 0 };
+        bucket.genres[genre].chars += chars;
+        bucket.genres[genre].episodes += 1;
 
         const author = novel?.author_id
             ? (nameOf.get(novel.author_id) ?? "名無しの書き手")
             : "名無しの書き手";
-        bucket.authors[author] = (bucket.authors[author] ?? 0) + chars;
+        if (!bucket.authors[author]) bucket.authors[author] = { chars: 0, episodes: 0 };
+        bucket.authors[author].chars += chars;
+        bucket.authors[author].episodes += 1;
     }
 
-    /** 多い順に上位を出し、残りは「その他」へ */
-    function top(source: Record<string, number>) {
-        const sorted = Object.entries(source).sort((a, b) => b[1] - a[1]);
-        const head = sorted.slice(0, TOP_N);
-        const rest = sorted.slice(TOP_N).reduce((sum, one) => sum + one[1], 0);
-        return rest > 0 ? [...head, ["その他", rest] as [string, number]] : head;
+    /** 名前・字数・話数の並びにする。まとめるのは見る側 */
+    function rows(source: Record<string, { chars: number; episodes: number }>) {
+        return Object.entries(source)
+            .map(([name, value]) => ({
+                name,
+                chars: value.chars,
+                episodes: value.episodes,
+            }))
+            .sort((a, b) => b.chars - a.chars);
     }
 
     const out: Record<string, unknown> = {};
@@ -174,8 +190,8 @@ export async function GET(request: Request) {
             chars: value.chars,
             works: value.works.size,
             episodes: value.episodes,
-            genres: top(value.genres),
-            authors: top(value.authors),
+            genres: rows(value.genres),
+            authors: rows(value.authors),
         };
     }
 
