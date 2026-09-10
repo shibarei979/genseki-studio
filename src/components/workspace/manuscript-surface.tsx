@@ -71,6 +71,14 @@ export default function ManuscriptSurface({
     /** 本文の外枠。輪の見張りを、ここに付ける */
     const boxRef = useRef<HTMLDivElement>(null);
 
+    /*
+     * いま、かなを漢字に変えている途中か。
+     *
+     * 確定するまで、外へ渡さない。
+     * 渡すと、組み直しで変換中の文字が消える。
+     */
+    const isComposingRef = useRef(false);
+
     /**
      * 縦書きは右端が本文の先頭になる。
      * 何もしないと左端（＝本文の末尾側）が見えた状態で始まってしまう。
@@ -187,7 +195,37 @@ export default function ManuscriptSurface({
             <textarea
                 ref={areaRef}
                 value={value}
-                onChange={(e) => onChange?.(e.target.value)}
+                /*
+                 * ★ 変換中は、外へ渡さない。
+                 *
+                 *   かなから漢字に変える途中、この欄には
+                 *   まだ確定していない文字が乗っている。
+                 *
+                 *   その最中に別の理由で画面が組み直されると、
+                 *   組み直した側は「確定した文字」しか知らないので、
+                 *   変換中のぶんが消える。
+                 *
+                 *   この画面には自動保存の見張りが動いていて、
+                 *   決まった間隔で組み直しが起きる。
+                 *   打った文字が消えて、貼り付けだけ通るのは、これ。
+                 *
+                 *   確定するまで待って、そこで一度だけ渡す。
+                 *
+                 * ★ 携帯で起きやすい。
+                 *   画面の鍵盤は変換の時間が長く、
+                 *   その間に見張りが動く確率が上がる。
+                 */
+                onCompositionStart={() => {
+                    isComposingRef.current = true;
+                }}
+                onCompositionEnd={(e) => {
+                    isComposingRef.current = false;
+                    onChange?.(e.currentTarget.value);
+                }}
+                onChange={(e) => {
+                    if (isComposingRef.current) return;
+                    onChange?.(e.target.value);
+                }}
                 onScroll={showLineNumbers ? handleScroll : undefined}
                 onClick={(e) => {
                     if (!selectLineOnClick) return;
