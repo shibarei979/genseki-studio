@@ -218,9 +218,9 @@
 }
 
 .gm_title {
-    margin-top: 6px;
+    margin-top: 7px;
     font-family: garamond, "Hiragino Mincho ProN", serif;
-    font-size: 23px;
+    font-size: 24px;
     font-weight: 700;
     letter-spacing: .06em;
     line-height: 1.5;
@@ -239,8 +239,13 @@
 
 .gm_lines p {
     font-size: 14px;
-    line-height: 2.15;
+    line-height: 2.2;
     color: var(--ink);
+}
+
+/* 三点は、間を空けて置く。詰めると読点に見える */
+.gm_lines p:last-child {
+    margin-bottom: 2px;
 }
 
 .gm_ask {
@@ -275,6 +280,20 @@
     border-radius: 3px;
     cursor: pointer;
     transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+/*
+ * ★ 押せるところは、必ず印が出るようにする。
+ *   指で触る人と、鍵盤で辿る人で、
+ *   見え方が違ってはいけない。
+ */
+.gm_choice:focus-visible,
+.gm_book:focus-visible,
+.gm_go:focus-visible,
+.gm_sub:focus-visible,
+.gm_quiet:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
 }
 
 .gm_choice:hover,
@@ -429,7 +448,14 @@
     justify-content: space-between;
     align-items: baseline;
     font-size: 13px;
-    margin-bottom: 7px;
+    margin-bottom: 8px;
+}
+
+/* 置いた数が、目で見て分かるようにする */
+.gm_coin_val::after {
+    content: "";
+    display: inline-block;
+    width: 4px;
 }
 
 .gm_coin_val {
@@ -467,10 +493,14 @@
 }
 
 .gm_rest {
+    margin-top: 4px;
+    padding: 9px;
     text-align: center;
     font-size: 12.5px;
     letter-spacing: .06em;
     color: var(--ink-soft);
+    background: rgba(200, 148, 74, .06);
+    border-radius: 2px;
 }
 
 .gm_rest.is_ok {
@@ -486,18 +516,24 @@
     padding: 96px 0;
 }
 
-.gm_stone {
-    width: 46px;
-    height: 46px;
-    margin: 0 auto 26px;
-    border-radius: 50%;
-    border: 1px solid rgba(232, 215, 182, .5);
-    border-top-color: var(--amber);
-    animation: gm_spin 1.1s linear infinite;
+/*
+ * ★ 回る輪を出さない。待たせている顔になる。
+ *   線が港へ伸びるところを見せる。
+ */
+.gm_arrive {
+    display: block;
+    width: 220px;
+    height: 40px;
+    margin: 0 auto 22px;
 }
 
-@keyframes gm_spin {
-    to { transform: rotate(360deg); }
+.gm_arrive_line {
+    stroke-dashoffset: 1;
+    animation: gm_arrive_run 1.4s ease-out forwards;
+}
+
+@keyframes gm_arrive_run {
+    to { stroke-dashoffset: 0; }
 }
 
 .gm_wait p {
@@ -528,7 +564,14 @@
 
 .gm_answer_tag {
     font-size: 11px;
-    letter-spacing: .3em;
+    letter-spacing: .28em;
+    color: var(--ink-soft);
+}
+
+.gm_pair_note {
+    margin-top: 14px;
+    font-size: 12.5px;
+    letter-spacing: .08em;
     color: var(--ink-soft);
 }
 
@@ -868,6 +911,9 @@
 
 @media (max-width: 420px) {
     .gm_main { padding: 8px 16px 60px; }
+    .gm_open_ask { font-size: 24px; }
+    .gm_open { padding: 40px 0 32px; }
+    .gm_reveal { margin-left: -16px; margin-right: -16px; }
     .gm_open_ask { font-size: 21px; }
     .gm_title { font-size: 20px; }
     .gm_book { width: 60px; height: 200px; font-size: 11.5px; }
@@ -878,6 +924,8 @@
  * 動きを減らす設定の人には、動かさない
  * ---------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
+    .gm_arrive_line,
+    .gm_route_ship,
     .gm_stage,
     .gm_result,
     .gm_reveal,

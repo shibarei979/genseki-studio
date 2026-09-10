@@ -188,7 +188,12 @@ export default function WriterGame() {
                 </Link>
             </header>
 
-            <main className="gm_main">
+            {/*
+              * ★ 画面が変わったことを、読み上げにも伝える。
+              *   目で見ていない人には、
+              *   次の問いに移ったことが分からない。
+              */}
+            <main className="gm_main" aria-live="polite">
                 {at === -1 && <Open onStart={() => setAt(0)} />}
 
                 {at >= 0 && at <= last && (
@@ -225,8 +230,45 @@ export default function WriterGame() {
 
                 {at === last + 1 && (
                     <div className="gm_wait">
-                        <div className="gm_stone" />
-                        <p>原石を鑑定しています</p>
+                        {/*
+                          * ★ 回る輪を出さない。
+                          *
+                          *   待たせている、という顔になる。
+                          *   最後の一節だけ、線が港へ伸びる。
+                          *   航海が終わるところを見せる。
+                          */}
+                        <svg
+                            className="gm_arrive"
+                            viewBox="0 0 220 40"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M6 22 Q 40 10, 74 22 T 142 22 T 210 22"
+                                fill="none"
+                                stroke="rgba(232, 215, 182, .28)"
+                                strokeWidth="1.4"
+                                strokeDasharray="3 4"
+                            />
+                            <path
+                                className="gm_arrive_line"
+                                d="M6 22 Q 40 10, 74 22 T 142 22 T 210 22"
+                                fill="none"
+                                stroke="#c8944a"
+                                strokeWidth="1.8"
+                                pathLength={1}
+                                strokeDasharray="1"
+                            />
+                            <circle
+                                cx="210"
+                                cy="22"
+                                r="4"
+                                fill="none"
+                                stroke="#c8944a"
+                                strokeWidth="1.6"
+                            />
+                        </svg>
+
+                        <p>港に、着きます</p>
                     </div>
                 )}
 
@@ -751,7 +793,7 @@ function ResultView({
 
     return (
         <div className="gm_result">
-            <p className="gm_answer_tag">あなたが書けるのは</p>
+            <p className="gm_answer_tag">10の選択から、見えたのは</p>
 
             {/* 舞台 × 芯。ここがいちばん大きい */}
             <h2 className="gm_pair">
@@ -759,6 +801,10 @@ function ResultView({
                 <span className="gm_pair_cross">×</span>
                 <span className="gm_pair_word">{v.core}</span>
             </h2>
+
+            <p className="gm_pair_note">
+                あなたが選び続けたのは、この二つでした。
+            </p>
 
             {/*
               * ★ 6角形と、一作を横に並べる。
