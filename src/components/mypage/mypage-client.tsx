@@ -1049,6 +1049,32 @@ export default function MypageClient({
 
   const WorksTab = () => (
     <div>
+      {/*
+        * 閲覧の数え方を変えたことの断り。
+        *
+        * ★ 数字が下がるので、黙って変えない。
+        *
+        *   見回りの機械が、作品によっては 9 割を占めていた。
+        *   除くと 1451 が 457 になる作品もある。
+        *   何も言わずに減らすと、壊れたと思われる。
+        *
+        * ★ 9 月いっぱいで自動的に消える。
+        *   10 月には新しい数が当たり前になっている。
+        *   消し忘れないよう、日付で切る。
+        */}
+      {Date.now() < new Date('2026-10-01T00:00:00+09:00').getTime() && (
+        <p style={{
+          fontSize:12,color:'var(--color-text-muted)',lineHeight:1.9,
+          border:'1px solid var(--color-brand-border)',borderRadius:10,
+          background:'var(--color-bg-card)',padding:'10px 14px',marginBottom:20,
+        }}>
+          9月10日から、閲覧数の数え方を直しました。
+          検索の巡回などの機械と、ご自身が開いたぶんを数えなくなりました。
+          <br />
+          数字は下がりますが、読まれた量としては、こちらが正確です。
+        </p>
+      )}
+
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:28,flexWrap:'wrap',gap:12}}>
         <div>
           <h1 style={{fontSize:22,fontWeight:700,color:'var(--color-text)',letterSpacing:'-0.01em',lineHeight:1.3}}>

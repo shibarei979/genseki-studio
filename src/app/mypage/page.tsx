@@ -125,7 +125,17 @@ export default async function MypagePage() {
   if (novelIds.length > 0) {
     const [commentsData, viewsData, epsData, charData] = await Promise.all([
       supabase.from('comments').select('novel_id').in('novel_id', novelIds),
-      supabase.from('page_views').select('novel_id').eq('is_author', false).in('novel_id', novelIds),
+      /*
+       * ★ 閲覧は novel_stats から読む。
+       *
+       *   前はここで page_views を数えていたが、
+       *   見回りの機械を外していなかった。
+       *   作品によっては 9 割が機械だった。
+       *
+       *   数え方を 1 か所にまとめる。作品の頁・ランキング・
+       *   おすすめも、同じ入れ物を見る。
+       */
+      supabase.from('novel_stats').select('novel_id, view_count, like_count').in('novel_id', novelIds),
       supabase.from('episodes').select('novel_id').in('novel_id', novelIds).eq('published', true),
       /*
        * 字数は下書きの話も足す。
@@ -136,7 +146,7 @@ export default async function MypagePage() {
     ])
 
     commentsData.data?.forEach((c:any) => { novelCommentMap[c.novel_id] = (novelCommentMap[c.novel_id]||0)+1 })
-    viewsData.data?.forEach((v:any) => { novelViewMap[v.novel_id] = (novelViewMap[v.novel_id]||0)+1 })
+    viewsData.data?.forEach((v:any) => { novelViewMap[v.novel_id] = Number(v.view_count) || 0 })
     epsData.data?.forEach((e:any) => { novelEpCountMap[e.novel_id] = (novelEpCountMap[e.novel_id]||0)+1 })
     charData.data?.forEach((e:any) => { charCountMap[e.novel_id] = (charCountMap[e.novel_id]||0) + (e.char_count||0) })
 
@@ -157,12 +167,8 @@ export default async function MypagePage() {
      * ★ この数には話への♡も入っている。
      *   読者が押すのは、たいてい本文の下の♡。
      */
-    const { data: statRows } = await supabase
-      .from('novel_stats')
-      .select('novel_id, like_count')
-      .in('novel_id', novelIds)
-
-    statRows?.forEach((row:any) => {
+    /* いいねも、上で読んだ同じ行から取る */
+    viewsData.data?.forEach((row:any) => {
       novelLikeMap[row.novel_id] = Number(row.like_count) || 0
     })
   }
