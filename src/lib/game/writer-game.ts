@@ -355,13 +355,26 @@ export const STAGES: Stage[] = [
  * 結果
  * ============================================================ */
 
+/*
+ * 6 角形の角の名前。
+ *
+ * ★ 出た作品と、繋がる言葉にする。
+ *
+ *   前は「発信力」「文章」など、書き手の力量の話だった。
+ *   結果は「現代 × 再起」という作品の話なので、
+ *   「発信力が一番です」と言われても、
+ *   出た作品との関係が分からない。
+ *
+ *   何を大事にして選んだか、という言い方に変える。
+ *   これなら、あらすじと同じ土俵に乗る。
+ */
 export const AXIS_NAME: Record<Axis, string> = {
-    chara: "キャラクター",
-    world: "世界観",
-    text: "文章",
-    story: "物語",
-    reach: "発信力",
-    heat: "熱量",
+    chara: "人を書く",
+    world: "場所を作る",
+    text: "言葉を選ぶ",
+    story: "筋を通す",
+    reach: "届ける",
+    heat: "書き続ける",
 };
 
 /** 6角形に描く順。隣り合うものが近い意味になるように並べる */
@@ -398,7 +411,7 @@ export interface Verdict {
     core: Core;
     /** その組で書ける一作 */
     work: Work;
-    /** いちばん高い角。書き方の言葉 */
+    /** いちばん高い角。何を大事にして選んだか */
     best: Axis;
     /** 同じ手ざわりの作品を探す行き先 */
     genre: string;
@@ -461,10 +474,24 @@ export function judge(
         if (score[axis] > score[best]) best = axis;
     }
 
+    /*
+     * ★ 受け皿を必ず用意する。
+     *
+     *   組に当たりが無いと、結果が何も出ない。
+     *   「診断結果がなかった」という声は、これ。
+     *
+     *   当たらなければ、同じ舞台の別の芯を探す。
+     *   それも無ければ、いちばん当たり前の組を返す。
+     */
+    const work =
+        WORKS[`${place}-${core}`] ??
+        CORES.map((one) => WORKS[`${place}-${one}`]).find(Boolean) ??
+        WORKS["現代-日常"];
+
     return {
         place,
         core,
-        work: WORKS[`${place}-${core}`] ?? WORKS["現代-日常"],
+        work,
         best,
         genre: GENRE_OF[place],
     };
