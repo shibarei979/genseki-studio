@@ -56,12 +56,20 @@ export function generateMetadata({
     const image = `https://gensekikoro.com/game/og?${og.toString()}`;
 
     const head = hasResult
-        ? `私が書けるのは「${place} × ${core}」でした`
+        ? `${place} × ${core}`
         : "無名作家から、はじまる10の選択";
 
+    /*
+     * ★ 貼られたときに出る字は、短くする。
+     *
+     *   X は題名も説明も途中で切る。
+     *   長く書くと、切れた形で出る。
+     *   絵のほうに要る言葉は入れてあるので、
+     *   ここは短く言い切る。
+     */
     const body = hasResult
-        ? `${title ? `『${title}』　` : ""}あなたは何を書ける？　全100通り・1分・登録なし`
-        : "10の選択で、あなたが本当に書ける一作が決まります。全100通り・1分・登録なし。";
+        ? `${title ? `『${title}』` : "あなたは何を書ける？"}`
+        : "あなたが本当に書ける一作は？　全100通り・1分・登録なし";
 
     return {
         title: head,
