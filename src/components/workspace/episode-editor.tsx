@@ -382,9 +382,34 @@ export default function EpisodeEditor({
     /*
      * 資料から飛んできたら、その行へ動かして選ぶ。
      * 開いただけで場所が分からないのでは、辿れるうちに入らない。
+     *
+     * ★ 同じ合図では、一度しか動かさない。
+     *
+     *   前は見張りに onJumped を入れていた。
+     *   あれは親が組み直るたびに別物になるので、
+     *   組み直るたびに、この中身が走っていた。
+     *
+     *   「末尾へ寄せる」の合図が残ったまま打つと、
+     *   一文字ごとにカーソルが末尾へ飛ぶ。
+     *   携帯で「打ちたい所と違う所に入る」のは、これ。
+     *
+     *   受け取った合図を覚えておき、同じ値では走らせない。
      */
+    const jumpedRef = useRef<number | null>(null);
+
+    /* 知らせる先は、見張りに入れずに持つ */
+    const onJumpedRef = useRef(onJumped);
+    onJumpedRef.current = onJumped;
+
     useEffect(() => {
-        if (!jumpToLine) return;
+        if (!jumpToLine) {
+            /* 合図が下りたら、次を受けられるようにする */
+            jumpedRef.current = null;
+            return;
+        }
+
+        if (jumpedRef.current === jumpToLine) return;
+        jumpedRef.current = jumpToLine;
 
         /*
          * 描き終わってから測る。
@@ -416,11 +441,11 @@ export default function EpisodeEditor({
             }
 
             void result;
-            onJumped?.();
+            onJumpedRef.current?.();
         }, 60);
 
         return () => window.clearTimeout(timer);
-    }, [jumpToLine, onJumped]);
+    }, [jumpToLine]);
 
     return (
         <div
