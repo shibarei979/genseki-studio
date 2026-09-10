@@ -521,38 +521,65 @@
     text-align: left;
 }
 
-/* 軸の内訳。数字は出さない */
-.gm_axes {
-    margin-top: 22px;
-    text-align: left;
+/*
+ * 6角形。
+ *
+ * ★ 頂点が、そのまま 6 つの結果に当たる。
+ *   どこが尖っているかを見れば、
+ *   なぜその結果になったのかが分かる。
+ *
+ * ★ 数字は出さない。出すと点取りに戻る。
+ */
+.gm_hex {
+    display: flex;
+    justify-content: center;
+    margin: 18px 0 4px;
 }
 
-.gm_axis {
+.gm_hex svg {
+    animation: gm_hex_in .7s ease both .2s;
+}
+
+@keyframes gm_hex_in {
+    from { opacity: 0; transform: scale(.9) rotate(-6deg); }
+    to   { opacity: 1; transform: none; }
+}
+
+/*
+ * 選んだあとに返す一言。
+ *
+ * ★ 紙の真ん中に、これだけ置く。
+ *   ほかを消すことで、読ませる。
+ */
+.gm_echo {
+    min-height: 190px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 9px;
-    font-size: 11.5px;
-    color: var(--ink-soft);
+    justify-content: center;
+    text-align: center;
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    line-height: 2;
+    color: var(--ink);
+    animation: gm_echo_in .4s ease both;
 }
 
-.gm_axis_name {
-    width: 76px;
-    flex-shrink: 0;
+@keyframes gm_echo_in {
+    from { opacity: 0; letter-spacing: .18em; }
+    to   { opacity: 1; letter-spacing: .07em; }
 }
 
-.gm_axis_bar {
-    flex: 1;
-    height: 4px;
-    border-radius: 4px;
-    background: var(--rule);
-    overflow: hidden;
-}
-
-.gm_axis_fill {
-    height: 100%;
-    background: var(--amber);
-    border-radius: 4px;
+/* 結果の一行 */
+.gm_catch {
+    margin-top: 12px;
+    font-family: garamond, "Hiragino Mincho ProN", serif;
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    line-height: 1.9;
+    color: var(--amber);
 }
 
 /* ------------------------------------------------------------
@@ -657,7 +684,9 @@
  * ---------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
     .gm_stage,
-    .gm_card {
+    .gm_card,
+    .gm_echo,
+    .gm_hex svg {
         animation: none;
     }
 

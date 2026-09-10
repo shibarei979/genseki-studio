@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import {
     AXIS_NAME,
+    AXIS_ORDER,
     STAGES,
     judge,
     type Axis,
@@ -112,12 +113,39 @@ export default function WriterGame() {
         return score
     }
 
+    /*
+     * 選んだあと、一言返してから次へ行く。
+     *
+     * ★ 押して即座に次だと、手ごたえが無い。
+     *   「あなたはそういう人だ」と短く返されると、
+     *   自分がどういう人かを考え始める。
+     *   それが最後の問いに効く。
+     *
+     * ★ 1.1 秒。長いと待たされ、短いと読めない。
+     */
+    const [echo, setEcho] = useState<string | null>(null)
+
     function choose(choiceAt: number) {
+        const stage = stageAt(at)
+        const line =
+            stage && stage !== 'coin' ? stage.choices[choiceAt]?.echo : ''
+
         setPicked((now) => ({ ...now, [at]: choiceAt }))
+
+        if (line) {
+            setEcho(line)
+            window.setTimeout(() => {
+                setEcho(null)
+                setAt(at + 1)
+            }, 1100)
+            return
+        }
+
         setAt(at + 1)
     }
 
     function restart() {
+        setEcho(null)
         setPicked({})
         setCoins({ ...FLAT })
         setAt(-1)
@@ -141,7 +169,9 @@ export default function WriterGame() {
                     <>
                         <Dots at={at} last={last} />
 
-                        {stageAt(at) === 'coin' ? (
+                        {echo ? (
+                            <p className="gm_echo">{echo}</p>
+                        ) : stageAt(at) === 'coin' ? (
                             <Coins
                                 coins={coins}
                                 setCoins={setCoins}
@@ -155,7 +185,7 @@ export default function WriterGame() {
                             />
                         )}
 
-                        {at > 0 && (
+                        {at > 0 && !echo && (
                             <div style={{ textAlign: 'center' }}>
                                 <button
                                     type="button"
@@ -451,10 +481,17 @@ function ResultView({
     onRestart: () => void
 }) {
     const result = judge(score)
-    const top = Math.max(...(Object.values(score) as number[]), 1)
 
+    /*
+     * つぶやく文。
+     *
+     * ★ 型の名前だけでなく、言い切りの一行を入れる。
+     *   名前だけだと「へえ」で終わる。
+     *   一行あると、読んだ人が自分の答えを知りたくなる。
+     */
     const shareText = [
-        `私は${result.emoji}「${result.name}」でした。`,
+        `${result.emoji}「${result.name}」でした。`,
+        result.catch,
         '',
         '無名作家からスタートしたら、あなたは何になる？',
         '#原石航路作家ゲーム',
@@ -469,6 +506,7 @@ function ResultView({
 
                     <p className="gm_kind">鑑定結果</p>
                     <h2 className="gm_name">{result.name}</h2>
+                    <p className="gm_catch">{result.catch}</p>
 
                     <div style={{ marginTop: 18 }}>
                         {result.lines.map((line) => (
@@ -476,21 +514,7 @@ function ResultView({
                         ))}
                     </div>
 
-                    <div className="gm_axes">
-                        {(Object.keys(AXIS_NAME) as Axis[]).map((axis) => (
-                            <div key={axis} className="gm_axis">
-                                <span className="gm_axis_name">{AXIS_NAME[axis]}</span>
-                                <span className="gm_axis_bar">
-                                    <span
-                                        className="gm_axis_fill"
-                                        style={{
-                                            width: `${Math.round((score[axis] / top) * 100)}%`,
-                                        }}
-                                    />
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                    <Hexagon score={score} />
 
                     <p className="gm_hint">{result.hint}</p>
                 </div>
@@ -534,7 +558,7 @@ function ResultView({
                         rel="noopener"
                         className="gm_sub"
                     >
-                        結果を X に出す
+                        Xにつぶやく
                     </a>
                 </div>
 
@@ -544,6 +568,121 @@ function ResultView({
                     </button>
                 </div>
             </div>
+        </div>
+    )
+}
+
+/* ============================================================
+ * 6角形
+ *
+ * ★ 頂点が、そのまま 6 つの結果に当たる。
+ *
+ *   どこが尖っているかを見れば、
+ *   なぜその結果になったのかが分かる。
+ *   数字は出さない。出すと点取りに戻る。
+ *
+ * ★ 目盛りは 2 本だけ。
+ *   細かく引くと図面になり、余韻が消える。
+ *
+ * ★ いちばん高い角には、印を置く。
+ *   自分の形が、一目で残るように。
+ * ============================================================ */
+
+function Hexagon({ score }: { score: Score }) {
+    const SIZE = 210
+    const CENTER = SIZE / 2
+    const R = 66
+
+    const top = Math.max(...AXIS_ORDER.map((axis) => score[axis]), 1)
+
+    /** 何番目の角が、どこに来るか */
+    function point(index: number, ratio: number) {
+        const angle = (Math.PI * 2 * index) / AXIS_ORDER.length - Math.PI / 2
+        return {
+            x: CENTER + Math.cos(angle) * R * ratio,
+            y: CENTER + Math.sin(angle) * R * ratio,
+        }
+    }
+
+    function ring(ratio: number) {
+        return AXIS_ORDER.map((_, index) => {
+            const p = point(index, ratio)
+            return `${p.x.toFixed(1)},${p.y.toFixed(1)}`
+        }).join(' ')
+    }
+
+    const shape = AXIS_ORDER.map((axis, index) => {
+        /* 0 でも点として見えるよう、少しだけ下駄をはかせる */
+        const ratio = 0.14 + (score[axis] / top) * 0.86
+        const p = point(index, ratio)
+        return `${p.x.toFixed(1)},${p.y.toFixed(1)}`
+    }).join(' ')
+
+    /* いちばん高い角 */
+    let bestAt = 0
+    AXIS_ORDER.forEach((axis, index) => {
+        if (score[axis] > score[AXIS_ORDER[bestAt]]) bestAt = index
+    })
+
+    return (
+        <div className="gm_hex">
+            <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} aria-hidden="true">
+                {/* 目盛り。2 本だけ */}
+                <polygon points={ring(1)} fill="none" stroke="#ded4c1" strokeWidth="1" />
+                <polygon points={ring(0.55)} fill="none" stroke="#ebe3d4" strokeWidth="1" />
+
+                {/* 中心から各角への線 */}
+                {AXIS_ORDER.map((axis, index) => {
+                    const p = point(index, 1)
+                    return (
+                        <line
+                            key={axis}
+                            x1={CENTER}
+                            y1={CENTER}
+                            x2={p.x}
+                            y2={p.y}
+                            stroke="#ebe3d4"
+                            strokeWidth="1"
+                        />
+                    )
+                })}
+
+                {/* その人の形 */}
+                <polygon
+                    points={shape}
+                    fill="rgba(200, 148, 74, .26)"
+                    stroke="#c8944a"
+                    strokeWidth="1.8"
+                    strokeLinejoin="round"
+                />
+
+                {/* いちばん高い角に、印 */}
+                {(() => {
+                    const ratio =
+                        0.14 + (score[AXIS_ORDER[bestAt]] / top) * 0.86
+                    const p = point(bestAt, ratio)
+                    return <circle cx={p.x} cy={p.y} r="3.6" fill="#c8944a" />
+                })()}
+
+                {/* 角の名前 */}
+                {AXIS_ORDER.map((axis, index) => {
+                    const p = point(index, 1.3)
+                    return (
+                        <text
+                            key={axis}
+                            x={p.x}
+                            y={p.y}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            fontSize="10"
+                            fill={index === bestAt ? '#c8944a' : '#8b8377'}
+                            fontWeight={index === bestAt ? 700 : 400}
+                        >
+                            {AXIS_NAME[axis]}
+                        </text>
+                    )
+                })}
+            </svg>
         </div>
     )
 }

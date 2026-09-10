@@ -1,66 +1,55 @@
 /**
  * ============================================================
  * 原石航路
- * 作家人生ゲーム — 設問と、点の付け方
+ * 作家人生ゲーム — 出来事と、点の付け方
  *
- * ★ 画面と中身を分ける。
+ * ★ 軸は 6 つ。6 角形の頂点が、そのまま 6 つの結果になる。
  *
- *   設問を足す・言葉を直すのは、こちらだけを触る。
- *   画面の作りに手を入れずに済む。
+ *     chara   キャラクター    ライトノベル作家
+ *     world   世界観・場面    コミカライズ原作者
+ *     text    文章・余韻      文芸作家
+ *     story   物語の流れ      映像・シナリオ原作者
+ *     reach   届ける力        WEBヒット作家
+ *     heat    熱量・続ける力  （どれにも要る。大吉の土台）
  *
- * ★ 点は 5 つの軸に振る。
+ *   heat だけは、単独では結果にしない。
+ *   続ける力は「何になるか」ではなく「行けるところまで行けるか」なので。
  *
- *     light    ライトノベル寄り。キャラが立つ
- *     comic    絵で見せたい。場面が強い
- *     bunge    文芸寄り。文と余韻
- *     screen   映像寄り。画と流れ
- *     web      WEB で伸ばす力。続ける・届ける
+ * ★ 札は、型が透けないように書く。
  *
- *   選んだ札ごとに、いくつかの軸へ点を足す。
- *   1 つの札で 1 つの軸、とは限らない。
- *   人は、そんなにきれいに分かれない。
+ *   「文章を大事にする」と書けば、文芸を選ぶ人が選ぶ。
+ *   それでは占いにならない。
+ *   その人が実際にしそうな行いを書いて、裏で点を振る。
  *
- * ★ 点は見せない。
+ * ★ 選んだあと、一言返す。
  *
- *   途中で「いま文芸 12 点」と出ると、
- *   そこから先は答えではなく点を選び始める。
+ *   押して次へ進むだけだと、手ごたえがない。
+ *   「あなたはそういう人だ」と短く返されると、
+ *   自分がどういう人なのかを考え始める。
+ *   それが最後の問い（あなたは何作家か）へ効く。
  * ============================================================
  */
 
-export type Axis = "light" | "comic" | "bunge" | "screen" | "web";
+export type Axis = "chara" | "world" | "text" | "story" | "reach" | "heat";
 
 export type Score = Record<Axis, number>;
 
 export interface Choice {
-    /** 札に出す言葉 */
     label: string;
-    /** 添える一言。無くてもよい */
-    note?: string;
-    /** その札を選んだときに足す点 */
+    /** 選んだあとに返す一言 */
+    echo: string;
     add: Partial<Score>;
     /** 本の背として出すときの色 */
     cover?: { base: string; ink: string };
 }
 
 export interface Stage {
-    /** 画面の上に出す小さな見出し */
     tag: string;
-    /** 出来事 */
     title: string;
-    /** 状況の説明。改行は配列で分ける */
     lines: string[];
-    /** 問い */
     ask: string;
     choices: Choice[];
-    /** 札の見せ方 */
     look?: "note" | "book" | "comment" | "plain";
-    /**
-     * 数字が伸びる見せ場。
-     *
-     * 初投稿とバズの 2 か所。
-     * 数を出しておいてから問うと、
-     * 同じ問いでも「自分に起きたこと」になる。
-     */
     meter?: { to: number; unit: string; sub?: string };
 }
 
@@ -68,25 +57,32 @@ export const STAGES: Stage[] = [
     {
         tag: "STAGE 1",
         title: "最初の原石",
-        lines: ["机の上に、書きかけのメモが4枚。", "どれから手を伸ばしますか。"],
-        ask: "",
+        lines: [
+            "深夜。机の上に、書きかけのメモが4枚。",
+            "どれも、いつか書こうと思って置いたままのもの。",
+        ],
+        ask: "今夜、どれから手を伸ばしますか。",
         look: "note",
         choices: [
             {
                 label: "この主人公、絶対に面白い",
-                add: { light: 3, comic: 1 },
+                echo: "あなたは、人から書き始める。",
+                add: { chara: 4, heat: 1 },
             },
             {
                 label: "誰も知らない世界を作りたい",
-                add: { light: 2, screen: 2 },
+                echo: "あなたは、地図から書き始める。",
+                add: { world: 4, story: 1 },
             },
             {
                 label: "このラストだけは絶対に書きたい",
-                add: { bunge: 2, screen: 2 },
+                echo: "あなたは、終わりから逆算する。",
+                add: { story: 4, text: 1 },
             },
             {
                 label: "この一文から始めたい",
-                add: { bunge: 3, comic: 1 },
+                echo: "あなたは、言葉のほうを信じている。",
+                add: { text: 4, chara: 1 },
             },
         ],
     },
@@ -94,28 +90,32 @@ export const STAGES: Stage[] = [
     {
         tag: "STAGE 2",
         title: "本屋で一冊だけ",
-        lines: ["中身は分かりません。", "表紙と題名だけで、一冊選んでください。"],
+        lines: ["中身は分かりません。", "表紙と題名だけで、一冊だけ買えます。"],
         ask: "",
         look: "book",
         choices: [
             {
                 label: "魔王を倒した俺は、今日から喫茶店を始めます",
-                add: { light: 3, web: 2 },
+                echo: "続きが読みたくなる題名を、あなたは選んだ。",
+                add: { chara: 3, reach: 2 },
                 cover: { base: "#f0e2c4", ink: "#6a4a1e" },
             },
             {
                 label: "夏の終わり、君の名前を忘れる",
-                add: { bunge: 2, screen: 2 },
+                echo: "余韻の残る題名を、あなたは選んだ。",
+                add: { text: 3, story: 1 },
                 cover: { base: "#dfe9ef", ink: "#2d4a5e" },
             },
             {
                 label: "月面都市第七埠頭",
-                add: { screen: 2, comic: 2 },
+                echo: "説明のない題名を、あなたは選んだ。",
+                add: { world: 4 },
                 cover: { base: "#23303f", ink: "#dfe6ee" },
             },
             {
                 label: "彼女が死んだ日のことを、僕だけが覚えている",
-                add: { bunge: 3, screen: 1 },
+                echo: "謎から入る題名を、あなたは選んだ。",
+                add: { story: 3, text: 1 },
                 cover: { base: "#efe4e6", ink: "#5e3a40" },
             },
         ],
@@ -123,98 +123,127 @@ export const STAGES: Stage[] = [
 
     {
         tag: "STAGE 3",
-        title: "初投稿",
-        lines: ["投稿しました。", "24時間後——"],
+        title: "はじめての投稿",
+        lines: ["書き上げた第1話を、思いきって出しました。", "24時間後——"],
         meter: { to: 47, unit: "PV", sub: "♡ 3　感想 1" },
         ask: "さて、どうしますか。",
         choices: [
             {
-                label: "題名とあらすじを変えてみる",
-                add: { web: 3 },
+                label: "題名とあらすじを、書き直す",
+                echo: "中身より先に、入口を疑えるのは強い。",
+                add: { reach: 4 },
             },
             {
-                label: "とりあえず次の話を書く",
-                add: { web: 2, light: 2 },
+                label: "とにかく、次の話を書く",
+                echo: "止まらないことが、あなたの武器になる。",
+                add: { heat: 4 },
             },
             {
-                label: "第1話を、もう一度作り直す",
-                add: { bunge: 3 },
+                label: "第1話を、もう一度書き直す",
+                echo: "納得しないものを出しておけない人だ。",
+                add: { text: 3, heat: 1 },
             },
             {
-                label: "読んでくれた3人について考える",
-                add: { bunge: 1, web: 1, screen: 1, comic: 1, light: 1 },
-                note: "",
+                label: "読んでくれた3人のことを、考える",
+                echo: "数ではなく、人として見ている。",
+                add: { chara: 2, reach: 1, text: 1 },
             },
         ],
     },
 
     {
         tag: "STAGE 4",
-        title: "初めての感想",
-        lines: ["通知が4つ、届いています。", "いちばん嬉しいものを選んでください。"],
+        title: "はじめての感想",
+        lines: ["通知が4つ。", "どれも嬉しいけれど、ひとつだけ選ぶなら。"],
         ask: "",
         look: "comment",
         choices: [
             {
                 label: "この主人公、めっちゃ好きです",
-                add: { light: 3, comic: 1 },
+                echo: "人が残る物語を、あなたは書いている。",
+                add: { chara: 4 },
             },
             {
                 label: "続きまだですか？",
-                add: { web: 3, light: 1 },
+                echo: "待たせる物語を、あなたは書いている。",
+                add: { reach: 3, heat: 2 },
             },
             {
                 label: "最後の一文が、ずっと頭に残っています",
-                add: { bunge: 3 },
+                echo: "読み終えたあとに効く物語を、書いている。",
+                add: { text: 4 },
             },
             {
-                label: "頭の中で映像が流れました",
-                add: { screen: 3, comic: 1 },
+                label: "頭の中で、映像が流れました",
+                echo: "文字の外側に、もう一つの物語がある。",
+                add: { world: 3, story: 2 },
             },
         ],
     },
 
-    /* STAGE 5 は札ではなく、100 を振り分ける。画面の側で受け持つ */
+    /* STAGE 5 は 100 の振り分け。画面の側で受け持つ */
 
     {
         tag: "STAGE 6",
-        title: "予想外のキャラが人気に",
-        lines: ["主人公よりも、脇役のほうが人気になりました。", "次の話、どうしますか。"],
-        ask: "",
+        title: "書けない夜",
+        lines: [
+            "3週間、一行も書けていません。",
+            "更新は止まり、読者の数も少しずつ減っていく。",
+        ],
+        ask: "この夜、あなたは何をしますか。",
         choices: [
             {
-                label: "そのキャラの出番を増やす",
-                add: { light: 2, web: 2 },
+                label: "書けなくても、机には座る",
+                echo: "続ける人は、たいてい、こうしている。",
+                add: { heat: 5 },
             },
             {
-                label: "あくまで予定どおり進める",
-                add: { bunge: 3 },
+                label: "他の人の作品を、片っ端から読む",
+                echo: "入れないと出ない、と知っている。",
+                add: { text: 2, world: 2 },
             },
             {
-                label: "その人気を使って、新しい展開を作る",
-                add: { web: 2, screen: 2 },
+                label: "読者に「少し休みます」と伝える",
+                echo: "待っている人を、置き去りにしない。",
+                add: { reach: 3, chara: 1 },
             },
             {
-                label: "なぜ人気が出たのか、考えてみる",
-                add: { bunge: 1, web: 1, screen: 1, comic: 1, light: 1 },
+                label: "この物語のラストを、もう一度思い出す",
+                echo: "あなたを動かしているのは、終わりの一場面だ。",
+                add: { story: 4 },
             },
         ],
     },
 
     {
         tag: "STAGE 7",
-        title: "編集者からの便り",
+        title: "予想外のキャラが人気に",
         lines: [
-            "新着メッセージ",
-            "「作品を読ませていただきました。」",
-            "「一か所だけ直すとしたら、どこを直しますか？」",
+            "主人公ではなく、3話だけ出した脇役が人気になりました。",
+            "感想欄が、その子の話でいっぱいです。",
         ],
-        ask: "",
+        ask: "次の話、どうしますか。",
         choices: [
-            { label: "主人公", add: { light: 3, comic: 1 } },
-            { label: "最初の3ページ", add: { web: 3 } },
-            { label: "ラスト", add: { screen: 2, bunge: 2 } },
-            { label: "全体の文章", add: { bunge: 3 } },
+            {
+                label: "その子の出番を増やす",
+                echo: "読者の熱を、そのまま燃やせる人だ。",
+                add: { chara: 3, reach: 2 },
+            },
+            {
+                label: "予定どおり進める",
+                echo: "物語のほうを、あなたは信じている。",
+                add: { story: 3, text: 2 },
+            },
+            {
+                label: "その子の物語を、別に立てる",
+                echo: "広げることを恐れない。世界が伸びていく。",
+                add: { world: 4 },
+            },
+            {
+                label: "なぜ人気が出たのか、考えてみる",
+                echo: "当たった理由を、次に使える人だ。",
+                add: { reach: 3, chara: 1 },
+            },
         ],
     },
 
@@ -225,10 +254,26 @@ export const STAGES: Stage[] = [
         meter: { to: 12491, unit: "PV", sub: "いま、30分だけ自由に動けます" },
         ask: "何をしますか。",
         choices: [
-            { label: "次の話を書く", add: { web: 3, light: 1 } },
-            { label: "SNSで知らせる", add: { web: 3 } },
-            { label: "感想を読みに行く", add: { comic: 1, light: 2, bunge: 1 } },
-            { label: "この先の展開を練り直す", add: { bunge: 2, screen: 2 } },
+            {
+                label: "すぐ次の話を書く",
+                echo: "波が来たときに走れる。これは才能だ。",
+                add: { heat: 3, reach: 2 },
+            },
+            {
+                label: "SNSで知らせる",
+                echo: "届けるところまでを、創作だと思っている。",
+                add: { reach: 4 },
+            },
+            {
+                label: "感想を、全部読む",
+                echo: "読者の顔を見てから、次を決める人だ。",
+                add: { chara: 3, heat: 1 },
+            },
+            {
+                label: "この先の展開を、練り直す",
+                echo: "波のあとを見ている。落ち着いている。",
+                add: { story: 3, text: 1 },
+            },
         ],
     },
 
@@ -237,14 +282,30 @@ export const STAGES: Stage[] = [
         title: "誰かと組むことになった",
         lines: [
             "あなたの物語を、別の人が形にすることになりました。",
-            "絶対に変えてほしくないものを、ひとつ。",
+            "絵になるか、映像になるかは、まだ分かりません。",
         ],
-        ask: "",
+        ask: "絶対に変えてほしくないものを、ひとつ。",
         choices: [
-            { label: "キャラクター", add: { comic: 3, light: 2 } },
-            { label: "ストーリー", add: { screen: 3 } },
-            { label: "世界観", add: { screen: 2, comic: 2 } },
-            { label: "この作品が伝えたいこと", add: { bunge: 3 } },
+            {
+                label: "キャラクター",
+                echo: "この人たちさえ生きていれば、物語は残る。",
+                add: { chara: 4 },
+            },
+            {
+                label: "ストーリー",
+                echo: "筋が通っていることが、あなたの譲れない線だ。",
+                add: { story: 4 },
+            },
+            {
+                label: "世界観",
+                echo: "この世界の空気だけは、誰にも触らせない。",
+                add: { world: 4 },
+            },
+            {
+                label: "この作品が伝えたいこと",
+                echo: "形は変わってもいい。芯だけは動かせない。",
+                add: { text: 4 },
+            },
         ],
     },
 
@@ -252,13 +313,29 @@ export const STAGES: Stage[] = [
         tag: "STAGE 10",
         title: "数年後",
         lines: ["あなたの作品について、誰かが話しています。"],
-        ask: "",
+        ask: "いちばん言われたいのは、どれですか。",
         look: "comment",
         choices: [
-            { label: "このキャラ、一生推す", add: { light: 3, comic: 2 } },
-            { label: "人生でいちばん、続きを待った作品", add: { web: 3, light: 1 } },
-            { label: "何年経っても忘れられない", add: { bunge: 3, screen: 1 } },
-            { label: "この作品から、全部が始まった", add: { screen: 2, comic: 2, bunge: 1 } },
+            {
+                label: "このキャラ、一生推す",
+                echo: "",
+                add: { chara: 4, heat: 1 },
+            },
+            {
+                label: "人生でいちばん、続きを待った作品",
+                echo: "",
+                add: { reach: 3, heat: 2 },
+            },
+            {
+                label: "何年経っても、忘れられない",
+                echo: "",
+                add: { text: 4, story: 1 },
+            },
+            {
+                label: "この作品から、全部が始まった",
+                echo: "",
+                add: { world: 3, story: 2 },
+            },
         ],
     },
 ];
@@ -271,71 +348,75 @@ export interface Result {
     key: string;
     emoji: string;
     name: string;
-    /** 結果の頁で読ませる文 */
+    /** 一行で言い切る。ここが share されるところ */
+    catch: string;
     lines: string[];
-    /** その人に向く読み方・書き方 */
     hint: string;
-    /** 同じ手ざわりの作品を探すための行き先 */
     genre: string;
 }
 
 export const RESULTS: Record<string, Result> = {
-    light: {
-        key: "light",
+    chara: {
+        key: "chara",
         emoji: "📚",
         name: "ライトノベル作家タイプ",
+        catch: "あなたの物語は、人から立ち上がる。",
         lines: [
-            "あなたの物語は、まずキャラクターから立ち上がります。",
-            "読者は筋よりも先に「この人をもっと見ていたい」と思う。",
+            "読者はまず「この人をもっと見ていたい」と思う。",
+            "筋よりも先に、誰かが立っている。",
             "その引力は、作ろうとして作れるものではありません。",
         ],
         hint: "章の切れ目より、その人が何を言うかで場面を決めてみてください。",
         genre: "異世界ファンタジー",
     },
-    comic: {
-        key: "comic",
+    world: {
+        key: "world",
         emoji: "🎨",
         name: "コミカライズ原作者タイプ",
+        catch: "あなたの物語には、まだ見ぬ絵がある。",
         lines: [
-            "あなたの物語は、絵に置き換えたときにいちばん強くなります。",
             "一枚の絵で伝わる場面を、無意識に選んでいる。",
+            "説明していないところに、世界がある。",
             "文字の外側に、もう一つの物語を持っている人です。",
         ],
         hint: "見せ場の前後を、あえて言葉少なに書いてみてください。",
         genre: "ハイファンタジー",
     },
-    bunge: {
-        key: "bunge",
+    text: {
+        key: "text",
         emoji: "✒️",
         name: "文芸作家タイプ",
+        catch: "あなたの物語は、読み終えたあとに始まる。",
         lines: [
-            "あなたの物語は、読み終えたあとに始まります。",
             "急がず、削り、残す。その手つきが文に出ている。",
             "数字が伸びるのに時間がかかる代わりに、長く残ります。",
+            "十年後に読み返される側の作家です。",
         ],
         hint: "最後の一行を先に決めて、そこへ向かって書いてみてください。",
         genre: "文芸",
     },
-    screen: {
-        key: "screen",
+    story: {
+        key: "story",
         emoji: "🎬",
         name: "映像・シナリオ原作者タイプ",
+        catch: "あなたの物語は、頭の中で動いている。",
         lines: [
-            "あなたの物語は、頭の中で動いています。",
             "場面が切り替わる速さ、間の取り方に、それが出ている。",
             "読者は文章を読みながら、画を見ています。",
+            "終わりから逆算できる人は、そう多くありません。",
         ],
         hint: "説明したくなったところを、動きに置き換えてみてください。",
         genre: "ミステリー",
     },
-    web: {
-        key: "web",
+    reach: {
+        key: "reach",
         emoji: "🔥",
         name: "WEBヒット作家タイプ",
+        catch: "あなたは、届けるところまでを創作だと思っている。",
         lines: [
-            "あなたは、届けるところまでを創作だと思っている。",
-            "続ける力と、読者との距離の取り方が、そのまま武器になります。",
+            "続ける力と、読者との距離の取り方が、そのまま武器になる。",
             "才能というより、習慣に近い強さです。",
+            "この強さを持つ人が、いちばん先に見つかります。",
         ],
         hint: "次の一話を、いつ出すか決めてから書いてみてください。",
         genre: "恋愛",
@@ -343,56 +424,72 @@ export const RESULTS: Record<string, Result> = {
     daikichi: {
         key: "daikichi",
         emoji: "🌟",
-        name: "大吉：次世代トップヒット作家タイプ",
+        name: "次世代トップヒット作家タイプ",
+        catch: "どれか一つに、寄らなかった。",
         lines: [
-            "どれか一つに寄りませんでした。",
-            "キャラも、筋も、文も、届け方も、同じ強さで持っている。",
-            "こういう人が、いちばん遠くまで行きます。",
+            "人も、筋も、文も、世界も、届け方も、同じ強さで持っている。",
+            "6つの角が、どれも欠けていません。",
+            "こういう形の人が、いちばん遠くまで行きます。",
         ],
-        hint: "一つに絞らないでください。それがあなたの形です。",
+        hint: "一つに絞らないでください。それが、あなたの形です。",
         genre: "オールジャンル",
     },
 };
 
-/** 軸の名前。結果の頁で内訳として出す */
 export const AXIS_NAME: Record<Axis, string> = {
-    light: "キャラクター",
-    comic: "場面の強さ",
-    bunge: "文と余韻",
-    screen: "物語の流れ",
-    web: "届ける力",
+    chara: "キャラクター",
+    world: "世界観",
+    text: "文章",
+    story: "物語",
+    reach: "発信力",
+    heat: "熱量",
 };
+
+/** 6角形に描く順。隣り合うものが近い意味になるように並べる */
+export const AXIS_ORDER: Axis[] = [
+    "chara",
+    "world",
+    "story",
+    "text",
+    "reach",
+    "heat",
+];
 
 /**
  * 点から、結果を決める。
  *
- * ★ 大吉は「どれか一つが高い」ではなく、「どれも低くない」。
+ * ★ 大吉は「どれか一つが高い」ではなく「どれも欠けていない」。
  *
- *   いちばん高い軸と、いちばん低い軸の差が小さく、
- *   なおかつ全体が高いときだけ。
+ *   6 角形が、まるいまま大きい人。
  *   偶然そうなる人は少ない。だから大吉。
  *
- * ★ 同点のときは、より珍しいほうを返す。
- *   ライトノベルと文芸が並んだら、文芸を出す。
+ * ★ heat は単独では結果にしない。
+ *   続ける力は「何になるか」ではなく
+ *   「行けるところまで行けるか」なので。
+ *
+ * ★ 同点のときは、珍しいほうを返す。
  *   多いほうを出すと、みな同じ結果になる。
  */
-const RARITY: Axis[] = ["bunge", "screen", "comic", "web", "light"];
+const RARITY: Axis[] = ["text", "story", "world", "reach", "chara"];
 
 export function judge(score: Score): Result {
-    const values = Object.values(score);
-    const high = Math.max(...values);
-    const low = Math.min(...values);
-    const total = values.reduce((sum, one) => sum + one, 0);
+    /* 大吉は 6 つ全部で見る */
+    const all = AXIS_ORDER.map((axis) => score[axis]);
+    const high = Math.max(...all);
+    const low = Math.min(...all);
+    const total = all.reduce((sum, one) => sum + one, 0);
 
-    /* 大吉。どれも低くなく、差が小さい */
-    if (total >= 40 && high - low <= 6) return RESULTS.daikichi;
+    if (total >= 46 && high - low <= 7) return RESULTS.daikichi;
 
-    let best: Axis = "light";
+    /* 型は heat を除いた 5 つで決める */
+    let best: Axis = "chara";
     for (const axis of RARITY) {
         if (score[axis] > score[best]) best = axis;
-        else if (score[axis] === score[best]) {
-            /* 同じなら、珍しいほう（RARITY の先にあるほう）を残す */
-            if (RARITY.indexOf(axis) < RARITY.indexOf(best)) best = axis;
+        else if (
+            score[axis] === score[best] &&
+            RARITY.indexOf(axis) < RARITY.indexOf(best)
+        ) {
+            best = axis;
         }
     }
 
