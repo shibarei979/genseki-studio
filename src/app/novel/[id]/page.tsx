@@ -335,15 +335,28 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
      *   他人のいいねは返らず、いつも 0 に見えていた。
      *   数だけを返す novel_stats から読む。
      */
-    supabase.from('novel_stats').select('like_count, bookmark_count').eq('novel_id', params.id).maybeSingle(),
-    supabase.from('novel_views').select('view_count').eq('novel_id', params.id).maybeSingle(),
+    /*
+     * ★ 閲覧も novel_stats から読む。
+     *
+     *   前は novel_views.view_count を見ていた。
+     *   あれは page_views の行を、作者も見回りの機械も
+     *   含めて全部数えた数だった。
+     *   3 分の 2 が機械、という作品もある。
+     *
+     *   マイページや分析は page_views を数えているので、
+     *   同じ作品に 2 つの数があり、どちらが本当か
+     *   作者に説明できなかった。
+     */
+    supabase.from('novel_stats').select('like_count, bookmark_count, view_count').eq('novel_id', params.id).maybeSingle(),
+    /* 閲覧は上の行に入っているので、別に読まない */
+    Promise.resolve({ data: null }),
     supabase.from('discovers').select('*',{count:'exact',head:true}).eq('novel_id', params.id).eq('is_pending', false),
     /* 保存も上の行に入っているので、別に数えない */
     Promise.resolve({ count: 0 }),
   ])
-  /* novel_stats はひとつの行で、いいねと保存の両方を返す */
+  /* novel_stats はひとつの行で、いいね・保存・閲覧をまとめて返す */
   const likeCount = Number((likeCountRes as any).data?.like_count ?? 0)
-  const viewCount = viewDataRes.data?.view_count || 0
+  const viewCount = Number((likeCountRes as any).data?.view_count ?? 0)
   const discoverCount = discoverCountRes.count
   const bookmarkCount = Number((likeCountRes as any).data?.bookmark_count ?? 0)
 

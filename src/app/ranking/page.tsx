@@ -105,7 +105,8 @@ async function computeRanking(period: string, novelType: string, serial: string,
     const hasLive = new Set((liveEps || []).map((e:any) => e.novel_id))
 
     const [{ data: viewsData }, { data: discoversData }, { data: likesData }, { data: bookmarksData }, { data: readData }] = await Promise.all([
-      supabase.from('novel_views').select('novel_id, view_count').in('novel_id', poolIds),
+      /* 閲覧は novel_stats から。作者と見回りの機械を除いた数 */
+      supabase.from('novel_stats').select('novel_id, view_count').in('novel_id', poolIds),
       supabase.from('discovers').select('novel_id').in('novel_id', poolIds).eq('is_pending', false),
       supabase.from('likes').select('novel_id').in('novel_id', poolIds),
       supabase.from('bookmarks').select('novel_id').in('novel_id', poolIds),

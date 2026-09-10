@@ -150,7 +150,8 @@ export async function GET(
       supabase.from('discovers').select('novel_id').eq('is_pending', false).in('novel_id', recNovelIds),
       supabase.from('episodes').select('novel_id, created_at').in('novel_id', recNovelIds).eq('published', true),
       supabase.from('bookmarks').select('novel_id').in('novel_id', recNovelIds),
-      supabase.from('novel_views').select('novel_id, view_count').in('novel_id', recNovelIds),
+      /* 閲覧は novel_stats から。作者と見回りの機械を除いた数 */
+      supabase.from('novel_stats').select('novel_id, view_count').in('novel_id', recNovelIds),
       supabase.from('read_episodes').select('novel_id').in('novel_id', recNovelIds),
     ])
     recLikes?.forEach((l: any) => { recLikeMap[l.novel_id] = (recLikeMap[l.novel_id] || 0) + 1 })
