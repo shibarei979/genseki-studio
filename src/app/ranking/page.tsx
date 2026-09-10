@@ -190,11 +190,17 @@ async function computeRanking(period: string, novelType: string, serial: string,
     const scoreMap = Object.fromEntries((risingData||[]).map((r:any) => [r.id, r.rising_score]))
     if (risingIds.length === 0) return { items: [], total: 0 }
     const { data: risingNovelData } = await supabase
-      .from('novels').select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags')
+      /*
+       * ★ created_at も取る。
+       *   取っていなかったので、この並びだけ更新日が空になり、
+       *   NaN/NaN/NaN と出ていた。
+       */
+      .from('novels').select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at')
       .in('id', risingIds).eq('published', true)
     const risingItems = (risingNovelData || [])
       .sort((a:any, b:any) => (scoreMap[b.id]||0) - (scoreMap[a.id]||0))
-      .map((n:any) => ({...n, like_count: scoreMap[n.id]||0}))
+      /* 更新日。話がまだ無い作品は、作った日を出す */
+      .map((n:any) => ({...n, like_count: scoreMap[n.id]||0, last_updated: n.created_at}))
     const authorIds2 = Array.from(new Set(risingItems.map((n:any) => n.author_id)))
     const authorMap2: Record<string,string> = {}
     if (authorIds2.length > 0) {
@@ -533,9 +539,30 @@ export default async function RankingPage({ searchParams }: Props) {
     : rankingAll
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
+  /*
+   * 日付を出す。
+   *
+   * ★ 読めない値のときは、何も出さない。
+   *
+   *   前はそのまま組み立てていたので、
+   *   値が無いと NaN/NaN/NaN と出ていた。
+   *   出せないものは、出さないほうがよい。
+   *
+   * ★ 日本時間で出す。
+   *   getFullYear などは、その機械の時計で答える。
+   *   置き場は協定世界時なので、0 時から 9 時に
+   *   出した話が前の日に見える。
+   */
   function fmtDate(s: string) {
+    if (!s) return ''
     const d = new Date(s)
-    return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`
+    if (Number.isNaN(d.getTime())) return ''
+    return d.toLocaleDateString('ja-JP', {
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    })
   }
   function fmtChar(n: number) {
     if (n >= 10000) return `${Math.floor(n/1000)/10}万文字`
@@ -793,7 +820,9 @@ export default async function RankingPage({ searchParams }: Props) {
                       )}
                       <div style={{display:'flex',gap:10,fontSize:11,color:'var(--color-text-faint)',flexWrap:'wrap',alignItems:'center'}}>
                         {n.char_count > 0 && <span>{fmtChar(n.char_count)}</span>}
-                        <span>更新：{fmtDate(n.last_updated)}</span>
+                        {fmtDate(n.last_updated) && (
+                          <span>更新：{fmtDate(n.last_updated)}</span>
+                        )}
                         {isGrowthRanking ? (
                           <span style={{background:'var(--color-brand-light)',color:'var(--color-brand)',fontWeight:700,padding:'1px 8px',borderRadius:10,fontSize:11}}>{n.rateLabel} {n.ratePercent}%</span>
                         ) : (

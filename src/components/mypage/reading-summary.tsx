@@ -44,22 +44,38 @@ const TOP_N = 3
 /*
  * 輪の色。
  *
- * ★ 4 つとも、はっきり違う色にする。
+ * ★ 数を決め打ちにしない。
  *
- *   前は紺・緑・薄い縁・灰で組んでいた。
- *   どれも暗くて近く、輪の切れ目が見えなかった。
- *   割合の数字を読まないと分からないなら、輪の意味がない。
+ *   前は 4 色を順に回していた。「すべて見る」で
+ *   39 件並ぶと、同じ色が 10 回ずつ出て見分けが付かない。
  *
- * ★ このサイトに元からある色から選ぶ。
- *   紺は帯の色、琥珀は本棚の板の色。
- *   新しい色を持ち込むより、見慣れた色のほうが落ち着く。
+ *   色は数だけ作る。角度を少しずつずらして取る。
+ *
+ * ★ ずらす角は 137.5 度。
+ *
+ *   一周（360）と割り切れない角なので、
+ *   何度回しても前の色と重ならない。
+ *   葉や花びらが重ならずに付く角と同じ。
+ *
+ * ★ 濃さと明るさは固定する。
+ *
+ *   色味だけを変える。明るさまで動かすと、
+ *   薄すぎて見えない色や、黒く沈む色が混ざる。
+ *   このサイトの地に合う range に収める。
+ *
+ * ★ 「その他」だけは、いつも灰。
+ *   まとめたものだと、色で分かるようにする。
  */
-const TONES = [
-    '#24506b', // 紺。帯の色
-    '#d09a4e', // 琥珀。本棚の板の色
-    '#6f9f74', // 若草
-    '#c5c2b8', // その他。灰
-]
+const TONE_START = 205;
+const TONE_STEP = 137.508;
+const TONE_GREY = "#c5c2b8";
+
+function toneOf(index: number, name: string) {
+    if (name === "その他") return TONE_GREY;
+
+    const hue = Math.round((TONE_START + index * TONE_STEP) % 360);
+    return `hsl(${hue} 38% 48%)`;
+}
 
 /*
  * 文庫本 1 冊ぶんの字数。
@@ -468,7 +484,7 @@ export function Ring({
                                 cy="52"
                                 r={R}
                                 fill="none"
-                                stroke={TONES[index % TONES.length]}
+                                stroke={toneOf(index, one.name)}
                                 strokeWidth={WIDTH}
                                 strokeDasharray={dash}
                                 strokeDashoffset={start}
@@ -499,7 +515,7 @@ export function Ring({
                                         height: 9,
                                         borderRadius: 2,
                                         flexShrink: 0,
-                                        background: TONES[index % TONES.length],
+                                        background: toneOf(index, one.name),
                                     }}
                                 />
                                 <span
