@@ -148,6 +148,22 @@
     }
 
     /*
+     * 字の間を、少し空ける。
+     *
+     * ★ 縦書きでは、字の間が列に沿った向きになる。
+     *
+     *   詰まっていると、押した指がどの字を指しているのか
+     *   ブラウザにも決められない。
+     *   0.02em を 0.1em まで広げる。
+     *   16px の字なら、1 文字あたり 1.3px ぶん高くなる。
+     *
+     *   読みにくくなるほどは広げない。
+     */
+    .manuscript-surface textarea.manuscript-vertical {
+        letter-spacing: .1em !important;
+    }
+
+    /*
      * カーソルを、見えるようにする。
      *
      * ★ 縦書きのカーソルは横一本の線で、太さは変えられない。
@@ -177,4 +193,87 @@
         outline: none;
         box-shadow: inset 0 0 0 1px var(--color-forest-line);
     }
+}
+
+
+/*
+ * ============================================================
+ * 一文字ずつ動かす押し具
+ *
+ * ★ 縦書きの携帯にだけ出す。
+ *   横書きは行が太いので、指でも当たる。
+ *
+ * ★ 本文の右下に、小さく浮かせる。
+ *   本文の上に重ねると、字を隠す。
+ *   隅なら、書いている場所とぶつからない。
+ * ============================================================
+ */
+.ms_nudge {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .ms_nudge {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        z-index: 5;
+
+        display: flex;
+        align-items: center;
+        gap: 2px;
+
+        padding: 4px 6px;
+        border: 1px solid var(--color-brand-border);
+        border-radius: 999px;
+        background: var(--color-bg-card);
+        box-shadow: 0 2px 8px rgba(40, 35, 25, .12);
+
+        font-size: 10px;
+        color: var(--color-text-muted);
+    }
+
+    .ms_nudge button {
+        width: 34px;
+        height: 30px;
+        border: none;
+        background: none;
+        color: var(--color-brand);
+        font-size: 13px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .ms_nudge button:active {
+        background: var(--color-brand-light);
+        border-radius: 999px;
+    }
+}
+
+
+/*
+ * ============================================================
+ * 携帯・縦書きの入力の箱
+ *
+ * ★ textarea ではなく、contenteditable の div。
+ *   Safari で縦書きの入力が効く唯一の形。
+ *
+ * ★ 何も書いていないときの、案内の文。
+ *   textarea の placeholder に当たるものが無いので、
+ *   自分で出す。
+ * ============================================================
+ */
+.manuscript-vertical[contenteditable]:empty::before {
+    content: attr(data-placeholder);
+    color: var(--color-text-faint);
+    pointer-events: none;
+}
+
+/*
+ * 触れているあいだ、縁を光らせる。
+ * カーソルは細くて見えないので、
+ * ここに書けることだけでも伝える。
+ */
+.manuscript-vertical[contenteditable]:focus {
+    box-shadow: inset 0 0 0 1px var(--color-forest-line);
 }

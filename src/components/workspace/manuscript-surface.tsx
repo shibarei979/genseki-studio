@@ -15,9 +15,10 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useVerticalWheel } from "@/hooks/use-vertical-wheel";
+import VerticalBox from "@/components/workspace/vertical-box";
 import type { DisplaySettings } from "@/types";
 import { LINE_HEIGHT_VALUE } from "@/types";
 
@@ -92,6 +93,61 @@ export default function ManuscriptSurface({
      * 目盛りを本文と一緒に動かす。
      * 別々に動くと、番号と行がずれて役に立たなくなる。
      */
+    /**
+     * 書き込む場所を、一文字ずつ動かす。
+     *
+     * ★ 縦書きの携帯では、押して当てるには字が小さすぎる。
+     *
+     *   行までは当たるようになったが、
+     *   列の中のどの字か、までは指では選べない。
+     *   字ひとつは 16px、指の当たりはその何倍もある。
+     *
+     *   押して大まかに寄せてから、これで詰める。
+     *
+     * ★ 動かしたあと、欄に触れたままにする。
+     *   離すと鍵盤が下りて、打ち直しになる。
+     */
+    function nudge(step: number) {
+        const area = areaRef.current;
+        if (!area) return;
+
+        const at = Math.max(
+            0,
+            Math.min(area.value.length, (area.selectionStart ?? 0) + step),
+        );
+
+        area.focus();
+        area.setSelectionRange(at, at);
+    }
+
+    /*
+     * 携帯かどうか。
+     *
+     * ★ 携帯の縦書きだけ、入力の器を差し替える。
+     *
+     *   textarea の縦書きは Safari が対応していない。
+     *   押した位置から字を割り出す計算が動かないので、
+     *   何を直してもずれは消えない。
+     *
+     *   contenteditable の箱なら、同じ Safari でも効く。
+     *
+     * ★ パソコンは textarea のまま。
+     *   あちらは動いているし、ルビや置換の仕掛けが
+     *   全部 textarea を前提に組まれている。
+     */
+    const [isNarrow, setIsNarrow] = useState(false);
+
+    useEffect(() => {
+        const q = window.matchMedia("(max-width: 1023px)");
+        const apply = () => setIsNarrow(q.matches);
+
+        apply();
+        q.addEventListener("change", apply);
+        return () => q.removeEventListener("change", apply);
+    }, []);
+
+    const useBox = isNarrow && isVertical && !readOnly;
+
     function handleScroll() {
         const area = areaRef.current;
         const gutter = gutterRef.current;
@@ -141,7 +197,8 @@ export default function ManuscriptSurface({
             ref={boxRef}
             data-manuscript-theme={settings.theme}
             className={[
-                "manuscript-surface h-full w-full",
+                /* 押し具を隅に浮かせるので、位置の基準にする */
+                "manuscript-surface relative h-full w-full",
                 showLineNumbers ? (isVertical ? "flex flex-col" : "flex") : "",
             ].join(" ")}
         >
@@ -198,6 +255,31 @@ export default function ManuscriptSurface({
                 </div>
             )}
 
+            {useBox ? (
+                /*
+                  * 携帯の縦書きだけ、contenteditable の箱にする。
+                  *
+                  * ★ textarea の縦書きは Safari が対応していない。
+                  *   押した位置から字を割り出す計算が動かない。
+                  *
+                  * ★ ルビ・傍点・置換は、この器では使えない。
+                  *   あれらは textarea の選択位置を前提に組んである。
+                  *   携帯の縦書きでは、まず打てることを優先する。
+                  */
+                <VerticalBox
+                    boxRef={areaRef as unknown as React.RefObject<HTMLDivElement>}
+                    value={value}
+                    onChange={onChange}
+                    onSelectionChange={onSelectionChange}
+                    placeholder={placeholder}
+                    style={style}
+                    className={[
+                        "manuscript min-h-0 flex-1 bg-transparent",
+                        "manuscript-vertical page-scroll overflow-x-auto overflow-y-hidden px-6 py-2",
+                        showLineNumbers ? "pt-2" : "",
+                    ].join(" ")}
+                />
+            ) : (
             <textarea
                 ref={areaRef}
                 value={value}
@@ -295,6 +377,41 @@ export default function ManuscriptSurface({
                     showLineNumbers ? (isVertical ? "pt-2" : "pl-3") : "",
                 ].join(" ")}
             />
+            )}
+
+            {/*
+              * 一文字ずつ、書き込む場所を動かす。
+              *
+              * ★ 縦書きの携帯では、押して当てるには字が小さすぎる。
+              *
+              *   行までは当たるようになったが、
+              *   列の中のどの字か、までは指で選べない。
+              *   字ひとつは 16px、指の当たりはその何倍もある。
+              *
+              *   押して大まかに寄せてから、これで詰める。
+              *
+              * ★ 縦書きのときだけ、携帯にだけ出す。
+              *   横書きは行が太いので、指でも当たる。
+              */}
+            {isVertical && !useBox && (
+                <div className="ms_nudge" aria-hidden={false}>
+                    <button
+                        type="button"
+                        onClick={() => nudge(-1)}
+                        aria-label="書き込む場所を、ひとつ前へ"
+                    >
+                        ◀
+                    </button>
+                    <span>1字</span>
+                    <button
+                        type="button"
+                        onClick={() => nudge(1)}
+                        aria-label="書き込む場所を、ひとつ後ろへ"
+                    >
+                        ▶
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
