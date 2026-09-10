@@ -157,7 +157,12 @@
 .gm_route_line {
     display: block;
     width: 100%;
-    height: 22px;
+    height: 34px;
+}
+
+/* 帆。進むたびに、なめらかに移る */
+.gm_route_ship {
+    transition: transform .5s cubic-bezier(.3, .8, .3, 1);
 }
 
 .gm_route_text {
@@ -572,10 +577,10 @@
 .gm_pane {
     display: flex;
     align-items: center;
-    gap: 20px;
-    margin: 24px auto 0;
-    padding: 22px;
-    max-width: 520px;
+    gap: 22px;
+    margin: 26px auto 0;
+    padding: 24px 26px;
+    max-width: 560px;
     border: 1px solid var(--rule);
     border-top: 3px solid var(--amber);
     border-radius: 2px;
@@ -696,9 +701,18 @@
  *
  * ★ ここだけ濃い。落ちになる。
  * ---------------------------------------------------------- */
+/*
+ * ★ 濃い帯を、短くする。
+ *
+ *   前は縦に長すぎて、結果より大きく見えた。
+ *   主役は結果のほうで、これは受けの部分。
+ *
+ * ★ 押し具を横に並べる。
+ *   縦に積むと、そのぶん帯が伸びる。
+ */
 .gm_reveal {
-    margin: 34px -22px 0;
-    padding: 34px 26px 48px;
+    margin: 30px -22px 0;
+    padding: 28px 26px 34px;
     background:
         radial-gradient(120% 80% at 50% 0%, #24405a 0%, transparent 62%),
         linear-gradient(180deg, var(--sea) 0%, var(--sea-deep) 100%);
@@ -743,18 +757,27 @@
 
 .gm_reveal_logo {
     display: block;
-    width: min(300px, 78%);
+    width: min(220px, 62%);
     height: auto;
-    margin: 20px auto 6px;
+    margin: 14px auto 2px;
     filter: brightness(0) invert(1);
     opacity: .96;
 }
 
 .gm_reveal_lead {
-    margin-top: 14px;
-    font-size: 13px;
-    line-height: 2.1;
-    color: #b6c4d1;
+    margin-top: 8px;
+    font-size: 12.5px;
+    line-height: 2;
+    color: #a9bac8;
+}
+
+/* 押し具を横に並べる。帯を伸ばさないため */
+.gm_reveal_acts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
 }
 
 /* ------------------------------------------------------------
@@ -762,7 +785,7 @@
  * ---------------------------------------------------------- */
 .gm_go {
     display: inline-block;
-    margin-top: 22px;
+    margin-top: 18px;
     padding: 15px 40px;
     border: none;
     border-radius: 2px;
@@ -784,7 +807,7 @@
 
 .gm_sub {
     display: inline-block;
-    margin-top: 12px;
+    margin-top: 0;
     padding: 12px 28px;
     border: 1px solid rgba(232, 215, 182, .42);
     border-radius: 2px;
@@ -804,7 +827,7 @@
 /* 紙の上に置く控えめな押し具 */
 .gm_quiet {
     display: inline-block;
-    margin-top: 26px;
+    margin-top: 18px;
     border: none;
     background: none;
     color: var(--ink-soft);

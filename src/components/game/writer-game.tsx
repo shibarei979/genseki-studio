@@ -446,35 +446,73 @@ function Dots({ at, last }: { at: number; last: number }) {
               */}
             <svg
                 className="gm_route_line"
-                viewBox="0 0 300 22"
+                viewBox="0 0 300 34"
                 preserveAspectRatio="none"
                 aria-hidden="true"
             >
-                {/* 通ってきた道 */}
-                <line x1="6" y1="11" x2="294" y2="11" stroke="#e2d9c8" strokeWidth="1.5" />
-                <line
-                    x1="6"
-                    y1="11"
-                    x2={6 + (288 * at) / all}
-                    y2="11"
+                {/*
+                  * ★ まっすぐな線にしない。
+                  *
+                  *   直線だと、ただの進み具合の帯に見える。
+                  *   波打たせると、海の上を進んでいるように見える。
+                  *
+                  * ★ 通ったところは実線、これからは薄い点線。
+                  *   どこまで来たかが、線の質で分かる。
+                  */}
+                <path
+                    d="M6 17 Q 42 6, 78 17 T 150 17 T 222 17 T 294 17"
+                    fill="none"
+                    stroke="#e2d9c8"
+                    strokeWidth="1.4"
+                    strokeDasharray="3 4"
+                />
+
+                <path
+                    d="M6 17 Q 42 6, 78 17 T 150 17 T 222 17 T 294 17"
+                    fill="none"
                     stroke="#c8944a"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 4"
+                    strokeWidth="1.6"
+                    pathLength={1}
+                    strokeDasharray="1"
+                    strokeDashoffset={1 - at / all}
+                    style={{ transition: "stroke-dashoffset .5s ease" }}
                 />
 
                 {/* 節目 */}
-                {Array.from({ length: all }, (_, index) => (
-                    <circle
-                        key={index}
-                        cx={6 + (288 * index) / all}
-                        cy="11"
-                        r={index === at ? 4 : 2}
-                        fill={index <= at ? '#c8944a' : '#e2d9c8'}
-                    />
-                ))}
+                {Array.from({ length: all }, (_, index) => {
+                    const x = 6 + (288 * index) / all
+                    /* 波に乗せる。線の高さと合わせる */
+                    const y = 17 - Math.sin((index / all) * Math.PI * 4) * 5.5
+                    return (
+                        <circle
+                            key={index}
+                            cx={x}
+                            cy={y}
+                            r={index === at ? 0 : 2}
+                            fill={index < at ? "#c8944a" : "#e2d9c8"}
+                        />
+                    )
+                })}
+
+                {/* いま居るところ。小さな帆 */}
+                {(() => {
+                    const x = 6 + (288 * at) / all
+                    const y = 17 - Math.sin((at / all) * Math.PI * 4) * 5.5
+                    return (
+                        <g
+                            className="gm_route_ship"
+                            style={{ transform: `translate(${x}px, ${y}px)` }}
+                        >
+                            <path
+                                d="M0 -7 L5 4 L-5 4 Z"
+                                fill="#c8944a"
+                            />
+                        </g>
+                    )
+                })()}
 
                 {/* 港 */}
-                <circle cx="294" cy="11" r="3" fill="none" stroke="#c8944a" strokeWidth="1.4" />
+                <circle cx="294" cy="17" r="3.4" fill="none" stroke="#c8944a" strokeWidth="1.4" />
             </svg>
 
             <p className="gm_route_text">
@@ -740,7 +778,11 @@ function ResultView({
                 <div className="gm_pane_right">
                     <p className="gm_work_tag">あなたが書ける一作</p>
                     <p className="gm_work_title">{v.work.title}</p>
-                    <p className="gm_work_note">{v.work.note}</p>
+                    <div className="gm_work_note">
+                        {v.work.note.map((line) => (
+                            <p key={line}>{line}</p>
+                        ))}
+                    </div>
 
                     <p className="gm_work_best">
                         いちばん強いのは <b>{AXIS_NAME[v.best]}</b>
@@ -792,16 +834,15 @@ function ResultView({
 
                 <p className="gm_reveal_small">題名は、あとから変えられます</p>
 
-                <div>
+                {/* 横に並べる。縦に積むと帯が伸びる */}
+                <div className="gm_reveal_acts">
                     <Link
                         href={`/search?genre=${encodeURIComponent(v.genre)}`}
                         className="gm_sub"
                     >
-                        {v.place}の作品を読んでみる
+                        {v.place}の作品を読む
                     </Link>
-                </div>
 
-                <div>
                     <a
                         href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
                             shareText,
