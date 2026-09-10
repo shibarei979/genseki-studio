@@ -275,8 +275,20 @@ export default function ManuscriptSurface({
                     style={style}
                     className={[
                         "manuscript min-h-0 flex-1 bg-transparent",
-                        "manuscript-vertical page-scroll overflow-x-auto overflow-y-hidden px-6 py-2",
-                        showLineNumbers ? "pt-2" : "",
+                        /*
+                         * ★ 上に余白を厚く取る。
+                         *
+                         *   当たり位置が下へ寄るので、列の頭の字に
+                         *   指が届かない。箱の外を押すことになる。
+                         *
+                         *   上に余白があれば、そこを押しても
+                         *   箱の中なので、頭の字に寄せられる。
+                         *
+                         *   縦書きでは padding-top が
+                         *   「列の頭の側」に当たる。
+                         */
+                        "manuscript-vertical page-scroll overflow-x-auto overflow-y-hidden",
+                        "ms_box px-6",
                     ].join(" ")}
                 />
             ) : (
