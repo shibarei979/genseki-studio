@@ -39,14 +39,34 @@ import {
 /* 100 を振り分ける出来事を、5 番目に挟む */
 const COIN_AT = 4
 
+/*
+ * 100 の振り分け先。
+ *
+ * ★ 何に置いたかで、どの角が伸びるかが変わる。
+ *
+ *     作品づくり  文章と熱量。手を動かすこと
+ *     イラスト    世界観。見せる形にすること
+ *     取材・資料  世界観と物語。中身を集めること
+ *     宣伝        発信力。届けること
+ *
+ * ★ キャラクターには振らない。
+ *   人は金で作るものではない、という筋を通す。
+ */
 const COIN_KINDS: { key: string; label: string; add: Partial<Score> }[] = [
-    { key: 'work', label: '作品づくり', add: { bunge: 1, light: 1 } },
-    { key: 'art', label: 'イラスト・デザイン', add: { comic: 2 } },
-    { key: 'research', label: '取材・資料', add: { bunge: 1, screen: 1 } },
-    { key: 'ad', label: '宣伝', add: { web: 2 } },
+    { key: 'work', label: '作品づくり', add: { text: 1, heat: 1 } },
+    { key: 'art', label: 'イラスト・デザイン', add: { world: 2 } },
+    { key: 'research', label: '取材・資料', add: { world: 1, story: 1 } },
+    { key: 'ad', label: '宣伝', add: { reach: 2 } },
 ]
 
-const EMPTY: Score = { light: 0, comic: 0, bunge: 0, screen: 0, web: 0 }
+const EMPTY: Score = {
+    chara: 0,
+    world: 0,
+    text: 0,
+    story: 0,
+    reach: 0,
+    heat: 0,
+}
 
 const FLAT = { work: 25, art: 25, research: 25, ad: 25 }
 
