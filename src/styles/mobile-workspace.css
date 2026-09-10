@@ -251,63 +251,31 @@
 }
 
 
+
+
+
+
+
 /*
  * ============================================================
- * 携帯・縦書きの入力の箱
+ * 携帯では、書くときだけ横書きにする
  *
- * ★ textarea ではなく、contenteditable の div。
- *   Safari で縦書きの入力が効く唯一の形。
+ * ★ 縦書きの入力は、iPhone では押した所にカーソルが立たない。
+ *   WebKit の不具合 283620。Apple は回避策を示していない。
  *
- * ★ 何も書いていないときの、案内の文。
- *   textarea の placeholder に当たるものが無いので、
- *   自分で出す。
+ *   textarea をやめて contenteditable にしても直らなかった。
+ *   土台を変えても、位置の計算そのものが壊れている。
+ *
+ *   書けないより、横書きで書けるほうがよい。
+ *   読むとき・確かめるときは、これまでどおり縦書き。
  * ============================================================
  */
-.manuscript-vertical[contenteditable]:empty::before {
-    content: attr(data-placeholder);
-    color: var(--color-text-faint);
-    pointer-events: none;
-}
-
-/*
- * 上に余白を厚く取る。
- *
- * ★ 当たり位置が下へ寄る。
- *
- *   列の頭の字を押そうとすると、箱の外になり、
- *   カーソルが動かない。下のほうは当たるのに、
- *   上だけ届かないのは、これ。
- *
- *   上に余白を作れば、そこを押しても箱の中なので、
- *   頭の字へ寄せられる。
- *
- * ★ 縦書きでは padding-top が「列の頭の側」に当たる。
- *   下は薄くてよい。
- */
-.ms_box {
-    padding-top: 40px;
-    padding-bottom: 10px;
-}
-
-/*
- * 字を大きくする。
- *
- * ★ 的そのものを広げる。
- *
- *   16px の字は、指の当たりに対して小さすぎる。
- *   17px まで上げる。選んだ大きさがそれ以上なら、
- *   そちらを尊重する。
- */
-.manuscript-vertical[contenteditable] {
-    font-size: max(17px, var(--ms-font-size, 17px)) !important;
-    letter-spacing: .12em !important;
-}
-
-/*
- * 触れているあいだ、縁を光らせる。
- * カーソルは細くて見えないので、
- * ここに書けることだけでも伝える。
- */
-.manuscript-vertical[contenteditable]:focus {
-    box-shadow: inset 0 0 0 1px var(--color-forest-line);
+.ms_note {
+    margin: 0 0 8px;
+    padding: 7px 10px;
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: var(--color-text-muted);
+    background: var(--color-bg-card);
+    border-left: 2px solid var(--color-brand-border);
 }

@@ -18,7 +18,6 @@ import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import { useVerticalWheel } from "@/hooks/use-vertical-wheel";
-import VerticalBox from "@/components/workspace/vertical-box";
 import type { DisplaySettings } from "@/types";
 import { LINE_HEIGHT_VALUE } from "@/types";
 
@@ -66,7 +65,54 @@ export default function ManuscriptSurface({
     showLineNumbers = false,
     zoom = 1,
 }: Props) {
-    const isVertical = settings.writing_mode === "vertical";
+    const wantsVertical = settings.writing_mode === "vertical";
+
+    /*
+     * 携帯かどうか。
+     *
+     * ★ 携帯の縦書きだけ、入力の器を差し替える。
+     *
+     *   textarea の縦書きは Safari が対応していない。
+     *   押した位置から字を割り出す計算が動かないので、
+     *   何を直してもずれは消えない。
+     *
+     *   contenteditable の箱なら、同じ Safari でも効く。
+     *
+     * ★ パソコンは textarea のまま。
+     *   あちらは動いているし、ルビや置換の仕掛けが
+     *   全部 textarea を前提に組まれている。
+     */
+    const [isNarrow, setIsNarrow] = useState(false);
+
+    useEffect(() => {
+        const q = window.matchMedia("(max-width: 1023px)");
+        const apply = () => setIsNarrow(q.matches);
+
+        apply();
+        q.addEventListener("change", apply);
+        return () => q.removeEventListener("change", apply);
+    }, []);
+
+    /*
+     * ★ 携帯で書くときは、横書きにする。
+     *
+     *   縦書きの入力は、iPhone では押した所に
+     *   カーソルが立たない。WebKit の不具合 283620。
+     *   Apple は回避策を示していない。
+     *
+     *   textarea をやめて contenteditable にしても直らなかった。
+     *   土台を変えても、位置の計算そのものが壊れている。
+     *
+     *   書けないより、横書きで書けるほうがよい。
+     *   読むとき・確かめるときは、これまでどおり縦書き。
+     *
+     * ★ 設定そのものは書き換えない。
+     *   その人が選んだ向きは、そのまま残す。
+     *   ここで出す形を変えるだけ。
+     */
+    const forcedHorizontal = isNarrow && !readOnly && wantsVertical;
+    const isVertical = wantsVertical && !forcedHorizontal;
+
     const areaRef = useRef<HTMLTextAreaElement>(null);
     const gutterRef = useRef<HTMLDivElement>(null);
     /** 本文の外枠。輪の見張りを、ここに付ける */
@@ -120,33 +166,7 @@ export default function ManuscriptSurface({
         area.setSelectionRange(at, at);
     }
 
-    /*
-     * 携帯かどうか。
-     *
-     * ★ 携帯の縦書きだけ、入力の器を差し替える。
-     *
-     *   textarea の縦書きは Safari が対応していない。
-     *   押した位置から字を割り出す計算が動かないので、
-     *   何を直してもずれは消えない。
-     *
-     *   contenteditable の箱なら、同じ Safari でも効く。
-     *
-     * ★ パソコンは textarea のまま。
-     *   あちらは動いているし、ルビや置換の仕掛けが
-     *   全部 textarea を前提に組まれている。
-     */
-    const [isNarrow, setIsNarrow] = useState(false);
 
-    useEffect(() => {
-        const q = window.matchMedia("(max-width: 1023px)");
-        const apply = () => setIsNarrow(q.matches);
-
-        apply();
-        q.addEventListener("change", apply);
-        return () => q.removeEventListener("change", apply);
-    }, []);
-
-    const useBox = isNarrow && isVertical && !readOnly;
 
     function handleScroll() {
         const area = areaRef.current;
@@ -255,43 +275,6 @@ export default function ManuscriptSurface({
                 </div>
             )}
 
-            {useBox ? (
-                /*
-                  * 携帯の縦書きだけ、contenteditable の箱にする。
-                  *
-                  * ★ textarea の縦書きは Safari が対応していない。
-                  *   押した位置から字を割り出す計算が動かない。
-                  *
-                  * ★ ルビ・傍点・置換は、この器では使えない。
-                  *   あれらは textarea の選択位置を前提に組んである。
-                  *   携帯の縦書きでは、まず打てることを優先する。
-                  */
-                <VerticalBox
-                    boxRef={areaRef as unknown as React.RefObject<HTMLDivElement>}
-                    value={value}
-                    onChange={onChange}
-                    onSelectionChange={onSelectionChange}
-                    placeholder={placeholder}
-                    style={style}
-                    className={[
-                        "manuscript min-h-0 flex-1 bg-transparent",
-                        /*
-                         * ★ 上に余白を厚く取る。
-                         *
-                         *   当たり位置が下へ寄るので、列の頭の字に
-                         *   指が届かない。箱の外を押すことになる。
-                         *
-                         *   上に余白があれば、そこを押しても
-                         *   箱の中なので、頭の字に寄せられる。
-                         *
-                         *   縦書きでは padding-top が
-                         *   「列の頭の側」に当たる。
-                         */
-                        "manuscript-vertical page-scroll overflow-x-auto overflow-y-hidden",
-                        "ms_box px-6",
-                    ].join(" ")}
-                />
-            ) : (
             <textarea
                 ref={areaRef}
                 value={value}
@@ -389,7 +372,7 @@ export default function ManuscriptSurface({
                     showLineNumbers ? (isVertical ? "pt-2" : "pl-3") : "",
                 ].join(" ")}
             />
-            )}
+
 
             {/*
               * 一文字ずつ、書き込む場所を動かす。
@@ -405,7 +388,22 @@ export default function ManuscriptSurface({
               * ★ 縦書きのときだけ、携帯にだけ出す。
               *   横書きは行が太いので、指でも当たる。
               */}
-            {isVertical && !useBox && (
+            {/*
+              * 携帯で書くときは横書きにしている、という断り。
+              *
+              * ★ 黙って向きを変えない。
+              *
+              *   縦書きにしたはずなのに横で出ると、
+              *   設定が効いていないと思われる。
+              *   なぜそうしているかを、その場に書く。
+              */}
+            {forcedHorizontal && (
+                <p className="ms_note">
+                    携帯では横書きで書きます。読むときは縦書きのままです。
+                </p>
+            )}
+
+            {isVertical && (
                 <div className="ms_nudge" aria-hidden={false}>
                     <button
                         type="button"
