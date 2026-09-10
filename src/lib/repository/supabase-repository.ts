@@ -880,12 +880,28 @@ export const supabaseRepository: Repository = {
              *   話は投稿できる。作品が下書きのまま残るだけなので、
              *   題名を付ければ、そのとき公開になる。
              */
+            /*
+             * ★ 片方だけ下書きの作品も、引き上げる。
+             *
+             *   前は published と visibility の両方が
+             *   下書きのときだけ引き上げていた。
+             *
+             *   片方だけ立っている作品——たとえば
+             *   visibility は public なのに published が false——は
+             *   条件に当たらず、引き上げられないまま残る。
+             *
+             *   作者の公開ページは両方そろって初めて出すので、
+             *   投稿済みなのに一覧から消えていた。
+             *
+             * ★ 限定公開は、そのままにする。
+             *   作者が意図して絞ったものを、全体公開へ戻さない。
+             */
             await db()
                 .from("novels")
                 .update({ published: true, visibility: "public" })
                 .eq("id", data.novel_id)
-                .eq("published", false)
-                .eq("visibility", "draft")
+                .neq("visibility", "limited")
+                .or("published.eq.false,visibility.eq.draft")
                 .not("title", "is", null)
                 .neq("title", "");
 
