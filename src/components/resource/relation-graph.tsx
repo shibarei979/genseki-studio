@@ -90,13 +90,19 @@ const PAD = 0;
  *
  *   4.0 なら 2560×1600。枠のおよそ 2.7 倍の広さ。
  */
-const SPREAD = 4.0;
+/*
+ * ★ 紙の広さは、つまみで決める。
+ *
+ *   人が増えるほど窮屈になるので、
+ *   広い紙を使えるようにする。
+ *
+ *   ここに書いてあるのは、いちばん狭いときの値。
+ *   広げるときは、これに倍率を掛ける。
+ */
+const SPREAD = 2.5;
 
-const BOARD_H = Math.round(BASE_SIZE * SPREAD);
-const BOARD_W = Math.round(BOARD_H * ASPECT);
-
-/* 描く範囲の比。余白のぶんを入れて数える */
-const DRAWN_ASPECT = (BOARD_W + PAD * 2) / (BOARD_H + PAD * 2);
+/* 紙の形。広さが変わっても、形は変わらない */
+const DRAWN_ASPECT = ASPECT;
 const BASE_RADIUS = 142;
 
 /*
@@ -435,7 +441,27 @@ export default function RelationGraph({
      * ★ 初めは、紙が枠ぴったりのところ。
      *   そこから、引いて眺めるか、寄って読むか。
      */
-    const [sizeValue, setSizeValue] = useState(39);
+    /*
+     * 紙の広さ。0〜100。
+     *
+     * ★ 人が増えるほど窮屈になるので、広げられるようにする。
+     *
+     *   0   狭い紙。人が少ないとき
+     *   100 その 3 倍の広さ。人が多いとき
+     *
+     * ★ 広げると、置ける場所が増える。
+     *   ただし枠に全体を収めると、そのぶん小さく見える。
+     *   近くを読みたいときは、下の「拡大」で寄る。
+     */
+    const [wideValue, setWideValue] = useState(0);
+
+    /*
+     * 拡大。0〜100。
+     *
+     * ★ 0 で紙の全体が枠に収まる。
+     *   上げるほど、紙の一部を大きく見る。送って見る。
+     */
+    const [zoomValue, setZoomValue] = useState(0);
 
     /*
      * 送る枠。
@@ -481,7 +507,11 @@ export default function RelationGraph({
      * ★ 掛け算で伸ばす。
      *   足し算だと、小さいほうの差が目盛りに出ない。
      */
-    const scale = 0.5 * Math.pow(6, sizeValue / 100);
+    /* 紙の広さの倍率。1.0 〜 3.0 */
+    const wide = 1 + (wideValue / 100) * 2;
+
+    /* 拡大の倍率。1.0 で紙の全体が枠に収まる */
+    const scale = Math.pow(3, zoomValue / 100);
 
     useEffect(() => {
         const el = panRef.current;
@@ -524,7 +554,7 @@ export default function RelationGraph({
         }, 30);
 
         return () => window.clearTimeout(timer);
-    }, [sizeValue]);
+    }, [zoomValue, wideValue]);
 
 
     /*
@@ -567,7 +597,7 @@ export default function RelationGraph({
      *
      *   離れ具合を変えたいときは「整理する」。
      */
-    const spread = SPREAD;
+    const spread = SPREAD * wide;
     /*
      * 板の大きさ。
      *
@@ -759,7 +789,22 @@ export default function RelationGraph({
     nodes.forEach((node, index) => {
         const saved = dragging?.id === node.id ? dragging.position : layout[node.id];
         if (saved) {
-            positions.set(node.id, saved);
+            /*
+             * ★ 紙を広げたら、置いた場所も一緒に伸ばす。
+             *
+             *   覚えているのは、いちばん狭い紙での位置。
+             *   そのまま使うと、広げたときに丸が左上へ固まる。
+             *
+             *   つまんで動かしている最中の位置は、
+             *   もう今の紙での値なので、そのまま使う。
+             */
+            const isDragging = dragging?.id === node.id;
+            positions.set(
+                node.id,
+                isDragging
+                    ? saved
+                    : { x: saved.x * wide, y: saved.y * wide },
+            );
             return;
         }
         // 上から時計回りに並べる
@@ -1278,7 +1323,17 @@ export default function RelationGraph({
                         return;
                     }
                     // 動かさずに離したときは、選んだものとして扱う
-                    if (dragging.moved) onMove?.(dragging.id, dragging.position);
+                    /*
+                     * ★ 覚えるときは、いちばん狭い紙での値に戻す。
+                     *   広げた状態の値をそのまま覚えると、
+                     *   狭めたときに紙からはみ出す。
+                     */
+                    if (dragging.moved) {
+                        onMove?.(dragging.id, {
+                            x: dragging.position.x / wide,
+                            y: dragging.position.y / wide,
+                        });
+                    }
                     else onSelect(selectedId === dragging.id ? null : dragging.id);
                     setDragging(null);
                 }}
@@ -1287,7 +1342,12 @@ export default function RelationGraph({
                         onBend?.(bending.id, bending.position);
                         setBending(null);
                     }
-                    if (dragging?.moved) onMove?.(dragging.id, dragging.position);
+                    if (dragging?.moved && !focusId) {
+                        onMove?.(dragging.id, {
+                            x: dragging.position.x / wide,
+                            y: dragging.position.y / wide,
+                        });
+                    }
                     setDragging(null);
                 }}
             >
@@ -1710,24 +1770,51 @@ export default function RelationGraph({
             {onMove && (
                 <>
                     <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+                        {/*
+                          * ★ つまみは 2 つ。別のことをする。
+                          *
+                          *   紙の広さ  丸を置ける場所を増やす
+                          *   拡大      その紙のどこを大きく見るか
+                          *
+                          *   広げただけでは、枠に全体を収めるので
+                          *   見かけが縮むだけ。近くを読むには拡大が要る。
+                          */}
                         <label className="flex items-center gap-2">
-                            <span className="text-[11px] text-faint">大きさ</span>
-
-                            {/* 小さいほう・大きいほうが、目で分かるように */}
-                            <span className="text-[9px] text-faint">小</span>
+                            <span className="text-[11px] text-faint">紙の広さ</span>
 
                             <input
                                 type="range"
                                 min={0}
                                 max={100}
                                 step={5}
-                                value={sizeValue}
-                                onChange={(e) => setSizeValue(Number(e.target.value))}
-                                aria-label="図の大きさ"
-                                className="w-36 accent-[var(--color-forest)]"
+                                value={wideValue}
+                                onChange={(e) => setWideValue(Number(e.target.value))}
+                                aria-label="紙の広さ"
+                                className="w-28 accent-[var(--color-forest)]"
                             />
 
-                            <span className="text-[12px] text-faint">大</span>
+                            <span className="w-8 text-[10px] text-faint">
+                                ×{wide.toFixed(1)}
+                            </span>
+                        </label>
+
+                        <label className="flex items-center gap-2">
+                            <span className="text-[11px] text-faint">拡大</span>
+
+                            <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={5}
+                                value={zoomValue}
+                                onChange={(e) => setZoomValue(Number(e.target.value))}
+                                aria-label="拡大"
+                                className="w-28 accent-[var(--color-forest)]"
+                            />
+
+                            <span className="w-8 text-[10px] text-faint">
+                                ×{scale.toFixed(1)}
+                            </span>
                         </label>
 
                         <button
