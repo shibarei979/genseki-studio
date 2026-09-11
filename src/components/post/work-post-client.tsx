@@ -58,10 +58,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
      * 何十話も貯めてから出す人がいる。
      * 1 話ずつ開いて押していくのは、それだけで日が暮れる。
      */
-    const [isBulkOpen, setIsBulkOpen] = useState(false);
-    const [bulkFrom, setBulkFrom] = useState("");
-    const [bulkTo, setBulkTo] = useState("");
-    const [bulkError, setBulkError] = useState("");
+    /* いま何話ぶん処理しているか。押し具に出す */
     const [bulkDoing, setBulkDoing] = useState(0);
 
     /*
@@ -111,22 +108,63 @@ export default function WorkPostClient({ workId }: { workId: string }) {
             return;
         }
 
+        /*
+         * ★ 話の順に出す。
+         *
+         *   出した順が、そのまま「新着」の順になる。
+         *   並べずに出すと、30話目が1話目より先に出て、
+         *   読者の側で順番が入れ替わって見える。
+         */
+        const ordered = [...targets].sort((a, b) => a.ep_number - b.ep_number);
+
+        /*
+         * ★ 1 話でも失敗したら、そこで止まっていた。
+         *
+         *   途中まで出て、残りが出ない。
+         *   どこまで出たかも分からない。
+         *   「投稿されない話もある」という声は、これ。
+         *
+         *   失敗したものは覚えておいて、残りは続ける。
+         */
+        const failed: number[] = [];
         const repository = getRepository();
-        for (const row of targets) {
-            await repository.updateEpisode(row.id, {
-                is_published: publish,
-                /*
-                 * ★ 予約の時刻は両方とも消す。
-                 *   非公開に戻したとき scheduled_at が残っていると、
-                 *   その時刻は過ぎているので、すぐまた公開される。
-                 */
-                publish_at: null,
-                scheduled_at: null,
-            });
+
+        setBulkDoing(ordered.length);
+
+        for (const row of ordered) {
+            try {
+                await repository.updateEpisode(row.id, {
+                    is_published: publish,
+                    /*
+                     * ★ 予約の時刻は両方とも消す。
+                     *   非公開に戻したとき scheduled_at が残っていると、
+                     *   その時刻は過ぎているので、すぐまた公開される。
+                     */
+                    publish_at: null,
+                    scheduled_at: null,
+                });
+            } catch {
+                failed.push(row.ep_number);
+            }
+            setBulkDoing((left) => left - 1);
         }
+
+        setBulkDoing(0);
+        await reload();
+
+        if (failed.length > 0) {
+            window.alert(
+                `${ordered.length - failed.length}話を${publish ? "投稿" : "非公開に"}しました。\n\n` +
+                    `${failed.length}話はできませんでした：\n` +
+                    failed.slice(0, 8).map((n) => `${n}話目`).join("・") +
+                    (failed.length > 8 ? " ほか" : "") +
+                    "\n\nもう一度お試しください。",
+            );
+            return;
+        }
+
         setPicked([]);
         setIsPicking(false);
-        await reload();
     }
 
     async function deletePicked() {
@@ -305,82 +343,6 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                 String(b.publish_at ?? b.scheduled_at),
             ),
         );
-
-    /**
-     * 範囲でまとめて投稿する。
-     *
-     * 題名の無い話が 1 つでもあれば、何も投稿せずに止める。
-     * 途中まで出して止まると、どこまで出たか分からなくなる。
-     */
-    async function bulkPost() {
-        const from = Number(bulkFrom);
-        const to = Number(bulkTo);
-
-        if (!Number.isFinite(from) || !Number.isFinite(to) || from < 1 || to < from) {
-            setBulkError("範囲が正しくありません。");
-            return;
-        }
-
-        const targets = episodes.filter(
-            (row) =>
-                row.ep_number >= from &&
-                row.ep_number <= to &&
-                !row.is_published,
-        );
-
-        if (targets.length === 0) {
-            setBulkError("その範囲に、まだ投稿していない話がありません。");
-            return;
-        }
-
-        /* 題名の無い話を先に洗う */
-        const noTitle = targets.filter((row) => !row.title.trim());
-        if (noTitle.length > 0) {
-            setBulkError(
-                `名前の無い話が${noTitle.length}話あります（${noTitle
-                    .slice(0, 3)
-                    .map((row) => `${row.ep_number}話目`)
-                    .join("・")}${noTitle.length > 3 ? " ほか" : ""}）。` +
-                    "先に名前を入れてください。",
-            );
-            return;
-        }
-
-        if (
-            !window.confirm(
-                `${targets.length}話をまとめて投稿します。\n` +
-                    `（${from}話目〜${to}話目のうち、まだ投稿していない分）\n\n` +
-                    "投稿すると読者に公開されます。",
-            )
-        ) {
-            return;
-        }
-
-        setBulkError("");
-        setBulkDoing(targets.length);
-
-        try {
-            const repository = getRepository();
-            for (const row of targets) {
-                await repository.updateEpisode(row.id, {
-                    is_published: true,
-                    publish_at: null,
-                });
-                setBulkDoing((left) => left - 1);
-            }
-            await reload();
-            setIsBulkOpen(false);
-            setBulkFrom("");
-            setBulkTo("");
-        } catch (caught) {
-            setBulkError(
-                caught instanceof Error
-                    ? caught.message
-                    : "投稿できませんでした。",
-            );
-        }
-        setBulkDoing(0);
-    }
 
     /**
      * 開く話を変える。
@@ -568,90 +530,18 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                              * 範囲を指すので、出すつもりの無い話まで
                              * 巻き込まない。
                              */}
-                            {episodes.some((row) => !row.is_published) && (
-                                <div className="mt-3 border-t border-line pt-3">
-                                    {!isBulkOpen ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setIsBulkOpen(true);
-                                                setBulkError("");
-                                            }}
-                                            className="w-full rounded-md border border-forest-line px-3 py-2 text-[11px] text-forest hover:bg-forest-tint"
-                                        >
-                                            まとめて投稿する
-                                        </button>
-                                    ) : (
-                                        <div>
-                                            <p className="text-[11px] text-ink">
-                                                何話目から何話目まで
-                                            </p>
-
-                                            <div className="mt-2 flex items-center gap-1.5">
-                                                <input
-                                                    type="number"
-                                                    min={1}
-                                                    value={bulkFrom}
-                                                    onChange={(e) => setBulkFrom(e.target.value)}
-                                                    placeholder="1"
-                                                    className="w-16 rounded border border-line px-2 py-1 text-[12px] outline-none focus:border-forest"
-                                                />
-                                                <span className="text-[11px] text-muted">〜</span>
-                                                <input
-                                                    type="number"
-                                                    min={1}
-                                                    value={bulkTo}
-                                                    onChange={(e) => setBulkTo(e.target.value)}
-                                                    placeholder={String(episodes.length)}
-                                                    className="w-16 rounded border border-line px-2 py-1 text-[12px] outline-none focus:border-forest"
-                                                />
-                                                <span className="text-[11px] text-muted">話目</span>
-                                            </div>
-
-                                            <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
-                                                この範囲のうち、まだ投稿していない話だけを出します。
-                                                名前の無い話があるときは、何も投稿しません。
-                                            </p>
-
-                                            {bulkError && (
-                                                <p className="mt-1.5 text-[10px] leading-relaxed text-[var(--color-danger)]">
-                                                    {bulkError}
-                                                </p>
-                                            )}
-
-                                            <div className="mt-2 flex gap-1.5">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setIsBulkOpen(false);
-                                                        setBulkError("");
-                                                    }}
-                                                    disabled={bulkDoing > 0}
-                                                    className="rounded-md border border-line px-3 py-1.5 text-[11px] text-muted hover:text-ink disabled:opacity-40"
-                                                >
-                                                    やめる
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => void bulkPost()}
-                                                    disabled={bulkDoing > 0}
-                                                    className="flex-1 rounded-md bg-forest py-1.5 text-[11px] font-medium text-white hover:bg-forest-dark disabled:opacity-40"
-                                                >
-                                                    {bulkDoing > 0
-                                                        ? `投稿しています…（残り${bulkDoing}）`
-                                                        : "この範囲を投稿する"}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
                             {/*
-                             * まとめて消す。
+                             * 話を選んで、まとめて何かする。
                              *
-                             * 執筆画面と同じ形。
-                             * ふだんは四角を出さず、押したときだけ選べる。
+                             * ★ 道は 1 つだけにする。
+                             *
+                             *   前は「数字で範囲を指す」ものと
+                             *   「印を付けて選ぶ」ものが両方あった。
+                             *   同じことをする道が 2 つあると、
+                             *   どちらを使えばよいのか分からない。
+                             *
+                             *   「難しすぎる」という声は、これ。
+                             *   見ながら選べるほうだけ残す。
                              */}
                             {episodes.length > 0 && (
                                 <div className="mt-2 border-t border-line pt-2">
@@ -665,7 +555,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                             className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-surface py-1.5 text-[11px] text-muted hover:border-forest-line hover:text-forest"
                                         >
                                             <span aria-hidden="true">☑</span>
-                                            話を選ぶ
+                                            話を選んで、まとめて投稿する
                                         </button>
                                     ) : (
                                         <div className="rounded-md border border-line bg-canvas px-2.5 py-2">
@@ -673,7 +563,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                 <span className="text-[11px] text-ink">
                                                     {picked.length > 0
                                                         ? `${picked.length}話を選んでいます`
-                                                        : "消す話を選んでください"}
+                                                        : "下の一覧から、話を選んでください"}
                                                 </span>
                                                 <button
                                                     type="button"
@@ -704,6 +594,28 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                         : "すべて選ぶ"}
                                                 </button>
 
+                                                {/*
+                                                  * ★ いちばん使う選び方を、一押しで。
+                                                  *
+                                                  *   出していない話だけを出したい、
+                                                  *   というのがほとんど。
+                                                  *   一つずつ押させない。
+                                                  */}
+                                                {episodes.some((row) => !row.is_published) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setPicked(
+                                                                episodes
+                                                                    .filter((row) => !row.is_published)
+                                                                    .map((row) => row.id),
+                                                            )
+                                                        }
+                                                        className="rounded border border-forest-line px-2 py-0.5 text-[10px] text-forest hover:bg-forest-tint"
+                                                    >
+                                                        まだ投稿していない話を選ぶ
+                                                    </button>
+                                                )}
                                             </div>
 
                                             {/* 選んだ話にできること */}
@@ -717,9 +629,12 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                         <button
                                                             type="button"
                                                             onClick={() => void bulkSet(true)}
-                                                            className="rounded-full border border-forest-line px-2.5 py-1 text-[10px] text-forest hover:bg-forest-tint"
+                                                            disabled={bulkDoing > 0}
+                                                            className="rounded-full border border-forest-line px-2.5 py-1 text-[10px] text-forest hover:bg-forest-tint disabled:opacity-40"
                                                         >
-                                                            投稿する
+                                                            {bulkDoing > 0
+                                                                ? `投稿しています…（残り${bulkDoing}）`
+                                                                : "投稿する"}
                                                         </button>
                                                         <button
                                                             type="button"

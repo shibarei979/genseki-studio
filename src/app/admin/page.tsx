@@ -1,4 +1,5 @@
 import LivePresence from "@/components/admin/live-presence"
+import ErrorPanel from "@/components/admin/error-panel"
 import AdminShell from '@/components/admin/admin-shell'
 import UserJoinPetals from '@/components/admin/user-join-petals'
 import { createClient } from '@/lib/supabase/server'
@@ -683,6 +684,18 @@ export default async function AdminPage({
     <AdminShell title="ダッシュボード" description="原石航路の運営状況をひと目で確認できます">
       {/* 人が増えていたら花が舞う。1 人につき 50 枚 */}
       <UserJoinPetals count={userCount ?? 0} />
+
+      {/*
+        * 不具合の記録。
+        *
+        * ★ 自分で読む部品にしてある。
+        *   上の Promise.all には割り込まない。
+        *   あそこは数え上げの順番が組んであり、
+        *   割り込むと取りこぼしが出る。
+        *
+        * ★ 何も起きていない日は、一行で済む。
+        */}
+      <ErrorPanel />
 
         {/*
           * 上の帯。
