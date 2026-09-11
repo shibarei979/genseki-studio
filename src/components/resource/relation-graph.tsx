@@ -689,19 +689,17 @@ export default function RelationGraph({
      *   2 人や 3 人のときに、くっつきすぎないように。
      */
     /*
-     * ★ 紙の広さを、そのまま輪に効かせる。
+     * ★ 輪の大きさは、人数だけで決める。
      *
-     *   広さを上げたのに丸の間が変わらないと、
-     *   何のために上げたのか分からない。
-     *   広げたぶんだけ、丸どうしも離れる。
-     *
-     * ★ 人数ぶんの下限は、そのまま残す。
-     *   人が多いときに、団子にならないように。
+     *   紙の広さは掛けない。
+     *   広さは紙が広くなるだけで、
+     *   初めの並びとは関わりがない。
      */
     const PER_NODE = NODE_RADIUS * 6;
-    const NEEDED =
-        Math.max(NODE_RADIUS * 5, (nodes.length * PER_NODE) / (Math.PI * 2)) *
-        wide;
+    const NEEDED = Math.max(
+        NODE_RADIUS * 5,
+        (nodes.length * PER_NODE) / (Math.PI * 2),
+    );
 
     const RADIUS_Y = Math.min(MAX_Y, NEEDED);
     const RADIUS_X = Math.min(MAX_X, RADIUS_Y * liveAspect);
@@ -843,26 +841,7 @@ export default function RelationGraph({
      *   貼り付けると、並びが潰れて重なる。
      *   同じ割合で縮めれば、形は保たれる。
      */
-    const fitSaved = (() => {
-        let maxX = 0;
-        let maxY = 0;
 
-        for (const node of nodes) {
-            const saved = layout[node.id];
-            if (!saved) continue;
-            maxX = Math.max(maxX, saved.x * wide);
-            maxY = Math.max(maxY, saved.y * wide);
-        }
-
-        if (maxX <= 0 && maxY <= 0) return 1;
-
-        const room = NODE_RADIUS + 40;
-        const byX = maxX > 0 ? (WIDTH - room) / maxX : 1;
-        const byY = maxY > 0 ? (HEIGHT - room) / maxY : 1;
-
-        /* はみ出していなければ、そのまま */
-        return Math.min(1, byX, byY);
-    })();
 
     const positions = new Map<string, { x: number; y: number }>();
 
@@ -901,28 +880,19 @@ export default function RelationGraph({
              *   もう今の紙での値なので、そのまま使う。
              */
             /*
-             * ★ 覚えている位置は、必ず紙の中に収める。
+             * ★ 覚えた場所は、そのまま使う。
              *
-             *   紙の広さを変えたり、丸の大きさを変えたりすると、
-             *   昔の位置が紙からはみ出す。
-             *   はみ出したところは描かれないので、
-             *   丸が「消えた」ように見える。
+             *   紙の広さを変えても、丸は動かさない。
+             *   広さは紙が広くなるだけで、
+             *   置いた場所とは関わりがない。
              *
-             *   実際、紙を広げたあとに丸が 1 つしか
-             *   見えないことがあった。
+             *   前は広さに合わせて位置を伸ばしたり
+             *   縮めたりしていた。動かすたびに
+             *   ほかの丸まで動いて、使えなかった。
+             *
+             * ★ 紙の外へは出さない。そこは描かれない。
              */
-            const isDragging = dragging?.id === node.id;
-            positions.set(
-                node.id,
-                clampToBoard(
-                    isDragging
-                        ? saved
-                        : {
-                              x: saved.x * wide * fitSaved,
-                              y: saved.y * wide * fitSaved,
-                          },
-                ),
-            );
+            positions.set(node.id, clampToBoard(saved));
             return;
         }
         // 上から時計回りに並べる
@@ -1077,12 +1047,13 @@ export default function RelationGraph({
          *   描く範囲は紙より一回り大きい。
          *   紙の幅だけで割ると、そのぶん掴む位置がずれる。
          */
-        const wide = WIDTH + PAD * 2;
-        const tall = HEIGHT + PAD * 2;
+        /* 名前が紙の広さのつまみとぶつからないようにする */
+        const spanX = WIDTH + PAD * 2;
+        const spanY = HEIGHT + PAD * 2;
 
         return {
-            x: ((event.clientX - rect.left) / rect.width) * wide - PAD,
-            y: ((event.clientY - rect.top) / rect.height) * tall - PAD,
+            x: ((event.clientX - rect.left) / rect.width) * spanX - PAD,
+            y: ((event.clientY - rect.top) / rect.height) * spanY - PAD,
         };
     }
 
@@ -1270,7 +1241,23 @@ export default function RelationGraph({
                   *   その中で縦横とも真ん中に寄せる。
                   *   紙が枠より大きいときは、この入れ物ごと伸びる。
                   */}
-                <div className="flex min-h-full min-w-full items-center justify-center">
+                {/*
+                  * ★ はみ出しているときは、真ん中に寄せない。
+                  *
+                  *   寄せたまま大きくすると、
+                  *   左と上へはみ出したぶんが掴めなくなる。
+                  *   送っても端まで戻れない。
+                  *
+                  *   枠より小さいときだけ寄せる。
+                  */}
+                <div
+                    className={[
+                        "flex min-h-full min-w-full",
+                        scale > 1
+                            ? "items-start justify-start"
+                            : "items-center justify-center",
+                    ].join(" ")}
+                >
             <svg
                 ref={svgRef}
                 /*
@@ -1446,12 +1433,7 @@ export default function RelationGraph({
                      *   広げた状態の値をそのまま覚えると、
                      *   狭めたときに紙からはみ出す。
                      */
-                    if (dragging.moved) {
-                        onMove?.(dragging.id, {
-                            x: dragging.position.x / wide / fitSaved,
-                            y: dragging.position.y / wide / fitSaved,
-                        });
-                    }
+                    if (dragging.moved) onMove?.(dragging.id, dragging.position);
                     else onSelect(selectedId === dragging.id ? null : dragging.id);
                     setDragging(null);
                 }}
@@ -1461,10 +1443,7 @@ export default function RelationGraph({
                         setBending(null);
                     }
                     if (dragging?.moved && !focusId) {
-                        onMove?.(dragging.id, {
-                            x: dragging.position.x / wide,
-                            y: dragging.position.y / wide,
-                        });
+                        onMove?.(dragging.id, dragging.position);
                     }
                     setDragging(null);
                 }}
