@@ -92,10 +92,116 @@ const RELATION_COLORS = [
     "#7d6b3a", "#3a7d75", "#6b3a5a", "#4a5a3a",
 ];
 
+/*
+ * ============================================================
+ * 関係の色は、6 つにまとめる
+ *
+ * ★ 47 種類を 47 色にしても、人は覚えられない。
+ *
+ *   前は関係の名前ごとに違う色を振っていた。
+ *   色の数だけ凡例が並び、図そのものより
+ *   下の帯のほうが賑やかになっていた。
+ *
+ *   色で分けるのは「どういう間柄か」の大枠だけにする。
+ *   細かい名前は、線に触れたときに出す。
+ *
+ * ★ 6 つにしたのは、一目で覚えられる数だから。
+ *   これ以上増やすと、また覚えられなくなる。
+ *
+ * ★ どれにも当てはまらないものは「その他」。
+ *   作者が自分で付けた名前は、そこへ入る。
+ * ============================================================
+ */
+export const RELATION_GROUPS: {
+    key: string;
+    label: string;
+    color: string;
+    words: string[];
+}[] = [
+    {
+        key: "family",
+        label: "家族・恋愛",
+        color: "#d9738f",
+        words: [
+            "兄弟", "姉妹", "家族", "夫婦", "片想い", "片思い", "許嫁",
+            "息子", "娘", "祖父", "祖母", "叔父", "叔母", "伯父", "伯母",
+            "従兄", "従弟", "従姉", "従妹", "親子", "義理",
+            "父", "母", "兄", "弟", "姉", "妹", "親", "子", "祖",
+            "恋", "婚", "想い", "血縁",
+        ],
+    },
+    {
+        key: "friend",
+        label: "友好",
+        color: "#3f9a7a",
+        words: [
+            "親友", "友人の友人", "クラスメイト", "知り合い", "知人",
+            "仲間", "同級", "同期", "相棒", "味方", "協力", "協定",
+            "同盟", "推し", "庇護", "恩人", "友",
+        ],
+    },
+    {
+        key: "enemy",
+        label: "敵対",
+        color: "#c4453a",
+        words: [
+            "敵", "対立", "宿敵", "仇", "復讐", "憎", "苦手", "不信",
+            "襲撃", "殺", "裏切", "ライバル", "競",
+        ],
+    },
+    {
+        key: "belong",
+        label: "所属・仕事",
+        color: "#3a6ea8",
+        words: [
+            "従者", "部下", "上司", "同僚", "所属", "眷属", "奴隷",
+            "使役", "手駒", "器物", "利用", "雇", "仕事", "取引", "臣",
+            "主従", "駒",
+        ],
+    },
+    {
+        key: "master",
+        label: "師弟",
+        color: "#b5852f",
+        words: ["師弟", "師匠", "弟子", "先輩", "後輩", "教え子", "指導", "門下", "師"],
+    },
+    {
+        key: "other",
+        label: "その他",
+        color: "#8a8f93",
+        words: [],
+    },
+];
+
+/*
+ * 言葉と大枠の対応。長いものから先に見る。
+ *
+ * ★ 短い言葉から当てると、取り違える。
+ *
+ *   「師弟」は「弟」に当たって家族になり、
+ *   「親友」は「親」に当たって家族になっていた。
+ *   「従者」も「従（従兄弟）」に当たっていた。
+ *
+ *   長い言葉を先に見れば、
+ *   師弟・親友・従者のほうが先に当たる。
+ */
+const GROUP_WORDS = RELATION_GROUPS.flatMap((group) =>
+    group.words.map((word) => ({ word, group })),
+).sort((a, b) => b.word.length - a.word.length);
+
+/** その関係が、どの大枠に入るか */
+export function groupOf(label: string) {
+    const text = label.trim();
+
+    for (const one of GROUP_WORDS) {
+        if (text.includes(one.word)) return one.group;
+    }
+
+    return RELATION_GROUPS[RELATION_GROUPS.length - 1];
+}
+
 function colorOf(label: string): string {
-    let hash = 0;
-    for (let i = 0; i < label.length; i += 1) hash = (hash * 31 + label.charCodeAt(i)) | 0;
-    return RELATION_COLORS[Math.abs(hash) % RELATION_COLORS.length];
+    return groupOf(label).color;
 }
 
 interface Dragging {
@@ -167,14 +273,6 @@ export default function RelationGraph({
             document.body.style.overflow = "";
         };
     }, [isFull]);
-
-    /*
-     * 凡例を開いているか。
-     *
-     * 畳んだ状態から始める。関係の名前は数が多く、
-     * 開いたままだと図の場所を奪う。
-     */
-    const [isLegendOpen, setIsLegendOpen] = useState(false);
 
     /*
      * 紐の長さ。
@@ -492,7 +590,15 @@ export default function RelationGraph({
     }
 
     const active = hoveredId ?? selectedId;
-    const labels = Array.from(new Set(relations.map((relation) => relation.label)));
+    /*
+     * この作品で使われている、関係の大枠。
+     *
+     * 47 種類の名前を、6 つにまとめたもの。
+     * 凡例には、これだけを出す。
+     */
+    const usedGroups = RELATION_GROUPS.filter((group) =>
+        relations.some((relation) => groupOf(relation.label).key === group.key),
+    );
 
     const body = (
         <div className="flex h-full flex-col">
@@ -588,10 +694,13 @@ export default function RelationGraph({
                     const to = positions.get(relation.to_entry_id);
                     if (!from || !to) return null;
 
-                    const isActive =
-                        !active ||
-                        relation.from_entry_id === active ||
-                        relation.to_entry_id === active;
+                    /* この線が、いま選んでいる人につながっているか */
+                    const touchesActive =
+                        !!active &&
+                        (relation.from_entry_id === active ||
+                            relation.to_entry_id === active);
+
+                    const isActive = !active || touchesActive;
 
                     // 中心へ少し引き寄せて曲げる。直線だけだと線が重なって読めない
                     const midX = (from.x + to.x) / 2;
@@ -600,7 +709,14 @@ export default function RelationGraph({
                     const controlY = midY + (CENTER_Y - midY) * 0.35;
 
                     return (
-                        <g key={relation.id} opacity={isActive ? 1 : 0.15}>
+                        /*
+                          * ★ 選んでいる人から遠い線は、ほとんど消す。
+                          *
+                          *   前は 0.15 で残していたが、
+                          *   47 本もあると、薄くても地が埋まる。
+                          *   見るべき線だけを残す。
+                          */
+                        <g key={relation.id} opacity={isActive ? 1 : 0.06}>
                             <path
                                 d={`M${from.x} ${from.y} Q${controlX} ${controlY} ${to.x} ${to.y}`}
                                 fill="none"
@@ -611,10 +727,20 @@ export default function RelationGraph({
                             {/*
                              * 関係の名前。
                              *
-                             * 白い札で囲む。
-                             * 線の上に直に置くと、線が字を横切って読めない。
+                             * ★ ふだんは出さない。
+                             *
+                             *   47 本あれば、47 個の札が中央に散らばる。
+                             *   図の真ん中が文字で埋まり、
+                             *   どの線を見ればよいのか分からなくなる。
+                             *
+                             *   誰かを選んだとき、その人につながる線にだけ出す。
+                             *   知りたいのは「いま見ている人との間柄」なので、
+                             *   それで足りる。
+                             *
+                             * ★ 白い札で囲む。
+                             *   線の上に直に置くと、線が字を横切って読めない。
                              */}
-                            {relation.label && (
+                            {relation.label && touchesActive && (
                                 <>
                                     <rect
                                         x={controlX - relation.label.length * 4.5 - 5}
@@ -849,70 +975,46 @@ export default function RelationGraph({
             )}
 
             {/*
-             * 凡例。
-             * 破線で見せる。図の中の線と形を揃えないと、
-             * どれがどれか分からない。
-             */}
-            {/*
               * 凡例。
               *
-              * ★ 畳んでおく。
+              * ★ 6 つだけ出す。
               *
-              *   関係の名前は作品によっては 40 を超える。
-              *   全部並べると 5 段になり、枠の 3 分の 1 を食う。
-              *   図に使える高さが、そのぶん減る。
+              *   前は関係の名前をぜんぶ並べていた。
+              *   作品によっては 47 個あり、5 段になって
+              *   図より下の帯のほうが賑やかだった。
               *
-              *   ふだんは 1 段ぶんだけ出し、
-              *   見たい人が開く形にする。
+              *   色で分けるのは「どういう間柄か」の大枠だけ。
+              *   細かい名前は、その人を選んだときに線の上へ出る。
               *
-              * ★ 閉じているときも、いくつあるかは書く。
-              *   隠していることが分からないと、押されない。
+              * ★ 使われている大枠だけ出す。
+              *   その作品に無い色を並べても意味がない。
               */}
-            <ul
-                className={[
-                    "mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1.5",
-                    isLegendOpen ? "" : "max-h-[26px] overflow-hidden",
-                ].join(" ")}
-            >
-                {labels.map((label) => (
+            <ul className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1.5">
+                {usedGroups.map((group) => (
                     <li
-                        key={label}
+                        key={group.key}
                         className="flex items-center gap-2 text-xs text-muted"
                     >
-                        <svg width="28" height="6" aria-hidden="true">
+                        <svg width="26" height="6" aria-hidden="true">
                             <line
                                 x1="0"
                                 y1="3"
-                                x2="28"
+                                x2="26"
                                 y2="3"
-                                stroke={colorOf(label)}
-                                strokeWidth="2.4"
-                                strokeDasharray="7 6"
+                                stroke={group.color}
+                                strokeWidth="2.6"
                                 strokeLinecap="round"
                             />
                         </svg>
-                        {label}
+                        {group.label}
                     </li>
                 ))}
             </ul>
 
-            {labels.length > 6 && (
-                <div className="mt-1.5 text-center">
-                    <button
-                        type="button"
-                        onClick={() => setIsLegendOpen((open) => !open)}
-                        aria-expanded={isLegendOpen}
-                        className="text-[11px] text-forest hover:underline"
-                    >
-                        {isLegendOpen
-                            ? "関係の名前を畳む"
-                            : `関係の名前をすべて見る（${labels.length}）`}
-                    </button>
-                </div>
-            )}
-
             <p className="mt-3 text-center text-xs text-faint">
-                実線は変化を記録した関係、破線はまだ記録がない関係です。
+                {active
+                    ? "実線は変化を記録した関係、破線はまだ記録がない関係です。"
+                    : "丸に触れると、その人とのつながりだけが残り、関係の名前が出ます。"}
             </p>
         </div>
     );
