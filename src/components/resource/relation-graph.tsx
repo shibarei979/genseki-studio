@@ -800,6 +800,39 @@ export default function RelationGraph({
         return true;
     });
 
+    /*
+     * 覚えている位置を、いまの紙に収める倍率。
+     *
+     * ★ 紙の広さや丸の大きさを変えると、
+     *   昔の位置が紙からはみ出す。
+     *   はみ出したところは描かれないので、
+     *   丸が消えたように見える。
+     *
+     * ★ 端に貼り付けるのではなく、まとめて縮める。
+     *   貼り付けると、並びが潰れて重なる。
+     *   同じ割合で縮めれば、形は保たれる。
+     */
+    const fitSaved = (() => {
+        let maxX = 0;
+        let maxY = 0;
+
+        for (const node of nodes) {
+            const saved = layout[node.id];
+            if (!saved) continue;
+            maxX = Math.max(maxX, saved.x * wide);
+            maxY = Math.max(maxY, saved.y * wide);
+        }
+
+        if (maxX <= 0 && maxY <= 0) return 1;
+
+        const room = NODE_RADIUS + 40;
+        const byX = maxX > 0 ? (WIDTH - room) / maxX : 1;
+        const byY = maxY > 0 ? (HEIGHT - room) / maxY : 1;
+
+        /* はみ出していなければ、そのまま */
+        return Math.min(1, byX, byY);
+    })();
+
     const positions = new Map<string, { x: number; y: number }>();
 
     if (focusId && focusIds) {
@@ -836,12 +869,28 @@ export default function RelationGraph({
              *   つまんで動かしている最中の位置は、
              *   もう今の紙での値なので、そのまま使う。
              */
+            /*
+             * ★ 覚えている位置は、必ず紙の中に収める。
+             *
+             *   紙の広さを変えたり、丸の大きさを変えたりすると、
+             *   昔の位置が紙からはみ出す。
+             *   はみ出したところは描かれないので、
+             *   丸が「消えた」ように見える。
+             *
+             *   実際、紙を広げたあとに丸が 1 つしか
+             *   見えないことがあった。
+             */
             const isDragging = dragging?.id === node.id;
             positions.set(
                 node.id,
-                isDragging
-                    ? saved
-                    : { x: saved.x * wide, y: saved.y * wide },
+                clampToBoard(
+                    isDragging
+                        ? saved
+                        : {
+                              x: saved.x * wide * fitSaved,
+                              y: saved.y * wide * fitSaved,
+                          },
+                ),
             );
             return;
         }
@@ -1368,8 +1417,8 @@ export default function RelationGraph({
                      */
                     if (dragging.moved) {
                         onMove?.(dragging.id, {
-                            x: dragging.position.x / wide,
-                            y: dragging.position.y / wide,
+                            x: dragging.position.x / wide / fitSaved,
+                            y: dragging.position.y / wide / fitSaved,
                         });
                     }
                     else onSelect(selectedId === dragging.id ? null : dragging.id);
@@ -1895,7 +1944,7 @@ export default function RelationGraph({
                                 onClick={() => onReset?.()}
                                 className="shrink-0 text-[11px] text-forest hover:underline"
                             >
-                                並びを戻す
+                                {nodes.length}人を並べ直す
                             </button>
                         )}
                     </div>
