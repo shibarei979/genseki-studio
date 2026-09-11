@@ -432,10 +432,10 @@ export default function RelationGraph({
      *   はみ出したぶんが切れていた。
      */
     /*
-     * ★ 初めは、いちばん小さい＝紙の全体が枠に収まる。
-     *   まず全部を見せて、見たいところを大きくしてもらう。
+     * ★ 初めは、紙が枠ぴったりのところ。
+     *   そこから、引いて眺めるか、寄って読むか。
      */
-    const [sizeValue, setSizeValue] = useState(0);
+    const [sizeValue, setSizeValue] = useState(39);
 
     /*
      * 送る枠。
@@ -466,19 +466,22 @@ export default function RelationGraph({
      *
      * ★ 紙は一枚。広さは変わらない。つまみは倍率だけ。
      *
-     *   0   紙の全体が、枠にぴったり収まる。
-     *       まわりに余白は作らない。
+     *   0   紙の全体を、遠くから眺める。
+     *       枠のまわりに余白が出るが、形は掴める。
      *
-     *       余白を作ると、そこは紙ではないので
-     *       丸を置けない。「端まで行けない」になる。
+     *   39  紙が枠にぴったり。
      *
      *   100 紙の一部が、枠いっぱいに拡大される。
      *       見たいところへ送って見る。
      *
+     * ★ 余白の外へは、丸を置けない。
+     *   そこは紙ではないので。
+     *   紙の端までは行ける（壁は丸の縁ぶんだけ）。
+     *
      * ★ 掛け算で伸ばす。
      *   足し算だと、小さいほうの差が目盛りに出ない。
      */
-    const scale = Math.pow(3, sizeValue / 100);
+    const scale = 0.5 * Math.pow(6, sizeValue / 100);
 
     useEffect(() => {
         const el = panRef.current;
