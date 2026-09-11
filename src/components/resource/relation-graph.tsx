@@ -484,8 +484,23 @@ export default function RelationGraph({
      * 板は横長なので、枠の形によっては
      * 横が先に足りなくなる。両方を見て、小さいほうに合わせる。
      */
-    const fitHeight =
-        box.w && box.h ? Math.min(box.h, box.w / DRAWN_ASPECT) : 0;
+    /*
+     * 紙の形を、枠に合わせる。
+     *
+     * ★ 形が違うと、必ず余白が出る。
+     *
+     *   紙を 1.6 で固定していた。枠の形は画面によって
+     *   1.4 のことも 1.8 のこともある。
+     *   収めたときに、上下か左右が必ず余っていた。
+     *
+     *   枠と同じ形にすれば、ぴったり収まる。
+     *   余白が消えて、そのぶん広く使える。
+     *
+     * ★ 測れていないあいだは、1.6 のまま。
+     */
+    const liveAspect = box.w && box.h ? box.w / box.h : DRAWN_ASPECT;
+
+    const fitHeight = box.h || 0;
 
     /*
      * つまみから、倍率を出す。
@@ -606,8 +621,15 @@ export default function RelationGraph({
      *   横に広げるぶんには、右に余地ができるだけで
      *   すでに置いた丸は動かない。
      */
+    /*
+     * 紙の高さ。
+     *
+     * ★ 広さのつまみで決まる。
+     *   輪が収まるだけの広さがあればよい。
+     */
     const HEIGHT = Math.round(BASE_SIZE * spread);
-    const WIDTH = Math.round(HEIGHT * ASPECT);
+    /* 紙の横幅。枠と同じ形にする */
+    const WIDTH = Math.round(HEIGHT * liveAspect);
     const CENTER_X = WIDTH / 2;
     const CENTER_Y = HEIGHT / 2;
     /*
@@ -666,14 +688,23 @@ export default function RelationGraph({
      * ★ 少なくても、丸 5 個ぶんの輪は取る。
      *   2 人や 3 人のときに、くっつきすぎないように。
      */
+    /*
+     * ★ 紙の広さを、そのまま輪に効かせる。
+     *
+     *   広さを上げたのに丸の間が変わらないと、
+     *   何のために上げたのか分からない。
+     *   広げたぶんだけ、丸どうしも離れる。
+     *
+     * ★ 人数ぶんの下限は、そのまま残す。
+     *   人が多いときに、団子にならないように。
+     */
     const PER_NODE = NODE_RADIUS * 6;
-    const NEEDED = Math.max(
-        NODE_RADIUS * 5,
-        (nodes.length * PER_NODE) / (Math.PI * 2),
-    );
+    const NEEDED =
+        Math.max(NODE_RADIUS * 5, (nodes.length * PER_NODE) / (Math.PI * 2)) *
+        wide;
 
     const RADIUS_Y = Math.min(MAX_Y, NEEDED);
-    const RADIUS_X = Math.min(MAX_X, RADIUS_Y * ASPECT);
+    const RADIUS_X = Math.min(MAX_X, RADIUS_Y * liveAspect);
 
 
     /*
@@ -1330,7 +1361,7 @@ export default function RelationGraph({
                      */
                     display: "block",
                     width: fitHeight
-                        ? `${Math.floor(fitHeight * scale * DRAWN_ASPECT)}px`
+                        ? `${Math.floor(fitHeight * scale * liveAspect)}px`
                         : "100%",
                     height: fitHeight
                         ? `${Math.floor(fitHeight * scale)}px`
