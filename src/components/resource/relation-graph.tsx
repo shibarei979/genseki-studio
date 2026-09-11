@@ -622,10 +622,7 @@ export default function RelationGraph({
      *
      *   丸と名前が切れない幅だけ残して、あとは使う。
      */
-    /* 初めに並ぶ輪。紙の端から、丸の縁ぶんだけ内側 */
-    const EDGE = NODE_RADIUS + 34;
-    const RADIUS_X = WIDTH / 2 - EDGE;
-    const RADIUS_Y = HEIGHT / 2 - EDGE;
+
     const [dragging, setDragging] = useState<Dragging | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
@@ -637,6 +634,47 @@ export default function RelationGraph({
         connectedIds.add(relation.to_entry_id);
     }
     const nodes = entries.filter((entry) => connectedIds.has(entry.id));
+
+    /*
+     * 初めに並ぶ輪の大きさ。
+     *
+     * ★ 人数で決める。紙の広さでは決めない。
+     *
+     *   紙を広げたら、そのぶん輪も広がっていた。
+     *   4 人しかいないのに四隅へ散らばり、
+     *   線だけがやたら長くなる。
+     *
+     *   輪の長さは「人数 × 丸どうしの間」で足りる。
+     *   それ以上広げても、間が空くだけで読みにくい。
+     *
+     * ★ 紙からはみ出さないよう、上限だけ紙で決める。
+     */
+    const EDGE = NODE_RADIUS + 34;
+
+    const MAX_X = WIDTH / 2 - EDGE;
+    const MAX_Y = HEIGHT / 2 - EDGE;
+
+    /*
+     * 人数ぶんの丸が、間を空けて並ぶのに要る半径。
+     *
+     * ★ 一人あたり、丸の直径の 3 倍ほどを見込む。
+     *
+     *   MIN_GAP（丸どうしの最短の間）で数えると、
+     *   4 人のときに輪が丸 2 個ぶんしかなく、
+     *   団子になってしまう。
+     *
+     * ★ 少なくても、丸 5 個ぶんの輪は取る。
+     *   2 人や 3 人のときに、くっつきすぎないように。
+     */
+    const PER_NODE = NODE_RADIUS * 6;
+    const NEEDED = Math.max(
+        NODE_RADIUS * 5,
+        (nodes.length * PER_NODE) / (Math.PI * 2),
+    );
+
+    const RADIUS_Y = Math.min(MAX_Y, NEEDED);
+    const RADIUS_X = Math.min(MAX_X, RADIUS_Y * ASPECT);
+
 
     /*
      * 丸の中に出す絵。
