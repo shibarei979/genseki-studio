@@ -432,10 +432,10 @@ export default function RelationGraph({
      *   はみ出したぶんが切れていた。
      */
     /*
-     * ★ 初めは、いちばん小さい＝紙の全体が見える。
-     *   まず全部を見せて、見たいところを大きくしてもらう。
+     * ★ 初めは、紙の全体が枠にちょうど収まるところ。
+     *   まず全部を見せて、そこから寄るか引くかしてもらう。
      */
-    const [sizeValue, setSizeValue] = useState(0);
+    const [sizeValue, setSizeValue] = useState(33);
 
     /*
      * 送る枠。
@@ -466,8 +466,10 @@ export default function RelationGraph({
      *
      * ★ 紙は一枚。広さは変わらない。つまみは倍率だけ。
      *
-     *   0   紙の全体が、枠に収まって見える。
-     *       丸は隅々まで置けるが、字は小さい。
+     *   0   紙の全体が、枠より小さく見える。
+     *       まわりに余白が出るが、形は掴める。
+     *
+     *   33  紙の全体が、枠にちょうど収まる。
      *
      *   100 紙の一部が、枠いっぱいに拡大される。
      *       見たいところへ送って見る。
@@ -475,7 +477,7 @@ export default function RelationGraph({
      * ★ 掛け算で伸ばす。
      *   足し算だと、小さいほうの差が目盛りに出ない。
      */
-    const scale = Math.pow(3, sizeValue / 100);
+    const scale = 0.6 * Math.pow(5, sizeValue / 100);
 
     useEffect(() => {
         const el = panRef.current;
@@ -1355,14 +1357,6 @@ export default function RelationGraph({
                      *
                      * ★ つまんでいる最中は、指の位置を使う。
                      */
-                    const midX = (from.x + to.x) / 2;
-                    const midY = (from.y + to.y) / 2;
-
-                    const defaultControl = {
-                        x: midX + (CENTER_X - midX) * 0.35,
-                        y: midY + (CENTER_Y - midY) * 0.35,
-                    };
-
                     /*
                      * 中間点。
                      *
@@ -1394,9 +1388,19 @@ export default function RelationGraph({
                      *
                      * ★ 決めていなければ、これまでどおり緩く曲げる。
                      */
+                    /*
+                     * ★ ふだんはまっすぐ引く。
+                     *
+                     *   前は中心へ引き寄せて緩く曲げていた。
+                     *   線が重なるのを避けるためだったが、
+                     *   紙を広げたので、重なることは減った。
+                     *
+                     *   曲げたいときは、中間点を置いてもらう。
+                     *   勝手に曲げるより、そのほうが分かりやすい。
+                     */
                     const path = bent
                         ? `M${from.x} ${from.y} L${bent.x} ${bent.y} L${to.x} ${to.y}`
-                        : `M${from.x} ${from.y} Q${defaultControl.x} ${defaultControl.y} ${to.x} ${to.y}`;
+                        : `M${from.x} ${from.y} L${to.x} ${to.y}`;
 
                     /*
                      * 関係の名前を置くところ。
@@ -1408,12 +1412,7 @@ export default function RelationGraph({
                      */
                     const labelAt = bent
                         ? bent
-                        : {
-                              x:
-                                  (from.x + 2 * defaultControl.x + to.x) / 4,
-                              y:
-                                  (from.y + 2 * defaultControl.y + to.y) / 4,
-                          };
+                        : { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
 
                     const controlX = labelAt.x;
                     const controlY = labelAt.y;
