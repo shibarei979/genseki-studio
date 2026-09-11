@@ -676,8 +676,17 @@ export default function RelationGraph({
         connectedIds.add(relation.to_entry_id);
     }
 
+    /*
+     * ★ まだ結んでいない人は、図に出さない。
+     *
+     *   一度出してみたが、数百並んで図が埋まった。
+     *   本文から拾った断片まで項目として入っているため。
+     *
+     *   全部を出すのは、項目が整っている作品でしか成り立たない。
+     *   ここは関係を見る場所であって、
+     *   まだ結んでいない人を数える場所ではない。
+     */
     const nodes = entries.filter((entry) => connectedIds.has(entry.id));
-    const loneNodes = entries.filter((entry) => !connectedIds.has(entry.id));
 
     /*
      * 初めに並ぶ輪の大きさ。
@@ -1240,11 +1249,6 @@ export default function RelationGraph({
 
             <p className="mb-1.5 text-[11px] text-muted">
                 {nodes.length}人を{relations.length}本の関係で結んでいます。
-                {loneNodes.length > 0 && (
-                    <span className="text-faint">
-                        　まだ結んでいない人が{loneNodes.length}人います（下に薄く出ています）。
-                    </span>
-                )}
             </p>
 
             {/*
@@ -1979,69 +1983,6 @@ export default function RelationGraph({
                     );
                 })}
 
-                {/*
-                  * まだ結んでいない人。
-                  *
-                  * ★ 紙の下端に、横一列で並べる。
-                  *
-                  *   輪の中に混ぜると、関係のある図が読めなくなる。
-                  *   端に置いておけば、邪魔にならず、
-                  *   「まだこの人たちが残っている」とだけ伝わる。
-                  *
-                  * ★ 薄くする。結んである人と見分けが付くように。
-                  *
-                  * ★ 押せば、その人が選ばれる。
-                  *   上の「関係を追加」から結べる。
-                  */}
-                {!focusId &&
-                    loneNodes.map((node, index) => {
-                        const perRow = Math.max(
-                            1,
-                            Math.floor((WIDTH - 160) / (NODE_RADIUS * 3.2)),
-                        );
-                        const row = Math.floor(index / perRow);
-                        const col = index % perRow;
-
-                        const x = 80 + col * NODE_RADIUS * 3.2;
-                        const y =
-                            HEIGHT - 70 - row * (NODE_RADIUS * 3.2);
-
-                        return (
-                            <g
-                                key={node.id}
-                                opacity={selectedId === node.id ? 1 : 0.42}
-                                style={{ cursor: "pointer" }}
-                                onPointerDown={(event) => {
-                                    event.stopPropagation();
-                                    onSelect(
-                                        selectedId === node.id ? null : node.id,
-                                    );
-                                }}
-                            >
-                                <circle
-                                    cx={x}
-                                    cy={y}
-                                    r={NODE_RADIUS * 0.62}
-                                    fill="var(--color-canvas)"
-                                    stroke="var(--color-brand-border)"
-                                    strokeWidth="1.5"
-                                    strokeDasharray="4 4"
-                                />
-
-                                <text
-                                    x={x}
-                                    y={y + NODE_RADIUS * 0.62 + 22}
-                                    textAnchor="middle"
-                                    fontSize="19"
-                                    fill="var(--color-text-faint)"
-                                >
-                                    {node.name.length > 6
-                                        ? `${node.name.slice(0, 6)}…`
-                                        : node.name}
-                                </text>
-                            </g>
-                        );
-                    })}
             </svg>
                 </div>
             </div>
