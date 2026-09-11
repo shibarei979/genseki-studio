@@ -105,9 +105,6 @@ export default function RelationsView({
         (entry) => entry.candidate_status === "none" && entry.name.trim(),
     );
 
-    /* 関係を追加する欄を開いているか。ふだんは畳んでおく */
-    const [isAdding, setIsAdding] = useState(false);
-
     const [fromId, setFromId] = useState("");
     const [toId, setToId] = useState("");
     const [label, setLabel] = useState("");
@@ -192,11 +189,6 @@ export default function RelationsView({
                                 type="text"
                                 value={label}
                                 onChange={(e) => setLabel(e.target.value)}
-                                /*
-                                 * ★ ここに触れたときだけ、見本の札を出す。
-                                 *   ふだんから並べておくと、2 段ぶん場所を取る。
-                                 */
-                                onFocus={() => setIsAdding(true)}
                                 placeholder="関係ラベルを入力"
                                 aria-label="関係の名前"
                                 className="w-36 rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
@@ -233,7 +225,6 @@ export default function RelationsView({
                             </div>
                         </div>
 
-                        {isAdding && (
                         <ul className="mt-2 flex flex-wrap gap-1.5">
                             {PRESETS.map((preset) => (
                                 <li key={preset}>
@@ -247,7 +238,6 @@ export default function RelationsView({
                                 </li>
                             ))}
                         </ul>
-                        )}
 
                     </div>
 
@@ -439,11 +429,33 @@ export default function RelationsView({
                           *   狭い画面では図の下に積まれるので、
                           *   空の枠のぶんだけ画面が伸びる。
                           */}
+                        {/*
+                          * ★ 右の欄も、図と同じ高さにそろえる。
+                          *
+                          *   図だけ高さを決めていたので、
+                          *   右の欄は中身のぶんだけ下へ伸び、
+                          *   頁ごと送ることになっていた。
+                          *
+                          *   同じ高さに切って、中だけ送る。
+                          */}
                         <div
                             className={[
-                                "rounded-lg border border-line bg-surface p-4",
+                                "thin-scroll overflow-y-auto rounded-lg border border-line bg-surface p-4",
                                 !selected ? "hidden lg:block" : "",
                             ].join(" ")}
+                            style={
+                                /*
+                                 * 図のときだけ、高さを切る。
+                                 * 一覧のときは行が並ぶだけなので、
+                                 * 切ると読みにくい。
+                                 */
+                                mode === "graph"
+                                    ? {
+                                          height:
+                                              "clamp(300px, calc(100vh - 230px), 640px)",
+                                      }
+                                    : undefined
+                            }
                         >
                             {!selected || !from || !to ? (
                                 <p className="py-8 text-center text-xs text-faint">
