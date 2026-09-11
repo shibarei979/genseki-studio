@@ -9,12 +9,25 @@
  * 書いたものが移ってしまう。名前を直すのと、
  * 同じ人だと決めるのは、別の話。
  *
- * そこで今は尋ねる。
- *   はい    別名として 1 つにまとめる（今までと同じ）
- *   いいえ  別々のまま。その組は二度と訊かない
+ * ★ 窓で尋ねるのは、やめた。
  *
- * 断った組は覚えておく。覚えないと、一覧を開くたびに
- * 同じことを訊かれる。
+ *   重複の数だけ窓が順に出ていた。
+ *   20 組あれば 20 回。押し終えるまで先へ進めない。
+ *   「何度もクリックするのが面倒」という声は、これ。
+ *
+ * ★ 本文から入ってきたものは、黙ってまとめる。
+ *
+ *   あれは機械が拾った候補で、作者が書いたものではない。
+ *   吸われて困る中身が、そもそも入っていない。
+ *   名前が同じなら、同じものとして扱ってよい。
+ *
+ * ★ 作者が自分で作ったものは、まとめない。
+ *
+ *   「ワイ」を「律」に直した瞬間に中身が吸われる、
+ *   という事故はここで防ぐ。
+ *   そちらは画面の帯（DuplicateStrip）に出す。
+ *   帯には「すべてまとめる」があるので、
+ *   まとめたい人は一押しで済む。
  * ============================================================
  */
 
@@ -26,7 +39,13 @@ import { findDuplicates } from "@/lib/resource/dedupe";
 import type { ResourceEntry } from "@/types";
 import type { DuplicateGroup } from "@/lib/resource/dedupe";
 
-/** 断った組の覚え。頁を開き直しても残るよう、端末に置く */
+/*
+ * 断った組の覚え。
+ *
+ * ★ 窓で尋ねるのはやめたが、覚えは残す。
+ *   前に「別もの」と答えた組を、今になって
+ *   黙ってまとめてしまうと、約束が違う。
+ */
 const DECLINED_KEY = "genseki:merge-declined";
 
 function loadDeclined(): Set<string> {
@@ -69,22 +88,21 @@ export function useAutoMerge(
         for (const group of findDuplicates(entries)) {
             const key = keyOf(group);
             if (handledRef.current.has(key) || declined.has(key)) continue;
-            handledRef.current.add(key);
 
-            const names = group.drop.map((row) => row.name).join("」「");
-            const ok = window.confirm(
-                `「${names}」と「${group.keep.name}」は同じものですか？\n\n` +
-                    `はい　　1 つにまとめます。「${names}」は別名として残り、\n` +
-                    `　　　　以後は本文に出ても同じものとして数えられます。\n` +
-                    `いいえ　別々のままにします。この組は二度と訊きません。`,
+            /*
+             * 消えるほうが、すべて本文から拾った候補か。
+             *
+             * ★ 1 つでも作者が書いたものが混じっていれば、まとめない。
+             *   書いたものが黙って移るのが、いちばん困る。
+             */
+            const allFromText = group.drop.every(
+                (row) => row.candidate_source || row.candidate_status !== "none",
             );
 
-            if (ok) {
-                onMerge(group);
-            } else {
-                declined.add(key);
-                saveDeclined(declined);
-            }
+            if (!allFromText) continue;
+
+            handledRef.current.add(key);
+            onMerge(group);
         }
     }, [entries, onMerge]);
 }

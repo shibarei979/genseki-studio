@@ -105,6 +105,9 @@ export default function RelationsView({
         (entry) => entry.candidate_status === "none" && entry.name.trim(),
     );
 
+    /* 関係を追加する欄を開いているか。ふだんは畳んでおく */
+    const [isAdding, setIsAdding] = useState(false);
+
     const [fromId, setFromId] = useState("");
     const [toId, setToId] = useState("");
     const [label, setLabel] = useState("");
@@ -126,8 +129,8 @@ export default function RelationsView({
                     </span>
                     関係図
                 </h1>
-                <p className="mt-1 text-sm text-muted">
-                    人物・場所・組織・出来事のつながりを見える形にします。関係は後から変えられます。
+                <p className="mt-1 text-xs text-muted">
+                    人物・場所・組織・出来事のつながりを見える形にします。
                 </p>
             </header>
 
@@ -140,7 +143,27 @@ export default function RelationsView({
                 </div>
             ) : (
                 <>
-                    {/* 関係を追加 */}
+                    {/*
+                      * 関係を追加。
+                      *
+                      * ★ 畳んでおく。
+                      *
+                      *   出しっぱなしだと、選び具と見本の札で
+                      *   画面の上半分が埋まり、
+                      *   図を見るのに毎回下へ送ることになる。
+                      *
+                      *   見に来る回数のほうが、結ぶ回数より多い。
+                      *   ふだんは図を先に出す。
+                      */}
+                    {!isAdding ? (
+                        <button
+                            type="button"
+                            onClick={() => setIsAdding(true)}
+                            className="rounded-md border border-forest-line px-3 py-1.5 text-xs text-forest hover:bg-forest-tint"
+                        >
+                            ＋ 関係を追加
+                        </button>
+                    ) : (
                     <div className="rounded-lg border border-line bg-surface px-4 py-3">
                         <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs text-muted">関係を追加</span>
@@ -212,7 +235,16 @@ export default function RelationsView({
                                 </li>
                             ))}
                         </ul>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsAdding(false)}
+                            className="mt-2 text-[11px] text-faint underline hover:text-muted"
+                        >
+                            閉じる
+                        </button>
                     </div>
+                    )}
 
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
                         {/*
