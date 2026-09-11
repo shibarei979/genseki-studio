@@ -595,6 +595,22 @@ function ChangeEditor({
  *   作った順だと、あとから足した人が末尾に付く。
  *   探すときは名前で探す。
  */
+/**
+ * 関係を結ぶ相手を選ぶ。
+ *
+ * ★ 打って探せるようにする。
+ *
+ *   項目が数百あると、選び具を開いて目で探すのは無理。
+ *   一文字打てば、その字を含むものだけが残る。
+ *
+ * ★ 種類も出す。
+ *
+ *   同じ名前が人物と場所の両方にあることがある。
+ *   どちらを選んでいるのか、名前だけでは分からない。
+ *
+ * ★ 選んだあとは、名前だけを出す。
+ *   選び終えた欄に一覧が残っていると、邪魔になる。
+ */
 function EntrySelect({
     value,
     onChange,
@@ -608,49 +624,109 @@ function EntrySelect({
     pages: ResourcePage[];
     label: string;
 }) {
-    /* 種類ごとにまとめる。並びは資料の頁の並びに合わせる */
-    const groups = pages
-        .map((page) => ({
-            page,
-            rows: entries
-                .filter((entry) => entry.page_id === page.id)
-                .sort((a, b) => a.name.localeCompare(b.name, "ja")),
-        }))
-        .filter((group) => group.rows.length > 0);
+    const [text, setText] = useState("");
+    const [isOpen, setIsOpen] = useState(false);
 
-    /* どの頁にも属さないもの。落とさずに最後へ */
-    const loose = entries
-        .filter((entry) => !pages.some((page) => page.id === entry.page_id))
-        .sort((a, b) => a.name.localeCompare(b.name, "ja"));
+    const pageById = new Map(pages.map((page) => [page.id, page]));
+    const picked = entries.find((entry) => entry.id === value) ?? null;
+
+    /*
+     * 打った字で絞る。
+     *
+     * ★ 名前と別名の両方を見る。
+     *   「律」で探して「律さん」が出ないと、探した気がしない。
+     *
+     * ★ 出すのは 40 件まで。
+     *   それ以上並べても目で追えない。もう少し打ってもらう。
+     */
+    const found = (() => {
+        const word = text.trim();
+        const rows = word
+            ? entries.filter(
+                  (entry) =>
+                      entry.name.includes(word) ||
+                      entry.aliases.some((alias) => alias.includes(word)),
+              )
+            : entries;
+
+        return rows
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name, "ja"))
+            .slice(0, 40);
+    })();
+
+    if (picked && !isOpen) {
+        return (
+            <button
+                type="button"
+                onClick={() => {
+                    setIsOpen(true);
+                    setText("");
+                }}
+                className="rounded-md border border-forest-line bg-forest-tint px-3 py-1.5 text-sm text-forest"
+            >
+                {picked.name}
+            </button>
+        );
+    }
 
     return (
-        <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            aria-label={label}
-            className="max-w-[10rem] rounded-md border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-forest"
-        >
-            <option value="">{label}</option>
+        <div className="relative">
+            <input
+                type="text"
+                value={text}
+                autoFocus={isOpen}
+                onChange={(e) => {
+                    setText(e.target.value);
+                    setIsOpen(true);
+                }}
+                onFocus={() => setIsOpen(true)}
+                placeholder={label}
+                aria-label={label}
+                className="w-40 rounded-md border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-forest"
+            />
 
-            {groups.map((group) => (
-                <optgroup key={group.page.id} label={group.page.label}>
-                    {group.rows.map((entry) => (
-                        <option key={entry.id} value={entry.id}>
-                            {entry.name}
-                        </option>
-                    ))}
-                </optgroup>
-            ))}
+            {isOpen && (
+                <>
+                    {/* 外を押したら閉じる */}
+                    <button
+                        type="button"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        onClick={() => setIsOpen(false)}
+                        className="fixed inset-0 z-10 cursor-default"
+                    />
 
-            {loose.length > 0 && (
-                <optgroup label="そのほか">
-                    {loose.map((entry) => (
-                        <option key={entry.id} value={entry.id}>
-                            {entry.name}
-                        </option>
-                    ))}
-                </optgroup>
+                    <ul className="thin-scroll absolute left-0 top-full z-20 mt-1 max-h-64 w-56 overflow-y-auto rounded-md border border-line bg-surface py-1 shadow-lg">
+                        {found.length === 0 ? (
+                            <li className="px-3 py-2 text-xs text-faint">
+                                見つかりません
+                            </li>
+                        ) : (
+                            found.map((entry) => (
+                                <li key={entry.id}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onChange(entry.id);
+                                            setIsOpen(false);
+                                            setText("");
+                                        }}
+                                        className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left hover:bg-forest-tint"
+                                    >
+                                        <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                                            {entry.name}
+                                        </span>
+                                        <span className="shrink-0 text-[10px] text-faint">
+                                            {pageById.get(entry.page_id)?.label ?? ""}
+                                        </span>
+                                    </button>
+                                </li>
+                            ))
+                        )}
+                    </ul>
+                </>
             )}
-        </select>
+        </div>
     );
 }
