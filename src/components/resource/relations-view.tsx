@@ -633,7 +633,7 @@ function EntrySelect({
             <option value="">{label}</option>
 
             {groups.map((group) => (
-                <optgroup key={group.page.id} label={group.page.title}>
+                <optgroup key={group.page.id} label={group.page.label}>
                     {group.rows.map((entry) => (
                         <option key={entry.id} value={entry.id}>
                             {entry.name}
