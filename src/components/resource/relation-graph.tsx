@@ -1088,6 +1088,20 @@ export default function RelationGraph({
                         }),
                     });
                 }}
+                /*
+                 * ★ 何も無いところを押したら、全体に戻す。
+                 *
+                 *   中心に見ているとき、外れた場所を押すと
+                 *   そのままだった。戻る道が押し具だけなのは、
+                 *   下まで目を動かすことになる。
+                 *
+                 *   図そのものを押せば戻る。
+                 */
+                onPointerDown={(event) => {
+                    if (event.target === event.currentTarget) {
+                        onSelect(null);
+                    }
+                }}
                 onPointerUp={() => {
                     /* 線の中間点を離したとき */
                     if (bending) {
@@ -1180,10 +1194,22 @@ export default function RelationGraph({
                         y: midY + (CENTER_Y - midY) * 0.35,
                     };
 
-                    const bent =
-                        bending?.id === relation.id
-                            ? bending.position
-                            : (relation.bend ?? null);
+                    /*
+                     * 中間点。
+                     *
+                     * ★ 中心に見ているときは、使わない。
+                     *
+                     *   あの並びは、こちらが置き直したもの。
+                     *   丸だけ動かして中間点をそのままにすると、
+                     *   線が遠くへ引っ張られて、尖った形になる。
+                     *
+                     *   置き直した並びには、置き直した線を引く。
+                     */
+                    const bent = focusId
+                        ? null
+                        : bending?.id === relation.id
+                          ? bending.position
+                          : (relation.bend ?? null);
 
                     /*
                      * 線の引き方。
@@ -1307,7 +1333,7 @@ export default function RelationGraph({
                               *
                               *   線を二度押したときだけ出す。
                               */}
-                            {onBend && openBendId === relation.id && (
+                            {onBend && !focusId && openBendId === relation.id && (
                                 <circle
                                     cx={controlX}
                                     cy={controlY}
