@@ -87,6 +87,24 @@ export default function RelationsView({
             episodes.map((episode) => `第${episode.ep_number}話`),
         );
     }, [relations, entries, episodes, dismissed]);
+    /*
+     * 関係を結べる項目。
+     *
+     * ★ 本文から拾った候補は、まだ混ぜない。
+     *
+     *   「わたし」「だけど」「そして」のような
+     *   文の断片が数百並び、選び具が使い物にならなかった。
+     *
+     *   資料の本体には混ぜない決まりなのに、
+     *   ここだけ素通しになっていた。
+     *
+     * ★ 名前の無いものも出さない。
+     *   選んでも、図では「（名前未設定）」になる。
+     */
+    const pickable = entries.filter(
+        (entry) => entry.candidate_status === "none" && entry.name.trim(),
+    );
+
     const [fromId, setFromId] = useState("");
     const [toId, setToId] = useState("");
     const [label, setLabel] = useState("");
@@ -129,14 +147,16 @@ export default function RelationsView({
                             <EntrySelect
                                 value={fromId}
                                 onChange={setFromId}
-                                entries={entries}
+                                entries={pickable}
+                                pages={pages}
                                 label="出発点を選ぶ"
                             />
                             <span className="text-sm text-faint">→</span>
                             <EntrySelect
                                 value={toId}
                                 onChange={setToId}
-                                entries={entries.filter((entry) => entry.id !== fromId)}
+                                entries={pickable.filter((entry) => entry.id !== fromId)}
+                                pages={pages}
                                 label="到達点を選ぶ"
                             />
                             <input
@@ -251,7 +271,12 @@ export default function RelationsView({
                         >
                             {mode === "graph" ? (
                                 <RelationGraph
-                                    entries={entries}
+                                    /*
+                                     * ★ 図にも、候補は出さない。
+                                     *   本文から拾った断片が丸になると、
+                                     *   図が読めなくなる。
+                                     */
+                                    entries={pickable}
                                     relations={relations}
                                     selectedId={focusId}
                                     /*
@@ -525,30 +550,75 @@ function ChangeEditor({
     );
 }
 
+/**
+ * 関係を結ぶ相手を選ぶ。
+ *
+ * ★ 種類ごとに分けて出す。
+ *
+ *   人物・場所・組織・出来事が混ざったまま並ぶと、
+ *   数十個の中から目で探すことになる。
+ *   「人物」の中を見ればよい、と分かるだけで早い。
+ *
+ * ★ 名前の順に並べる。
+ *   作った順だと、あとから足した人が末尾に付く。
+ *   探すときは名前で探す。
+ */
 function EntrySelect({
     value,
     onChange,
     entries,
+    pages,
     label,
 }: {
     value: string;
     onChange: (value: string) => void;
     entries: ResourceEntry[];
+    pages: ResourcePage[];
     label: string;
 }) {
+    /* 種類ごとにまとめる。並びは資料の頁の並びに合わせる */
+    const groups = pages
+        .map((page) => ({
+            page,
+            rows: entries
+                .filter((entry) => entry.page_id === page.id)
+                .sort((a, b) => a.name.localeCompare(b.name, "ja")),
+        }))
+        .filter((group) => group.rows.length > 0);
+
+    /* どの頁にも属さないもの。落とさずに最後へ */
+    const loose = entries
+        .filter((entry) => !pages.some((page) => page.id === entry.page_id))
+        .sort((a, b) => a.name.localeCompare(b.name, "ja"));
+
     return (
         <select
             value={value}
             onChange={(e) => onChange(e.target.value)}
             aria-label={label}
-            className="rounded-md border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-forest"
+            className="max-w-[10rem] rounded-md border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-forest"
         >
             <option value="">{label}</option>
-            {entries.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                    {entry.name || "（名前未設定）"}
-                </option>
+
+            {groups.map((group) => (
+                <optgroup key={group.page.id} label={group.page.title}>
+                    {group.rows.map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                            {entry.name}
+                        </option>
+                    ))}
+                </optgroup>
             ))}
+
+            {loose.length > 0 && (
+                <optgroup label="そのほか">
+                    {loose.map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                            {entry.name}
+                        </option>
+                    ))}
+                </optgroup>
+            )}
         </select>
     );
 }
