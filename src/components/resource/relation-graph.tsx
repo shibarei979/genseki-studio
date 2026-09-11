@@ -300,7 +300,7 @@ export default function RelationGraph({
      *
      * ★ 図はいつも枠ぴったり。送りは出ない。
      */
-    const zoom = 50;
+
 
 
 
@@ -341,12 +341,42 @@ export default function RelationGraph({
      *   つまり、つまみと紐の長さは逆向き。
      */
     /*
-     * ★ 初めの値は、真ん中より少し右。
+     * 大きさ。0〜100。
      *
-     *   左端から始めると、丸が小さすぎて
-     *   「壊れているのか」と思われる。
+     * ★ 大きな一枚を、拡げたり縮めたりして見る。
+     *
+     *   前は「枠にぴったり収める」作りだった。
+     *   人が増えるほど全体が縮み、名前が読めなくなる。
+     *
+     *   一枚の大きさを変えられるようにして、
+     *   見たいところへ送って見てもらう。
+     *
+     * ★ 初めは、いちばん大きい。
+     *   小さく出して「読めない」と思われるより、
+     *   大きく出して「送れば見える」ほうがよい。
      */
-    const [sizeValue, setSizeValue] = useState(55);
+    const [sizeValue, setSizeValue] = useState(100);
+
+    /*
+     * 送る枠。
+     *
+     * 大きさを変えたとき、真ん中が見えるように寄せ直す。
+     */
+    const panRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const box = panRef.current;
+        if (!box) return;
+
+        /* 描き直したあとに寄せる */
+        const timer = window.setTimeout(() => {
+            box.scrollLeft = (box.scrollWidth - box.clientWidth) / 2;
+            box.scrollTop = (box.scrollHeight - box.clientHeight) / 2;
+        }, 30);
+
+        return () => window.clearTimeout(timer);
+    }, [sizeValue]);
+
 
     /*
      * 画面いっぱいに広げるか。
@@ -377,12 +407,18 @@ export default function RelationGraph({
     }, [isFull]);
 
     /*
-     * つまみから、紐の長さを出す。
+     * 紐の長さ。
      *
-     * 0   → 2.0（丸が小さい。人数が多いとき向き）
-     * 100 → 0.8（丸が大きい。人数が少ないとき向き）
+     * ★ 決め打ちにする。
+     *
+     *   つまみは一枚の大きさを変えるためのもので、
+     *   丸どうしの離れ具合とは別の話。
+     *   両方をひとつのつまみで動かすと、
+     *   何が起きているのか分からない。
+     *
+     *   離れ具合を変えたいときは「整理する」。
      */
-    const spread = 2.0 - (sizeValue / 100) * 1.2;
+    const spread = 1.5;
     /*
      * 板の大きさ。
      *
@@ -845,7 +881,20 @@ export default function RelationGraph({
               *
               * ★ 押し具と凡例は、下に貼り付けたまま。
               */}
-            <div className="thin-scroll min-h-0 flex-1 overflow-auto">
+            {/*
+              * ★ 上下左右に送れるようにする。
+              *
+              *   一枚を大きくすると、枠からはみ出す。
+              *   はみ出したところは、送って見る。
+              *
+              * ★ 真ん中から見えるようにする。
+              *   左上から始まると、いちばん見たい真ん中が
+              *   毎回外れている。
+              */}
+            <div
+                ref={panRef}
+                className="thin-scroll min-h-0 flex-1 overflow-auto"
+            >
             <svg
                 ref={svgRef}
                 viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -867,8 +916,15 @@ export default function RelationGraph({
                  *   枠は横に長いので、幅のほうが先に足りなくなる。
                  * ★ 50% が枠ぴったり。だから 2 倍して渡す。
                  */
+                /*
+                 * ★ 一枚の大きさ。
+                 *
+                 *   100% で枠の幅ぴったり。
+                 *   つまみを上げると、そのぶん大きくなり、
+                 *   枠からはみ出したところは送って見る。
+                 */
                 style={{
-                    width: `${zoom * 2}%`,
+                    width: `${100 + sizeValue * 1.8}%`,
                     aspectRatio: `${ASPECT} / 1`,
                     height: "auto",
                 }}
@@ -1243,7 +1299,7 @@ export default function RelationGraph({
 
                     <div className="mt-1.5 flex items-center justify-between gap-2">
                         <p className="text-[11px] text-faint">
-                            丸をつまむと動かせます。線の真ん中の点をつまむと、通り道が変わります。
+                            丸をつまむと動かせます。図は上下左右に送って見られます。
                         </p>
                         {Object.keys(layout).length > 0 && (
                             <button
