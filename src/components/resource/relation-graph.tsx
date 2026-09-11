@@ -1049,7 +1049,11 @@ export default function RelationGraph({
               */}
             <div
                 ref={panRef}
-                className="thin-scroll flex min-h-0 flex-1 overflow-auto"
+                /*
+                 * ★ 中身が枠より小さいときは、真ん中に置く。
+                 *   大きいときは、左上から送って見る。
+                 */
+                className="thin-scroll min-h-0 flex-1 overflow-auto"
             >
             <svg
                 ref={svgRef}
@@ -1118,12 +1122,27 @@ export default function RelationGraph({
                  * ★ つまみがいちばん左のとき、1.0 倍。
                  *   紙の全体が、枠にぴったり収まる。
                  */
+                /*
+                 * ★ 縦も横も、実寸で決める。
+                 *
+                 *   比（aspectRatio）に任せると、
+                 *   入れ物の作りによって片方が伸びない。
+                 *
+                 * ★ 縮めさせない（flexShrink: 0）。
+                 *
+                 *   送る枠は横並びの入れ物で、
+                 *   はみ出した絵は勝手に縮められる。
+                 *   つまみを動かしても大きくならなかったのは、これ。
+                 */
                 style={{
+                    width: fitHeight
+                        ? `${Math.round(fitHeight * scale * DRAWN_ASPECT)}px`
+                        : "100%",
                     height: fitHeight
                         ? `${Math.round(fitHeight * scale)}px`
                         : "100%",
-                    aspectRatio: `${DRAWN_ASPECT} / 1`,
-                    width: "auto",
+                    flexShrink: 0,
+                    flexGrow: 0,
                     /* 枠より小さいときは、真ん中に置く */
                     margin: "auto",
                 }}
