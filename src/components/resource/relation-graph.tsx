@@ -523,8 +523,21 @@ export default function RelationGraph({
     const WIDTH = Math.round(HEIGHT * ASPECT);
     const CENTER_X = WIDTH / 2;
     const CENTER_Y = HEIGHT / 2;
-    const RADIUS_X = BASE_RADIUS * spread * ASPECT;
-    const RADIUS_Y = BASE_RADIUS * spread;
+    /*
+     * 丸を並べる輪の大きさ。
+     *
+     * ★ 紙いっぱいに広げる。
+     *
+     *   前は紙の 7 割ほどの輪だった。
+     *   左右に 139、上下に 87 の余りが出て、
+     *   端のほうへは自分で運ばないと届かない。
+     *   「左右上下に行けない」と見えるのは、これ。
+     *
+     *   丸と名前が切れない幅だけ残して、あとは使う。
+     */
+    const EDGE = NODE_RADIUS + 22;
+    const RADIUS_X = WIDTH / 2 - EDGE;
+    const RADIUS_Y = HEIGHT / 2 - EDGE;
     const [dragging, setDragging] = useState<Dragging | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
