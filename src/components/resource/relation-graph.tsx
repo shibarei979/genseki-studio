@@ -76,7 +76,21 @@ const PAD = 0;
  * 板の大きさは、この値で決まる。
  * 図の外でも使うので、部品の外に置く。
  */
-const SPREAD = 1.5;
+/*
+ * ★ 紙は、枠よりずっと広く取る。
+ *
+ *   つまみを小さくすると、その広い紙の全体が
+ *   枠の中に小さく見える。丸は隅々まで置ける。
+ *
+ *   つまみを大きくすると、紙の一部が
+ *   枠いっぱいに拡大され、送って見る。
+ *
+ *   前は 1.5（960×600）で、枠とほぼ同じ広さだった。
+ *   だから小さくしても、置ける範囲が広がらなかった。
+ *
+ *   4.0 なら 2560×1600。枠のおよそ 2.7 倍の広さ。
+ */
+const SPREAD = 4.0;
 
 const BOARD_H = Math.round(BASE_SIZE * SPREAD);
 const BOARD_W = Math.round(BOARD_H * ASPECT);
@@ -91,12 +105,22 @@ const BASE_RADIUS = 142;
  * ★ 丸の直径に、名前のぶんを足す。
  *   名前は丸の下に出るので、縦に重なりやすい。
  */
-const MIN_GAP = 82;
+const MIN_GAP = 140;
 /*
  * 丸の大きさ。
  * 頭文字が読める大きさにする。小さいと点にしか見えない。
  */
-const NODE_RADIUS = 21;
+/*
+ * ★ 紙を広げたぶん、丸と字も大きくする。
+ *
+ *   紙は 2560×1600。枠に全体を収めると 0.6 倍ほどに縮む。
+ *   丸の半径 21 は画面で 13px、字の 14 は 8.6px。
+ *   小さすぎて読めない。
+ *
+ *   1.7 倍にしておけば、全体を見たときに
+ *   丸 22px、字 15px ほどになる。
+ */
+const NODE_RADIUS = 36;
 
 /** 関係の名前から線の色を決める。同じ名前なら同じ色になる */
 const RELATION_COLORS = [
@@ -408,10 +432,10 @@ export default function RelationGraph({
      *   はみ出したぶんが切れていた。
      */
     /*
-     * ★ 初めは、いちばん大きい＝紙の全体が枠に収まる。
-     *   まず全部を見せる。小さくしたい人が動かす。
+     * ★ 初めは、いちばん小さい＝紙の全体が見える。
+     *   まず全部を見せて、見たいところを大きくしてもらう。
      */
-    const [sizeValue, setSizeValue] = useState(100);
+    const [sizeValue, setSizeValue] = useState(0);
 
     /*
      * 送る枠。
@@ -440,24 +464,18 @@ export default function RelationGraph({
     /*
      * つまみから、倍率を出す。
      *
-     * ★ いちばん大きいときが、枠ぴったり。
+     * ★ 紙は一枚。広さは変わらない。つまみは倍率だけ。
      *
-     *   紙の全体が枠に収まった状態が、いちばん大きい。
-     *   それより大きくしても、紙の一部しか見えず、
-     *   送って見ることになる。関係図では、
-     *   全体が見えていることのほうが大事。
+     *   0   紙の全体が、枠に収まって見える。
+     *       丸は隅々まで置けるが、字は小さい。
      *
-     *   小さくするのは、紙を遠くから眺めるため。
-     *   人数が多いときに、形だけを掴みたいことがある。
+     *   100 紙の一部が、枠いっぱいに拡大される。
+     *       見たいところへ送って見る。
      *
-     * ★ 掛け算で縮める。
+     * ★ 掛け算で伸ばす。
      *   足し算だと、小さいほうの差が目盛りに出ない。
-     *
-     *   0   → 0.25 倍（ごく小さく）
-     *   50  → 0.50 倍
-     *   100 → 1.00 倍（枠ぴったり。紙の全体が見える）
      */
-    const scale = 0.25 * Math.pow(4, sizeValue / 100);
+    const scale = Math.pow(3, sizeValue / 100);
 
     useEffect(() => {
         const el = panRef.current;
@@ -568,7 +586,7 @@ export default function RelationGraph({
      *
      *   丸と名前が切れない幅だけ残して、あとは使う。
      */
-    const EDGE = NODE_RADIUS + 22;
+    const EDGE = NODE_RADIUS + 38;
     const RADIUS_X = WIDTH / 2 - EDGE;
     const RADIUS_Y = HEIGHT / 2 - EDGE;
     const [dragging, setDragging] = useState<Dragging | null>(null);
@@ -847,7 +865,7 @@ export default function RelationGraph({
          *   紙の外は描かれない。端ちょうどに置くと、
          *   丸が半分切れ、下の名前が消える。
          */
-        const edge = NODE_RADIUS + 22;
+        const edge = NODE_RADIUS + 38;
         return {
             x: Math.min(WIDTH - edge, Math.max(edge, point.x)),
             y: Math.min(HEIGHT - edge, Math.max(edge, point.y)),
@@ -1546,7 +1564,7 @@ export default function RelationGraph({
                                         x={controlX}
                                         y={controlY + 3.5}
                                         textAnchor="middle"
-                                        fontSize="12"
+                                        fontSize="20"
                                         fill={colorOf(relation.label)}
                                     >
                                         {relation.label}
@@ -1634,7 +1652,7 @@ export default function RelationGraph({
                                     x={position.x}
                                     y={position.y + 5}
                                     textAnchor="middle"
-                                    fontSize="18"
+                                    fontSize="30"
                                     fontWeight="600"
                                     fill="var(--color-forest)"
                                 >
@@ -1644,7 +1662,7 @@ export default function RelationGraph({
 
                             <text
                                 x={position.x}
-                                y={position.y + NODE_RADIUS + 17}
+                                y={position.y + NODE_RADIUS + 28}
                                 textAnchor="middle"
                                 /*
                                  * ★ 枠に収めるほど、文字は縮む。
@@ -1656,7 +1674,7 @@ export default function RelationGraph({
                                  *   丸に対して字を大きくする。
                                  *   重なりは、丸どうしの間（MIN_GAP）で防ぐ。
                                  */
-                                fontSize="14"
+                                fontSize="24"
                                 fontWeight="500"
                                 fill="var(--color-ink)"
                             >
