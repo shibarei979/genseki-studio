@@ -30,6 +30,12 @@ interface Props {
     onMove?: (entryId: string, position: { x: number; y: number }) => void;
     /** 置いた場所を捨てて、円周の並びに戻す */
     onReset?: () => void;
+    /**
+     * 線の中間点を動かしたとき。
+     *
+     * null を渡すと、これまでどおりの曲げ方に戻る。
+     */
+    onBend?: (relationId: string, bend: { x: number; y: number } | null) => void;
 }
 
 /** 図の広さ。もとの大きさ。広げるときは、これに倍率を掛ける */
@@ -220,8 +226,21 @@ export default function RelationGraph({
     layout = {},
     onMove,
     onReset,
+    onBend,
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+    /*
+     * いま、どの線の中間点をつまんでいるか。
+     *
+     * ★ 丸を動かすのとは、別に持つ。
+     *   同じ入れ物にすると、どちらを動かしているのか
+     *   分からなくなる。
+     */
+    const [bending, setBending] = useState<{
+        id: string;
+        position: { x: number; y: number };
+    } | null>(null);
 
     /*
      * その人を中心に見るか。
@@ -277,39 +296,20 @@ export default function RelationGraph({
      *   項目が多いときは、広さを広げて大きさを下げると
      *   全体が見える。近くを読みたいときは大きさを上げる。
      */
-    const [zoom, setZoom] = useState(50);
-
     /*
-     * 画面いっぱいに広げるか。
+     * 図の大きさ。
      *
-     * ★ 枠は頁の一部なので、どうしても小さい。
-     *   人が 20 人を超えると、名前が読める大きさにならない。
+     * ★ いつも枠ぴったり。選ばせない。
      *
-     * ★ 広げるのは器だけ。図の作りは変えない。
-     *   同じ部品がそのまま大きな器に入るので、
-     *   広げたときだけ別物になる、ということが起きない。
+     *   前は 25〜100% から選べて、画面いっぱいにも広げられた。
+     *   押し具が 2 段になり、どれを触ればよいのか分からない。
      *
-     * ★ Esc で閉じる。
-     *   覆いを閉じる道が押し具だけだと、逃げ場が無い。
+     *   紐の長さを変えれば、詰まり具合は調えられる。
+     *   大きさまで持たせる必要がなかった。
      */
-    const [isFull, setIsFull] = useState(false);
+    const zoom = 50;
 
-    useEffect(() => {
-        if (!isFull) return;
 
-        function onKey(event: KeyboardEvent) {
-            if (event.key === "Escape") setIsFull(false);
-        }
-
-        document.addEventListener("keydown", onKey);
-        /* 後ろの頁が動くと、どこを見ていたか分からなくなる */
-        document.body.style.overflow = "hidden";
-
-        return () => {
-            document.removeEventListener("keydown", onKey);
-            document.body.style.overflow = "";
-        };
-    }, [isFull]);
 
     /*
      * 紐の長さ。
@@ -738,7 +738,7 @@ export default function RelationGraph({
         relations.some((relation) => groupOf(relation.label).key === group.key),
     );
 
-    const body = (
+    return (
         <div className="flex h-full flex-col">
             {/*
               * 章で絞る。
@@ -833,6 +833,14 @@ export default function RelationGraph({
                 role="img"
                 aria-label="関係図"
                 onPointerMove={(event) => {
+                    /* 線の中間点をつまんでいるとき */
+                    if (bending) {
+                        const point = toGraphPoint(event);
+                        if (!point) return;
+                        setBending({ ...bending, position: clampToBoard(point) });
+                        return;
+                    }
+
                     if (focusId) return;
                     if (!dragging) return;
                     const point = toGraphPoint(event);
@@ -847,6 +855,13 @@ export default function RelationGraph({
                     });
                 }}
                 onPointerUp={() => {
+                    /* 線の中間点を離したとき */
+                    if (bending) {
+                        onBend?.(bending.id, bending.position);
+                        setBending(null);
+                        return;
+                    }
+
                     if (!dragging) return;
                     // 動かさずに離したときは、選んだものとして扱う
                     if (dragging.moved) onMove?.(dragging.id, dragging.position);
@@ -854,6 +869,10 @@ export default function RelationGraph({
                     setDragging(null);
                 }}
                 onPointerLeave={() => {
+                    if (bending) {
+                        onBend?.(bending.id, bending.position);
+                        setBending(null);
+                    }
                     if (dragging?.moved) onMove?.(dragging.id, dragging.position);
                     setDragging(null);
                 }}
@@ -887,11 +906,31 @@ export default function RelationGraph({
 
                     const isActive = !active || touchesActive;
 
-                    // 中心へ少し引き寄せて曲げる。直線だけだと線が重なって読めない
+                    /*
+                     * 線の曲げ方。
+                     *
+                     * ★ 中間点が決めてあれば、そこを通す。
+                     *
+                     *   決めていなければ、中心へ少し引き寄せる。
+                     *   直線だけだと、線が重なって読めない。
+                     *
+                     * ★ つまんでいる最中は、指の位置を使う。
+                     */
                     const midX = (from.x + to.x) / 2;
                     const midY = (from.y + to.y) / 2;
-                    const controlX = midX + (CENTER_X - midX) * 0.35;
-                    const controlY = midY + (CENTER_Y - midY) * 0.35;
+
+                    const defaultControl = {
+                        x: midX + (CENTER_X - midX) * 0.35,
+                        y: midY + (CENTER_Y - midY) * 0.35,
+                    };
+
+                    const bent =
+                        bending?.id === relation.id
+                            ? bending.position
+                            : (relation.bend ?? null);
+
+                    const controlX = bent ? bent.x : defaultControl.x;
+                    const controlY = bent ? bent.y : defaultControl.y;
 
                     return (
                         /*
@@ -909,6 +948,47 @@ export default function RelationGraph({
                                 strokeWidth={relation.changes.length > 0 ? 2.4 : 1.6}
                                 strokeDasharray={relation.changes.length > 0 ? "0" : "7 6"}
                             />
+                            {/*
+                              * 中間点。つまんで、線の通り道を決める。
+                              *
+                              * ★ 選んでいる線にだけ出す。
+                              *
+                              *   47 本すべてに点を置くと、
+                              *   図が点だらけになる。
+                              *
+                              * ★ 二度押しで、元の曲げ方に戻す。
+                              *   動かしすぎたときに、戻す道が要る。
+                              */}
+                            {onBend && touchesActive && (
+                                <circle
+                                    cx={controlX}
+                                    cy={controlY}
+                                    r={bending?.id === relation.id ? 7 : 5}
+                                    fill="var(--color-canvas)"
+                                    stroke={colorOf(relation.label)}
+                                    strokeWidth="2"
+                                    style={{ cursor: "grab" }}
+                                    onPointerDown={(event) => {
+                                        event.stopPropagation();
+                                        (event.target as Element).setPointerCapture?.(
+                                            event.pointerId,
+                                        );
+                                        setBending({
+                                            id: relation.id,
+                                            position: { x: controlX, y: controlY },
+                                        });
+                                    }}
+                                    onDoubleClick={(event) => {
+                                        event.stopPropagation();
+                                        onBend(relation.id, null);
+                                    }}
+                                >
+                                    <title>
+                                        つまむと線の通り道が変わります（二度押しで元に戻す）
+                                    </title>
+                                </circle>
+                            )}
+
                             {/*
                              * 関係の名前。
                              *
@@ -1113,46 +1193,9 @@ export default function RelationGraph({
                         )}
                     </div>
 
-                    {/*
-                      * 大きさ。
-                      *
-                      * ★ 50% で枠ぴったり。
-                      *   それより上は送って見る。下は全体が見える。
-                      */}
-                    <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
-                        <span className="text-[11px] text-faint">大きさ</span>
-                        {[25, 50, 75, 100].map((one) => (
-                            <button
-                                key={one}
-                                type="button"
-                                onClick={() => setZoom(one)}
-                                aria-pressed={one === zoom}
-                                className={[
-                                    "rounded-md border px-2.5 py-1 text-[11px]",
-                                    one === zoom
-                                        ? "border-forest bg-forest-tint/60 text-forest"
-                                        : "border-line text-muted hover:border-forest-line",
-                                ].join(" ")}
-                            >
-                                {one}%
-                            </button>
-                        ))}
-                        <span className="text-[10.5px] text-faint">
-                            50% で枠ぴったり
-                        </span>
-
-                        <button
-                            type="button"
-                            onClick={() => setIsFull((open) => !open)}
-                            className="rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
-                        >
-                            {isFull ? "元の大きさに戻す" : "画面いっぱいに広げる"}
-                        </button>
-                    </div>
-
                     <div className="mt-1.5 flex items-center justify-between gap-2">
                         <p className="text-[11px] text-faint">
-                            丸をつまむと動かせます。置いた場所は覚えられます。
+                            丸をつまむと動かせます。線の真ん中の点をつまむと、通り道が変わります。
                         </p>
                         {Object.keys(layout).length > 0 && (
                             <button
@@ -1216,34 +1259,4 @@ export default function RelationGraph({
         </div>
     );
 
-    if (!isFull) return body;
-
-    /*
-     * 画面いっぱい。
-     *
-     * ★ 中身は同じものをそのまま入れる。
-     *   別に作ると、広げたときだけ動きが違う、が起きる。
-     *
-     * ★ 覆いを押しても閉じない。
-     *   丸を掴んで端まで運んだとき、指が覆いに乗る。
-     *   そこで閉じると、置いた場所が消える。
-     */
-    return (
-        <div
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 800,
-                background: "var(--color-canvas)",
-                padding: 16,
-                display: "flex",
-                flexDirection: "column",
-            }}
-            role="dialog"
-            aria-modal="true"
-            aria-label="関係図（画面いっぱい）"
-        >
-            {body}
-        </div>
-    );
 }

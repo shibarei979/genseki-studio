@@ -139,15 +139,7 @@ export default function RelationsView({
                     関係図
                 </h1>
 
-                {entries.length >= 2 && !isAdding && (
-                    <button
-                        type="button"
-                        onClick={() => setIsAdding(true)}
-                        className="rounded-md border border-forest-line px-2.5 py-1 text-[11px] text-forest hover:bg-forest-tint"
-                    >
-                        ＋ 関係を追加
-                    </button>
-                )}
+
             </header>
 
             {entries.length < 2 ? (
@@ -171,8 +163,14 @@ export default function RelationsView({
                       *   見に来る回数のほうが、結ぶ回数より多い。
                       *   ふだんは図を先に出す。
                       */}
-                    {isAdding && (
-                    <div className="rounded-lg border border-line bg-surface px-4 py-3">
+                    {/*
+                      * ★ 畳まずに出しておく。
+                      *
+                      *   一度畳んでみたが、結ぶたびに開くのが手間だった。
+                      *   代わりに、中身を 1 行に収める。
+                      *   見本の札は、欄に触れたときだけ出す。
+                      */}
+                    <div className="rounded-lg border border-line bg-surface px-3 py-2">
                         <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs text-muted">関係を追加</span>
                             <EntrySelect
@@ -194,6 +192,11 @@ export default function RelationsView({
                                 type="text"
                                 value={label}
                                 onChange={(e) => setLabel(e.target.value)}
+                                /*
+                                 * ★ ここに触れたときだけ、見本の札を出す。
+                                 *   ふだんから並べておくと、2 段ぶん場所を取る。
+                                 */
+                                onFocus={() => setIsAdding(true)}
                                 placeholder="関係ラベルを入力"
                                 aria-label="関係の名前"
                                 className="w-36 rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
@@ -230,6 +233,7 @@ export default function RelationsView({
                             </div>
                         </div>
 
+                        {isAdding && (
                         <ul className="mt-2 flex flex-wrap gap-1.5">
                             {PRESETS.map((preset) => (
                                 <li key={preset}>
@@ -243,16 +247,9 @@ export default function RelationsView({
                                 </li>
                             ))}
                         </ul>
+                        )}
 
-                        <button
-                            type="button"
-                            onClick={() => setIsAdding(false)}
-                            className="mt-2 text-[11px] text-faint underline hover:text-muted"
-                        >
-                            閉じる
-                        </button>
                     </div>
-                    )}
 
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
                         {/*
@@ -337,6 +334,13 @@ export default function RelationsView({
                                      */
                                     layout={graphLayout}
                                     onMove={onMoveNode}
+                                    /*
+                                     * 線の通り道。
+                                     * つまんで決めた中間点を、そのまま覚える。
+                                     */
+                                    onBend={(relationId, bend) =>
+                                        onUpdate(relationId, { bend })
+                                    }
                                     onSelect={(id) => {
                                         setFocusId(id);
                                         // 選んだ項目に繋がる関係を右に出す
@@ -682,9 +686,28 @@ function EntrySelect({
               )
             : entries;
 
+        /*
+         * ★ 人物を先に出す。
+         *
+         *   関係を結ぶ相手は、たいてい人。
+         *   場所や出来事に混ざって五十音順に並ぶと、
+         *   目当ての人が下のほうに沈む。
+         *
+         *   同じ種類の中では、名前の順。
+         */
+        function rank(entry: ResourceEntry) {
+            const page = pageById.get(entry.page_id);
+            if (page?.builtin_key === "character") return 0;
+            return 1;
+        }
+
         return rows
             .slice()
-            .sort((a, b) => a.name.localeCompare(b.name, "ja"))
+            .sort((a, b) => {
+                const gap = rank(a) - rank(b);
+                if (gap !== 0) return gap;
+                return a.name.localeCompare(b.name, "ja");
+            })
             .slice(0, 40);
     })();
 
