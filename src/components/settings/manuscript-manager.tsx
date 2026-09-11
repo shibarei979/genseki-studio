@@ -823,6 +823,70 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                                 ))}
                             </div>
 
+                            {/*
+                              * ★ 書き方の見本を、その場に出す。
+                              *
+                              *   「見出しの行で分ける」と言われても、
+                              *   何をどう書けば切れるのかが分からない。
+                              *   選んだ分け方に合わせて、見本を出す。
+                              *
+                              * ★ 選んでいるものだけ出す。
+                              *   4 つ全部の説明を並べると、読まれない。
+                              */}
+                            <div className="mt-2.5 rounded border border-line bg-surface px-3 py-2.5">
+                                <p className="text-[10.5px] font-medium text-ink">
+                                    こう書くと、分かれます
+                                </p>
+
+                                <pre className="mt-1.5 overflow-x-auto whitespace-pre text-[10.5px] leading-relaxed text-muted">
+{splitMode === "heading"
+    ? `第1話　旅立ち
+その日、風は静かだった。
+
+第2話　港
+船が着いた。`
+    : splitMode === "bracket"
+      ? `【旅立ち】
+その日、風は静かだった。
+
+【港】
+船が着いた。`
+      : splitMode === "blank"
+        ? `その日、風は静かだった。
+（ここで空行を3つ）
+
+
+
+船が着いた。`
+        : `全部が1話になります。
+話に分けたいときは、
+上の分け方を選んでください。`}
+                                </pre>
+
+                                {splitMode === "heading" && (
+                                    <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
+                                        「第1話」「第一章」「プロローグ」「幕間」「# 見出し」の行で分かれます。
+                                        「＊」や「◆」だけの行では分かれません（場面の区切りとして使う人が多いため）。
+                                    </p>
+                                )}
+
+                                {splitMode === "bracket" && (
+                                    <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
+                                        【　】だけの行で分かれ、中の言葉が話の題名になります。
+                                        本文の中の【　】では分かれません。
+                                        よそのサイトから落とした原稿に、題名を付けて一気に上げるときに向きます。
+                                    </p>
+                                )}
+
+                                {splitMode === "blank" && (
+                                    <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
+                                        空行が3つ以上続く所で分かれます。
+                                        かたまりの1行目が短ければ、それを題名にします。
+                                        場面の区切りに空行を使っている原稿では、切れすぎることがあります。
+                                    </p>
+                                )}
+                            </div>
+
                             <p className="mt-2 text-[10.5px] leading-relaxed text-faint">
                                 切りたい場所が違うときは、本文に「ここで切る」を置いて指せます。
                             </p>
