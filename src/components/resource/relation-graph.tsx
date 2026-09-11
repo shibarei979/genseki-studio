@@ -215,6 +215,13 @@ export default function RelationGraph({
      *   同じ入れ物にすると、どちらを動かしているのか
      *   分からなくなる。
      */
+    /*
+     * 中間点を出している線。
+     *
+     * 線を二度押すと出る。もう一度押すと引っ込む。
+     */
+    const [openBendId, setOpenBendId] = useState<string | null>(null);
+
     const [bending, setBending] = useState<{
         id: string;
         position: { x: number; y: number };
@@ -355,7 +362,11 @@ export default function RelationGraph({
      *   小さく出して「読めない」と思われるより、
      *   大きく出して「送れば見える」ほうがよい。
      */
-    const [sizeValue, setSizeValue] = useState(100);
+    /*
+     * ★ 初めは、枠ぴったり。
+     *   つまみの 38 あたりで 1.0 倍になる。
+     */
+    const [sizeValue, setSizeValue] = useState(38);
 
     /*
      * 送る枠。
@@ -370,20 +381,29 @@ export default function RelationGraph({
      * 割合で指定すると、入れ物の作りによって
      * 伸びたり伸びなかったりする。
      */
-    const [boxHeight, setBoxHeight] = useState(0);
+    const [box, setBox] = useState({ w: 0, h: 0 });
+
+    /*
+     * 枠にちょうど収まる高さ。
+     *
+     * 板は横長なので、枠の形によっては
+     * 横が先に足りなくなる。両方を見て、小さいほうに合わせる。
+     */
+    const fitHeight = box.w && box.h ? Math.min(box.h, box.w / ASPECT) : 0;
 
     useEffect(() => {
-        const box = panRef.current;
-        if (!box) return;
+        const el = panRef.current;
+        if (!el) return;
 
-        const measure = () => setBoxHeight(box.clientHeight);
+        const measure = () =>
+            setBox({ w: el.clientWidth, h: el.clientHeight });
         measure();
 
         const watcher =
             typeof ResizeObserver !== "undefined"
                 ? new ResizeObserver(measure)
                 : null;
-        watcher?.observe(box);
+        watcher?.observe(el);
 
         return () => watcher?.disconnect();
     }, []);
@@ -964,9 +984,21 @@ export default function RelationGraph({
                  * ★ 0 で枠の 3 割、100 で 1.2 倍。
                  *   前はいちばん大きいが 2 倍で、大きすぎた。
                  */
+                /*
+                 * ★ 枠いっぱいに使う。
+                 *
+                 *   前は高さだけを見て決めていた。
+                 *   枠が横に長いと、横が余ったままになる。
+                 *
+                 *   横と縦の両方を見て、
+                 *   「ちょうど収まる大きさ」を先に出す。
+                 *   つまみは、そこからの倍率。
+                 *
+                 * ★ つまみの真ん中あたりで、枠ぴったり。
+                 */
                 style={{
-                    height: boxHeight
-                        ? `${Math.round(boxHeight * (0.3 + (sizeValue / 100) * 0.9))}px`
+                    height: fitHeight
+                        ? `${Math.round(fitHeight * (0.4 + (sizeValue / 100) * 1.6))}px`
                         : "100%",
                     aspectRatio: `${ASPECT} / 1`,
                     width: "auto",
@@ -1101,8 +1133,43 @@ export default function RelationGraph({
                             ? bending.position
                             : (relation.bend ?? null);
 
-                    const controlX = bent ? bent.x : defaultControl.x;
-                    const controlY = bent ? bent.y : defaultControl.y;
+                    /*
+                     * 線の引き方。
+                     *
+                     * ★ 中間点を決めてあれば、そこを通る二本の直線。
+                     *
+                     *   曲線の「制御点」は線の上に乗らない。
+                     *   つまんだ点と線が離れていて、
+                     *   どこを動かしているのか分からなかった。
+                     *
+                     *   二本の直線にすれば、点は必ず線の上にある。
+                     *   直角に曲げることもできる。
+                     *
+                     * ★ 決めていなければ、これまでどおり緩く曲げる。
+                     */
+                    const path = bent
+                        ? `M${from.x} ${from.y} L${bent.x} ${bent.y} L${to.x} ${to.y}`
+                        : `M${from.x} ${from.y} Q${defaultControl.x} ${defaultControl.y} ${to.x} ${to.y}`;
+
+                    /*
+                     * 関係の名前を置くところ。
+                     *
+                     * ★ 線の上に置く。
+                     *
+                     *   曲線のときは、真ん中の点を出す。
+                     *   制御点に置くと、線から浮いて見える。
+                     */
+                    const labelAt = bent
+                        ? bent
+                        : {
+                              x:
+                                  (from.x + 2 * defaultControl.x + to.x) / 4,
+                              y:
+                                  (from.y + 2 * defaultControl.y + to.y) / 4,
+                          };
+
+                    const controlX = labelAt.x;
+                    const controlY = labelAt.y;
 
                     /*
                      * 線の形。
@@ -1123,8 +1190,30 @@ export default function RelationGraph({
                           *   見るべき線だけを残す。
                           */
                         <g key={relation.id} opacity={isActive ? 1 : 0.06}>
+                            {/*
+                              * ★ 線を二度押すと、中間点が出る。
+                              *
+                              *   押しやすいよう、見えない太い線を重ねる。
+                              *   細い線をぴたりと押すのは、指では無理。
+                              */}
                             <path
-                                d={`M${from.x} ${from.y} Q${controlX} ${controlY} ${to.x} ${to.y}`}
+                                d={path}
+                                fill="none"
+                                stroke="transparent"
+                                strokeWidth="14"
+                                style={{ cursor: "pointer" }}
+                                onDoubleClick={(event) => {
+                                    event.stopPropagation();
+                                    setOpenBendId(
+                                        openBendId === relation.id
+                                            ? null
+                                            : relation.id,
+                                    );
+                                }}
+                            />
+
+                            <path
+                                d={path}
                                 fill="none"
                                 stroke={colorOf(relation.label)}
                                 strokeWidth={relation.changes.length > 0 ? 2.4 : 1.6}
@@ -1156,15 +1245,17 @@ export default function RelationGraph({
                               *   動かしすぎたときに、戻す道が要る。
                               */}
                             {/*
-                              * ★ 選んでいなくても掴める。
+                              * 中間点。
                               *
-                              *   前は選んだ線にだけ点を出していた。
-                              *   1 本直すのに、選んでから掴む二手が要る。
+                              * ★ ふだんは出さない。
                               *
-                              *   ふだんは薄く、触れると濃くする。
-                              *   出てはいるが、邪魔にはならない。
+                              *   47 本すべてに点が出ると、
+                              *   関係の名前と見分けが付かず、
+                              *   図が点だらけになる。
+                              *
+                              *   線を二度押したときだけ出す。
                               */}
-                            {onBend && (
+                            {onBend && openBendId === relation.id && (
                                 <circle
                                     cx={controlX}
                                     cy={controlY}
@@ -1172,11 +1263,6 @@ export default function RelationGraph({
                                     fill="var(--color-canvas)"
                                     stroke={colorOf(relation.label)}
                                     strokeWidth="2"
-                                    opacity={
-                                        bending?.id === relation.id || touchesActive
-                                            ? 1
-                                            : 0.35
-                                    }
                                     style={{ cursor: "grab" }}
                                     onPointerDown={(event) => {
                                         event.stopPropagation();
@@ -1411,7 +1497,7 @@ export default function RelationGraph({
 
                     <div className="mt-1.5 flex items-center justify-between gap-2">
                         <p className="text-[11px] text-faint">
-                            丸をつまむと動かせます。図は上下左右に送って見られます。
+                            丸をつまむと動かせます。線を二度押すと、通り道を変える点が出ます。
                         </p>
                         {Object.keys(layout).length > 0 && (
                             <button
