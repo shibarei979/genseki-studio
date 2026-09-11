@@ -1095,12 +1095,19 @@ export default function RelationGraph({
               */}
             <div
                 ref={panRef}
-                /*
-                 * ★ 中身が枠より小さいときは、真ん中に置く。
-                 *   大きいときは、左上から送って見る。
-                 */
                 className="thin-scroll min-h-0 flex-1 overflow-auto"
             >
+                {/*
+                  * ★ 縦にも真ん中へ置くための、内側の一枚。
+                  *
+                  *   margin: auto は横しか真ん中にしない。
+                  *   縦が上に張り付いて、下が大きく空いていた。
+                  *
+                  *   枠と同じ大きさを下限に持つ入れ物を挟み、
+                  *   その中で縦横とも真ん中に寄せる。
+                  *   紙が枠より大きいときは、この入れ物ごと伸びる。
+                  */}
+                <div className="flex min-h-full min-w-full items-center justify-center">
             <svg
                 ref={svgRef}
                 /*
@@ -1198,8 +1205,6 @@ export default function RelationGraph({
                         : "100%",
                     flexShrink: 0,
                     flexGrow: 0,
-                    /* 枠より小さいときは、真ん中に置く */
-                    margin: "auto",
                 }}
                 role="img"
                 aria-label="関係図"
@@ -1699,6 +1704,7 @@ export default function RelationGraph({
                     );
                 })}
             </svg>
+                </div>
             </div>
 
             {onMove && (
