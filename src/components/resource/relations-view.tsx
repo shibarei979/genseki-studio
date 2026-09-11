@@ -121,17 +121,33 @@ export default function RelationsView({
     const to = selected ? entryById.get(selected.to_entry_id) : null;
 
     return (
-        <div className="space-y-4">
-            <header>
-                <h1 className="flex items-center gap-2 text-xl font-medium text-ink">
+        <div className="space-y-2">
+            {/*
+              * ★ 見出しと押し具を、同じ行に置く。
+              *
+              *   見出し・説明・押し具で 3 行使っていた。
+              *   その上に頁のタブもあるので、
+              *   図が画面の下へ押し出されていた。
+              *
+              *   説明は外す。名前と図を見れば分かる。
+              */}
+            <header className="flex flex-wrap items-center gap-2">
+                <h1 className="flex items-center gap-2 text-base font-medium text-ink">
                     <span className="text-forest">
-                        <ResourceIcon builtinKey="relation" size={22} />
+                        <ResourceIcon builtinKey="relation" size={18} />
                     </span>
                     関係図
                 </h1>
-                <p className="mt-1 text-xs text-muted">
-                    人物・場所・組織・出来事のつながりを見える形にします。
-                </p>
+
+                {entries.length >= 2 && !isAdding && (
+                    <button
+                        type="button"
+                        onClick={() => setIsAdding(true)}
+                        className="rounded-md border border-forest-line px-2.5 py-1 text-[11px] text-forest hover:bg-forest-tint"
+                    >
+                        ＋ 関係を追加
+                    </button>
+                )}
             </header>
 
             {entries.length < 2 ? (
@@ -155,15 +171,7 @@ export default function RelationsView({
                       *   見に来る回数のほうが、結ぶ回数より多い。
                       *   ふだんは図を先に出す。
                       */}
-                    {!isAdding ? (
-                        <button
-                            type="button"
-                            onClick={() => setIsAdding(true)}
-                            className="rounded-md border border-forest-line px-3 py-1.5 text-xs text-forest hover:bg-forest-tint"
-                        >
-                            ＋ 関係を追加
-                        </button>
-                    ) : (
+                    {isAdding && (
                     <div className="rounded-lg border border-line bg-surface px-4 py-3">
                         <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs text-muted">関係を追加</span>
@@ -296,7 +304,19 @@ export default function RelationsView({
                                            * ★ 板を横長にしたので、
                                            *   高さは戻す。横幅を使って描く。
                                            */
-                                          height: "min(640px, 72vh)",
+                                          /*
+                                           * ★ 残りの高さから決める。
+                                           *
+                                           *   72vh のような決め打ちだと、
+                                           *   上の見出しや頁のタブのぶんだけ
+                                           *   画面をはみ出す。
+                                           *
+                                           *   画面の高さから、上に積まれるものを
+                                           *   引いた値にする。狭い画面でも
+                                           *   最低 300px は残す。
+                                           */
+                                          height:
+                                              "clamp(300px, calc(100vh - 230px), 640px)",
                                       }
                                     : undefined
                             }
@@ -406,10 +426,23 @@ export default function RelationsView({
                             )}
                         </div>
 
-                        {/* 選んだ関係 */}
-                        <div className="rounded-lg border border-line bg-surface p-4">
+                        {/*
+                          * 選んだ関係。
+                          *
+                          * ★ 何も選んでいないときは、狭い画面では出さない。
+                          *
+                          *   横に並べられる画面では、右に置いておけばよい。
+                          *   狭い画面では図の下に積まれるので、
+                          *   空の枠のぶんだけ画面が伸びる。
+                          */}
+                        <div
+                            className={[
+                                "rounded-lg border border-line bg-surface p-4",
+                                !selected ? "hidden lg:block" : "",
+                            ].join(" ")}
+                        >
                             {!selected || !from || !to ? (
-                                <p className="py-16 text-center text-xs text-faint">
+                                <p className="py-8 text-center text-xs text-faint">
                                     図や一覧から関係を選ぶと、ここに詳しく出ます。
                                 </p>
                             ) : (
