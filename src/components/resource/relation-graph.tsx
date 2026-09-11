@@ -258,15 +258,18 @@ export default function RelationGraph({
     /*
      * その人を中心に見るか。
      *
-     * ★ 初めから入れておく。
+     * ★ 初めは入れない。
      *
-     *   人が増えるほど、全部を一度に見ても読めない。
-     *   誰かを押した時点で、その人の周りだけになるほうが
-     *   知りたいことに近い。
+     *   入れて出していたが、丸を押した瞬間に
+     *   その人が中心へ据え直され、掴んで動かせなくなった。
+     *   並びをこちらが決めている間は、動かしても残らないため。
      *
-     *   全体を見たい人は、押し具で外せる。
+     *   「真ん中以外動かせない」という声は、これ。
+     *
+     *   ふだんは、押したら選ぶだけ。動かせる。
+     *   中心に見たい人が、押し具で切り替える。
      */
-    const [isFocusMode, setIsFocusMode] = useState(true);
+    const [isFocusMode, setIsFocusMode] = useState(false);
 
     /*
      * いま見ている章。null は全部の時点。
@@ -1145,7 +1148,6 @@ export default function RelationGraph({
                         return;
                     }
 
-                    if (focusId) return;
                     if (!dragging) return;
                     const point = toGraphPoint(event);
                     if (!point) return;
@@ -1181,6 +1183,21 @@ export default function RelationGraph({
                     }
 
                     if (!dragging) return;
+
+                    /*
+                     * ★ 中心に見ているあいだに動かしたぶんは、覚えない。
+                     *
+                     *   あの並びはこちらが置き直したもの。
+                     *   そこでの位置を覚えると、
+                     *   全体に戻したときに並びが崩れる。
+                     */
+                    if (focusId) {
+                        if (!dragging.moved) {
+                            onSelect(selectedId === dragging.id ? null : dragging.id);
+                        }
+                        setDragging(null);
+                        return;
+                    }
                     // 動かさずに離したときは、選んだものとして扱う
                     if (dragging.moved) onMove?.(dragging.id, dragging.position);
                     else onSelect(selectedId === dragging.id ? null : dragging.id);
@@ -1488,8 +1505,7 @@ export default function RelationGraph({
                             onMouseEnter={() => setHoveredId(node.id)}
                             onMouseLeave={() => setHoveredId(null)}
                             onPointerDown={(event) => {
-                                /* 中心に見ているときは、押して選ぶだけ */
-                                if (focusId || !onMove) {
+                                if (!onMove) {
                                     onSelect(node.id === selectedId ? null : node.id);
                                     return;
                                 }
