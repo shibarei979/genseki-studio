@@ -251,7 +251,16 @@ export interface Repository {
 
     createRelation(
         workId: string,
-        input: Pick<ResourceRelation, "from_entry_id" | "to_entry_id" | "label">,
+        /*
+         * ★ 線の形も、結ぶときに受け取る。
+         *   向きのある関係は、結ぶ時点で分かっている。
+         *   あとで選び直させるのは、手数が増えるだけ。
+         */
+        input: Pick<
+            ResourceRelation,
+            "from_entry_id" | "to_entry_id" | "label"
+        > &
+            Partial<Pick<ResourceRelation, "line_style">>,
     ): Promise<ResourceRelation>;
 
     updateRelation(

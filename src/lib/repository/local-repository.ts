@@ -851,7 +851,11 @@ export const localRepository: Repository = {
 
     async createRelation(
         workId: string,
-        input: Pick<ResourceRelation, "from_entry_id" | "to_entry_id" | "label">,
+        input: Pick<
+            ResourceRelation,
+            "from_entry_id" | "to_entry_id" | "label"
+        > &
+            Partial<Pick<ResourceRelation, "line_style">>,
     ): Promise<ResourceRelation> {
         const all = readAll<ResourceRelation>(RELATIONS_KEY);
         const timestamp = now();
@@ -864,6 +868,8 @@ export const localRepository: Repository = {
             label: input.label,
             note: "",
             changes: [],
+            /* 線の形。決めていなければ null（おまかせ） */
+            line_style: input.line_style ?? null,
             created_at: timestamp,
             updated_at: timestamp,
         };

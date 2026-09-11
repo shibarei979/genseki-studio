@@ -1645,6 +1645,8 @@ export const supabaseRepository: Repository = {
                 label: input.label ?? "",
                 note: input.note ?? "",
                 changes: input.changes ?? [],
+                /* 線の形。決めていなければ null（おまかせ） */
+                line_style: input.line_style ?? null,
             })
             .select()
             .single();
