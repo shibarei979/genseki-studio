@@ -58,28 +58,6 @@ const ASPECT = 1.6;
 const BASE_RADIUS = 142;
 
 /*
- * 紐の長さの段。
- *
- * ★ 数字は、丸と丸を離す割合。
- *
- *   1 のとき、丸 1 つぶんほど離れて並ぶ。
- *   1.9 なら、その倍近く離れる。
- *
- * ★ 言葉は「短い／長い」にする。
- *
- *   前は「狭い／広い」と書いていた。
- *   図そのものが広くなると読まれ、
- *   大きさの押し具と区別が付かなかった。
- *   動くのは紐の長さなので、そう呼ぶ。
- */
-const SPREADS = [
-    { label: "短い", value: 0.85 },
-    { label: "ふつう", value: 1.15 },
-    { label: "長い", value: 1.5 },
-    { label: "とても長い", value: 1.9 },
-];
-
-/*
  * 丸どうしの、いちばん近い間。
  *
  * ★ 丸の直径に、名前のぶんを足す。
@@ -307,6 +285,21 @@ export default function RelationGraph({
      *   紐の長さを変えれば、詰まり具合は調えられる。
      *   大きさまで持たせる必要がなかった。
      */
+    /*
+     * 大きさ。つまみ 1 つで決める。
+     *
+     * ★ 0 で丸が小さく、100 で大きい。
+     *
+     *   中では「紐の長さ」を動かしている。
+     *   図は枠いっぱいに縮めて描くので、
+     *   紐を長くすると全体が縮み、丸が小さくなる。
+     *   短くすると丸が大きくなる。
+     *
+     *   押し具を 2 段に分けていたが、
+     *   触る人にとっては「大きさ」ひとつで足りる。
+     *
+     * ★ 図はいつも枠ぴったり。送りは出ない。
+     */
     const zoom = 50;
 
 
@@ -338,9 +331,52 @@ export default function RelationGraph({
      *   まず読める大きさから始めて、
      *   足りなければ伸ばしてもらう。
      */
-    const [spreadAt, setSpreadAt] = useState(1);
+    /*
+     * つまみの値。0〜100。
+     *
+     * ★ 右へ動かすほど、丸が大きい。
+     *
+     *   中では紐の長さを動かしている。
+     *   紐が短いほど図が詰まり、枠に収めたときに丸が大きくなる。
+     *   つまり、つまみと紐の長さは逆向き。
+     */
+    const [sizeValue, setSizeValue] = useState(45);
 
-    const spread = SPREADS[spreadAt].value;
+    /*
+     * 画面いっぱいに広げるか。
+     *
+     * ★ 枠は頁の一部なので、どうしても小さい。
+     *   人が増えると、名前が読める大きさにならない。
+     *
+     * ★ 広げるのは器だけ。図の作りは変えない。
+     * ★ Esc で閉じる。押し具だけだと、逃げ場が無い。
+     */
+    const [isFull, setIsFull] = useState(false);
+
+    useEffect(() => {
+        if (!isFull) return;
+
+        function onKey(event: KeyboardEvent) {
+            if (event.key === "Escape") setIsFull(false);
+        }
+
+        document.addEventListener("keydown", onKey);
+        /* 後ろの頁が動くと、どこを見ていたか分からなくなる */
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.removeEventListener("keydown", onKey);
+            document.body.style.overflow = "";
+        };
+    }, [isFull]);
+
+    /*
+     * つまみから、紐の長さを出す。
+     *
+     * 0   → 2.0（丸が小さい。人数が多いとき向き）
+     * 100 → 0.8（丸が大きい。人数が少ないとき向き）
+     */
+    const spread = 2.0 - (sizeValue / 100) * 1.2;
     /*
      * 板の大きさ。
      *
@@ -738,7 +774,7 @@ export default function RelationGraph({
         relations.some((relation) => groupOf(relation.label).key === group.key),
     );
 
-    return (
+    const body = (
         <div className="flex h-full flex-col">
             {/*
               * 章で絞る。
@@ -1148,49 +1184,50 @@ export default function RelationGraph({
 
             {onMove && (
                 <>
-                    {/*
-                      * 紐の長さ。
-                      *
-                      * ★ 何が動くのかを、言葉で言う。
-                      *   「広さ」だと図全体の話に読める。
-                      */}
-                    <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                        <span className="text-[11px] text-faint">紐の長さ</span>
-                        {SPREADS.map((one, index) => (
-                            <button
-                                key={one.label}
-                                type="button"
-                                onClick={() => setSpreadAt(index)}
-                                aria-pressed={index === spreadAt}
-                                className={[
-                                    "rounded-md border px-2.5 py-1 text-[11px]",
-                                    index === spreadAt
-                                        ? "border-forest bg-forest-tint/60 text-forest"
-                                        : "border-line text-muted hover:border-forest-line",
-                                ].join(" ")}
-                            >
-                                {one.label}
-                            </button>
-                        ))}
+                    <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+                        <label className="flex items-center gap-2">
+                            <span className="text-[11px] text-faint">大きさ</span>
 
-                        <span className="text-[10.5px] text-faint">
-                            丸どうしの離れ具合
-                        </span>
+                            <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={5}
+                                value={sizeValue}
+                                onChange={(e) => setSizeValue(Number(e.target.value))}
+                                aria-label="図の大きさ"
+                                className="w-36 accent-[var(--color-forest)]"
+                            />
+                        </label>
+
+                        <button
+                            type="button"
+                            onClick={tidy}
+                            className="rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
+                        >
+                            整理する
+                        </button>
 
                         {/*
-                          * ★ 中心に見ているときは、出さない。
-                          *   並びはこちらで決めているので、
-                          *   押しても何も起きない。
+                          * 画面いっぱい。
+                          *
+                          * ★ 印にする。
+                          *   言葉で書くと場所を取るうえ、
+                          *   拡大の印は、どこで見ても同じ形をしている。
                           */}
-                        {!focusId && (
-                            <button
-                                type="button"
-                                onClick={tidy}
-                                className="rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
-                            >
-                                整理する
-                            </button>
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => setIsFull((open) => !open)}
+                            aria-label={
+                                isFull ? "元の大きさに戻す" : "画面いっぱいに広げる"
+                            }
+                            title={
+                                isFull ? "元の大きさに戻す" : "画面いっぱいに広げる"
+                            }
+                            className="rounded-md border border-line p-1.5 text-muted hover:border-forest-line hover:text-forest"
+                        >
+                            <ExpandIcon isFull={isFull} />
+                        </button>
                     </div>
 
                     <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -1259,4 +1296,67 @@ export default function RelationGraph({
         </div>
     );
 
+    if (!isFull) return body;
+
+    /*
+     * 画面いっぱい。
+     *
+     * ★ 中身は同じものをそのまま入れる。
+     *   別に作ると、広げたときだけ動きが違う、が起きる。
+     *
+     * ★ 覆いを押しても閉じない。
+     *   丸を掴んで端まで運んだとき、指が覆いに乗る。
+     *   そこで閉じると、置いた場所が消える。
+     */
+    return (
+        <div
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 800,
+                background: "var(--color-canvas)",
+                padding: 16,
+                display: "flex",
+                flexDirection: "column",
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="関係図（画面いっぱい）"
+        >
+            {body}
+        </div>
+    );
+}
+
+/**
+ * 拡大の印。
+ *
+ * ★ 言葉で書かない。
+ *   どこで見ても同じ形なので、印のほうが早い。
+ *   読む画面の拡大にも、同じ形を使う。
+ */
+function ExpandIcon({ isFull }: { isFull: boolean }) {
+    return (
+        <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+            {isFull ? (
+                <path
+                    d="M6.5 1.5v5h-5M9.5 14.5v-5h5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            ) : (
+                <path
+                    d="M1.5 5.5v-4h4M14.5 10.5v4h-4M1.5 10.5v4h4M14.5 5.5v-4h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            )}
+        </svg>
+    );
 }

@@ -198,13 +198,16 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                   background:'var(--color-bg)', color:'var(--color-brand)',
                   fontSize:12.5, fontWeight:600, cursor:'pointer',
                 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="1.9"
+                {/*
+                  * 拡大の印。
+                  *
+                  * ★ 関係図の「画面いっぱいに広げる」と同じ形にする。
+                  *   同じことをする印は、同じ形でないと覚えられない。
+                  */}
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"
+                  stroke="currentColor" strokeWidth="1.5"
                   strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-                  <path d="M16 3h3a2 2 0 0 1 2 2v3" />
-                  <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
-                  <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                  <path d="M1.5 5.5v-4h4M14.5 10.5v4h-4M1.5 10.5v4h4M14.5 5.5v-4h-4" />
                 </svg>
                 全画面で読む
               </button>
