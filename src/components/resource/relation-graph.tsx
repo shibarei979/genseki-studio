@@ -59,10 +59,16 @@ const ASPECT = 1.6;
 /*
  * 紙の外側の余白。
  *
- * 端に置いた丸と、その下に出る名前が
- * 切れずに見えるだけの幅を取る。
+ * ★ 0 にする。
+ *
+ *   余白を足すと、描く範囲の比が紙の比とずれる。
+ *   いちばん小さくしたときに、上下か左右が必ず余る。
+ *   「紙が枠にぴったり」にならない。
+ *
+ *   端に置いた丸が切れないようにするのは、
+ *   丸を置ける範囲（EDGE）のほうで受け持つ。
  */
-const PAD = 46;
+const PAD = 0;
 
 /*
  * 紐の長さ。丸どうしの離れ具合。
@@ -427,17 +433,25 @@ export default function RelationGraph({
     /*
      * つまみから、倍率を出す。
      *
-     * ★ 足し算ではなく、掛け算で伸ばす。
+     * ★ いちばん小さいときが、枠ぴったり。
      *
-     *   足し算だと、小さいほうの差が分からない。
-     *   0.15 と 0.4 の差は大きいのに、
-     *   目盛りの上では同じ幅になってしまう。
+     *   一枚の紙があり、そこに関係図が描いてある。
+     *   いちばん小さいときは、紙の全体が枠に収まる。
+     *   大きくすると紙が枠からはみ出し、
+     *   その一部を送って見る。
      *
-     *   0   → 0.15 倍（ごく小さく。全体を見渡す）
-     *   50  → 0.42 倍
-     *   100 → 1.20 倍（枠ぴったりより少し大きい）
+     *   だから 0 のときに 1.0 倍。
+     *   それより小さくする意味はない。
+     *   小さくしても、紙の外の余白が増えるだけ。
+     *
+     * ★ 掛け算で伸ばす。
+     *   足し算だと、小さいほうの差が目盛りに出ない。
+     *
+     *   0   → 1.0 倍（紙の全体が見える）
+     *   50  → 1.7 倍
+     *   100 → 3.0 倍
      */
-    const scale = 0.15 * Math.pow(1.2 / 0.15, sizeValue / 100);
+    const scale = Math.pow(3, sizeValue / 100);
 
     useEffect(() => {
         const el = panRef.current;
@@ -808,9 +822,16 @@ export default function RelationGraph({
      *   端で止めるのは、そのためだけ。
      */
     function clampToBoard(point: { x: number; y: number }) {
+        /*
+         * ★ 丸と名前が切れないぶんだけ、内側で止める。
+         *
+         *   紙の外は描かれない。端ちょうどに置くと、
+         *   丸が半分切れ、下の名前が消える。
+         */
+        const edge = NODE_RADIUS + 22;
         return {
-            x: Math.min(WIDTH, Math.max(0, point.x)),
-            y: Math.min(HEIGHT, Math.max(0, point.y)),
+            x: Math.min(WIDTH - edge, Math.max(edge, point.x)),
+            y: Math.min(HEIGHT - edge, Math.max(edge, point.y)),
         };
     }
 
