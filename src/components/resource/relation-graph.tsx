@@ -366,7 +366,17 @@ export default function RelationGraph({
      * ★ 初めは、枠ぴったり。
      *   つまみの 38 あたりで 1.0 倍になる。
      */
-    const [sizeValue, setSizeValue] = useState(38);
+    /*
+     * ★ 初めは、枠ぴったり。
+     *
+     *   つまみの真ん中が 1.0 倍。
+     *   左端で 0.35 倍、右端で 1.9 倍。
+     *
+     *   前は右半分で大きくならなかった。
+     *   板の外まで描こうとしていたので、
+     *   はみ出したぶんが切れていた。
+     */
+    const [sizeValue, setSizeValue] = useState(50);
 
     /*
      * 送る枠。
@@ -390,6 +400,21 @@ export default function RelationGraph({
      * 横が先に足りなくなる。両方を見て、小さいほうに合わせる。
      */
     const fitHeight = box.w && box.h ? Math.min(box.h, box.w / ASPECT) : 0;
+
+    /*
+     * つまみから、倍率を出す。
+     *
+     * ★ 足し算ではなく、掛け算で伸ばす。
+     *
+     *   足し算だと、小さいほうの差が分からない。
+     *   0.15 と 0.4 の差は大きいのに、
+     *   目盛りの上では同じ幅になってしまう。
+     *
+     *   0   → 0.15 倍（ごく小さく。全体を見渡す）
+     *   50  → 0.42 倍
+     *   100 → 1.20 倍（枠ぴったりより少し大きい）
+     */
+    const scale = 0.15 * Math.pow(1.2 / 0.15, sizeValue / 100);
 
     useEffect(() => {
         const el = panRef.current;
@@ -731,8 +756,27 @@ export default function RelationGraph({
     }
 
     /** 図の外へ出さない。掴んだまま端を越えると見失う */
-    function clampToBoard(point: { x: number; y: number }) {
-        const margin = NODE_RADIUS + 4;
+    /*
+     * 板の中に留める。
+     *
+     * ★ 丸は、名前のぶんまで見えるように留める。
+     *
+     *   丸そのものが端に触れても、下に出る名前が切れる。
+     *   名前の高さぶん、内側で止める。
+     *
+     * ★ 中間点は、板の端まで置ける。
+     *
+     *   丸と違って、名前も絵も付いていない。
+     *   端まで回せたほうが、線を避けやすい。
+     *
+     *   板の外へは出さない。出すと、
+     *   その線が板の外で描かれて、消えたように見える。
+     */
+    function clampToBoard(
+        point: { x: number; y: number },
+        kind: "node" | "bend" = "node",
+    ) {
+        const margin = kind === "node" ? NODE_RADIUS + 20 : 2;
         return {
             x: Math.min(WIDTH - margin, Math.max(margin, point.x)),
             y: Math.min(HEIGHT - margin, Math.max(margin, point.y)),
@@ -998,7 +1042,12 @@ export default function RelationGraph({
                  */
                 style={{
                     height: fitHeight
-                        ? `${Math.round(fitHeight * (0.4 + (sizeValue / 100) * 1.6))}px`
+                        ? `${Math.round(
+                              fitHeight *
+                                  (sizeValue <= 50
+                                      ? 0.35 + (sizeValue / 50) * 0.65
+                                      : 1 + ((sizeValue - 50) / 50) * 0.9),
+                          )}px`
                         : "100%",
                     aspectRatio: `${ASPECT} / 1`,
                     width: "auto",
@@ -1011,15 +1060,18 @@ export default function RelationGraph({
                     /* 線の中間点をつまんでいるとき */
                     if (bending) {
                         /*
-                         * ★ 中間点は、板の外へも置ける。
+                         * ★ 中間点も、板の中に留める。
                          *
-                         *   丸は板の中に留めるが、線の通り道は別。
-                         *   大きく外へ回して、ほかの線を避けたいことがある。
-                         *   閉じ込めると、その回し方ができない。
+                         *   外へ置けるようにしたが、
+                         *   板の外は描かれないので線が切れて見えた。
+                         *   置いたはずの点も消える。
+                         *
+                         *   板を広く取ってあるので、
+                         *   中だけでも十分に回せる。
                          */
                         const point = toGraphPoint(event);
                         if (!point) return;
-                        setBending({ ...bending, position: point });
+                        setBending({ ...bending, position: clampToBoard(point) });
                         return;
                     }
 
