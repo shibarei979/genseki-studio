@@ -1055,11 +1055,13 @@ export default function ResourceClient({ workId }: Props) {
                                     )}
                                     pages={pages}
                                     episodes={episodes}
-                                    onCreate={async (fromId, toId, label) => {
+                                    onCreate={async (fromId, toId, label, lineStyle) => {
                                         await repository.createRelation(workId, {
                                             from_entry_id: fromId,
                                             to_entry_id: toId,
                                             label,
+                                            /* 結ぶときに選んだ線の形 */
+                                            line_style: lineStyle,
                                         });
                                         await reload();
                                     }}

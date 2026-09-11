@@ -29,7 +29,12 @@ interface Props {
     entries: ResourceEntry[];
     pages: ResourcePage[];
     episodes: Episode[];
-    onCreate: (fromId: string, toId: string, label: string) => void;
+    onCreate: (
+        fromId: string,
+        toId: string,
+        label: string,
+        lineStyle: "dashed" | "solid" | "arrow" | null,
+    ) => void;
     onUpdate: (relationId: string, patch: Partial<ResourceRelation>) => void;
     onDelete: (relation: ResourceRelation) => void;
     onUpdatePage: (patch: Partial<ResourcePage>) => void;
@@ -108,6 +113,22 @@ export default function RelationsView({
     const [fromId, setFromId] = useState("");
     const [toId, setToId] = useState("");
     const [label, setLabel] = useState("");
+
+    /*
+     * 結ぶときの線の形。
+     *
+     * ★ 結んだあとに直させない。
+     *
+     *   「AはBを慕っている」のような向きのある関係は、
+     *   結ぶ時点で分かっている。
+     *   あとで選び直させるのは、手数が増えるだけ。
+     *
+     * ★ 選ばなければ、おまかせ。
+     *   変化の記録があれば実線、無ければ破線。
+     */
+    const [newStyle, setNewStyle] = useState<
+        "dashed" | "solid" | "arrow" | null
+    >(null);
 
     const entryById = new Map(entries.map((entry) => [entry.id, entry]));
     const pageById = new Map(pages.map((page) => [page.id, page]));
@@ -193,11 +214,49 @@ export default function RelationsView({
                                 aria-label="関係の名前"
                                 className="w-36 rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
                             />
+                            {/*
+                              * 線の形。結ぶ前に選ぶ。
+                              *
+                              * ★ 印だけにする。
+                              *   言葉を並べると、1 行に収まらない。
+                              */}
+                            <div className="flex gap-0.5 rounded-md border border-line p-0.5">
+                                {(
+                                    [
+                                        { key: null, label: "おまかせ", mark: "—" },
+                                        { key: "dashed", label: "破線", mark: "╌" },
+                                        { key: "solid", label: "実線", mark: "─" },
+                                        { key: "arrow", label: "矢印", mark: "→" },
+                                    ] as {
+                                        key: "dashed" | "solid" | "arrow" | null;
+                                        label: string;
+                                        mark: string;
+                                    }[]
+                                ).map((one) => (
+                                    <button
+                                        key={one.label}
+                                        type="button"
+                                        onClick={() => setNewStyle(one.key)}
+                                        aria-pressed={newStyle === one.key}
+                                        title={one.label}
+                                        aria-label={`線の形：${one.label}`}
+                                        className={[
+                                            "rounded px-2 py-1 text-xs",
+                                            newStyle === one.key
+                                                ? "bg-forest text-white"
+                                                : "text-muted hover:text-ink",
+                                        ].join(" ")}
+                                    >
+                                        {one.mark}
+                                    </button>
+                                ))}
+                            </div>
+
                             <button
                                 type="button"
                                 disabled={!canCreate}
                                 onClick={() => {
-                                    onCreate(fromId, toId, label.trim());
+                                    onCreate(fromId, toId, label.trim(), newStyle);
                                     setLabel("");
                                 }}
                                 className="rounded-md bg-forest px-4 py-1.5 text-sm text-white hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-40"
@@ -338,14 +397,18 @@ export default function RelationsView({
                                         onUpdate(relationId, { bend })
                                     }
                                     onSelect={(id) => {
+                                        /*
+                                         * ★ 人を押したら、その人の関係を並べる。
+                                         *
+                                         *   前は最初に見つかった 1 本を
+                                         *   勝手に選んでいた。
+                                         *   どれが選ばれたのか分からず、
+                                         *   直したい関係とは限らない。
+                                         *
+                                         *   並べて、その中から選んでもらう。
+                                         */
                                         setFocusId(id);
-                                        // 選んだ項目に繋がる関係を右に出す
-                                        const hit = relations.find(
-                                            (relation) =>
-                                                relation.from_entry_id === id ||
-                                                relation.to_entry_id === id,
-                                        );
-                                        setSelectedRelationId(hit?.id ?? null);
+                                        setSelectedRelationId(null);
                                     }}
                                 />
                             ) : relations.length === 0 ? (
@@ -447,7 +510,8 @@ export default function RelationsView({
                         <div
                             className={[
                                 "thin-scroll overflow-y-auto rounded-lg border border-line bg-surface p-4",
-                                !selected ? "hidden lg:block" : "",
+                                /* 人も関係も選んでいないときだけ、狭い画面では隠す */
+                                !selected && !focusId ? "hidden lg:block" : "",
                             ].join(" ")}
                             style={
                                 /*
@@ -464,9 +528,25 @@ export default function RelationsView({
                             }
                         >
                             {!selected || !from || !to ? (
-                                <p className="py-8 text-center text-xs text-faint">
-                                    図や一覧から関係を選ぶと、ここに詳しく出ます。
-                                </p>
+                                focusId ? (
+                                    /*
+                                      * その人の関係を並べる。
+                                      *
+                                      * ★ 押した人が、どういう関わりを
+                                      *   持っているかを一度に見せる。
+                                      *   直したいものを、その中から選ぶ。
+                                      */
+                                    <FocusRelations
+                                        focusId={focusId}
+                                        relations={relations}
+                                        entryById={entryById}
+                                        onPick={setSelectedRelationId}
+                                    />
+                                ) : (
+                                    <p className="py-8 text-center text-xs text-faint">
+                                        図や一覧から関係を選ぶと、ここに詳しく出ます。
+                                    </p>
+                                )
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between gap-2">
@@ -618,6 +698,22 @@ function ChangeEditor({
 }) {
     const [at, setAt] = useState("");
     const [label, setLabel] = useState("");
+
+    /*
+     * 結ぶときの線の形。
+     *
+     * ★ 結んだあとに直させない。
+     *
+     *   「AはBを慕っている」のような向きのある関係は、
+     *   結ぶ時点で分かっている。
+     *   あとで選び直させるのは、手数が増えるだけ。
+     *
+     * ★ 選ばなければ、おまかせ。
+     *   変化の記録があれば実線、無ければ破線。
+     */
+    const [newStyle, setNewStyle] = useState<
+        "dashed" | "solid" | "arrow" | null
+    >(null);
 
     function add() {
         if (!label.trim()) return;
@@ -860,6 +956,112 @@ function EntrySelect({
                     </ul>
                 </>
             )}
+        </div>
+    );
+}
+
+/**
+ * ============================================================
+ * FocusRelations — その人の関係を並べる
+ *
+ * ★ 人を押したとき、どの関係を直したいかは分からない。
+ *
+ *   前は最初に見つかった 1 本を勝手に選んでいた。
+ *   選ばれた覚えがないものが右に出て、
+ *   直したい関係へ辿り着けなかった。
+ *
+ *   その人が持つ関わりを、全部並べる。
+ *   そこから選んでもらう。
+ *
+ * ★ 相手の名前を大きく出す。
+ *
+ *   探しているのは「誰との関係か」。
+ *   関係の名前より、相手の名前で探す。
+ * ============================================================
+ */
+function FocusRelations({
+    focusId,
+    relations,
+    entryById,
+    onPick,
+}: {
+    focusId: string;
+    relations: ResourceRelation[];
+    entryById: Map<string, ResourceEntry>;
+    onPick: (relationId: string) => void;
+}) {
+    const own = relations.filter(
+        (relation) =>
+            relation.from_entry_id === focusId ||
+            relation.to_entry_id === focusId,
+    );
+
+    const me = entryById.get(focusId);
+
+    if (own.length === 0) {
+        return (
+            <div className="py-8 text-center">
+                <p className="text-xs text-ink">
+                    {me?.name ?? "この項目"}には、まだ関係がありません。
+                </p>
+                <p className="mt-1 text-[11px] text-faint">
+                    上の「関係を追加」から結べます。
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            <p className="text-sm font-medium text-ink">{me?.name ?? ""}</p>
+            <p className="mt-0.5 text-[11px] text-faint">
+                {own.length}件の関わり。直したいものを選んでください。
+            </p>
+
+            <ul className="mt-2 divide-y divide-line">
+                {own.map((relation) => {
+                    const isFrom = relation.from_entry_id === focusId;
+                    const other = entryById.get(
+                        isFrom ? relation.to_entry_id : relation.from_entry_id,
+                    );
+
+                    return (
+                        <li key={relation.id}>
+                            <button
+                                type="button"
+                                onClick={() => onPick(relation.id)}
+                                className="flex w-full items-center gap-2 py-2 text-left hover:bg-forest-tint"
+                            >
+                                {/*
+                                  * 向き。矢印の線のときは、どちら向きかが要る。
+                                  * それ以外は「—」で、向きが無いことを示す。
+                                  */}
+                                <span className="shrink-0 text-[11px] text-faint">
+                                    {relation.line_style === "arrow"
+                                        ? isFrom
+                                            ? "→"
+                                            : "←"
+                                        : "—"}
+                                </span>
+
+                                <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
+                                    {other?.name ?? "?"}
+                                </span>
+
+                                <span className="shrink-0 rounded bg-forest-tint px-2 py-0.5 text-[10.5px] text-forest">
+                                    {relation.label || "（名前なし）"}
+                                </span>
+
+                                {relation.changes.length > 0 && (
+                                    <span className="shrink-0 text-[10px] text-faint">
+                                        変化{relation.changes.length}
+                                    </span>
+                                )}
+                            </button>
+                        </li>
+                    );
+                })}
+            </ul>
         </div>
     );
 }
