@@ -893,7 +893,7 @@ export default function RelationGraph({
               */}
             <div
                 ref={panRef}
-                className="thin-scroll min-h-0 flex-1 overflow-auto"
+                className="thin-scroll flex min-h-0 flex-1 overflow-auto"
             >
             <svg
                 ref={svgRef}
@@ -919,14 +919,21 @@ export default function RelationGraph({
                 /*
                  * ★ 一枚の大きさ。
                  *
-                 *   100% で枠の幅ぴったり。
-                 *   つまみを上げると、そのぶん大きくなり、
-                 *   枠からはみ出したところは送って見る。
+                 *   いちばん小さいときは、枠の中にすっかり収まる。
+                 *   上下にも送りが出ないよう、高さで合わせる。
+                 *
+                 *   幅で合わせると、板が横長なので
+                 *   高さが余り、縦の送りだけが残っていた。
+                 *
+                 * ★ いちばん大きいときは、その 2 倍。
+                 *   前は 2.8 倍で、大きすぎた。
                  */
                 style={{
-                    width: `${100 + sizeValue * 1.8}%`,
+                    height: `${40 + sizeValue * 1.6}%`,
                     aspectRatio: `${ASPECT} / 1`,
-                    height: "auto",
+                    width: "auto",
+                    /* 枠より小さいときは、真ん中に置く */
+                    margin: "auto",
                 }}
                 role="img"
                 aria-label="関係図"
