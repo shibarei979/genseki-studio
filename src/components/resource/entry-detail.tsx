@@ -368,6 +368,47 @@ export default function EntryDetail({
                             />
                         </Card>
 
+                        {/*
+                          * 登場する章。
+                          *
+                          * ★ 関係図を章ごとに見るために使う。
+                          *
+                          *   空なら「全部の章に出る」として扱う。
+                          *   決めていない人の図は、これまでどおり。
+                          *
+                          * ★ 数字だけを受け取る。
+                          *   「1章」「一章」と書く人がいるので、
+                          *   数字だけ拾って、それ以外は捨てる。
+                          */}
+                        <Card title="登場する章">
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                defaultValue={(entry.chapters ?? []).join(", ")}
+                                placeholder="1, 2, 5"
+                                onBlur={(e) => {
+                                    const numbers = Array.from(
+                                        new Set(
+                                            (e.target.value.match(/\d+/g) ?? [])
+                                                .map(Number)
+                                                .filter((n) => n > 0 && n < 1000),
+                                        ),
+                                    ).sort((a, b) => a - b);
+
+                                    onChange({
+                                        chapters: numbers.length > 0 ? numbers : null,
+                                    });
+                                }}
+                                className="w-full rounded-md border border-line px-2.5 py-1.5 text-sm text-ink outline-none focus:border-forest"
+                            />
+
+                            <p className="mt-1.5 text-[11px] leading-relaxed text-faint">
+                                この人が出てくる章を、数字で。カンマで区切ります。
+                                <br />
+                                空のままなら、どの章でも出ます。
+                            </p>
+                        </Card>
+
                         {entry.candidate_source && (
                             <Card title="本文での記述">
                                 {entry.source_ref && (

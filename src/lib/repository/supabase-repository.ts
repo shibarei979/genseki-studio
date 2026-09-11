@@ -1537,6 +1537,8 @@ export const supabaseRepository: Repository = {
         if (patch.is_major !== undefined) next.is_major = patch.is_major;
         /* 列を足したら、ここにも足さないと書けない */
         if (patch.graph_pos !== undefined) next.graph_pos = patch.graph_pos;
+        /* 登場する章。空の配列は「決めていない」として扱う */
+        if (patch.chapters !== undefined) next.chapters = patch.chapters;
         if (patch.image_url !== undefined) next.image_url = patch.image_url;
         if (patch.page_id !== undefined) next.page_id = patch.page_id;
         if (patch.candidate_status !== undefined) {

@@ -237,6 +237,30 @@ export default function RelationGraph({
     const [isFocusMode, setIsFocusMode] = useState(true);
 
     /*
+     * いま見ている章。null は全部の時点。
+     *
+     * ★ 小説の関係は、話が進むと変わる。
+     *
+     *   最初は敵、途中で協力、最後は仲間。
+     *   全部を一枚に重ねると、
+     *   「3章の時点では誰と誰が知り合いだったか」が分からない。
+     *
+     * ★ 登場する章を決めていない人は、どの章でも出る。
+     *   入れた人だけが絞られる。
+     */
+    const [chapter, setChapter] = useState<number | null>(null);
+
+    /*
+     * この作品で使われている章。
+     *
+     * 誰かが入れている章だけを並べる。
+     * 1 から順に全部出すと、使っていない章まで押せてしまう。
+     */
+    const allChapters = Array.from(
+        new Set(entries.flatMap((entry) => entry.chapters ?? [])),
+    ).sort((a, b) => a - b);
+
+    /*
      * 図の大きさ。
      *
      * ★ 枠にぴったり収まる大きさを 50% とする。
@@ -412,6 +436,20 @@ export default function RelationGraph({
      *   置いた場所は表に残したまま。
      * ============================================================
      */
+    /*
+     * その章に出る人か。
+     *
+     * 決めていない（空）人は、どの章でも出る。
+     * 決めていない人まで消すと、
+     * 何も入力していない作品では図が空になる。
+     */
+    function inChapter(node: { chapters?: number[] | null }) {
+        if (chapter === null) return true;
+        const list = node.chapters;
+        if (!list || list.length === 0) return true;
+        return list.includes(chapter);
+    }
+
     const focusId = isFocusMode ? selectedId : null;
 
     /** 選んだ人と、直につながる人 */
@@ -426,19 +464,32 @@ export default function RelationGraph({
         return near;
     })();
 
-    /* 出す人。中心に見るときは、近い人だけ */
+    /* 出す人。章で絞り、中心に見るときは近い人だけ */
+    const inChapterNodes = nodes.filter(inChapter);
     const shownNodes = focusIds
-        ? nodes.filter((node) => focusIds.has(node.id))
-        : nodes;
+        ? inChapterNodes.filter((node) => focusIds.has(node.id))
+        : inChapterNodes;
 
-    /* 出す線。中心に見るときは、その人につながるものだけ */
-    const shownRelations = focusId
-        ? relations.filter(
-              (relation) =>
-                  relation.from_entry_id === focusId ||
-                  relation.to_entry_id === focusId,
-          )
-        : relations;
+    const shownIds = new Set(shownNodes.map((node) => node.id));
+
+    /*
+     * 出す線。
+     *
+     * ★ 両端とも出ている人でなければ、線も出さない。
+     *   片方が消えている線は、どこへも繋がらない。
+     */
+    const shownRelations = relations.filter((relation) => {
+        if (!shownIds.has(relation.from_entry_id)) return false;
+        if (!shownIds.has(relation.to_entry_id)) return false;
+
+        if (focusId) {
+            return (
+                relation.from_entry_id === focusId ||
+                relation.to_entry_id === focusId
+            );
+        }
+        return true;
+    });
 
     const positions = new Map<string, { x: number; y: number }>();
 
@@ -689,6 +740,52 @@ export default function RelationGraph({
 
     const body = (
         <div className="flex h-full flex-col">
+            {/*
+              * 章で絞る。
+              *
+              * ★ 誰かが章を入れているときだけ出す。
+              *
+              *   何も入力していない作品に出しても、
+              *   どれを押しても同じ図になる。
+              *   使えないものは置かない。
+              */}
+            {allChapters.length > 0 && (
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10.5px] text-faint">章で見る</span>
+
+                    <button
+                        type="button"
+                        onClick={() => setChapter(null)}
+                        aria-pressed={chapter === null}
+                        className={[
+                            "rounded-md border px-2.5 py-0.5 text-[11px]",
+                            chapter === null
+                                ? "border-forest bg-forest-tint/60 text-forest"
+                                : "border-line text-muted hover:border-forest-line",
+                        ].join(" ")}
+                    >
+                        全部
+                    </button>
+
+                    {allChapters.map((one) => (
+                        <button
+                            key={one}
+                            type="button"
+                            onClick={() => setChapter(one)}
+                            aria-pressed={chapter === one}
+                            className={[
+                                "rounded-md border px-2.5 py-0.5 text-[11px]",
+                                chapter === one
+                                    ? "border-forest bg-forest-tint/60 text-forest"
+                                    : "border-line text-muted hover:border-forest-line",
+                            ].join(" ")}
+                        >
+                            {one}章
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/*
               * 図の置き場。
               *
@@ -1108,7 +1205,9 @@ export default function RelationGraph({
             </ul>
 
             <p className="mt-3 text-center text-xs text-faint">
-                {focusId
+                {chapter !== null
+                    ? `${chapter}章に出る人だけを出しています。章を決めていない人は、どの章でも出ます。`
+                    : focusId
                     ? "この人と直につながる人だけを出しています。実線は変化を記録した関係です。"
                     : active
                       ? "実線は変化を記録した関係、破線はまだ記録がない関係です。"
