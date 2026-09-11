@@ -55,6 +55,28 @@ const BASE_SIZE = 400;
  *   同じ枠でも大きく描ける。
  */
 const ASPECT = 1.6;
+
+/*
+ * 紙の外側の余白。
+ *
+ * 端に置いた丸と、その下に出る名前が
+ * 切れずに見えるだけの幅を取る。
+ */
+const PAD = 46;
+
+/*
+ * 紐の長さ。丸どうしの離れ具合。
+ *
+ * 板の大きさは、この値で決まる。
+ * 図の外でも使うので、部品の外に置く。
+ */
+const SPREAD = 1.5;
+
+const BOARD_H = Math.round(BASE_SIZE * SPREAD);
+const BOARD_W = Math.round(BOARD_H * ASPECT);
+
+/* 描く範囲の比。余白のぶんを入れて数える */
+const DRAWN_ASPECT = (BOARD_W + PAD * 2) / (BOARD_H + PAD * 2);
 const BASE_RADIUS = 142;
 
 /*
@@ -399,7 +421,8 @@ export default function RelationGraph({
      * 板は横長なので、枠の形によっては
      * 横が先に足りなくなる。両方を見て、小さいほうに合わせる。
      */
-    const fitHeight = box.w && box.h ? Math.min(box.h, box.w / ASPECT) : 0;
+    const fitHeight =
+        box.w && box.h ? Math.min(box.h, box.w / DRAWN_ASPECT) : 0;
 
     /*
      * つまみから、倍率を出す。
@@ -487,7 +510,7 @@ export default function RelationGraph({
      *
      *   離れ具合を変えたいときは「整理する」。
      */
-    const spread = 1.5;
+    const spread = SPREAD;
     /*
      * 板の大きさ。
      *
@@ -759,27 +782,22 @@ export default function RelationGraph({
     /*
      * 板の中に留める。
      *
-     * ★ 丸は、名前のぶんまで見えるように留める。
+     * ★ 壁は作らない。枠の中は、関係図の紙そのもの。
      *
-     *   丸そのものが端に触れても、下に出る名前が切れる。
-     *   名前の高さぶん、内側で止める。
+     *   前は丸を内側で止めていた。
+     *   端に置きたいのに置けず、見えない壁に当たる。
+     *   紙の端まで使えるほうが、並べ方が自由になる。
      *
-     * ★ 中間点は、板の端まで置ける。
+     * ★ 外へは出さない。
      *
-     *   丸と違って、名前も絵も付いていない。
-     *   端まで回せたほうが、線を避けやすい。
-     *
-     *   板の外へは出さない。出すと、
-     *   その線が板の外で描かれて、消えたように見える。
+     *   紙の外に置くと、そこは描かれない。
+     *   丸も線も消えたように見える。
+     *   端で止めるのは、そのためだけ。
      */
-    function clampToBoard(
-        point: { x: number; y: number },
-        kind: "node" | "bend" = "node",
-    ) {
-        const margin = kind === "node" ? NODE_RADIUS + 20 : 2;
+    function clampToBoard(point: { x: number; y: number }) {
         return {
-            x: Math.min(WIDTH - margin, Math.max(margin, point.x)),
-            y: Math.min(HEIGHT - margin, Math.max(margin, point.y)),
+            x: Math.min(WIDTH, Math.max(0, point.x)),
+            y: Math.min(HEIGHT, Math.max(0, point.y)),
         };
     }
 
@@ -803,9 +821,18 @@ export default function RelationGraph({
          *   板の比（ASPECT）を、そのまま器にも掛けてある。
          *   余白が入らないので、枠の幅と高さで割ればよい。
          */
+        /*
+         * ★ 余白のぶんを足して数える。
+         *
+         *   描く範囲は紙より一回り大きい。
+         *   紙の幅だけで割ると、そのぶん掴む位置がずれる。
+         */
+        const wide = WIDTH + PAD * 2;
+        const tall = HEIGHT + PAD * 2;
+
         return {
-            x: ((event.clientX - rect.left) / rect.width) * WIDTH,
-            y: ((event.clientY - rect.top) / rect.height) * HEIGHT,
+            x: ((event.clientX - rect.left) / rect.width) * wide - PAD,
+            y: ((event.clientY - rect.top) / rect.height) * tall - PAD,
         };
     }
 
@@ -985,7 +1012,16 @@ export default function RelationGraph({
             >
             <svg
                 ref={svgRef}
-                viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+                /*
+                 * ★ 紙の外側に、少し余白を持たせる。
+                 *
+                 *   端に置いた丸は、そのままだと半分切れ、
+                 *   下に出る名前も消える。
+                 *
+                 *   描く範囲だけ外へ広げる。
+                 *   置ける場所は紙の中のまま。
+                 */
+                viewBox={`${-PAD} ${-PAD} ${WIDTH + PAD * 2} ${HEIGHT + PAD * 2}`}
                 className={[
                     "mx-auto block",
                     dragging ? "cursor-grabbing" : "",
@@ -1049,7 +1085,7 @@ export default function RelationGraph({
                                       : 1 + ((sizeValue - 50) / 50) * 0.9),
                           )}px`
                         : "100%",
-                    aspectRatio: `${ASPECT} / 1`,
+                    aspectRatio: `${DRAWN_ASPECT} / 1`,
                     width: "auto",
                     /* 枠より小さいときは、真ん中に置く */
                     margin: "auto",
