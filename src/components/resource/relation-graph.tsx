@@ -224,6 +224,19 @@ export default function RelationGraph({
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
     /*
+     * その人を中心に見るか。
+     *
+     * ★ 初めから入れておく。
+     *
+     *   人が増えるほど、全部を一度に見ても読めない。
+     *   誰かを押した時点で、その人の周りだけになるほうが
+     *   知りたいことに近い。
+     *
+     *   全体を見たい人は、押し具で外せる。
+     */
+    const [isFocusMode, setIsFocusMode] = useState(true);
+
+    /*
      * 図の大きさ。
      *
      * ★ 枠にぴったり収まる大きさを 50% とする。
@@ -380,11 +393,77 @@ export default function RelationGraph({
     }
 
     /*
-     * 置いた場所があればそれを使い、無ければ円周に並べる。
-     * 一度動かしたものは覚えておく。
-     * 開き直すたびに並び直ると、作った図が意味を持たない。
+     * ============================================================
+     * その人を中心に見る
+     *
+     * ★ 選んだ人と、直につながる人だけを残す。
+     *
+     *   47 人を薄くして残しても、地は埋まったまま。
+     *   関わりのない人は、出さない。
+     *
+     * ★ 選んだ人を真ん中に置き、まわりに輪で並べる。
+     *
+     *   置いた場所をそのまま使うと、
+     *   選んだ人が端にいたとき、輪が画面の外へ出る。
+     *   中心に据え直せば、何人いても収まる。
+     *
+     * ★ 元の並びは壊さない。
+     *   ここで作るのは、見せ方だけ。
+     *   置いた場所は表に残したまま。
+     * ============================================================
      */
+    const focusId = isFocusMode ? selectedId : null;
+
+    /** 選んだ人と、直につながる人 */
+    const focusIds = (() => {
+        if (!focusId) return null;
+
+        const near = new Set<string>([focusId]);
+        for (const relation of relations) {
+            if (relation.from_entry_id === focusId) near.add(relation.to_entry_id);
+            if (relation.to_entry_id === focusId) near.add(relation.from_entry_id);
+        }
+        return near;
+    })();
+
+    /* 出す人。中心に見るときは、近い人だけ */
+    const shownNodes = focusIds
+        ? nodes.filter((node) => focusIds.has(node.id))
+        : nodes;
+
+    /* 出す線。中心に見るときは、その人につながるものだけ */
+    const shownRelations = focusId
+        ? relations.filter(
+              (relation) =>
+                  relation.from_entry_id === focusId ||
+                  relation.to_entry_id === focusId,
+          )
+        : relations;
+
     const positions = new Map<string, { x: number; y: number }>();
+
+    if (focusId && focusIds) {
+        /* 真ん中に、選んだ人 */
+        positions.set(focusId, { x: CENTER_X, y: CENTER_Y });
+
+        const around = shownNodes.filter((node) => node.id !== focusId);
+
+        /*
+         * まわりの輪。
+         *
+         * 人数が少ないときは小さく、多いときは大きく。
+         * いつも同じ大きさだと、2 人のときに間が空きすぎる。
+         */
+        const tight = Math.min(1, Math.max(0.45, around.length / 10));
+
+        around.forEach((node, index) => {
+            const angle = (Math.PI * 2 * index) / around.length - Math.PI / 2;
+            positions.set(node.id, {
+                x: CENTER_X + Math.cos(angle) * RADIUS_X * tight,
+                y: CENTER_Y + Math.sin(angle) * RADIUS_Y * tight,
+            });
+        });
+    } else {
     nodes.forEach((node, index) => {
         const saved = dragging?.id === node.id ? dragging.position : layout[node.id];
         if (saved) {
@@ -399,6 +478,7 @@ export default function RelationGraph({
             y: CENTER_Y + Math.sin(angle) * RADIUS_Y,
         });
     });
+    }
 
     /*
      * こちらが並べたものだけ、重なりをほどく。
@@ -487,6 +567,13 @@ export default function RelationGraph({
     }
 
     /** 図の中の座標に直す。画面の大きさが変わっても合うように */
+    /*
+     * ★ 中心に見ているときは、掴んで動かさない。
+     *
+     *   並びはこちらで決めているので、動かしても
+     *   全体に戻したときには残らない。
+     *   動くのに残らないのは、いちばん困る。
+     */
     function toGraphPoint(event: { clientX: number; clientY: number }) {
         const svg = svgRef.current;
         if (!svg) return null;
@@ -649,6 +736,7 @@ export default function RelationGraph({
                 role="img"
                 aria-label="関係図"
                 onPointerMove={(event) => {
+                    if (focusId) return;
                     if (!dragging) return;
                     const point = toGraphPoint(event);
                     if (!point) return;
@@ -689,7 +777,7 @@ export default function RelationGraph({
                     </filter>
                 </defs>
 
-                {relations.map((relation) => {
+                {shownRelations.map((relation) => {
                     const from = positions.get(relation.from_entry_id);
                     const to = positions.get(relation.to_entry_id);
                     if (!from || !to) return null;
@@ -767,7 +855,7 @@ export default function RelationGraph({
                     );
                 })}
 
-                {nodes.map((node) => {
+                {shownNodes.map((node) => {
                     const position = positions.get(node.id);
                     if (!position) return null;
                     const isActive = !active || node.id === active;
@@ -779,7 +867,8 @@ export default function RelationGraph({
                             onMouseEnter={() => setHoveredId(node.id)}
                             onMouseLeave={() => setHoveredId(null)}
                             onPointerDown={(event) => {
-                                if (!onMove) {
+                                /* 中心に見ているときは、押して選ぶだけ */
+                                if (focusId || !onMove) {
                                     onSelect(node.id === selectedId ? null : node.id);
                                     return;
                                 }
@@ -911,13 +1000,20 @@ export default function RelationGraph({
                             丸どうしの離れ具合
                         </span>
 
-                        <button
-                            type="button"
-                            onClick={tidy}
-                            className="rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
-                        >
-                            整理する
-                        </button>
+                        {/*
+                          * ★ 中心に見ているときは、出さない。
+                          *   並びはこちらで決めているので、
+                          *   押しても何も起きない。
+                          */}
+                        {!focusId && (
+                            <button
+                                type="button"
+                                onClick={tidy}
+                                className="rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
+                            >
+                                整理する
+                            </button>
+                        )}
                     </div>
 
                     {/*
@@ -1012,9 +1108,11 @@ export default function RelationGraph({
             </ul>
 
             <p className="mt-3 text-center text-xs text-faint">
-                {active
-                    ? "実線は変化を記録した関係、破線はまだ記録がない関係です。"
-                    : "丸に触れると、その人とのつながりだけが残り、関係の名前が出ます。"}
+                {focusId
+                    ? "この人と直につながる人だけを出しています。実線は変化を記録した関係です。"
+                    : active
+                      ? "実線は変化を記録した関係、破線はまだ記録がない関係です。"
+                      : "丸を押すと、その人を中心にした図になります。"}
             </p>
         </div>
     );
