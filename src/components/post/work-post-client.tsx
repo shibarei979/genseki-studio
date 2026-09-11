@@ -15,7 +15,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import EpisodeIllustManager from "@/components/post/episode-illust-manager";
@@ -62,6 +62,25 @@ export default function WorkPostClient({ workId }: { workId: string }) {
     const [bulkDoing, setBulkDoing] = useState(0);
 
     /*
+     * 出せない話。
+     *
+     * ★ 名前の無い話があったら、1 話も出さない。
+     *
+     *   前は窓で「名前の無い話が3話あります」と言うだけだった。
+     *   どれのことか分からず、探しに行くことになる。
+     *
+     *   その話を赤くして、そこまで画面を送る。
+     *   直す場所まで連れていく。
+     */
+    const [blocked, setBlocked] = useState<string[]>([]);
+
+    /* 何が起きたかの知らせ。窓は使わない */
+    const [bulkNote, setBulkNote] = useState("");
+
+    /* 押す前の、最後の確かめ */
+    const [asking, setAsking] = useState<null | { publish: boolean; count: number }>(null);
+
+    /*
      * まとめて消す。
      *
      * 執筆画面と同じ形。投稿の一覧を見ながら
@@ -70,10 +89,61 @@ export default function WorkPostClient({ workId }: { workId: string }) {
     const [isPicking, setIsPicking] = useState(false);
     const [picked, setPicked] = useState<string[]>([]);
 
-    function togglePicked(id: string) {
+    /*
+     * 最後に押した話。
+     *
+     * Shift を押しながら次を押したとき、
+     * ここから先までをまとめて選ぶ。
+     */
+    const lastPickedRef = useRef<string | null>(null);
+
+    /**
+     * 話を選ぶ／外す。
+     *
+     * ★ Shift を押しながらだと、前に押した話からここまで。
+     *
+     *   30 話を選ぶのに 30 回押させない。
+     *   一覧のある画面では、どこでもこの押し方ができる。
+     *   知らない人は、ふつうに一つずつ押せばよい。
+     *
+     * ★ 範囲を選ぶときは、外さずに足すだけ。
+     *   途中に選び済みのものが混ざっていても、
+     *   まとめて外れると驚く。
+     */
+    function togglePicked(id: string, withShift = false) {
+        const all = orderedIds();
+
+        if (withShift && lastPickedRef.current) {
+            const from = all.indexOf(lastPickedRef.current);
+            const to = all.indexOf(id);
+
+            if (from >= 0 && to >= 0) {
+                const [head, tail] = from < to ? [from, to] : [to, from];
+                const span = all.slice(head, tail + 1);
+
+                setPicked((list) => Array.from(new Set([...list, ...span])));
+                lastPickedRef.current = id;
+                return;
+            }
+        }
+
+        lastPickedRef.current = id;
         setPicked((list) =>
             list.includes(id) ? list.filter((at) => at !== id) : [...list, id],
         );
+    }
+
+    /**
+     * 画面に並んでいる順の、話の id。
+     *
+     * ★ ep_number ではなく、見えている順で数える。
+     *   章をまたいで選んだとき、画面で挟まれた話が
+     *   選ばれるほうが、押した人の思ったとおりになる。
+     */
+    function orderedIds() {
+        return [...episodes]
+            .sort((a, b) => a.ep_number - b.ep_number)
+            .map((row) => row.id);
     }
 
     /**
@@ -82,31 +152,67 @@ export default function WorkPostClient({ workId }: { workId: string }) {
      * 投稿するときは名前が要る。
      * 名前の無い話があれば、何もせずに知らせる。
      */
-    async function bulkSet(publish: boolean) {
+    /**
+     * 出せるかどうかを、先に全部調べる。
+     *
+     * ★ 1 話でも出せなければ、1 話も出さない。
+     *
+     *   途中まで出てから止まると、
+     *   出したものを非公開に戻す手間がかかる。
+     *   出す前に分かるものは、出す前に言う。
+     *
+     * ★ 駄目な話を赤くして、そこまで連れていく。
+     *   「3話あります」と言われても、探しに行くのが大変。
+     */
+    function checkBeforePost(): string[] {
+        const targets = episodes.filter((row) => picked.includes(row.id));
+        return targets.filter((row) => !row.title.trim()).map((row) => row.id);
+    }
+
+    /** その話まで画面を送る */
+    function scrollToEpisode(id: string) {
+        window.setTimeout(() => {
+            const el = document.querySelector(`[data-ep-id="${id}"]`);
+            el?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 60);
+    }
+
+    /**
+     * 選んだ話を、まとめて投稿する／非公開にする。
+     *
+     * ★ 確かめの窓は使わない。
+     *   画面から浮いた素っ気ない窓が出ると、
+     *   そこだけ他所の作りに見える。
+     *   投稿は嬉しい瞬間なので、なおさら。
+     */
+    function askBulk(publish: boolean) {
         if (picked.length === 0) return;
 
-        const targets = episodes.filter((row) => picked.includes(row.id));
+        setBulkNote("");
 
         if (publish) {
-            const noTitle = targets.filter((row) => !row.title.trim());
-            if (noTitle.length > 0) {
-                window.alert(
-                    `名前の無い話が${noTitle.length}話あります。\n` +
-                        "先に名前を入れてください。",
+            const bad = checkBeforePost();
+
+            if (bad.length > 0) {
+                setBlocked(bad);
+                setBulkNote(
+                    `名前の無い話が${bad.length}話あります。` +
+                        "赤くしてある話に、名前を入れてください。",
                 );
+                scrollToEpisode(bad[0]);
                 return;
             }
         }
 
-        if (
-            !window.confirm(
-                publish
-                    ? `${targets.length}話を投稿します。読者に公開されます。`
-                    : `${targets.length}話を非公開にします。`,
-            )
-        ) {
-            return;
-        }
+        setBlocked([]);
+        setAsking({ publish, count: picked.length });
+    }
+
+    async function bulkSet(publish: boolean) {
+        setAsking(null);
+
+        const targets = episodes.filter((row) => picked.includes(row.id));
+        if (targets.length === 0) return;
 
         /*
          * ★ 話の順に出す。
@@ -122,11 +228,9 @@ export default function WorkPostClient({ workId }: { workId: string }) {
          *
          *   途中まで出て、残りが出ない。
          *   どこまで出たかも分からない。
-         *   「投稿されない話もある」という声は、これ。
-         *
          *   失敗したものは覚えておいて、残りは続ける。
          */
-        const failed: number[] = [];
+        const failed: string[] = [];
         const repository = getRepository();
 
         setBulkDoing(ordered.length);
@@ -144,7 +248,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                     scheduled_at: null,
                 });
             } catch {
-                failed.push(row.ep_number);
+                failed.push(row.id);
             }
             setBulkDoing((left) => left - 1);
         }
@@ -153,18 +257,30 @@ export default function WorkPostClient({ workId }: { workId: string }) {
         await reload();
 
         if (failed.length > 0) {
-            window.alert(
-                `${ordered.length - failed.length}話を${publish ? "投稿" : "非公開に"}しました。\n\n` +
-                    `${failed.length}話はできませんでした：\n` +
-                    failed.slice(0, 8).map((n) => `${n}話目`).join("・") +
-                    (failed.length > 8 ? " ほか" : "") +
-                    "\n\nもう一度お試しください。",
+            const numbers = ordered
+                .filter((row) => failed.includes(row.id))
+                .map((row) => `${row.ep_number}話目`);
+
+            setBlocked(failed);
+            setPicked(failed);
+            setBulkNote(
+                `${ordered.length - failed.length}話を${publish ? "投稿" : "非公開に"}しました。` +
+                    `${failed.length}話はできませんでした（` +
+                    numbers.slice(0, 5).join("・") +
+                    (numbers.length > 5 ? " ほか" : "") +
+                    "）。赤くしてある話を、もう一度お試しください。",
             );
+            scrollToEpisode(failed[0]);
             return;
         }
 
+        setBlocked([]);
         setPicked([]);
         setIsPicking(false);
+        setBulkNote(
+            `${ordered.length}話を${publish ? "投稿しました" : "非公開にしました"}。`,
+        );
+        window.setTimeout(() => setBulkNote(""), 4000);
     }
 
     async function deletePicked() {
@@ -618,8 +734,75 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                 )}
                                             </div>
 
+                                            {/*
+                                              * ★ 使い方は、その場に書く。
+                                              *
+                                              *   Shift を押しながら、は知っている人しか使わない。
+                                              *   help を探しに行く人はいない。
+                                              *   選んでいる最中の、目の前に置く。
+                                              */}
+                                            <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
+                                                Shift を押しながら押すと、前に押した話からここまでをまとめて選べます。
+                                            </p>
+
+                                            {/*
+                                              * 何が起きたかの知らせ。
+                                              * 窓を出さず、選んでいる場所のすぐ下に置く。
+                                              */}
+                                            {bulkNote && (
+                                                <p
+                                                    className={[
+                                                        "mt-2 rounded border-l-2 px-2.5 py-2 text-[10.5px] leading-relaxed",
+                                                        blocked.length > 0
+                                                            ? "border-[var(--color-danger)] bg-[var(--color-danger-tint,#fdf4f4)] text-[var(--color-danger)]"
+                                                            : "border-forest bg-forest-tint text-forest",
+                                                    ].join(" ")}
+                                                >
+                                                    {bulkNote}
+                                                </p>
+                                            )}
+
+                                            {/*
+                                              * 押す前の、最後の確かめ。
+                                              *
+                                              * ★ 窓を出さない。
+                                              *   画面から浮いた素っ気ない窓が出ると、
+                                              *   そこだけ他所の作りに見える。
+                                              */}
+                                            {asking && (
+                                                <div className="mt-2 rounded border border-forest-line bg-forest-tint px-2.5 py-2">
+                                                    <p className="text-[11px] leading-relaxed text-ink">
+                                                        {asking.count}話を
+                                                        {asking.publish
+                                                            ? "投稿します。読者に公開されます。"
+                                                            : "非公開にします。読者から見えなくなります。"}
+                                                    </p>
+
+                                                    <div className="mt-2 flex gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setAsking(null)}
+                                                            className="rounded border border-line bg-surface px-3 py-1 text-[10.5px] text-muted hover:text-ink"
+                                                        >
+                                                            やめる
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                void bulkSet(asking.publish)
+                                                            }
+                                                            className="flex-1 rounded bg-forest py-1 text-[10.5px] font-medium text-white hover:bg-forest-dark"
+                                                        >
+                                                            {asking.publish
+                                                                ? "投稿する"
+                                                                : "非公開にする"}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* 選んだ話にできること */}
-                                            {picked.length > 0 && (
+                                            {picked.length > 0 && !asking && (
                                                 <div className="mt-2 border-t border-line pt-2">
                                                     <p className="text-[10px] text-faint">
                                                         選んだ{picked.length}話を
@@ -628,7 +811,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                     <div className="mt-1 flex flex-wrap gap-1">
                                                         <button
                                                             type="button"
-                                                            onClick={() => void bulkSet(true)}
+                                                            onClick={() => askBulk(true)}
                                                             disabled={bulkDoing > 0}
                                                             className="rounded-full border border-forest-line px-2.5 py-1 text-[10px] text-forest hover:bg-forest-tint disabled:opacity-40"
                                                         >
@@ -638,7 +821,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            onClick={() => void bulkSet(false)}
+                                                            onClick={() => askBulk(false)}
                                                             className="rounded-full border border-line px-2.5 py-1 text-[10px] text-muted hover:border-forest-line"
                                                         >
                                                             非公開にする
@@ -721,29 +904,93 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                         key={`${group.id ?? "loose"}-${groupAt}`}
                                         className="mb-1"
                                     >
-                                        {group.label && (
-                                            <p className="px-2 py-1.5 text-[11px] font-medium text-ink">
-                                                {group.label}
-                                            </p>
-                                        )}
+                                        {group.label &&
+                                            (isPicking ? (
+                                                /*
+                                                  * ★ 章ごと、まとめて選べるようにする。
+                                                  *
+                                                  *   章で区切って出す人には、これがいちばん早い。
+                                                  *   一つずつ押させない。
+                                                  *
+                                                  * ★ 全部選ばれていたら、外す。
+                                                  *   押し間違えたときに、同じ所を押せば戻せる。
+                                                  */
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const ids = own.map((row) => row.id);
+                                                        const allPicked = ids.every((id) =>
+                                                            picked.includes(id),
+                                                        );
+
+                                                        setPicked((list) =>
+                                                            allPicked
+                                                                ? list.filter(
+                                                                      (id) => !ids.includes(id),
+                                                                  )
+                                                                : Array.from(
+                                                                      new Set([...list, ...ids]),
+                                                                  ),
+                                                        );
+                                                    }}
+                                                    className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-[11px] font-medium text-ink hover:text-forest"
+                                                >
+                                                    <span
+                                                        aria-hidden="true"
+                                                        className="text-[9px] text-forest"
+                                                    >
+                                                        ☑
+                                                    </span>
+                                                    {group.label}
+                                                    <span className="text-[9.5px] font-normal text-faint">
+                                                        まとめて選ぶ
+                                                    </span>
+                                                </button>
+                                            ) : (
+                                                <p className="px-2 py-1.5 text-[11px] font-medium text-ink">
+                                                    {group.label}
+                                                </p>
+                                            ))}
 
                                         <ul className={group.label ? "pl-1" : ""}>
                                             {own.map((episode) => (
                                                 <li
                                                     key={episode.id}
-                                                    className="flex items-center gap-1.5"
+                                                    data-ep-id={episode.id}
+                                                    className={[
+                                                        "flex items-center gap-1.5 rounded",
+                                                        /*
+                                                         * ★ 出せなかった話を、赤くする。
+                                                         *   「3話あります」と言われても探せない。
+                                                         *   その話まで連れていって、色で示す。
+                                                         */
+                                                        blocked.includes(episode.id)
+                                                            ? "bg-[var(--color-danger-tint,#fdf4f4)] ring-1 ring-[var(--color-danger)]"
+                                                            : "",
+                                                    ].join(" ")}
                                                 >
                                                     {/* 選んでいる間だけ四角を出す */}
                                                     {isPicking && (
                                                         <button
                                                             type="button"
-                                                            onClick={() => togglePicked(episode.id)}
+                                                            onClick={(e) =>
+                                                                togglePicked(
+                                                                    episode.id,
+                                                                    e.shiftKey,
+                                                                )
+                                                            }
                                                             aria-pressed={picked.includes(episode.id)}
                                                             className={[
                                                                 "ml-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[9px]",
+                                                                /*
+                                                                 * ★ 選んだ印は緑。
+                                                                 *   もとは「消す」ために作った四角で、
+                                                                 *   赤かった。投稿しようとしている人に
+                                                                 *   赤は怖い。
+                                                                 */
                                                                 picked.includes(episode.id)
-                                                                    ? "border-[var(--color-danger)] bg-[var(--color-danger)] text-white"
-                                                                    : "border-line text-transparent hover:border-[var(--color-danger)]",
+                                                                    ? "border-forest bg-forest text-white"
+                                                                    : "border-line text-transparent hover:border-forest",
                                                             ].join(" ")}
                                                         >
                                                             ✓
@@ -1062,6 +1309,9 @@ function PostForm({
      */
     const [illustUrl] = useState(episode.illust_url ?? "");
     const [illustIsAi] = useState(episode.illust_is_ai ?? false);
+
+    /* 間隔の設定を開いているか。ふだんは畳んでおく */
+    const [isSlotOpen, setIsSlotOpen] = useState(false);
 
     const [at, setAt] = useState(
         toLocalInput(episode.publish_at ?? episode.scheduled_at),
@@ -1794,6 +2044,26 @@ function PostForm({
                                     ）
                                 </button>
 
+                                {/*
+                                  * ★ 間隔の設定は、畳んでおく。
+                                  *
+                                  *   出しっぱなしにしていたので、
+                                  *   「いつも出す時刻」「何日ごと」が
+                                  *   何のためのものか分からなかった。
+                                  *
+                                  *   ふだん要るのは上の一押しだけ。
+                                  *   間隔を変えたい人だけが開く。
+                                  */}
+                                {!isSlotOpen ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsSlotOpen(true)}
+                                        className="mt-1.5 text-[10px] text-faint underline hover:text-muted"
+                                    >
+                                        間隔を変える（いまは{work.default_publish_days ?? 1}日ごと）
+                                    </button>
+                                ) : (
+                                <>
                                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                                     <label className="flex items-center gap-1.5 text-[10px] text-muted">
                                         いつも出す時刻
@@ -1837,9 +2107,19 @@ function PostForm({
                                 </div>
 
                                 <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
-                                    最後に予約した話の何日あとを、次の予定にするかです。
-                                    この作品にだけ効きます。
+                                    上の「次の予定を入れる」で入る時刻を決めます。
+                                    最後に予約した話から数えます。この作品にだけ効きます。
                                 </p>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSlotOpen(false)}
+                                    className="mt-1.5 text-[10px] text-faint underline hover:text-muted"
+                                >
+                                    閉じる
+                                </button>
+                                </>
+                                )}
                             </div>
                         </Field>
 
