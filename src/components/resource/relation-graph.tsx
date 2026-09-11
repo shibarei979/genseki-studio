@@ -278,6 +278,9 @@ export default function RelationGraph({
      *
      * 線を二度押すと出る。もう一度押すと引っ込む。
      */
+    /* 名前で探すときの、打った字 */
+    const [findText, setFindText] = useState("");
+
     const [openBendId, setOpenBendId] = useState<string | null>(null);
 
     const [bending, setBending] = useState<{
@@ -653,14 +656,28 @@ export default function RelationGraph({
     const [dragging, setDragging] = useState<Dragging | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
-    // 関係を持っているものだけを図に出す。
-    // 孤立した点が並ぶと、図から関係が読み取りにくくなる
+    /*
+     * 図に出す人。
+     *
+     * ★ まだ結んでいない人も出す。
+     *
+     *   前は関係を持つ人だけを出していた。
+     *   11 人いるのに 4 人しか出ず、
+     *   「誰をまだ結んでいないか」が分からなかった。
+     *
+     *   全体像を見る場所なので、全員が居るべき。
+     *
+     * ★ ただし薄く、外側に置く。
+     *   結んである人の図を、邪魔しないように。
+     */
     const connectedIds = new Set<string>();
     for (const relation of relations) {
         connectedIds.add(relation.from_entry_id);
         connectedIds.add(relation.to_entry_id);
     }
+
     const nodes = entries.filter((entry) => connectedIds.has(entry.id));
+    const loneNodes = entries.filter((entry) => !connectedIds.has(entry.id));
 
     /*
      * 初めに並ぶ輪の大きさ。
@@ -1191,6 +1208,45 @@ export default function RelationGraph({
 
     const body = (
         <div className="flex h-full flex-col">
+            {/*
+              * いまの姿を、一行で。
+              *
+              * ★ 全体像を確かめる場所なので、
+              *   数がそろっているかを、まず出す。
+              *
+              *   結んだ人・まだの人・関係の本数。
+              *   これだけで「あと誰が残っているか」が分かる。
+              */}
+            {/*
+              * 名前で探す。
+              *
+              * ★ 人が増えると、目で探すのは無理。
+              *   打った字を含む人だけを、はっきり出す。
+              *   ほかは薄くして、場所だけ分かるようにする。
+              *
+              * ★ 人が少ないうちは出さない。
+              *   4 人の図に探す欄があっても、邪魔なだけ。
+              */}
+            {entries.length >= 8 && (
+                <input
+                    type="text"
+                    value={findText}
+                    onChange={(e) => setFindText(e.target.value)}
+                    placeholder="名前で探す"
+                    aria-label="名前で探す"
+                    className="mb-1.5 w-40 rounded-md border border-line bg-surface px-2.5 py-1 text-[12px] outline-none focus:border-forest"
+                />
+            )}
+
+            <p className="mb-1.5 text-[11px] text-muted">
+                {nodes.length}人を{relations.length}本の関係で結んでいます。
+                {loneNodes.length > 0 && (
+                    <span className="text-faint">
+                        　まだ結んでいない人が{loneNodes.length}人います（下に薄く出ています）。
+                    </span>
+                )}
+            </p>
+
             {/*
               * 章で絞る。
               *
@@ -1807,7 +1863,20 @@ export default function RelationGraph({
                     return (
                         <g
                             key={node.id}
-                            opacity={isActive ? 1 : 0.3}
+                            opacity={
+                                /*
+                                 * ★ 名前で探しているときは、そちらを優先する。
+                                 *   合う人だけをはっきり出し、
+                                 *   ほかは薄くして場所だけ残す。
+                                 */
+                                findText.trim()
+                                    ? node.name.includes(findText.trim())
+                                        ? 1
+                                        : 0.12
+                                    : isActive
+                                      ? 1
+                                      : 0.3
+                            }
                             onMouseEnter={() => setHoveredId(node.id)}
                             onMouseLeave={() => setHoveredId(null)}
                             onPointerDown={(event) => {
@@ -1909,6 +1978,70 @@ export default function RelationGraph({
                         </g>
                     );
                 })}
+
+                {/*
+                  * まだ結んでいない人。
+                  *
+                  * ★ 紙の下端に、横一列で並べる。
+                  *
+                  *   輪の中に混ぜると、関係のある図が読めなくなる。
+                  *   端に置いておけば、邪魔にならず、
+                  *   「まだこの人たちが残っている」とだけ伝わる。
+                  *
+                  * ★ 薄くする。結んである人と見分けが付くように。
+                  *
+                  * ★ 押せば、その人が選ばれる。
+                  *   上の「関係を追加」から結べる。
+                  */}
+                {!focusId &&
+                    loneNodes.map((node, index) => {
+                        const perRow = Math.max(
+                            1,
+                            Math.floor((WIDTH - 160) / (NODE_RADIUS * 3.2)),
+                        );
+                        const row = Math.floor(index / perRow);
+                        const col = index % perRow;
+
+                        const x = 80 + col * NODE_RADIUS * 3.2;
+                        const y =
+                            HEIGHT - 70 - row * (NODE_RADIUS * 3.2);
+
+                        return (
+                            <g
+                                key={node.id}
+                                opacity={selectedId === node.id ? 1 : 0.42}
+                                style={{ cursor: "pointer" }}
+                                onPointerDown={(event) => {
+                                    event.stopPropagation();
+                                    onSelect(
+                                        selectedId === node.id ? null : node.id,
+                                    );
+                                }}
+                            >
+                                <circle
+                                    cx={x}
+                                    cy={y}
+                                    r={NODE_RADIUS * 0.62}
+                                    fill="var(--color-canvas)"
+                                    stroke="var(--color-brand-border)"
+                                    strokeWidth="1.5"
+                                    strokeDasharray="4 4"
+                                />
+
+                                <text
+                                    x={x}
+                                    y={y + NODE_RADIUS * 0.62 + 22}
+                                    textAnchor="middle"
+                                    fontSize="19"
+                                    fill="var(--color-text-faint)"
+                                >
+                                    {node.name.length > 6
+                                        ? `${node.name.slice(0, 6)}…`
+                                        : node.name}
+                                </text>
+                            </g>
+                        );
+                    })}
             </svg>
                 </div>
             </div>
