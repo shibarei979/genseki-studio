@@ -209,6 +209,19 @@ export interface ResourceRelation {
      */
     bend?: { x: number; y: number } | null;
     /**
+     * 線の形。
+     *
+     *   dashed  破線
+     *   solid   実線
+     *   arrow   矢印（向きのある関係）
+     *
+     * ★ null なら、変化の記録の有無で決める（これまでどおり）。
+     *
+     * ★ 矢印は「AはBを慕っている」のような、
+     *   片側だけの関係に使う。
+     */
+    line_style?: "dashed" | "solid" | "arrow" | null;
+    /**
      * 話が進むにつれての変化。
      * 関係を 1 つのラベルで固定すると、
      * 初対面から決別までを追えなくなる。

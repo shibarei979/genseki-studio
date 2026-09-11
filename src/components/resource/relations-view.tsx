@@ -498,6 +498,65 @@ export default function RelationsView({
                                             aria-label="関係の名前"
                                             className="mt-1 w-full rounded-md border border-line bg-forest-tint px-2 py-1.5 text-sm text-forest outline-none focus:border-forest"
                                         />
+
+                                        {/*
+                                          * 線の形。
+                                          *
+                                          * ★ 矢印は、片側だけの関係に使う。
+                                          *   「AはBを慕っている」のように、
+                                          *   向きのある間柄を表せる。
+                                          *
+                                          * ★ 決めていなければ、これまでどおり
+                                          *   変化の記録があれば実線、無ければ破線。
+                                          */}
+                                        <div className="mt-2.5">
+                                            <p className="text-xs text-muted">線の形</p>
+
+                                            <div className="mt-1 flex gap-1">
+                                                {(
+                                                    [
+                                                        { key: null, label: "おまかせ" },
+                                                        { key: "dashed", label: "破線" },
+                                                        { key: "solid", label: "実線" },
+                                                        { key: "arrow", label: "矢印" },
+                                                    ] as {
+                                                        key:
+                                                            | "dashed"
+                                                            | "solid"
+                                                            | "arrow"
+                                                            | null;
+                                                        label: string;
+                                                    }[]
+                                                ).map((one) => (
+                                                    <button
+                                                        key={one.label}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onUpdate(selected.id, {
+                                                                line_style: one.key,
+                                                            })
+                                                        }
+                                                        aria-pressed={
+                                                            (selected.line_style ?? null) ===
+                                                            one.key
+                                                        }
+                                                        className={[
+                                                            "flex-1 rounded border px-1.5 py-1 text-[10.5px]",
+                                                            (selected.line_style ?? null) ===
+                                                            one.key
+                                                                ? "border-forest bg-forest-tint text-forest"
+                                                                : "border-line text-muted hover:border-forest-line",
+                                                        ].join(" ")}
+                                                    >
+                                                        {one.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <p className="mt-1 text-[10px] leading-relaxed text-faint">
+                                                矢印は、出発点から到達点への向きで出ます。
+                                            </p>
+                                        </div>
                                     </div>
 
                                     <div className="mt-3">

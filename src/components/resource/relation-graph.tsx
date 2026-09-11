@@ -364,6 +364,30 @@ export default function RelationGraph({
      */
     const panRef = useRef<HTMLDivElement>(null);
 
+    /*
+     * 枠の高さ。図の大きさを、実寸で出すのに使う。
+     *
+     * 割合で指定すると、入れ物の作りによって
+     * 伸びたり伸びなかったりする。
+     */
+    const [boxHeight, setBoxHeight] = useState(0);
+
+    useEffect(() => {
+        const box = panRef.current;
+        if (!box) return;
+
+        const measure = () => setBoxHeight(box.clientHeight);
+        measure();
+
+        const watcher =
+            typeof ResizeObserver !== "undefined"
+                ? new ResizeObserver(measure)
+                : null;
+        watcher?.observe(box);
+
+        return () => watcher?.disconnect();
+    }, []);
+
     useEffect(() => {
         const box = panRef.current;
         if (!box) return;
@@ -928,8 +952,22 @@ export default function RelationGraph({
                  * ★ いちばん大きいときは、その 2 倍。
                  *   前は 2.8 倍で、大きすぎた。
                  */
+                /*
+                 * ★ 実寸で決める。
+                 *
+                 *   割合（%）で指定すると、入れ物の作りによって
+                 *   伸びたり伸びなかったりする。
+                 *   真ん中から先で大きくならなかったのは、これ。
+                 *
+                 *   枠の高さを測って、その何倍かで出す。
+                 *
+                 * ★ 0 で枠の 3 割、100 で 1.2 倍。
+                 *   前はいちばん大きいが 2 倍で、大きすぎた。
+                 */
                 style={{
-                    height: `${40 + sizeValue * 1.6}%`,
+                    height: boxHeight
+                        ? `${Math.round(boxHeight * (0.3 + (sizeValue / 100) * 0.9))}px`
+                        : "100%",
                     aspectRatio: `${ASPECT} / 1`,
                     width: "auto",
                     /* 枠より小さいときは、真ん中に置く */
@@ -940,9 +978,16 @@ export default function RelationGraph({
                 onPointerMove={(event) => {
                     /* 線の中間点をつまんでいるとき */
                     if (bending) {
+                        /*
+                         * ★ 中間点は、板の外へも置ける。
+                         *
+                         *   丸は板の中に留めるが、線の通り道は別。
+                         *   大きく外へ回して、ほかの線を避けたいことがある。
+                         *   閉じ込めると、その回し方ができない。
+                         */
                         const point = toGraphPoint(event);
                         if (!point) return;
-                        setBending({ ...bending, position: clampToBoard(point) });
+                        setBending({ ...bending, position: point });
                         return;
                     }
 
@@ -987,6 +1032,28 @@ export default function RelationGraph({
                  * 板の上に置かれているように見せる。
                  */}
                 <defs>
+                    {/*
+                      * 矢印の先。
+                      *
+                      * ★ 線の色ごとに用意する。
+                      *   SVG の矢印は、線の色を引き継がない。
+                      *   家族の線に敵対の色の矢印が付くと、読み違える。
+                      */}
+                    {RELATION_GROUPS.map((group) => (
+                        <marker
+                            key={group.key}
+                            id={`arrow-${group.key}`}
+                            viewBox="0 0 10 10"
+                            refX="9"
+                            refY="5"
+                            markerWidth="6"
+                            markerHeight="6"
+                            orient="auto-start-reverse"
+                        >
+                            <path d="M0 0 L10 5 L0 10 z" fill={group.color} />
+                        </marker>
+                    ))}
+
                     <filter id="node-shadow" x="-40%" y="-40%" width="180%" height="180%">
                         <feDropShadow
                             dx="0"
@@ -1037,6 +1104,16 @@ export default function RelationGraph({
                     const controlX = bent ? bent.x : defaultControl.x;
                     const controlY = bent ? bent.y : defaultControl.y;
 
+                    /*
+                     * 線の形。
+                     *
+                     * 決めていなければ、これまでどおり
+                     * 変化の記録があれば実線、無ければ破線。
+                     */
+                    const lineStyle =
+                        relation.line_style ??
+                        (relation.changes.length > 0 ? "solid" : "dashed");
+
                     return (
                         /*
                           * ★ 選んでいる人から遠い線は、ほとんど消す。
@@ -1051,7 +1128,21 @@ export default function RelationGraph({
                                 fill="none"
                                 stroke={colorOf(relation.label)}
                                 strokeWidth={relation.changes.length > 0 ? 2.4 : 1.6}
-                                strokeDasharray={relation.changes.length > 0 ? "0" : "7 6"}
+                                /*
+                                 * 線の形。
+                                 *
+                                 * ★ 決めてあれば、それを使う。
+                                 * ★ 決めていなければ、これまでどおり
+                                 *   変化の記録があれば実線、無ければ破線。
+                                 */
+                                strokeDasharray={
+                                    lineStyle === "dashed" ? "7 6" : "0"
+                                }
+                                markerEnd={
+                                    lineStyle === "arrow"
+                                        ? `url(#arrow-${groupOf(relation.label).key})`
+                                        : undefined
+                                }
                             />
                             {/*
                               * 中間点。つまんで、線の通り道を決める。
@@ -1064,14 +1155,28 @@ export default function RelationGraph({
                               * ★ 二度押しで、元の曲げ方に戻す。
                               *   動かしすぎたときに、戻す道が要る。
                               */}
-                            {onBend && touchesActive && (
+                            {/*
+                              * ★ 選んでいなくても掴める。
+                              *
+                              *   前は選んだ線にだけ点を出していた。
+                              *   1 本直すのに、選んでから掴む二手が要る。
+                              *
+                              *   ふだんは薄く、触れると濃くする。
+                              *   出てはいるが、邪魔にはならない。
+                              */}
+                            {onBend && (
                                 <circle
                                     cx={controlX}
                                     cy={controlY}
-                                    r={bending?.id === relation.id ? 7 : 5}
+                                    r={bending?.id === relation.id ? 7 : 4.5}
                                     fill="var(--color-canvas)"
                                     stroke={colorOf(relation.label)}
                                     strokeWidth="2"
+                                    opacity={
+                                        bending?.id === relation.id || touchesActive
+                                            ? 1
+                                            : 0.35
+                                    }
                                     style={{ cursor: "grab" }}
                                     onPointerDown={(event) => {
                                         event.stopPropagation();
