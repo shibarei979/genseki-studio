@@ -464,8 +464,21 @@ export default function RelationGraph({
         const el = panRef.current;
         if (!el) return;
 
+        /*
+         * ★ 少しだけ小さく測る。
+         *
+         *   ぴったりに合わせると、端数の丸めで
+         *   1 ピクセルはみ出すことがある。
+         *   はみ出すと送りが出て、そのぶん幅が減り、
+         *   またはみ出す——という堂々巡りになる。
+         *
+         *   2 ピクセル譲っておけば、そうならない。
+         */
         const measure = () =>
-            setBox({ w: el.clientWidth, h: el.clientHeight });
+            setBox({
+                w: Math.max(0, el.clientWidth - 2),
+                h: Math.max(0, el.clientHeight - 2),
+            });
         measure();
 
         const watcher =
@@ -1135,11 +1148,20 @@ export default function RelationGraph({
                  *   つまみを動かしても大きくならなかったのは、これ。
                  */
                 style={{
+                    /*
+                     * ★ 文字と同じ並び方をやめる。
+                     *
+                     *   そのままだと、絵が文字の足元の線に乗り、
+                     *   下に数ピクセルの隙間ができる。
+                     *   そのぶんはみ出して送りが出て、
+                     *   幅が減って、さらにはみ出す。
+                     */
+                    display: "block",
                     width: fitHeight
-                        ? `${Math.round(fitHeight * scale * DRAWN_ASPECT)}px`
+                        ? `${Math.floor(fitHeight * scale * DRAWN_ASPECT)}px`
                         : "100%",
                     height: fitHeight
-                        ? `${Math.round(fitHeight * scale)}px`
+                        ? `${Math.floor(fitHeight * scale)}px`
                         : "100%",
                     flexShrink: 0,
                     flexGrow: 0,
