@@ -340,7 +340,13 @@ export default function RelationGraph({
      *   紐が短いほど図が詰まり、枠に収めたときに丸が大きくなる。
      *   つまり、つまみと紐の長さは逆向き。
      */
-    const [sizeValue, setSizeValue] = useState(45);
+    /*
+     * ★ 初めの値は、真ん中より少し右。
+     *
+     *   左端から始めると、丸が小さすぎて
+     *   「壊れているのか」と思われる。
+     */
+    const [sizeValue, setSizeValue] = useState(55);
 
     /*
      * 画面いっぱいに広げるか。
@@ -1188,6 +1194,9 @@ export default function RelationGraph({
                         <label className="flex items-center gap-2">
                             <span className="text-[11px] text-faint">大きさ</span>
 
+                            {/* 小さいほう・大きいほうが、目で分かるように */}
+                            <span className="text-[9px] text-faint">小</span>
+
                             <input
                                 type="range"
                                 min={0}
@@ -1198,6 +1207,8 @@ export default function RelationGraph({
                                 aria-label="図の大きさ"
                                 className="w-36 accent-[var(--color-forest)]"
                             />
+
+                            <span className="text-[12px] text-faint">大</span>
                         </label>
 
                         <button

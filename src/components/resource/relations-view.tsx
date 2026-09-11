@@ -299,11 +299,17 @@ export default function RelationsView({
                                            *   画面をはみ出す。
                                            *
                                            *   画面の高さから、上に積まれるものを
-                                           *   引いた値にする。狭い画面でも
-                                           *   最低 300px は残す。
+                                           *   引いた値にする。
+                                           *
+                                           *   引く量は 150px。
+                                           *   頁の見出しと、この頁の見出しぶん。
+                                           *   前は 230px 引いていて、
+                                           *   下に 3 割ほど余っていた。
+                                           *
+                                           *   狭い画面でも最低 320px は残す。
                                            */
                                           height:
-                                              "clamp(300px, calc(100vh - 230px), 640px)",
+                                              "clamp(320px, calc(100vh - 150px), 900px)",
                                       }
                                     : undefined
                             }
@@ -452,7 +458,7 @@ export default function RelationsView({
                                 mode === "graph"
                                     ? {
                                           height:
-                                              "clamp(300px, calc(100vh - 230px), 640px)",
+                                              "clamp(320px, calc(100vh - 150px), 900px)",
                                       }
                                     : undefined
                             }
