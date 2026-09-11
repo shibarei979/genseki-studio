@@ -588,7 +588,8 @@ export default function RelationGraph({
      *
      *   丸と名前が切れない幅だけ残して、あとは使う。
      */
-    const EDGE = NODE_RADIUS + 38;
+    /* 初めに並ぶ輪。紙の端から、丸の縁ぶんだけ内側 */
+    const EDGE = NODE_RADIUS + 34;
     const RADIUS_X = WIDTH / 2 - EDGE;
     const RADIUS_Y = HEIGHT / 2 - EDGE;
     const [dragging, setDragging] = useState<Dragging | null>(null);
@@ -862,15 +863,24 @@ export default function RelationGraph({
      */
     function clampToBoard(point: { x: number; y: number }) {
         /*
-         * ★ 丸と名前が切れないぶんだけ、内側で止める。
+         * 紙の中に留める。
          *
-         *   紙の外は描かれない。端ちょうどに置くと、
-         *   丸が半分切れ、下の名前が消える。
+         * ★ 止めるのは、紙の外は描かれないから。それだけ。
+         *
+         * ★ 向きによって、要る余裕が違う。
+         *
+         *   左・右・上  丸の縁まで。名前はここに出ない。
+         *   下          名前の高さぶん。丸の下に出るので。
+         *
+         *   前は四方すべてに名前ぶんの余裕を取っていた。
+         *   上と左右には要らないので、そのぶん端まで行けない。
          */
-        const edge = NODE_RADIUS + 38;
+        const side = NODE_RADIUS;
+        const bottom = NODE_RADIUS + 34;
+
         return {
-            x: Math.min(WIDTH - edge, Math.max(edge, point.x)),
-            y: Math.min(HEIGHT - edge, Math.max(edge, point.y)),
+            x: Math.min(WIDTH - side, Math.max(side, point.x)),
+            y: Math.min(HEIGHT - bottom, Math.max(side, point.y)),
         };
     }
 
