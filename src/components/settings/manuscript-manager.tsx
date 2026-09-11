@@ -33,6 +33,7 @@ import {
     SPLIT_MARK,
     splitManuscript,
     suggestSplitPoints,
+    type SplitMode,
 } from "@/lib/utils/manuscript";
 import { openPrintView } from "@/lib/utils/pdf-export";
 import { formatNumber } from "@/lib/utils/text";
@@ -51,7 +52,16 @@ interface Props {
 
 export default function ManuscriptManager({ work, episodes, settings, onImport }: Props) {
     const [raw, setRaw] = useState("");
-    const [detectHeadings, setDetectHeadings] = useState(true);
+    /*
+     * 原稿をどう分けるか。
+     *
+     * ★ 選べるようにした。
+     *
+     *   勝手に切られて困る人と、
+     *   決まりが分かっていれば自分で形を整えたい人がいる。
+     *   どちらも正しいので、こちらで決めずに選んでもらう。
+     */
+    const [splitMode, setSplitMode] = useState<SplitMode>("heading");
     /*
      * 「第◯章」の扱い。
      * 1 話ぶんとして書く人と、話をまとめる見出しとして
@@ -76,8 +86,8 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
     );
 
     const auto = useMemo(
-        () => splitManuscript(raw, { detectHeadings, chapterAs }),
-        [raw, detectHeadings, chapterAs],
+        () => splitManuscript(raw, { mode: splitMode, chapterAs }),
+        [raw, splitMode, chapterAs],
     );
 
     const chunks = edited ?? auto;
@@ -103,7 +113,7 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
      */
     useEffect(() => {
         setConfirmed([]);
-    }, [detectHeadings, chapterAs]);
+    }, [splitMode, chapterAs]);
 
     const confirmedChunks = confirmed
         .map((index) => chunks[index])
@@ -746,29 +756,80 @@ export default function ManuscriptManager({ work, episodes, settings, onImport }
                             className="thin-scroll w-full resize-y rounded-md border border-line px-3 py-3 text-sm leading-relaxed outline-none focus:border-forest"
                         />
 
-                        <label className="mt-3 flex items-center gap-2 text-sm text-ink">
-                            <input
-                                type="checkbox"
-                                checked={detectHeadings}
-                                onChange={(e) => setDetectHeadings(e.target.checked)}
-                                className="accent-[var(--color-forest)]"
-                            />
-                            章見出し・シーン区切りを検出する（推奨）
-                        </label>
-                        <p className="mt-1 text-xs text-faint">
-                            「第1話」「◆」「###」などの行を区切りとして扱います。
-                            見つからないときは、3行以上の空行で分けます。
-                            切りたい場所が違うときは、下の「ここで切る」で指せます。
-                        </p>
-
                         {/*
-                         * 「第◯章」の扱い。
-                         *
-                         * 1 話ぶんのつもりで書く人と、
-                         * 話をまとめる見出しのつもりで書く人がいる。
-                         * どちらかで結果がまるで変わるので、選んでもらう。
-                         */}
-                        {detectHeadings && (
+                          * ★ 分け方を選んでもらう。
+                          *
+                          *   前は「検出する」の入り切りだけだった。
+                          *   何がどう切られるのかが分からず、
+                          *   思ったところで切れないという声が続いた。
+                          *
+                          *   4 つから選び、切れた数をその場で見せる。
+                          */}
+                        <div className="mt-3 rounded-md border border-line px-3.5 py-3">
+                            <p className="text-[11px] font-medium text-ink">
+                                原稿を、どこで話に分けますか
+                            </p>
+
+                            <div className="mt-2 grid gap-1.5">
+                                {(
+                                    [
+                                        {
+                                            key: "heading",
+                                            label: "見出しの行で分ける",
+                                            note: "「第1話」「幕間」「# 見出し」などの行",
+                                        },
+                                        {
+                                            key: "bracket",
+                                            label: "【　】の行で分ける",
+                                            note: "その行を、そのまま話の題名にします",
+                                        },
+                                        {
+                                            key: "blank",
+                                            label: "空行を3つ以上あけた所で分ける",
+                                            note: "自分で入れた人向け",
+                                        },
+                                        {
+                                            key: "none",
+                                            label: "分けない",
+                                            note: "全部まとめて1話にします",
+                                        },
+                                    ] as { key: SplitMode; label: string; note: string }[]
+                                ).map((one) => (
+                                    <button
+                                        key={one.key}
+                                        type="button"
+                                        onClick={() => setSplitMode(one.key)}
+                                        className={[
+                                            "rounded border px-3 py-2 text-left",
+                                            splitMode === one.key
+                                                ? "border-forest bg-forest-tint"
+                                                : "border-line hover:border-forest-line",
+                                        ].join(" ")}
+                                    >
+                                        <span
+                                            className={[
+                                                "block text-[12px]",
+                                                splitMode === one.key
+                                                    ? "font-medium text-forest"
+                                                    : "text-ink",
+                                            ].join(" ")}
+                                        >
+                                            {one.label}
+                                        </span>
+                                        <span className="mt-0.5 block text-[10.5px] text-faint">
+                                            {one.note}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <p className="mt-2 text-[10.5px] leading-relaxed text-faint">
+                                切りたい場所が違うときは、本文に「ここで切る」を置いて指せます。
+                            </p>
+                        </div>
+
+                        {splitMode === "heading" && (
+
                             <div className="mt-3 rounded-md border border-line px-3.5 py-3">
                                 <p className="text-[11px] text-ink">
                                     原稿の中の「第◯章」は

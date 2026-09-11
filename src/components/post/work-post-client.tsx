@@ -1310,8 +1310,8 @@ function PostForm({
     const [illustUrl] = useState(episode.illust_url ?? "");
     const [illustIsAi] = useState(episode.illust_is_ai ?? false);
 
-    /* 間隔の設定を開いているか。ふだんは畳んでおく */
-    const [isSlotOpen, setIsSlotOpen] = useState(false);
+    /* 予約を取り消すか、確かめている最中か */
+    const [isCancelling, setIsCancelling] = useState(false);
 
     const [at, setAt] = useState(
         toLocalInput(episode.publish_at ?? episode.scheduled_at),
@@ -2002,9 +2002,32 @@ function PostForm({
                                 onChange={(e) => setAt(e.target.value)}
                                 className={inputClass}
                             />
-                            <p className="mt-1 text-[10px] text-faint">
-                                空のままなら、押した時点で投稿します。
-                            </p>
+
+                            <div className="mt-1 flex items-baseline justify-between gap-2">
+                                <p className="text-[10px] text-faint">
+                                    空のままなら、押した時点で投稿します。
+                                </p>
+
+                                {/*
+                                  * ★ 入れた時刻を消す道を置く。
+                                  *
+                                  *   入れてから「やっぱり今すぐ出す」と
+                                  *   思い直したとき、消す手が無かった。
+                                  *   欄を空にする押し方は端末によって違い、
+                                  *   携帯では消せないことがある。
+                                  *
+                                  *   入っているときだけ出す。
+                                  */}
+                                {at && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setAt("")}
+                                        className="shrink-0 text-[10px] text-muted underline hover:text-ink"
+                                    >
+                                        時刻を消す
+                                    </button>
+                                )}
+                            </div>
 
                             {/*
                               * 次の予定を一押しで入れる。
@@ -2044,82 +2067,6 @@ function PostForm({
                                     ）
                                 </button>
 
-                                {/*
-                                  * ★ 間隔の設定は、畳んでおく。
-                                  *
-                                  *   出しっぱなしにしていたので、
-                                  *   「いつも出す時刻」「何日ごと」が
-                                  *   何のためのものか分からなかった。
-                                  *
-                                  *   ふだん要るのは上の一押しだけ。
-                                  *   間隔を変えたい人だけが開く。
-                                  */}
-                                {!isSlotOpen ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsSlotOpen(true)}
-                                        className="mt-1.5 text-[10px] text-faint underline hover:text-muted"
-                                    >
-                                        間隔を変える（いまは{work.default_publish_days ?? 1}日ごと）
-                                    </button>
-                                ) : (
-                                <>
-                                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-[10px] text-muted">
-                                        いつも出す時刻
-                                        <input
-                                            type="time"
-                                            step={300}
-                                            value={work.default_publish_time ?? ""}
-                                            onChange={(e) =>
-                                                onChangeWorkInfo?.({
-                                                    default_publish_time:
-                                                        e.target.value || null,
-                                                })
-                                            }
-                                            className="rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink"
-                                        />
-                                    </label>
-
-                                    <label className="flex items-center gap-1.5 text-[10px] text-muted">
-                                        何日ごと
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            max={60}
-                                            value={work.default_publish_days ?? 1}
-                                            onChange={(e) =>
-                                                onChangeWorkInfo?.({
-                                                    default_publish_days:
-                                                        Math.min(
-                                                            60,
-                                                            Math.max(
-                                                                1,
-                                                                Number(e.target.value) || 1,
-                                                            ),
-                                                        ),
-                                                })
-                                            }
-                                            className="w-14 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink"
-                                        />
-                                        日
-                                    </label>
-                                </div>
-
-                                <p className="mt-1.5 text-[10px] leading-relaxed text-faint">
-                                    上の「次の予定を入れる」で入る時刻を決めます。
-                                    最後に予約した話から数えます。この作品にだけ効きます。
-                                </p>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setIsSlotOpen(false)}
-                                    className="mt-1.5 text-[10px] text-faint underline hover:text-muted"
-                                >
-                                    閉じる
-                                </button>
-                                </>
-                                )}
                             </div>
                         </Field>
 
@@ -2135,28 +2082,51 @@ function PostForm({
                                  * 日時を消して押し直す道もあるが、
                                  * 分かりにくい。ここに 1 つ置く。
                                  */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (
-                                            !window.confirm(
-                                                "予約を取り消します。この話は下書きに戻ります。",
-                                            )
-                                        ) {
-                                            return;
-                                        }
-                                        setAt("");
-                                        onChange({
-                                            is_published: false,
-                                            /* 取り消しも、両方とも消す */
-                                            publish_at: null,
-                                            scheduled_at: null,
-                                        });
-                                    }}
-                                    className="mt-2 text-[11px] text-[var(--color-danger)] hover:underline"
-                                >
-                                    予約を取り消す
-                                </button>
+                                {/*
+                                  * ★ 窓を出さない。
+                                  *   押したら、その場で確かめを出す。
+                                  */}
+                                {!isCancelling ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCancelling(true)}
+                                        className="mt-2 text-[11px] text-[var(--color-danger)] hover:underline"
+                                    >
+                                        予約を取り消す
+                                    </button>
+                                ) : (
+                                    <div className="mt-2 rounded border border-line bg-surface px-2.5 py-2">
+                                        <p className="text-[11px] leading-relaxed text-ink">
+                                            予約を取り消します。この話は下書きに戻ります。
+                                        </p>
+
+                                        <div className="mt-2 flex gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsCancelling(false)}
+                                                className="rounded border border-line px-3 py-1 text-[10.5px] text-muted hover:text-ink"
+                                            >
+                                                やめる
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsCancelling(false);
+                                                    setAt("");
+                                                    onChange({
+                                                        is_published: false,
+                                                        /* 取り消しも、両方とも消す */
+                                                        publish_at: null,
+                                                        scheduled_at: null,
+                                                    });
+                                                }}
+                                                className="flex-1 rounded bg-[var(--color-danger)] py-1 text-[10.5px] font-medium text-white hover:opacity-90"
+                                            >
+                                                取り消す
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

@@ -432,9 +432,34 @@ function Gem({
 
     const top = Math.max(...AXIS_ORDER.map((axis) => score[axis]), 1)
 
-    /* まだ何も答えていないときも、形が見えるように下駄をはかせる */
     const grown = AXIS_ORDER.reduce((sum, axis) => sum + score[axis], 0)
-    const base = grown === 0 ? 0.3 : 0.16
+
+    /*
+     * 形の尖り方。
+     *
+     * ★ 低い角も、ある程度は残す。
+     *
+     *   前は 0.16 まで落としていたので、
+     *   選ばなかった角がほとんど中心まで潰れ、
+     *   1 本だけ突き出た形になっていた。
+     *
+     *   10 のうち 2 くらいは残す。
+     *   どの角も持ってはいる、という形にする。
+     *
+     * ★ 伸び方も、なだらかにする。
+     *
+     *   そのままの割合で伸ばすと、差がそのまま出て尖る。
+     *   0.7 乗にすると、低いほうが少し持ち上がり、
+     *   高いほうとの差が縮まる。
+     *   順位は変わらない。形の角が取れるだけ。
+     */
+    const FLOOR = 0.22
+    const CURVE = 0.75
+
+    function reach(value: number) {
+        if (grown === 0) return 0.3
+        return FLOOR + Math.pow(value / top, CURVE) * (1 - FLOOR)
+    }
 
     function point(index: number, ratio: number) {
         const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2
@@ -452,7 +477,7 @@ function Gem({
     }
 
     const shape = AXIS_ORDER.map((axis, index) => {
-        const p = point(index, base + (score[axis] / top) * (1 - base))
+        const p = point(index, reach(score[axis]))
         return `${p.x.toFixed(1)},${p.y.toFixed(1)}`
     }).join(' ')
 
@@ -503,10 +528,7 @@ function Gem({
             {showNames && grown > 0 && (
                 <>
                     {(() => {
-                        const p = point(
-                            bestAt,
-                            base + (score[AXIS_ORDER[bestAt]] / top) * (1 - base),
-                        )
+                        const p = point(bestAt, reach(score[AXIS_ORDER[bestAt]]))
                         return <circle cx={p.x} cy={p.y} r="3.6" fill="#c8944a" />
                     })()}
 

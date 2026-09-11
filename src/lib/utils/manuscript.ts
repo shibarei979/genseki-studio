@@ -10,9 +10,32 @@
  * ============================================================
  */
 
+/**
+ * 原稿をどう分けるか。
+ *
+ *   heading  見出しの行で分ける（既定）
+ *   bracket  【　】だけの行で分け、その中を題名にする
+ *   blank    空行 3 つ以上で分ける
+ *   none     分けない。全部で 1 話
+ *
+ * ★ 選べるようにした理由。
+ *
+ *   勝手に切られて困る人と、
+ *   決まりが分かっていれば自分で形を整えたい人がいる。
+ *
+ *   よそのサイトから落とした原稿を、
+ *   題名を【　】で囲み、話の間に空行を 3 つ入れて
+ *   一気に上げたい、という声が届いた。
+ *
+ *   どちらも正しい。こちらで決めずに、選んでもらう。
+ */
+export type SplitMode = "heading" | "bracket" | "blank" | "none";
+
 export interface SplitOptions {
-    /** 章見出し・シーン区切りを検出する */
-    detectHeadings: boolean;
+    /** どう分けるか */
+    mode?: SplitMode;
+    /** 章見出し・シーン区切りを検出する（古い呼び方。mode に寄せる） */
+    detectHeadings?: boolean;
     /**
      * 「第◯章」をどう扱うか。
      *
@@ -58,18 +81,23 @@ const HEADING_PATTERNS: RegExp[] = [
     /*
      * 記号の区切り。
      *
-     * 「・彼は言った」「※注意」まで見出しとして切っていた。
-     * 小説では、記号で始まる行はいくらでもある。
-     * 場面ごとに切られて、2,300 行の原稿が
-     * 4,200 話になるという報告があった。
+     * ★ 記号だけの行は、もう見出しにしない。
      *
-     * 記号だけの行に限る。あとに文が続くものは本文とみなす。
-     * 「#」で始まる書き方だけは、見出しの印として広く使われて
-     * いるので、そのまま残す。
+     *   小説で「＊」や「◆」だけの行は、場面の切り替え。
+     *   話の区切りではない。
+     *
+     *   一つの話の中に何度も出てくるので、
+     *   場面ごとに別の話にされてしまう。
+     *   「1000 ファイル以上あるので書き方は変えられない」
+     *   という声が届いた。変えるべきはこちら。
+     *
+     *   横線だけの行も同じ。区切り線として使われる。
+     *
+     * ★ 「#」で始まる書き方だけ残す。
+     *   これは文章の書き方として、見出しの印と決まっている。
+     *   本文の中に紛れ込むことは、まずない。
      */
     /^\s*[#＃]{1,3}\s+.+$/,
-    /^\s*[◆◇■□●○※＊*☆★]{1,5}\s*$/,
-    /^\s*[-–—―ー=＝~〜_＿]{3,}\s*$/,
 ];
 
 function isHeading(line: string): boolean {
@@ -97,7 +125,17 @@ function countChars(text: string): number {
  * 原稿を話に分ける。
  *
  * detectHeadings が false のとき、または見出しが 1 つも見つからないときは
- * 3 行以上の空行を区切りとして扱う。それも無ければ全体を 1 話にする。
+ * 全体を 1 話にする。
+ *
+ * ★ 空行では切らない。
+ *
+ *   3 行以上の空行を区切りにしていた。
+ *   小説では、場面の切り替えに空行を重ねる書き方が多い。
+ *   一つの話が、場面の数だけ切られていた。
+ *
+ *   切りたい人は、本文に切り印を置くか、
+ *   取り込むときに「見出しで分ける」を選ぶ。
+ *   何も言われていないのに切らない。
  */
 /**
  * 手で入れた切り印。
@@ -217,21 +255,116 @@ export function splitManuscript(raw: string, options: SplitOptions): SplitResult
         }
     }
 
-    if (options.detectHeadings) {
-        /* 章を見出しとして扱うときは、そちらで切る */
-        if (options.chapterAs === "chapter") {
-            const withChapters = splitWithChapters(text);
-            if (withChapters.length > 0) return withChapters;
-        }
+    /* 古い呼び方を、新しい言い方に寄せる */
+    const mode: SplitMode =
+        options.mode ?? (options.detectHeadings === false ? "none" : "heading");
 
-        const byHeading = splitByHeading(text);
-        if (byHeading.length > 0) return byHeading;
+    if (mode === "none") {
+        return [{ title: "", body: text, charCount: countChars(text) }];
     }
 
-    const byBlank = splitByBlankLines(text);
-    if (byBlank.length > 1) return byBlank;
+    if (mode === "bracket") {
+        const byBracket = splitByBracket(text);
+        if (byBracket.length > 0) return byBracket;
+        return [{ title: "", body: text, charCount: countChars(text) }];
+    }
+
+    if (mode === "blank") {
+        const byBlank = splitByBlankLines(text);
+        if (byBlank.length > 0) return byBlank;
+        return [{ title: "", body: text, charCount: countChars(text) }];
+    }
+
+    /* 章を見出しとして扱うときは、そちらで切る */
+    if (options.chapterAs === "chapter") {
+        const withChapters = splitWithChapters(text);
+        if (withChapters.length > 0) return withChapters;
+    }
+
+    const byHeading = splitByHeading(text);
+    if (byHeading.length > 0) return byHeading;
 
     return [{ title: "", body: text, charCount: countChars(text) }];
+}
+
+/**
+ * 【　】だけの行で分ける。
+ *
+ * ★ その行を、そのまま題名にする。
+ *
+ *   よそのサイトから落とした原稿に、
+ *   自分で題名を付けて一気に上げたい人向け。
+ *
+ *   本文の中の【　】では切らない。
+ *   行が【で始まり】で終わっているものだけを見る。
+ */
+function splitByBracket(text: string): SplitResult[] {
+    const lines = text.split("\n");
+    const out: SplitResult[] = [];
+
+    let title = "";
+    let buffer: string[] = [];
+
+    function flush() {
+        const body = buffer.join("\n").trim();
+        if (!title && body.length === 0) return;
+        out.push({ title, body, charCount: countChars(body) });
+    }
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        const hit = /^【\s*(.+?)\s*】$/.exec(trimmed);
+
+        if (hit) {
+            flush();
+            title = hit[1].trim();
+            buffer = [];
+            continue;
+        }
+
+        buffer.push(line);
+    }
+
+    flush();
+    return out.filter((one) => one.title || one.body.length > 0);
+}
+
+/**
+ * 空行 3 つ以上で分ける。
+ *
+ * ★ 自分で入れた人向け。既定では使わない。
+ *
+ *   場面の変わり目に空行を重ねる書き方があるので、
+ *   何も言われずに切ると、話が場面の数だけ刻まれる。
+ *   選んだ人にだけ効かせる。
+ *
+ * ★ かたまりの頭が短い行なら、題名として拾う。
+ */
+function splitByBlankLines(text: string): SplitResult[] {
+    const pieces = text
+        .split(/\n{4,}/)
+        .map((block) => block.trim())
+        .filter((block) => block.length > 0);
+
+    if (pieces.length <= 1) return [];
+
+    return pieces.map((piece) => {
+        const lines = piece.split("\n");
+        const first = (lines[0] ?? "").trim();
+
+        const looksLikeTitle =
+            first.length > 0 &&
+            first.length <= 30 &&
+            lines.length > 1 &&
+            lines.slice(1).join("").trim().length > 0;
+
+        if (looksLikeTitle) {
+            const body = lines.slice(1).join("\n").trim();
+            return { title: toTitle(first), body, charCount: countChars(body) };
+        }
+
+        return { title: "", body: piece, charCount: countChars(piece) };
+    });
 }
 
 /** 「第◯章」の行か */
@@ -333,42 +466,6 @@ const TOO_MANY_PIECES = 200;
  * 超えるぶんは切り捨てず、画面で知らせて分けてもらう。
  */
 export const MAX_IMPORT_EPISODES = 5000;
-
-function splitByBlankLines(text: string): SplitResult[] {
-    /*
-     * 空行で切る。
-     *
-     * 以前は空行 2 つで切っていた。
-     * だが小説では場面の変わり目に空行を 2 つ空けるのが普通で、
-     * 場面ごとに全部切られてしまう。
-     * 「2,300 行の原稿が 4,200 話になる」という報告がこれ。
-     *
-     * 4 つ以上に上げる。ここまで空けるのは、
-     * 話の切れ目のつもりで空けたときぐらい。
-     */
-    const pieces = text
-        .split(new RegExp(`\\n{${BLANK_LINES_TO_SPLIT + 1},}`))
-        .map((block) => block.trim())
-        .filter((block) => block.length > 0);
-
-    /*
-     * それでも切れすぎたら、切らない。
-     *
-     * 空行の使い方は書き手によってまるで違う。
-     * 何百話にも刻まれるより、1 話のまま渡して
-     * 「ここで切る」で指してもらうほうが早い。
-     */
-    if (pieces.length > TOO_MANY_PIECES) {
-        const body = text.trim();
-        return [{ title: "", body, charCount: countChars(body) }];
-    }
-
-    return pieces.map((body) => ({
-        title: "",
-        body,
-        charCount: countChars(body),
-    }));
-}
 
 /**
  * ============================================================
