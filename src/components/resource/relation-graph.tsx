@@ -407,7 +407,11 @@ export default function RelationGraph({
      *   板の外まで描こうとしていたので、
      *   はみ出したぶんが切れていた。
      */
-    const [sizeValue, setSizeValue] = useState(50);
+    /*
+     * ★ 初めは、いちばん小さい＝紙の全体が見える。
+     *   まず全部を見せて、見たいところを大きくしてもらう。
+     */
+    const [sizeValue, setSizeValue] = useState(0);
 
     /*
      * 送る枠。
@@ -1111,16 +1115,12 @@ export default function RelationGraph({
                  *   「ちょうど収まる大きさ」を先に出す。
                  *   つまみは、そこからの倍率。
                  *
-                 * ★ つまみの真ん中あたりで、枠ぴったり。
+                 * ★ つまみがいちばん左のとき、1.0 倍。
+                 *   紙の全体が、枠にぴったり収まる。
                  */
                 style={{
                     height: fitHeight
-                        ? `${Math.round(
-                              fitHeight *
-                                  (sizeValue <= 50
-                                      ? 0.35 + (sizeValue / 50) * 0.65
-                                      : 1 + ((sizeValue - 50) / 50) * 0.9),
-                          )}px`
+                        ? `${Math.round(fitHeight * scale)}px`
                         : "100%",
                     aspectRatio: `${DRAWN_ASPECT} / 1`,
                     width: "auto",
@@ -1212,6 +1212,30 @@ export default function RelationGraph({
                     setDragging(null);
                 }}
             >
+                {/*
+                  * 紙の縁。
+                  *
+                  * ★ どこまでが紙かを、目に見えるようにする。
+                  *
+                  *   丸を置ける範囲は、この中だけ。
+                  *   縁が見えないと、どこで止まっているのか、
+                  *   止まっているのが正しいのかが分からない。
+                  *
+                  *   いちばん小さくしたとき、この縁が
+                  *   枠にぴったり重なるのが正しい姿。
+                  */}
+                <rect
+                    x="0.5"
+                    y="0.5"
+                    width={WIDTH - 1}
+                    height={HEIGHT - 1}
+                    fill="none"
+                    stroke="var(--color-brand-border)"
+                    strokeWidth="1"
+                    strokeDasharray="6 6"
+                    opacity="0.5"
+                />
+
                 {/*
                  * 丸に落とす影。
                  * 板の上に置かれているように見せる。
