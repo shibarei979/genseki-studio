@@ -260,39 +260,55 @@ async function computeRanking(period: string, novelType: string, serial: string,
    *
    * ★ 上限は付けない。下で分けて取る。
    */
-  let q = supabase.from('novels')
-    .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at')
-    .eq('published', true).is('deleted_at', null).in('age_rating', ratings)
-  // AI作品ランキングと人間作品ランキングを分離
-  if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
-  else q = (q as any).neq('ai_usage', 'full')
-  q = keepR18Out(q, genre, ratings) as typeof q
-  if (novelType !== '全て') q = (q as any).eq('novel_type', novelType)
-  if (genre !== '全て') {
-    /* こちらも、昔のジャンルを一緒に拾う */
-    const legacy = GENRE_LEGACY_MATCH[genre] ?? []
-    q = legacy.length > 0
-      ? (q as any).in('genre', [genre, ...legacy])
-      : (q as any).eq('genre', genre)
-  }
-  if (serial === 'serial')   q = (q as any).eq('is_serial', true)
-  if (serial === 'complete') q = (q as any).eq('is_serial', false)
-  if (serial === 'new')      q = (q as any).gte('created_at', new Date(Date.now()-30*24*60*60*1000).toISOString())
-  if (serial === 'newbie') {
-    const { data: newbieAuthors } = await supabase.from('novels').select('author_id').eq('published', true)
-    const authorCount: Record<string,number> = {}
-    newbieAuthors?.forEach((n:any) => { authorCount[n.author_id] = (authorCount[n.author_id]||0)+1 })
-    const newbieIds = Object.entries(authorCount).filter(([,c])=>c<=3).map(([id])=>id)
-    q = (q as any).in('author_id', newbieIds)
-  }
   /*
-   * ★ 作品も、分けて取る。
+   * ★ 問い合わせは、毎回組み直す。
    *
-   *   limit では 1000 件で頭打ちになる。
-   *   増えたときに、下のほうの作品が
-   *   まるごと消える。
+   *   前は 1 つ作って、range だけ変えて使い回していた。
+   *   Supabase の問い合わせは一度きりのもので、
+   *   二度目からは正しく走らない。
+   *
+   *   175 件あるはずが 106 件しか返らなかったのは、これ。
+   *
+   *   組み立てを関数にして、1 ページごとに作り直す。
    */
-  const novels = await readAll((from, to) => (q as any).range(from, to))
+  async function buildNovels(from: number, to: number) {
+  let q = supabase.from('novels')
+      .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at')
+      .eq('published', true).is('deleted_at', null).in('age_rating', ratings)
+    // AI作品ランキングと人間作品ランキングを分離
+    if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
+    else q = (q as any).neq('ai_usage', 'full')
+    q = keepR18Out(q, genre, ratings) as typeof q
+    if (novelType !== '全て') q = (q as any).eq('novel_type', novelType)
+    if (genre !== '全て') {
+      /* こちらも、昔のジャンルを一緒に拾う */
+      const legacy = GENRE_LEGACY_MATCH[genre] ?? []
+      q = legacy.length > 0
+        ? (q as any).in('genre', [genre, ...legacy])
+        : (q as any).eq('genre', genre)
+    }
+    if (serial === 'serial')   q = (q as any).eq('is_serial', true)
+    if (serial === 'complete') q = (q as any).eq('is_serial', false)
+    if (serial === 'new')      q = (q as any).gte('created_at', new Date(Date.now()-30*24*60*60*1000).toISOString())
+    if (serial === 'newbie') {
+      const { data: newbieAuthors } = await supabase.from('novels').select('author_id').eq('published', true)
+      const authorCount: Record<string,number> = {}
+      newbieAuthors?.forEach((n:any) => { authorCount[n.author_id] = (authorCount[n.author_id]||0)+1 })
+      const newbieIds = Object.entries(authorCount).filter(([,c])=>c<=3).map(([id])=>id)
+      q = (q as any).in('author_id', newbieIds)
+    }
+    /*
+     * ★ 作品も、分けて取る。
+     *
+     *   limit では 1000 件で頭打ちになる。
+     *   増えたときに、下のほうの作品が
+     *   まるごと消える。
+     */
+
+    return (q as any).range(from, to)
+  }
+
+  const novels = await readAll((from, to) => buildNovels(from, to))
 
   /*
    * ★ 1 話も出していない作品は、並べない。
