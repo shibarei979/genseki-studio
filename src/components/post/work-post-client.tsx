@@ -191,6 +191,52 @@ export default function WorkPostClient({ workId }: { workId: string }) {
         setBulkNote("");
 
         if (publish) {
+            /*
+             * ★ 先の予約が入っている話は、まとめて投稿から外す。
+             *
+             *   前は予約を消して、その場で出していた。
+             *   9/11 と 9/12 に予約していた話が今日出てしまい、
+             *   そのせいで「次の予定」の起点までずれた。
+             *
+             *   予約は作者が意図して入れた時刻。
+             *   黙って消してはいけない。
+             *
+             * ★ 過ぎた予約は、そのまま出す。
+             *   出るはずの時刻を過ぎているので、
+             *   いま出すのが正しい。
+             */
+            const now = Date.now();
+
+            const scheduled = episodes.filter((row) => {
+                if (!picked.includes(row.id)) return false;
+
+                const at = row.publish_at ?? row.scheduled_at;
+                if (!at) return false;
+
+                const time = new Date(at).getTime();
+                return !Number.isNaN(time) && time > now;
+            });
+
+            if (scheduled.length > 0) {
+                setPicked((list) =>
+                    list.filter(
+                        (id) => !scheduled.some((row) => row.id === id),
+                    ),
+                );
+
+                setBulkNote(
+                    `${scheduled.length}話は予約が入っているので、選択から外しました（` +
+                        scheduled
+                            .slice(0, 5)
+                            .map((row) => `${row.ep_number}話目`)
+                            .join("・") +
+                        (scheduled.length > 5 ? " ほか" : "") +
+                        "）。予約の時刻に出ます。",
+                );
+
+                if (picked.length === scheduled.length) return;
+            }
+
             const bad = checkBeforePost();
 
             if (bad.length > 0) {
