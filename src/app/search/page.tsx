@@ -219,8 +219,18 @@ export default async function SearchPage({ searchParams }: Props) {
       }
     }
 
-    // 基本ソート（後で並び替えが必要なものはcreated_at降順で全件取得）
-    const needsPostSort = ['like','like_daily','like_weekly','like_monthly','bookmark','view','comment','rising','ep_count','char_count','award'].includes(sort)
+    /*
+     * 基本ソート（後で並び替えが必要なものはcreated_at降順で全件取得）
+     *
+     * ★ updated（更新順）も、あとで並べ替える組に入れる。
+     *
+     *   novels.updated_at は、話を出したとき以外でも動く。
+     *   同じ時刻が何十作品も並ぶことがあり、
+     *   それで並べると更新順にならない。
+     *
+     *   話が出た時刻で並べ直す。
+     */
+    const needsPostSort = ['like','like_daily','like_weekly','like_monthly','bookmark','view','comment','rising','ep_count','char_count','award','updated'].includes(sort)
     if (needsPostSort) {
       query = (query as any).order('created_at', { ascending: false }).limit(500)
     } else if (sort === 'old') {
@@ -420,6 +430,40 @@ export default async function SearchPage({ searchParams }: Props) {
       novels.sort((a, b) => (charCountMap[b.id]||0) - (charCountMap[a.id]||0))
     } else if (sort === 'award') {
       novels.sort((a, b) => (awardMap[b.id]||0) - (awardMap[a.id]||0))
+    } else if (sort === 'updated') {
+      /*
+       * 更新順。
+       *
+       * ★ 話が出た時刻で並べる。
+       *
+       *   novels.updated_at は、話を出したとき以外でも動く。
+       *   同じ時刻が何十作品も並ぶことがあり、
+       *   それで並べても更新順にならない。
+       */
+      const lastPostedMap: Record<string, string> = {}
+
+      for (let at = 0; at < novelIds.length; at += 300) {
+        const { data: eps } = await supabase
+          .from('episodes')
+          .select('novel_id, posted_at, created_at')
+          .in('novel_id', novelIds.slice(at, at + 300))
+          .eq('is_published', true)
+          .limit(1000)
+
+        eps?.forEach((e: any) => {
+          const when = e.posted_at || e.created_at
+          if (!when) return
+
+          const now = lastPostedMap[e.novel_id]
+          if (!now || when > now) lastPostedMap[e.novel_id] = when
+        })
+      }
+
+      novels.sort((a, b) =>
+        String(lastPostedMap[b.id] || '').localeCompare(
+          String(lastPostedMap[a.id] || ''),
+        ),
+      )
     } else if (sort === 'rising') {
       // 急上昇：週間いいねで代替
       const { data: risingLikes } = await supabase

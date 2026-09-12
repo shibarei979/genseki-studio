@@ -680,17 +680,17 @@ export default async function ReaderHome() {
    *   作品の updated_at は、話を出したとき以外でも動く。
    *   それで並べると、投稿しても上に来ないことがあった。
    *
-   * ★ 1 話しか無い作品は出さない。
-   *   「続きが出た」ものを並べる場所なので。
+   * ★ 1 話だけの作品も出す。
+   *
+   *   前は「続きが出たもの」に絞っていたが、
+   *   初めの 1 話を出した人にとっても、
+   *   そこに並ぶことに意味がある。
+   *
+   *   出したばかりの人が並ばないと、
+   *   誰にも気づかれないまま埋もれる。
    */
   const updatedBooks = [...readable]
-    .filter((n) => {
-      const at = lastPostedMap[n.id]
-      if (!at) return false
-
-      /* 作ってすぐの 1 話目だけ、は「更新」ではない */
-      return at > String(n.created_at)
-    })
+    .filter((n) => Boolean(lastPostedMap[n.id]))
     .sort((a, b) =>
       String(lastPostedMap[b.id] || '').localeCompare(
         String(lastPostedMap[a.id] || ''),
