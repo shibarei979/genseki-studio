@@ -500,7 +500,36 @@ async function computeRanking(period: string, novelType: string, serial: string,
    *   続けて読んだ人を次に見るのは、それが
    *   面白かったことをいちばん強く表す数だから。
    */
-  const sorted = candidateNovels.sort((a: any, b: any) => {
+  /*
+   * ★ 短い期間は、点の付いた作品だけを出す。
+   *
+   *   日間・週間・月間・四半期は
+   *   「いまどれが読まれているか」を見る場所。
+   *   その期間に何も起きていない作品まで並べると、
+   *   下のほうが 0 点で埋まって読めない。
+   *
+   * ★ 年間・累計は、全作品を出す。
+   *   こちらは「これまでの積み重ね」を見る場所なので、
+   *   0 点でも順位の内に入る。
+   *
+   * ★ 外すのは、点を出したあと。
+   *
+   *   点はいいねだけで決まらない。
+   *   読まれた数も、星も、保存も入る。
+   *   いいねが 0 でも読まれた作品はあるので、
+   *   いいねの数で先に外してはいけない。
+   */
+  const shortPeriod =
+    period === 'daily' ||
+    period === 'weekly' ||
+    period === 'monthly' ||
+    period === 'quarterly'
+
+  const listed = shortPeriod
+    ? candidateNovels.filter((n: any) => (pointMap[n.id] || 0) > 0)
+    : candidateNovels
+
+  const sorted = listed.sort((a: any, b: any) => {
     const byPoint = (pointMap[b.id]||0) - (pointMap[a.id]||0)
     if (byPoint !== 0) return byPoint
 
