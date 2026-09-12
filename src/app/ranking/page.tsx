@@ -452,6 +452,22 @@ async function computeRanking(period: string, novelType: string, serial: string,
     ? candidateNovels.filter((n: any) => (pointMap[n.id] || 0) > 0)
     : candidateNovels
 
+  /*
+   * ★ どこで何件になったかを、記録に残す。
+   *
+   *   数が合わないとき、どの段で落ちたのかが
+   *   分からないと直せない。
+   *   Vercel の記録から追える。
+   */
+  console.log('[ランキング]', {
+    期間: period,
+    作品を読んだ: (novels || []).length,
+    話がある: candidateNovels.length,
+    点を読んだ: Object.keys(pointMap).length,
+    点が0でない: candidateNovels.filter((n: any) => (pointMap[n.id] || 0) > 0).length,
+    出す: listed.length,
+  })
+
   const sorted = listed.sort((a: any, b: any) => {
     const byPoint = (pointMap[b.id]||0) - (pointMap[a.id]||0)
     if (byPoint !== 0) return byPoint
