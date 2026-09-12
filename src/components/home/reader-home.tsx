@@ -271,18 +271,44 @@ export default async function ReaderHome() {
    * 題名の無いものも外す。棚に置いても何の本か分からない。
    */
   const readableIds = new Set<string>()
+
+  /*
+   * 最後に話が出た時刻。
+   *
+   * ★ 「最新話更新」は、これで並べる。
+   *
+   *   前は novels.updated_at で並べていた。
+   *   だがあれは、話を出したとき以外でも動く。
+   *   同じ時刻が何十作品も並ぶことがあり、
+   *   「投稿したのに一番上に行かない」が起きていた。
+   *
+   *   話が出た時刻そのもので並べれば、間違いようがない。
+   */
+  const lastPostedMap: Record<string, string> = {}
+
   {
     const ids = newest.map((n) => n.id)
     if (ids.length > 0) {
       const { data: liveEpisodes } = await supabase
         .from('episodes')
-        .select('novel_id')
+        .select('novel_id, posted_at, created_at')
         .in('novel_id', ids)
         .eq('is_published', true)
         .limit(20000)
 
-      for (const row of (liveEpisodes || []) as { novel_id: string }[]) {
+      for (const row of (liveEpisodes || []) as {
+        novel_id: string
+        posted_at: string | null
+        created_at: string | null
+      }[]) {
         readableIds.add(row.novel_id)
+
+        /* 出た時刻。無ければ作った時刻で代える */
+        const at = row.posted_at || row.created_at
+        if (!at) continue
+
+        const now = lastPostedMap[row.novel_id]
+        if (!now || at > now) lastPostedMap[row.novel_id] = at
       }
     }
   }
@@ -648,9 +674,28 @@ export default async function ReaderHome() {
    * 続きが出たものを並べる。
    * 追っている人にとっては、こちらのほうが用がある。
    */
+  /*
+   * ★ 話が出た時刻で並べる。
+   *
+   *   作品の updated_at は、話を出したとき以外でも動く。
+   *   それで並べると、投稿しても上に来ないことがあった。
+   *
+   * ★ 1 話しか無い作品は出さない。
+   *   「続きが出た」ものを並べる場所なので。
+   */
   const updatedBooks = [...readable]
-    .filter((n) => n.updated_at && n.updated_at !== n.created_at)
-    .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))
+    .filter((n) => {
+      const at = lastPostedMap[n.id]
+      if (!at) return false
+
+      /* 作ってすぐの 1 話目だけ、は「更新」ではない */
+      return at > String(n.created_at)
+    })
+    .sort((a, b) =>
+      String(lastPostedMap[b.id] || '').localeCompare(
+        String(lastPostedMap[a.id] || ''),
+      ),
+    )
     .slice(0, LIST_SIZE)
     .map((n) => toBook(n, extras))
 
