@@ -130,6 +130,22 @@ export async function publishDueEpisodes(
                 .update({ published: true })
                 .in("id", novelIds)
                 .eq("published", false);
+
+            /*
+             * ★ 作品の側の時刻も、新しくする。
+             *
+             *   「最新話更新」は novels.updated_at で並べている。
+             *   予約で話が出ても作品の時刻が変わらないと、
+             *   その作品が上に来ない。
+             *
+             * ★ 公開に引き上げる条件とは、分けて書く。
+             *   引き上げは「まだ下書きのとき」だけだが、
+             *   時刻は出すたびに新しくする必要がある。
+             */
+            await admin
+                .from("novels")
+                .update({ updated_at: new Date().toISOString() })
+                .in("id", novelIds);
         }
 
         return due.length;

@@ -905,6 +905,24 @@ export const supabaseRepository: Repository = {
                 .not("title", "is", null)
                 .neq("title", "");
 
+            /*
+             * ★ 作品の側の時刻も、新しくする。
+             *
+             *   「最新話更新」は novels.updated_at で並べている。
+             *   話を出しても作品の時刻が変わらないと、
+             *   続きを出した作品が上に来ない。
+             *
+             *   「投稿したのに一番上に行かない」という声は、これ。
+             *
+             * ★ 公開に引き上げる条件とは、分けて書く。
+             *   引き上げは「まだ下書きのとき」だけだが、
+             *   時刻は出すたびに新しくする必要がある。
+             */
+            await db()
+                .from("novels")
+                .update({ updated_at: new Date().toISOString() })
+                .eq("id", data.novel_id);
+
             /* 限定公開のままの作品は、印だけ立てる */
             await db()
                 .from("novels")
