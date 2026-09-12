@@ -240,21 +240,13 @@ async function computeRanking(period: string, novelType: string, serial: string,
      * ============================================================
      */
 
-    /* 候補：公開されている全作品 */
-    const allIds: string[] = []
-    for (let from = 0; ; from += 1000) {
-      const { data: page } = await supabase
-        .from('novels')
-        .select('id')
-        .eq('published', true)
-        .is('deleted_at', null)
-        .range(from, from + 999)
-
-      if (!page || page.length === 0) break
-      allIds.push(...page.map((n: any) => n.id))
-      if (page.length < 1000) break
-    }
-
+    /*
+     * ★ ここでは、いいねの数だけを集める。
+     *
+     *   候補の id は集めない。
+     *   このあと作品そのものを読むときに、
+     *   公開されているものを全部読むので、二度手間になる。
+     */
     if (period === 'all') {
       /* 累計：全期間。1000 件で切られないよう、分けて取る */
       for (let from = 0; ; from += 1000) {
@@ -300,14 +292,28 @@ async function computeRanking(period: string, novelType: string, serial: string,
       })
     }
 
-    likeIds = allIds
+    /* 候補があることだけ、先へ伝える */
+    likeIds = ['all']
   }
 
   if (likeIds.length === 0) return { items: [], total: 0 }
 
+  /*
+   * ★ id を並べて渡すのをやめる。
+   *
+   *   候補を全作品にしたので、in(...) に 195 個の id が並ぶ。
+   *   問い合わせの住所が長くなりすぎて、途中で切られる。
+   *   195 作品あるのに 112 件しか返らなかったのは、これ。
+   *
+   *   候補が全作品なら、そもそも id で絞る必要がない。
+   *   公開されているものを、そのまま読む。
+   *
+   * ★ 上限も外す。既定の 1000 件で切られないように。
+   */
   let q = supabase.from('novels')
     .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at')
-    .in('id', likeIds).eq('published', true).in('age_rating', ratings)
+    .eq('published', true).is('deleted_at', null).in('age_rating', ratings)
+    .limit(20000)
   // AI作品ランキングと人間作品ランキングを分離
   if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
   else q = (q as any).neq('ai_usage', 'full')
@@ -331,7 +337,36 @@ async function computeRanking(period: string, novelType: string, serial: string,
     q = (q as any).in('author_id', newbieIds)
   }
   const { data: novels } = await q
-  const candidateNovels = novels || []
+
+  /*
+   * ★ 1 話も出していない作品は、並べない。
+   *
+   *   押しても空の目次しか無く、読むものがない。
+   *   作者の公開ページでは既に外してある。
+   *   ランキングだけ出していると、辻褄が合わない。
+   *
+   * ★ 話の有無は、まとめて 1 回で調べる。
+   *   作品ごとに問い合わせると、その数だけ待つことになる。
+   */
+  const liveNovelIds = new Set<string>()
+  {
+    const ids = (novels || []).map((n: any) => n.id)
+
+    for (let at = 0; at < ids.length; at += 300) {
+      const { data: eps } = await supabase
+        .from('episodes')
+        .select('novel_id')
+        .in('novel_id', ids.slice(at, at + 300))
+        .eq('is_published', true)
+        .limit(50000)
+
+      eps?.forEach((e: any) => liveNovelIds.add(e.novel_id))
+    }
+  }
+
+  const candidateNovels = (novels || []).filter((n: any) =>
+    liveNovelIds.has(n.id),
+  )
   const candidateIds = candidateNovels.map((n: any) => n.id)
 
   // ポイント計算：☆×1 + いいね×2 + 保存×3
