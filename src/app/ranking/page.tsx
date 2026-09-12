@@ -66,6 +66,31 @@ async function computeRanking(period: string, novelType: string, serial: string,
   // キャッシュ内ではcookies非依存の素のクライアントを使用（ランキングは公開データのみ）
   const supabase: any = createSbClient(serverEnv.supabaseUrl, clientEnv.supabaseAnonKey)
   const likeMap: Record<string,number> = {}
+  /**
+   * 1000 行ずつ、無くなるまで取る。
+   *
+   * ★ limit は効かない。
+   *
+   *   PostgREST は既定で 1000 行までしか返さない。
+   *   limit(50000) と書いても、そこで頭打ちになる。
+   *   多い表では、途中から数え落とす。
+   *
+   *   range で区切って、返らなくなるまで繰り返す。
+   */
+  async function readAll(build: (from: number, to: number) => any) {
+    const rows: any[] = []
+
+    for (let from = 0; from < 200000; from += 1000) {
+      const { data: page } = await build(from, from + 999)
+      if (!page || page.length === 0) break
+
+      rows.push(...page)
+      if (page.length < 1000) break
+    }
+
+    return rows
+  }
+
   let likeIds: string[] = []
 
   const GROWTH_PERIODS = ['discover_rate', 'read_rate', 'bookmark_rate', 'newbie_focus']
@@ -100,7 +125,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
      */
     const { data: liveEps } = await supabase
       .from('episodes').select('novel_id')
-      .in('novel_id', poolIds).eq('is_published', true).limit(20000)
+      .in('novel_id', poolIds).eq('is_published', true).limit(1000)
 
     const hasLive = new Set((liveEps || []).map((e:any) => e.novel_id))
 
@@ -308,12 +333,11 @@ async function computeRanking(period: string, novelType: string, serial: string,
    *   候補が全作品なら、そもそも id で絞る必要がない。
    *   公開されているものを、そのまま読む。
    *
-   * ★ 上限も外す。既定の 1000 件で切られないように。
+   * ★ 上限は付けない。下で分けて取る。
    */
   let q = supabase.from('novels')
     .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at')
     .eq('published', true).is('deleted_at', null).in('age_rating', ratings)
-    .limit(20000)
   // AI作品ランキングと人間作品ランキングを分離
   if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
   else q = (q as any).neq('ai_usage', 'full')
@@ -336,7 +360,14 @@ async function computeRanking(period: string, novelType: string, serial: string,
     const newbieIds = Object.entries(authorCount).filter(([,c])=>c<=3).map(([id])=>id)
     q = (q as any).in('author_id', newbieIds)
   }
-  const { data: novels } = await q
+  /*
+   * ★ 作品も、分けて取る。
+   *
+   *   limit では 1000 件で頭打ちになる。
+   *   増えたときに、下のほうの作品が
+   *   まるごと消える。
+   */
+  const novels = await readAll((from, to) => (q as any).range(from, to))
 
   /*
    * ★ 1 話も出していない作品は、並べない。
@@ -350,17 +381,28 @@ async function computeRanking(period: string, novelType: string, serial: string,
    */
   const liveNovelIds = new Set<string>()
   {
-    const ids = (novels || []).map((n: any) => n.id)
-
-    for (let at = 0; at < ids.length; at += 300) {
-      const { data: eps } = await supabase
+    /*
+     * ★ limit は効かない。range で分けて取る。
+     *
+     *   PostgREST は既定で 1000 行までしか返さない。
+     *   limit(50000) と書いても、そこで頭打ちになる。
+     *
+     *   300 作品ぶんの話を一度に取ろうとすると、
+     *   1000 行で切られ、70 作品ぶんしか拾えない。
+     *   195 作品が 73 件になっていたのは、これ。
+     *
+     *   range で 1000 行ずつ、無くなるまで取る。
+     */
+    for (let from = 0; ; from += 1000) {
+      const { data: page } = await supabase
         .from('episodes')
         .select('novel_id')
-        .in('novel_id', ids.slice(at, at + 300))
         .eq('is_published', true)
-        .limit(50000)
+        .range(from, from + 999)
 
-      eps?.forEach((e: any) => liveNovelIds.add(e.novel_id))
+      if (!page || page.length === 0) break
+      page.forEach((e: any) => liveNovelIds.add(e.novel_id))
+      if (page.length < 1000) break
     }
   }
 
@@ -405,8 +447,16 @@ async function computeRanking(period: string, novelType: string, serial: string,
        *   既定の 1000 件で切られると、
        *   下のほうの作品の数がまるごと 0 になる。
        */
-      supabase.from('novel_stats').select('novel_id, like_count, bookmark_count').in('novel_id', candidateIds).limit(20000),
-      supabase.from('comments').select('novel_id, episode_id, user_id, rating').in('novel_id', candidateIds).not('rating', 'is', null).limit(20000),
+      readAll((from, to) =>
+        supabase.from('novel_stats')
+          .select('novel_id, like_count, bookmark_count')
+          .in('novel_id', candidateIds).range(from, to),
+      ).then((data) => ({ data })),
+      readAll((from, to) =>
+        supabase.from('comments')
+          .select('novel_id, episode_id, user_id, rating')
+          .in('novel_id', candidateIds).not('rating', 'is', null).range(from, to),
+      ).then((data) => ({ data })),
     ])
     allStats?.forEach((row: any) => {
       likeCntMap[row.novel_id] = Number(row.like_count) || 0
@@ -430,7 +480,10 @@ async function computeRanking(period: string, novelType: string, serial: string,
     const pvCntMap: Record<string, number> = {}
     {
       /* 話は作品より多い。上限を外しておく */
-      const { data: candEps } = await supabase.from('episodes').select('id, novel_id').in('novel_id', candidateIds).limit(50000)
+      const candEps = await readAll((from, to) =>
+        supabase.from('episodes').select('id, novel_id')
+          .in('novel_id', candidateIds).range(from, to),
+      )
       const epToNovelPv: Record<string, string> = {}
       const candEpIds = (candEps || []).map((e: any) => { epToNovelPv[e.id] = e.novel_id; return e.id })
       const hours = periodHours[period]
@@ -476,11 +529,15 @@ async function computeRanking(period: string, novelType: string, serial: string,
 
       for (let i = 0; i < candidateIds.length; i += 200) {
         const chunk = candidateIds.slice(i, i + 200)
-        const { data: reads } = await supabase
-          .from('read_episodes')
-          .select('novel_id, user_id, episode_id')
-          .in('novel_id', chunk)
-          .limit(20000)
+
+        /* ここも 1000 行で切られる。分けて取る */
+        const reads = await readAll((from, to) =>
+          supabase
+            .from('read_episodes')
+            .select('novel_id, user_id, episode_id')
+            .in('novel_id', chunk)
+            .range(from, to),
+        )
 
         reads?.forEach((r: any) => {
           if (!r.user_id) return
