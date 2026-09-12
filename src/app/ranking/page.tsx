@@ -513,7 +513,24 @@ async function computeRanking(period: string, novelType: string, serial: string,
 }
 
 // ランキングは3時間ごとに更新（キャッシュ）
-const getCachedRanking = unstable_cache(computeRanking, ['ranking-v1'], { revalidate: 10800 })
+/*
+ * 作り置き。
+ *
+ * ★ 合言葉を変えると、古い作り置きが捨てられる。
+ *
+ *   中身を直しても、合言葉が同じままだと
+ *   前の結果がそのまま返る。3 時間そのまま。
+ *   直したのに数字が変わらないのは、これ。
+ *
+ *   数え方を変えたときは、必ず番号を上げること。
+ *
+ * ★ 3 時間 → 10 分にする。
+ *
+ *   点は /api/cron/ranking が定時に数え直すので、
+ *   ここは「その結果を並べたもの」を短く持てば足りる。
+ *   長く持つと、数え直しても画面が追いつかない。
+ */
+const getCachedRanking = unstable_cache(computeRanking, ['ranking-v2'], { revalidate: 600 })
 
 
 interface Props {
