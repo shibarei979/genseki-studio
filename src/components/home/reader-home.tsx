@@ -211,13 +211,30 @@ export default async function ReaderHome() {
     user?.email === ROOT_ADMIN_EMAIL ||
     (viewer as { role?: string } | null)?.role === 'admin'
 
-  // ----- 作品プール（新着60冊）とおすすめスコア -----
+  /*
+   * 作品プールとおすすめスコア。
+   *
+   * ★ 「作られた新しい順」で切らない。
+   *
+   *   前は新しく作られた 60 件だけを母集団にしていた。
+   *   だが「最新話更新」は、更新の新しい順に並べる場所。
+   *
+   *   去年作られた作品でも、今日続きが出たなら
+   *   いちばん上に来るべき。それが 60 件の外にいると、
+   *   何をしても出てこない。
+   *
+   *   「8月に作った作品の続きを出したのに、
+   *   最新話更新に出ない」はこれが原因。
+   *
+   * ★ 200 件に広げる。
+   *   作品が増えたら、また見直すこと。
+   */
   const poolQuery = supabase
     .from('novels')
     .select('id, title, summary, catchcopy, genre, tags, author_id, created_at, age_rating, novel_type, serial_status, updated_at')
     .eq('published', true)
     .order('created_at', { ascending: false })
-    .limit(60)
+    .limit(200)
 
   const [{ data: newestRaw }, scoredAll] = await Promise.all([
     isAdmin
@@ -289,26 +306,40 @@ export default async function ReaderHome() {
   {
     const ids = newest.map((n) => n.id)
     if (ids.length > 0) {
-      const { data: liveEpisodes } = await supabase
-        .from('episodes')
-        .select('novel_id, posted_at, created_at')
-        .in('novel_id', ids)
-        .eq('is_published', true)
-        .limit(20000)
+      /*
+       * ★ limit は効かない。range で分けて取る。
+       *
+       *   既定で 1000 行までしか返らない。
+       *   200 作品ぶんの話は、それを軽く超える。
+       *   途中で切れると、下のほうの作品が
+       *   「話が無い」扱いになって消える。
+       */
+      for (let from = 0; from < 100000; from += 1000) {
+        const { data: page } = await supabase
+          .from('episodes')
+          .select('novel_id, posted_at, created_at')
+          .in('novel_id', ids)
+          .eq('is_published', true)
+          .range(from, from + 999)
 
-      for (const row of (liveEpisodes || []) as {
-        novel_id: string
-        posted_at: string | null
-        created_at: string | null
-      }[]) {
-        readableIds.add(row.novel_id)
+        if (!page || page.length === 0) break
 
-        /* 出た時刻。無ければ作った時刻で代える */
-        const at = row.posted_at || row.created_at
-        if (!at) continue
+        for (const row of page as {
+          novel_id: string
+          posted_at: string | null
+          created_at: string | null
+        }[]) {
+          readableIds.add(row.novel_id)
 
-        const now = lastPostedMap[row.novel_id]
-        if (!now || at > now) lastPostedMap[row.novel_id] = at
+          /* 出た時刻。無ければ作った時刻で代える */
+          const at = row.posted_at || row.created_at
+          if (!at) continue
+
+          const now = lastPostedMap[row.novel_id]
+          if (!now || at > now) lastPostedMap[row.novel_id] = at
+        }
+
+        if (page.length < 1000) break
       }
     }
   }

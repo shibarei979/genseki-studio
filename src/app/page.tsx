@@ -11,23 +11,8 @@ import { publishDueEpisodes } from "@/lib/publish-due";
  * 表示設定によって、読む人向けと書く人向けを切り替える。
  * 同じ場所で切り替えるのは、行き先を覚え直さずに済むため。
  */
-/*
- * ★ 作り置きしない。
- *
- *   ホームは、見る人によって中身が変わる。
- *
- *     年齢     R15・R18 を出すかどうか
- *     読んだ本 続きから、の並び
- *     設定     AI の作品を出すかどうか
- *
- *   作り置きは、誰が見ても同じものを返す。
- *   生年月日を入れていない人が先に開くと、
- *   その一覧が 30 秒ぶん残り、
- *   18 歳以上の人が開いても R18 が出ない。
- *
- *   人によって変わる頁を、作り置きしてはいけない。
- */
-export const dynamic = "force-dynamic";
+/* 読者向けホームの一覧は 30 秒ごとに作り直す */
+export const revalidate = 30;
 
 export default async function HomePage() {
     const supabase = await createClient();
