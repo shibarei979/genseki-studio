@@ -65,7 +65,6 @@ function keepR18Out(query: unknown, genre: string, ratings: string[]) {
 async function computeRanking(period: string, novelType: string, serial: string, genre: string, aiMode: string, offset: number, displaySize: number, showMore: boolean, ratings: string[] = ['all']): Promise<{ items: any[]; total: number }> {
   // キャッシュ内ではcookies非依存の素のクライアントを使用（ランキングは公開データのみ）
   const supabase: any = createSbClient(serverEnv.supabaseUrl, clientEnv.supabaseAnonKey)
-  const likeMap: Record<string,number> = {}
   /**
    * 1000 行ずつ、無くなるまで取る。
    *
@@ -236,88 +235,14 @@ async function computeRanking(period: string, novelType: string, serial: string,
     return { items: risingItems.map((n:any) => ({...n, display_name: authorMap2[n.author_id]||''})), total: risingItems.length }
   } else {
     /*
-     * ============================================================
-     * 期間ごとの、いいねの数を集める
+     * ★ ここでは何も数えない。
      *
-     * ★ 候補は、公開されている全作品。
+     *   いいねも保存も星も、ranking_points に
+     *   溜めてあるものを下で読む。
+     *   ここで数え直すと、二重に数えることになる。
      *
-     *   前は「いいねが付いた作品 ＋ 最近の100作品」だけを
-     *   候補にしていた。
-     *
-     *   そのせいで、いいねが無く、かつ新しくもない作品は
-     *   ランキングに一度も出てこなかった。
-     *   195 作品あるのに、年間70件・累計52件しか出ない、
-     *   という食い違いは、これが原因。
-     *
-     *   ランキングは全作品を並べたもの。
-     *   点が 0 なら下位に来るだけで、
-     *   候補から外れてよい理由は無い。
-     *
-     * ★ 数え方は、期間によって変える。
-     *
-     *   累計  likes を全部数える
-     *   日間  今日のぶんを数える
-     *   ほか  期間ごとの表から読む
-     *
-     * ★ いいねは分けて取る。
-     *   一度に全部取ると 1000 件で切られる。
-     *   （PostgREST の既定の上限）
-     * ============================================================
+     *   候補があることだけ、先へ伝える。
      */
-
-    /*
-     * ★ ここでは、いいねの数だけを集める。
-     *
-     *   候補の id は集めない。
-     *   このあと作品そのものを読むときに、
-     *   公開されているものを全部読むので、二度手間になる。
-     */
-    if (period === 'all') {
-      /* 累計：全期間。1000 件で切られないよう、分けて取る */
-      for (let from = 0; ; from += 1000) {
-        const { data: page } = await supabase
-          .from('likes')
-          .select('novel_id')
-          .range(from, from + 999)
-
-        if (!page || page.length === 0) break
-        page.forEach((l: any) => {
-          likeMap[l.novel_id] = (likeMap[l.novel_id] || 0) + 1
-        })
-        if (page.length < 1000) break
-      }
-    } else if (period === 'daily') {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-
-      const { data: dl } = await supabase
-        .from('likes')
-        .select('novel_id')
-        .gte('created_at', today.toISOString())
-
-      dl?.forEach((l: any) => {
-        likeMap[l.novel_id] = (likeMap[l.novel_id] || 0) + 1
-      })
-    } else {
-      const tableMap: Record<string, string> = {
-        weekly: 'weekly_likes',
-        monthly: 'monthly_likes',
-        quarterly: 'quarterly_likes',
-        yearly: 'yearly_likes',
-      }
-
-      const { data: likes } = await supabase
-        .from(tableMap[period])
-        .select('novel_id, like_count')
-        .order('like_count', { ascending: false })
-        .limit(1000)
-
-      likes?.forEach((l: any) => {
-        likeMap[l.novel_id] = l.like_count
-      })
-    }
-
-    /* 候補があることだけ、先へ伝える */
     likeIds = ['all']
   }
 
@@ -411,169 +336,59 @@ async function computeRanking(period: string, novelType: string, serial: string,
   )
   const candidateIds = candidateNovels.map((n: any) => n.id)
 
-  // ポイント計算：☆×1 + いいね×2 + 保存×3
-  // ☆は1人1話5まで（同一ユーザー・同一話のratingは最大5に丸める）
+  /*
+   * ============================================================
+   * 点は、溜めてある表から読む
+   *
+   * ★ その場で数え直さない。
+   *
+   *   前はここで、いいね・保存・星・読まれた数・
+   *   続けて読んだ人を、全作品ぶん集めていた。
+   *
+   *   作品が増えるほど重くなり、
+   *   1000 行の頭打ちにも当たりやすい。
+   *   195 作品が 73 件しか出ない不具合は、それで起きた。
+   *
+   *   数え直しは /api/cron/ranking が定時にやる。
+   *   ここは、その結果を読むだけ。
+   *
+   * ★ 最新の数ではない。
+   *
+   *     15 分ごと  日間・週間
+   *     30 分ごと  月間・四半期
+   *     1 日 1 回  年間・累計
+   *
+   *   ランキングが 15 分遅れても困らない。
+   *   押した瞬間に順位が動くほうが、かえって落ち着かない。
+   *
+   * ★ 点の重みは SQL 側（refresh_ranking_points）にある。
+   *   変えるときは、両方を見ること。
+   * ============================================================
+   */
   const pointMap: Record<string, number> = {}
-  /* 同点のときに見る。上の囲いの外でも使う */
+  /* 同点のときに見る */
   const continuedForSort: Record<string, number> = {}
   const likeCntMap: Record<string, number> = {}
   const bookmarkCntMap: Record<string, number> = {}
   const starSumMap: Record<string, number> = {}
+  const pvCntMap: Record<string, number> = {}
 
   if (candidateIds.length > 0) {
-    /*
-     * いいねと保存は novel_stats から読む。
-     *
-     * ★ 表を直に数えてはいけない。
-     *
-     *   likes と bookmarks の決まりは auth.uid() = user_id。
-     *   「自分が押したもの」しか読めないので、
-     *   ここで数えても 0 しか返らなかった。
-     *   ランキングは長いあいだ、実質「星の数」だけで
-     *   並んでいた。
-     *
-     *   novel_stats は数だけを返す入れ物で、
-     *   中の行の決まりを素通りする。
-     *   誰が押したかは漏れない。
-     *
-     * ★ いいねには話への♡も入っている。
-     *   読者が押すのは、たいてい本文の下の♡。
-     */
-    const [{ data: allStats }, { data: allRatings }] = await Promise.all([
-      /*
-       * ★ 上限を外す。
-       *
-       *   候補を全作品にしたので、返る行も増える。
-       *   既定の 1000 件で切られると、
-       *   下のほうの作品の数がまるごと 0 になる。
-       */
-      readAll((from, to) =>
-        supabase.from('novel_stats')
-          .select('novel_id, like_count, bookmark_count')
-          .in('novel_id', candidateIds).range(from, to),
-      ).then((data) => ({ data })),
-      readAll((from, to) =>
-        supabase.from('comments')
-          .select('novel_id, episode_id, user_id, rating')
-          .in('novel_id', candidateIds).not('rating', 'is', null).range(from, to),
-      ).then((data) => ({ data })),
-    ])
-    allStats?.forEach((row: any) => {
-      likeCntMap[row.novel_id] = Number(row.like_count) || 0
-      bookmarkCntMap[row.novel_id] = Number(row.bookmark_count) || 0
-    })
+    const rows = await readAll((from, to) =>
+      supabase
+        .from('ranking_points')
+        .select('novel_id, points, like_count, bookmark_count, star_sum, view_count, continued_count')
+        .eq('period', period)
+        .range(from, to),
+    )
 
-    // ☆は「1人1話につき最大5」：user_id+episode_idごとに最大ratingを取る
-    const bestRating: Record<string, number> = {} // key: novel_id|user_id|episode_id
-    allRatings?.forEach((r: any) => {
-      const key = `${r.novel_id}|${r.user_id}|${r.episode_id}`
-      const val = Math.min(5, r.rating || 0)
-      if (!bestRating[key] || val > bestRating[key]) bestRating[key] = val
-    })
-    Object.entries(bestRating).forEach(([key, val]) => {
-      const nId = key.split('|')[0]
-      starSumMap[nId] = (starSumMap[nId] || 0) + (val as number)
-    })
-
-    // 期間内PVの集計（PVもランキングに貢献させる）
-    const periodHours: Record<string, number> = { daily: 24, weekly: 168, monthly: 720, quarterly: 2160, yearly: 8760 }
-    const pvCntMap: Record<string, number> = {}
-    {
-      /* 話は作品より多い。上限を外しておく */
-      const candEps = await readAll((from, to) =>
-        supabase.from('episodes').select('id, novel_id')
-          .in('novel_id', candidateIds).range(from, to),
-      )
-      const epToNovelPv: Record<string, string> = {}
-      const candEpIds = (candEps || []).map((e: any) => { epToNovelPv[e.id] = e.novel_id; return e.id })
-      const hours = periodHours[period]
-      const pvSince = hours ? new Date(Date.now() - hours * 3600 * 1000).toISOString() : null
-      for (let i = 0; i < candEpIds.length; i += 500) {
-        const chunk = candEpIds.slice(i, i + 500)
-        /*
-         * ★ 時刻の列は viewed_at。created_at ではない。
-         *   その列は無いので、期間つきの並びでは
-         *   この問い合わせが失敗し、読まれた数が
-         *   まるごと 0 として数えられていた。
-         *
-         * ★ 見回りの機械は外す。
-         *   印の無い古い記録（null）は人として残す。
-         */
-        let q: any = supabase.from('page_views').select('episode_id')
-          .eq('is_author', false)
-          .or('is_bot.is.null,is_bot.eq.false')
-          .in('episode_id', chunk)
-        if (pvSince) q = q.gt('viewed_at', pvSince)
-        const { data: pvRows } = await q
-        pvRows?.forEach((r: any) => { const nid = epToNovelPv[r.episode_id]; if (nid) pvCntMap[nid] = (pvCntMap[nid] || 0) + 1 })
-      }
-    }
-
-    /*
-     * 続けて読んだ人を数える。
-     *
-     * ★ 同じ人が、その作品の 2 話以上を読んだ数。
-     *
-     *   1 話だけ読んで離れた人と、
-     *   続きを読みに戻ってきた人は、意味が違う。
-     *   後者のほうが「面白かった」を強く表す。
-     *
-     * ★ 順番までは見ない。
-     *   1 話 → 2 話 → 3 話 と順に追うには、
-     *   人数 × 話数ぶん調べることになり、
-     *   開くたびの計算としては重すぎる。
-     */
-    const continuedMap = continuedForSort
-    {
-      const readByUser: Record<string, Set<string>> = {}
-
-      for (let i = 0; i < candidateIds.length; i += 200) {
-        const chunk = candidateIds.slice(i, i + 200)
-
-        /* ここも 1000 行で切られる。分けて取る */
-        const reads = await readAll((from, to) =>
-          supabase
-            .from('read_episodes')
-            .select('novel_id, user_id, episode_id')
-            .in('novel_id', chunk)
-            .range(from, to),
-        )
-
-        reads?.forEach((r: any) => {
-          if (!r.user_id) return
-          const key = `${r.novel_id}|${r.user_id}`
-          if (!readByUser[key]) readByUser[key] = new Set()
-          readByUser[key].add(r.episode_id)
-        })
-      }
-
-      /* 2 話以上読んだ人だけ数える */
-      Object.entries(readByUser).forEach(([key, eps]) => {
-        if (eps.size < 2) return
-        const nId = key.split('|')[0]
-        continuedMap[nId] = (continuedMap[nId] || 0) + 1
-      })
-    }
-
-    candidateIds.forEach((id: string) => {
-      /*
-       * 点の出し方。
-       *
-       *   評価（星）    × 1
-       *   いいね        × 2
-       *   保存          × 2     ← 3 から下げた
-       *   続けて読んだ   × 1.3   ← 足した
-       *   読まれた数     × 0.2
-       *
-       * 保存は「あとで読む」の印で、読んだ証しではない。
-       * 続けて読んだほうが、面白かったことを強く表す。
-       */
-      pointMap[id] =
-        (starSumMap[id] || 0) * 1
-        + (likeCntMap[id] || 0) * 2
-        + (bookmarkCntMap[id] || 0) * 2
-        + Math.round((continuedMap[id] || 0) * 1.3)
-        + Math.round((pvCntMap[id] || 0) * 0.2)
+    rows.forEach((r: any) => {
+      pointMap[r.novel_id] = Number(r.points) || 0
+      likeCntMap[r.novel_id] = Number(r.like_count) || 0
+      bookmarkCntMap[r.novel_id] = Number(r.bookmark_count) || 0
+      starSumMap[r.novel_id] = Number(r.star_sum) || 0
+      pvCntMap[r.novel_id] = Number(r.view_count) || 0
+      continuedForSort[r.novel_id] = Number(r.continued_count) || 0
     })
   }
 

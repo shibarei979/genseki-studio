@@ -8,6 +8,18 @@
     {
       "path": "/api/cron/voice",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/ranking?set=fast",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/ranking?set=mid",
+      "schedule": "0,30 * * * *"
+    },
+    {
+      "path": "/api/cron/ranking?set=slow",
+      "schedule": "20 4 * * *"
     }
   ]
 }
