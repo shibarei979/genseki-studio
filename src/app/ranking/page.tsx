@@ -209,33 +209,98 @@ async function computeRanking(period: string, novelType: string, serial: string,
       authors2?.forEach((a:any) => { authorMap2[a.user_id] = a.display_name })
     }
     return { items: risingItems.map((n:any) => ({...n, display_name: authorMap2[n.author_id]||''})), total: risingItems.length }
-  } else if (period === 'all') {
-    // 累計：全期間のいいねを集計
-    const { data: allLikes } = await supabase.from('likes').select('novel_id')
-    allLikes?.forEach((l: any) => { likeMap[l.novel_id] = (likeMap[l.novel_id]||0)+1 })
-    likeIds = Object.entries(likeMap).sort((a,b)=>b[1]-a[1]).map(([id])=>id)
-    const { data: recentNovels } = await supabase.from('novels').select('id').eq('published',true).order('created_at',{ascending:false}).limit(100)
-    const recentIds = (recentNovels||[]).map((n:any)=>n.id)
-    likeIds = Array.from(new Set([...likeIds, ...recentIds]))
-  } else if (period === 'daily') {
-    const today = new Date(); today.setHours(0,0,0,0)
-    const { data: dl } = await supabase.from('likes').select('novel_id').gte('created_at', today.toISOString())
-    dl?.forEach((l: any) => { likeMap[l.novel_id] = (likeMap[l.novel_id]||0)+1 })
-    // 日間の保存・コメント（星）も集計対象にするため、いいねが付いた作品を候補に
-    likeIds = Object.entries(likeMap).sort((a,b)=>b[1]-a[1]).map(([id])=>id)
-    // 候補が少ない場合は最近更新された作品も追加
-    const { data: recentNovels } = await supabase.from('novels').select('id').eq('published',true).order('created_at',{ascending:false}).limit(100)
-    const recentIds = (recentNovels||[]).map((n:any)=>n.id)
-    likeIds = Array.from(new Set([...likeIds, ...recentIds]))
   } else {
-    const tableMap: Record<string,string> = { weekly:'weekly_likes', monthly:'monthly_likes', quarterly:'quarterly_likes', yearly:'yearly_likes' }
-    const { data: likes } = await supabase.from(tableMap[period]).select('novel_id, like_count').order('like_count',{ascending:false}).limit(500)
-    likes?.forEach((l: any) => { likeMap[l.novel_id] = l.like_count })
-    likeIds = (likes||[]).map((l: any) => l.novel_id)
-    // 候補が少ない場合を考慮し最近の作品も追加
-    const { data: recentNovels } = await supabase.from('novels').select('id').eq('published',true).order('created_at',{ascending:false}).limit(100)
-    const recentIds = (recentNovels||[]).map((n:any)=>n.id)
-    likeIds = Array.from(new Set([...likeIds, ...recentIds]))
+    /*
+     * ============================================================
+     * 期間ごとの、いいねの数を集める
+     *
+     * ★ 候補は、公開されている全作品。
+     *
+     *   前は「いいねが付いた作品 ＋ 最近の100作品」だけを
+     *   候補にしていた。
+     *
+     *   そのせいで、いいねが無く、かつ新しくもない作品は
+     *   ランキングに一度も出てこなかった。
+     *   195 作品あるのに、年間70件・累計52件しか出ない、
+     *   という食い違いは、これが原因。
+     *
+     *   ランキングは全作品を並べたもの。
+     *   点が 0 なら下位に来るだけで、
+     *   候補から外れてよい理由は無い。
+     *
+     * ★ 数え方は、期間によって変える。
+     *
+     *   累計  likes を全部数える
+     *   日間  今日のぶんを数える
+     *   ほか  期間ごとの表から読む
+     *
+     * ★ いいねは分けて取る。
+     *   一度に全部取ると 1000 件で切られる。
+     *   （PostgREST の既定の上限）
+     * ============================================================
+     */
+
+    /* 候補：公開されている全作品 */
+    const allIds: string[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data: page } = await supabase
+        .from('novels')
+        .select('id')
+        .eq('published', true)
+        .is('deleted_at', null)
+        .range(from, from + 999)
+
+      if (!page || page.length === 0) break
+      allIds.push(...page.map((n: any) => n.id))
+      if (page.length < 1000) break
+    }
+
+    if (period === 'all') {
+      /* 累計：全期間。1000 件で切られないよう、分けて取る */
+      for (let from = 0; ; from += 1000) {
+        const { data: page } = await supabase
+          .from('likes')
+          .select('novel_id')
+          .range(from, from + 999)
+
+        if (!page || page.length === 0) break
+        page.forEach((l: any) => {
+          likeMap[l.novel_id] = (likeMap[l.novel_id] || 0) + 1
+        })
+        if (page.length < 1000) break
+      }
+    } else if (period === 'daily') {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const { data: dl } = await supabase
+        .from('likes')
+        .select('novel_id')
+        .gte('created_at', today.toISOString())
+
+      dl?.forEach((l: any) => {
+        likeMap[l.novel_id] = (likeMap[l.novel_id] || 0) + 1
+      })
+    } else {
+      const tableMap: Record<string, string> = {
+        weekly: 'weekly_likes',
+        monthly: 'monthly_likes',
+        quarterly: 'quarterly_likes',
+        yearly: 'yearly_likes',
+      }
+
+      const { data: likes } = await supabase
+        .from(tableMap[period])
+        .select('novel_id, like_count')
+        .order('like_count', { ascending: false })
+        .limit(1000)
+
+      likes?.forEach((l: any) => {
+        likeMap[l.novel_id] = l.like_count
+      })
+    }
+
+    likeIds = allIds
   }
 
   if (likeIds.length === 0) return { items: [], total: 0 }
@@ -298,8 +363,15 @@ async function computeRanking(period: string, novelType: string, serial: string,
      *   読者が押すのは、たいてい本文の下の♡。
      */
     const [{ data: allStats }, { data: allRatings }] = await Promise.all([
-      supabase.from('novel_stats').select('novel_id, like_count, bookmark_count').in('novel_id', candidateIds),
-      supabase.from('comments').select('novel_id, episode_id, user_id, rating').in('novel_id', candidateIds).not('rating', 'is', null),
+      /*
+       * ★ 上限を外す。
+       *
+       *   候補を全作品にしたので、返る行も増える。
+       *   既定の 1000 件で切られると、
+       *   下のほうの作品の数がまるごと 0 になる。
+       */
+      supabase.from('novel_stats').select('novel_id, like_count, bookmark_count').in('novel_id', candidateIds).limit(20000),
+      supabase.from('comments').select('novel_id, episode_id, user_id, rating').in('novel_id', candidateIds).not('rating', 'is', null).limit(20000),
     ])
     allStats?.forEach((row: any) => {
       likeCntMap[row.novel_id] = Number(row.like_count) || 0
@@ -322,7 +394,8 @@ async function computeRanking(period: string, novelType: string, serial: string,
     const periodHours: Record<string, number> = { daily: 24, weekly: 168, monthly: 720, quarterly: 2160, yearly: 8760 }
     const pvCntMap: Record<string, number> = {}
     {
-      const { data: candEps } = await supabase.from('episodes').select('id, novel_id').in('novel_id', candidateIds)
+      /* 話は作品より多い。上限を外しておく */
+      const { data: candEps } = await supabase.from('episodes').select('id, novel_id').in('novel_id', candidateIds).limit(50000)
       const epToNovelPv: Record<string, string> = {}
       const candEpIds = (candEps || []).map((e: any) => { epToNovelPv[e.id] = e.novel_id; return e.id })
       const hours = periodHours[period]
