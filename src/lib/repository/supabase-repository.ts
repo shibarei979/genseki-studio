@@ -1147,7 +1147,10 @@ export const supabaseRepository: Repository = {
              *   次に開いたときに元へ戻る。
              */
             .select(
-                "visibility, serial_status, published, allow_comments, allow_likes, allow_bookmarks, allow_shares, moderate_comments",
+                "visibility, serial_status, published," +
+                    " allow_comments, allow_likes, allow_bookmarks, allow_shares," +
+                    " moderate_comments," +
+                    " notify_followers, notify_on_publish, notify_timing",
             )
             .eq("id", workId)
             .maybeSingle();
@@ -1193,6 +1196,11 @@ export const supabaseRepository: Repository = {
                 allow_bookmarks: merged.allow_bookmarks ?? true,
                 allow_shares: merged.allow_shares ?? true,
                 moderate_comments: merged.moderate_comments ?? false,
+
+                /* 知らせの設定 */
+                notify_followers: merged.notify_followers ?? true,
+                notify_on_publish: merged.notify_on_publish ?? true,
+                notify_timing: merged.notify_timing ?? "immediate",
             })
             .eq("id", workId);
 

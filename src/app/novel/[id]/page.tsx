@@ -94,7 +94,12 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
   const [profileRes, novelRes] = await Promise.all([
     user ? supabase.from('profiles').select('*').eq('user_id', user.id).single() : Promise.resolve({ data: null }),
     supabase.from('novels')
-      .select('id, title, summary, genre, tags, is_serial, published, views, author_id, created_at, novel_type, official_tags, ai_usage, cover_url, cover_is_ai, cover_stamp_corner, age_rating, visibility, deleted_at')
+      /*
+       * ★ 作者が決めた受け付けの設定も読む。
+       *
+       *   前は読んでおらず、切っても押し具が出たままだった。
+       */
+      .select('id, title, summary, genre, tags, is_serial, published, views, author_id, created_at, novel_type, official_tags, ai_usage, cover_url, cover_is_ai, cover_stamp_corner, age_rating, visibility, deleted_at, allow_likes, allow_bookmarks, allow_shares')
       .eq('id', params.id).maybeSingle(),
   ])
   const profile = profileRes.data
@@ -809,6 +814,9 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
               )
             })()}
             <NovelActions
+              allowLikes={novel.allow_likes !== false}
+              allowBookmarks={novel.allow_bookmarks !== false}
+              allowShares={novel.allow_shares !== false}
               novelId={params.id}
               userId={user?.id || null}
               authorId={novel.author_id}

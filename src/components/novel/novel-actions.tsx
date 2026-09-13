@@ -18,6 +18,20 @@ interface Props {
   discoverCount: number
   userDisplayName?: string
   hideStats?: boolean
+  /**
+   * 作者が決めた受け付けの設定。
+   *
+   * ★ 切っていれば、その押し具を出さない。
+   *
+   *   前は設定があっても読者の側が見ておらず、
+   *   切っても押せたままだった。
+   *
+   * ★ 数は残す。
+   *   あとから切っても、これまでの数は消さない。
+   */
+  allowLikes?: boolean
+  allowBookmarks?: boolean
+  allowShares?: boolean
 }
 
 function fmtNum(n: number): string {
@@ -28,7 +42,7 @@ function fmtNum(n: number): string {
 
 const DAILY_LIMIT = 3
 
-export default function NovelActions({ novelId, userId, authorId, novelTitle, isAuthor, initialLiked, initialBookmarked, initialDiscovered, likeCount, bookmarkCount, discoverCount, userDisplayName, hideStats }: Props) {
+export default function NovelActions({ novelId, userId, authorId, novelTitle, isAuthor, initialLiked, initialBookmarked, initialDiscovered, likeCount, bookmarkCount, discoverCount, userDisplayName, hideStats, allowLikes = true, allowBookmarks = true, allowShares = true }: Props) {
   const supabase = createClient()
   const [liked,       setLiked]       = useState(initialLiked)
   const [bookmarked,  setBookmarked]  = useState(initialBookmarked)
@@ -201,18 +215,25 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
       <LoginPromptModal show={showLogin} onClose={()=>setShowLogin(false)} message={loginMsg} />
 
       <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+        {/* 作者が切っていれば出さない。数は上に残る */}
+        {allowLikes && (
         <button onClick={toggleLike} style={btn(liked,'var(--color-danger)','#fef2f2')}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill={liked?'var(--color-danger)':'none'} stroke={liked?'var(--color-danger)':'var(--color-text-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
           {!hideStats && fmtNum(likes)}
         </button>
+        )}
+
+        {allowBookmarks && (
         <button onClick={toggleBookmark} style={btn(bookmarked,'var(--color-brand)','var(--color-brand-light)')}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill={bookmarked?'var(--color-brand)':'none'} stroke={bookmarked?'var(--color-brand)':'var(--color-text-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
           </svg>
           {!hideStats && fmtNum(bookmarks)}
         </button>
+        )}
+
         <button onClick={handleDiscover}
           disabled={isAuthor || !!reachedLimit}
           style={isAuthor || reachedLimit
@@ -228,6 +249,8 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
            * どちらが拡散の数か分からなくなる。
            */}
         </button>
+
+        {allowShares && (
         <button onClick={handleXShare}
           style={{display:'inline-flex',alignItems:'center',gap:5,padding:'11px 14px',borderRadius:20,
             border:'1.5px solid #e2e8f0',background:'var(--color-bg-card)',color:'#374151',
@@ -237,6 +260,7 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
           </svg>
           シェア
         </button>
+        )}
       </div>
 
       {/* 拡散コメント入力 */}
