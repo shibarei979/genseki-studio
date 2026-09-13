@@ -106,21 +106,69 @@ export default function ContestEntriesClient({
          *   地を落として、札が乗っているように見せる。
          */
         <main className="mx-auto w-full max-w-4xl bg-canvas px-5 py-8">
-            <Link
-                href={`/contest/${contestId}`}
-                className="text-[12px] text-muted hover:text-ink"
-            >
-                ‹ コンテストの説明へもどる
-            </Link>
+            {/*
+              * 頭の帯。
+              *
+              * ★ コンテストの絵を出す。
+              *
+              *   文字だけだと、どのコンテストの頁か
+              *   一目で分からない。
+              *   説明の頁から来た人が、同じ場所にいると分かる。
+              *
+              * ★ 絵の上に題名を重ねる。
+              *   絵の下に並べると、そのぶん縦に伸びる。
+              */}
+            {contest?.banner_url ? (
+                <div className="relative overflow-hidden rounded-xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={contest.banner_url}
+                        alt={contest.title || "コンテスト"}
+                        className="h-36 w-full object-cover sm:h-48"
+                    />
 
-            <h1 className="mt-3 text-xl font-medium text-ink">
-                応募作品
-                {contest?.title && (
-                    <span className="ml-2 text-[13px] text-muted">
-                        {contest.title}
-                    </span>
-                )}
-            </h1>
+                    {/* 字が読めるよう、下を暗く落とす */}
+                    <div
+                        className="absolute inset-0"
+                        style={{
+                            background:
+                                "linear-gradient(180deg, rgba(0,0,0,.1) 0%, rgba(0,0,0,.62) 100%)",
+                        }}
+                        aria-hidden="true"
+                    />
+
+                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                        <Link
+                            href={`/contest/${contestId}`}
+                            className="text-[11.5px] text-white/80 hover:text-white"
+                        >
+                            ‹ {contest.title || "コンテスト"}の説明へ
+                        </Link>
+
+                        <h1 className="mt-1 text-lg font-medium text-white sm:text-xl">
+                            応募作品
+                        </h1>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <Link
+                        href={`/contest/${contestId}`}
+                        className="text-[12px] text-muted hover:text-ink"
+                    >
+                        ‹ コンテストの説明へもどる
+                    </Link>
+
+                    <h1 className="mt-2 text-xl font-medium text-ink">
+                        応募作品
+                        {contest?.title && (
+                            <span className="ml-2 text-[13px] text-muted">
+                                {contest.title}
+                            </span>
+                        )}
+                    </h1>
+                </>
+            )}
 
             {isLoading ? (
                 <p className="mt-8 text-center text-sm text-faint">
@@ -137,9 +185,22 @@ export default function ContestEntriesClient({
                 </div>
             ) : (
                 <>
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                        <p className="text-[12px] text-muted">
-                            {entries.length}作品。新しく出したものから並んでいます。
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+                        {/*
+                          * 件数と並び。
+                          *
+                          * ★ 数を大きく出す。
+                          *   「67作品」はこの頁の顔になる数字。
+                          *   説明文に埋もれさせない。
+                          */}
+                        <p className="text-[13px] text-ink">
+                            <b className="text-[17px] font-medium">
+                                {entries.length}
+                            </b>
+                            <span className="ml-1 text-[12px] text-muted">作品</span>
+                            <span className="ml-2.5 text-[11.5px] text-faint">
+                                新しく出したものから
+                            </span>
                         </p>
 
                         {/* 見せ方を選ぶ */}

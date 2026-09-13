@@ -233,6 +233,9 @@ export default function FeaturedShowcase({
     const banner = shown.find((one) => one.contestBanner)?.contestBanner || null
     const contestTitle = shown.find((one) => one.contestTitle)?.contestTitle || ''
 
+    /* 絵の行き先に使う。どのコンテストの絵か */
+    const contestId = shown.find((one) => one.contestId)?.contestId || ''
+
     function step(direction: -1 | 1) {
         setAt((now) => (now + direction + count) % count)
     }
@@ -267,16 +270,45 @@ export default function FeaturedShowcase({
                 <div className="fs_page" key={safeAt}>
                 {banner && (
                     <div className="fs_contest">
-                        <div className="fs_frame">
-                            <div className="fs_mat">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                    src={banner}
-                                    alt={contestTitle || 'コンテスト'}
-                                    className="fs_contest-img"
-                                />
+                        {/*
+                          * ★ 絵に行き先を付ける。
+                          *
+                          *   前は絵を出すだけで、押しても何も起きなかった。
+                          *   目に付く場所にあるのに、そこで行き止まりだった。
+                          *
+                          * ★ 行き先は、応募作品の一覧。
+                          *
+                          *   絵を見て気になった人が知りたいのは
+                          *   「どんな作品が出ているか」。
+                          *   説明の頁より、そちらへ送るほうが近い。
+                          */}
+                        {contestId ? (
+                            <Link
+                                href={`/contest/${contestId}/entries`}
+                                className="fs_frame"
+                                aria-label={`${contestTitle || 'コンテスト'}の応募作品を読む`}
+                            >
+                                <div className="fs_mat">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={banner}
+                                        alt={contestTitle || 'コンテスト'}
+                                        className="fs_contest-img"
+                                    />
+                                </div>
+                            </Link>
+                        ) : (
+                            <div className="fs_frame">
+                                <div className="fs_mat">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={banner}
+                                        alt={contestTitle || 'コンテスト'}
+                                        className="fs_contest-img"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 
