@@ -243,7 +243,21 @@ export default function MypageClient({
   const [myNovels,       setMyNovels]       = useState(initialNovels)
   const [expandedWork,   setExpandedWork]   = useState<string | null>(null)
   const [worksFilter,    setWorksFilter]    = useState<'all'|'published'|'serial'|'completed'|'short'|'draft'>('all')
-  const [histSort,       setHistSort]       = useState<'recent'|'title'>('recent')
+  /*
+   * 履歴の並べ方。
+   *
+   *   recent  最近読んだ順
+   *   title   題名順
+   *   genre   ジャンルごとに区切る
+   *
+   * ★ genre は「絞る」のではなく「区切る」。
+   *
+   *   ジャンルで絞る選び具は別にある。
+   *   あれは 1 つだけ見る道具で、
+   *   こちらは全部を種類ごとにまとめて見る道具。
+   *   やりたいことが違う。
+   */
+  const [histSort,       setHistSort]       = useState<'recent'|'title'|'genre'>('recent')
   const [histGenre,      setHistGenre]      = useState('すべてのジャンル')
   const [histType,       setHistType]       = useState('すべての形式')
   const [workEpisodes,   setWorkEpisodes]   = useState<Record<string, any[]>>({})
@@ -1480,6 +1494,7 @@ export default function MypageClient({
                 backgroundRepeat:'no-repeat',backgroundPosition:'right 12px center',backgroundSize:'14px'}}>
               <option value="recent">最近読んだ順</option>
               <option value="title">タイトル順</option>
+              <option value="genre">ジャンルごとに区切る</option>
             </select>
             <select value={histGenre} onChange={e=>setHistGenre(e.target.value)}
               style={{height:42,padding:'0 34px 0 14px',border:'1px solid #dcdfda',borderRadius:10,fontSize:13.5,color:'var(--color-text)',background:'var(--color-bg-card)',cursor:'pointer',appearance:'none' as any,
@@ -1526,11 +1541,65 @@ export default function MypageClient({
         </div>
       ) : (
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        {historyItemsNow
-          .filter((h:any)=> histGenre==='すべてのジャンル' || h.genre===histGenre)
-          .filter((h:any)=> histType==='すべての形式' || h.novelType===histType)
-          .sort((a:any,b:any)=> histSort==='title' ? String(a.novelTitle).localeCompare(String(b.novelTitle),'ja') : 0)
-          .map((item:any) => {
+        {(() => {
+          /*
+           * 絞ってから並べる。
+           *
+           * ★ ジャンルごとに区切るときは、見出しを挟む。
+           *
+           *   絞る選び具（すべてのジャンル）は、1 つだけ見る道具。
+           *   こちらは、全部を種類ごとにまとめて見る道具。
+           *   やりたいことが違うので、別に持つ。
+           *
+           * ★ 読んだ数の多いジャンルから並べる。
+           *   よく読むものが上に来るほうが、探しやすい。
+           */
+          const shown = historyItemsNow
+            .filter((h:any)=> histGenre==='すべてのジャンル' || h.genre===histGenre)
+            .filter((h:any)=> histType==='すべての形式' || h.novelType===histType)
+
+          if (histSort !== 'genre') {
+            return shown
+              .sort((a:any,b:any)=> histSort==='title' ? String(a.novelTitle).localeCompare(String(b.novelTitle),'ja') : 0)
+              .map((item:any) => renderHistoryCard(item))
+          }
+
+          /* ジャンルごとにまとめる */
+          const byGenre = new Map<string, any[]>()
+          for (const one of shown) {
+            const key = one.genre || 'ジャンル未設定'
+            if (!byGenre.has(key)) byGenre.set(key, [])
+            byGenre.get(key)!.push(one)
+          }
+
+          const groups = Array.from(byGenre.entries())
+            .sort((a, b) => b[1].length - a[1].length)
+
+          return groups.map(([genre, items]) => (
+            <div key={genre} style={{display:'flex',flexDirection:'column',gap:12}}>
+              {/* ジャンルの見出し。数も添える */}
+              <div style={{display:'flex',alignItems:'baseline',gap:10,marginTop:8}}>
+                <h2 style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>
+                  {genre}
+                </h2>
+                <span style={{fontSize:12,color:'var(--color-text-muted)'}}>
+                  {items.length}作品
+                </span>
+                <span style={{flex:1,height:1,background:'var(--color-brand-border)'}} />
+              </div>
+
+              {items.map((item:any) => renderHistoryCard(item))}
+            </div>
+          ))
+        })()}
+        </div>
+      )}
+    </div>
+    )
+  }
+
+  /** 履歴の 1 件ぶん。並べ方が変わっても、中身は同じ */
+  function renderHistoryCard(item: any) {
           const totalEps = novelEpCountMap[item.novelId] || 0
           return (
           <div key={item.novelId}
@@ -1605,11 +1674,6 @@ export default function MypageClient({
               )}
             </div>
           </div>
-          )
-        })}
-        </div>
-      )}
-    </div>
     )
   }
 
