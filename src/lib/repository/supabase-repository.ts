@@ -1139,7 +1139,16 @@ export const supabaseRepository: Repository = {
     async getPublishSettings(workId: string): Promise<PublishSettings> {
         const { data } = await db()
             .from("novels")
-            .select("visibility, serial_status, published, allow_comments")
+            /*
+             * ★ 画面に出す項目は、全部読む。
+             *
+             *   前は allow_comments までしか読んでいなかった。
+             *   読まないものは、画面で押しても
+             *   次に開いたときに元へ戻る。
+             */
+            .select(
+                "visibility, serial_status, published, allow_comments, allow_likes, moderate_comments",
+            )
             .eq("id", workId)
             .maybeSingle();
 
@@ -1169,6 +1178,19 @@ export const supabaseRepository: Repository = {
                  * 完結にしても「連載中」と出たままになる。
                  */
                 is_serial: merged.serial_status === "ongoing",
+
+                /*
+                 * ★ 画面に出す項目は、全部書く。
+                 *
+                 *   前は公開の向きと連載の状態しか書いていなかった。
+                 *   コメントやいいねの設定は、押しても
+                 *   どこにも残らずに消えていた。
+                 *
+                 *   「押しても反応しない」という声は、これ。
+                 */
+                allow_comments: merged.allow_comments ?? true,
+                allow_likes: merged.allow_likes ?? true,
+                moderate_comments: merged.moderate_comments ?? false,
             })
             .eq("id", workId);
 

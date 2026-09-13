@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import PendingComments from '@/components/mypage/pending-comments'
 import ReadingSummary from '@/components/mypage/reading-summary'
 import ReadingSummaryBoundary from '@/components/mypage/reading-summary-boundary'
 import { READER_MISSIONS, WRITER_MISSIONS } from '@/components/mypage/mission-client'
@@ -1080,6 +1081,14 @@ export default function MypageClient({
 
   const WorksTab = () => (
     <div>
+      {/*
+        * 承認待ちのコメント。
+        *
+        * ★ 「承認後に公開」を選んだ作品にだけ出る。
+        *   何も待っていなければ、何も出ない。
+        */}
+      <PendingComments />
+
       {/*
         * 閲覧の数え方を変えたことの断り。
         *

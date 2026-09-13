@@ -79,6 +79,14 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [posting, setPosting] = useState(false)
+
+  /*
+   * 書いたあとの知らせ。
+   *
+   * 承認待ちのとき、書いたのに出てこないと
+   * 失敗したと思って二度書くことになる。
+   */
+  const [notice, setNotice] = useState('')
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set())
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null)
   const [replyBody, setReplyBody] = useState('')
@@ -205,16 +213,57 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
     if (!trimmed) return
     setPosting(true)
 
+    /*
+     * ★ 承認が要る作品か、書く直前に見る。
+     *
+     *   作者が「承認後に公開」にしているなら、
+     *   書き込みは未承認として入れる。
+     *   作者が認めるまで、ほかの人には出ない。
+     *
+     * ★ 読めなかったときは、承認済みとして入れる。
+     *
+     *   設定が読めないせいで書き込みが消えるのは、
+     *   書いた人にとって理不尽。
+     *   黙って出ないより、出るほうがまし。
+     */
+    let needsApproval = false
+    try {
+      const { data: work } = await supabase
+        .from('novels')
+        .select('moderate_comments')
+        .eq('id', novelId)
+        .maybeSingle()
+
+      needsApproval = work?.moderate_comments === true
+    } catch {
+      /* 読めなくても、書き込みは通す */
+    }
+
     const insertData: any = {
       novel_id: novelId,
       episode_id: episodeId,
       user_id: userId,
       body: trimmed,
       quoted_text: quotedText || null,
+      is_approved: !needsApproval,
     }
     if (rating > 0) insertData.rating = rating
 
     const { data, error } = await supabase.from('comments').insert(insertData).select().single()
+
+    if (!error && data && needsApproval) {
+      /*
+       * ★ 承認待ちであることを、その場で伝える。
+       *
+       *   書いたのに出てこないと、
+       *   失敗したと思って二度書くことになる。
+       */
+      setNotice('この作品は、作者が確認してから公開されます。')
+      setBody('')
+      setRating(0)
+      setPosting(false)
+      return
+    }
 
     if (!error && data) {
       const newComment: Comment = {
@@ -501,6 +550,20 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
             placeholder="感想を書いてみましょう"
             style={{ width: '100%', minHeight: 70, padding: '10px 12px', border: '1px solid var(--color-brand-border)', borderRadius: 8, fontSize: 14, resize: 'vertical', outline: 'none', fontFamily: 'inherit', background: 'var(--color-bg-card)', color: 'var(--color-text)' }}
           />
+          {/*
+            * 書いたあとの知らせ。
+            *
+            * 承認待ちのときに出す。
+            * 出ないと、書いたのに消えたと思われる。
+            */}
+          {notice && (
+            <p style={{ marginTop: 8, padding: '8px 10px', borderRadius: 6,
+              background: 'var(--color-brand-light)', color: 'var(--color-brand)',
+              fontSize: 12, lineHeight: 1.7 }}>
+              {notice}
+            </p>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
             <button onClick={handleSubmit} disabled={posting || !body.trim()}
               style={{ background: 'var(--color-brand)', color: 'var(--color-text-inverse)', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: posting || !body.trim() ? 'not-allowed' : 'pointer', opacity: posting || !body.trim() ? 0.5 : 1 }}>
