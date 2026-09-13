@@ -258,6 +258,17 @@ export default function MypageClient({
    *   やりたいことが違う。
    */
   const [histSort,       setHistSort]       = useState<'recent'|'title'|'genre'>('recent')
+
+  /*
+   * 閉じているジャンル。
+   *
+   * ★ 閉じたものだけ覚える。
+   *
+   *   開いているものを覚える形にすると、
+   *   新しく読んだジャンルが閉じた状態で出てくる。
+   *   初めて出るものは、開いているべき。
+   */
+  const [closedGenres,   setClosedGenres]   = useState<string[]>([])
   const [histGenre,      setHistGenre]      = useState('すべてのジャンル')
   const [histType,       setHistType]       = useState('すべての形式')
   const [workEpisodes,   setWorkEpisodes]   = useState<Record<string, any[]>>({})
@@ -1575,10 +1586,63 @@ export default function MypageClient({
           const groups = Array.from(byGenre.entries())
             .sort((a, b) => b[1].length - a[1].length)
 
-          return groups.map(([genre, items]) => (
+          const allClosed = groups.every(([g]) => closedGenres.includes(g))
+
+          return (
+          <>
+            {/*
+              * 全部たたむ・全部開く。
+              *
+              * ★ ジャンルが多いと、一つずつ押すのは大変。
+              *   まず全部たたんで、見たいものだけ開く。
+              *   そういう使い方ができるようにする。
+              */}
+            {groups.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setClosedGenres(
+                  allClosed ? [] : groups.map(([g]) => g)
+                )}
+                style={{alignSelf:'flex-start',background:'none',border:'none',padding:'2px 0',
+                  fontSize:12,color:'var(--color-brand)',cursor:'pointer',textDecoration:'underline'}}
+              >
+                {allClosed ? 'すべて開く' : 'すべてたたむ'}
+              </button>
+            )}
+
+            {groups.map(([genre, items]) => {
+            /*
+             * ★ たためるようにする。
+             *
+             *   ジャンルが 10 も 20 もあると、
+             *   目当てのものまで送るのが大変。
+             *   見出しを押して、開け閉めできるようにする。
+             *
+             * ★ 初めは全部開いておく。
+             *   閉じた状態で出すと、何も無いように見える。
+             */
+            const isClosed = closedGenres.includes(genre)
+
+            return (
             <div key={genre} style={{display:'flex',flexDirection:'column',gap:12}}>
-              {/* ジャンルの見出し。数も添える */}
-              <div style={{display:'flex',alignItems:'baseline',gap:10,marginTop:8}}>
+              {/* ジャンルの見出し。押すと開け閉め */}
+              <button
+                type="button"
+                onClick={() => setClosedGenres((now:string[]) =>
+                  now.includes(genre)
+                    ? now.filter((one:string) => one !== genre)
+                    : [...now, genre]
+                )}
+                aria-expanded={!isClosed}
+                style={{display:'flex',alignItems:'center',gap:10,marginTop:8,width:'100%',
+                  background:'none',border:'none',padding:'4px 0',cursor:'pointer',textAlign:'left'}}
+              >
+                {/* 開いていれば下向き、閉じていれば右向き */}
+                <span aria-hidden="true" style={{fontSize:10,color:'var(--color-text-muted)',
+                  transform:isClosed ? 'rotate(-90deg)' : undefined,transition:'transform .18s ease'}}>
+                  ▼
+                </span>
+
                 <h2 style={{fontSize:14,fontWeight:700,color:'var(--color-text)'}}>
                   {genre}
                 </h2>
@@ -1586,11 +1650,14 @@ export default function MypageClient({
                   {items.length}作品
                 </span>
                 <span style={{flex:1,height:1,background:'var(--color-brand-border)'}} />
-              </div>
+              </button>
 
-              {items.map((item:any) => renderHistoryCard(item))}
+              {!isClosed && items.map((item:any) => renderHistoryCard(item))}
             </div>
-          ))
+            )
+            })}
+          </>
+          )
         })()}
         </div>
       )}
