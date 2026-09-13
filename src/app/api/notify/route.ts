@@ -391,6 +391,42 @@ export async function POST(request: Request) {
         /* 自分あては出さない */
         if (!notice.targetId || notice.targetId === user.id) return none;
 
+        /*
+         * ★ 受け取る人が切っていれば、送らない。
+         *
+         *   マイページに「いいねされたとき」などの
+         *   入り切りがあり、保存もされていた。
+         *   ところが送る側が一度も見ておらず、
+         *   切っても届いていた。
+         *
+         * ★ 読めなかったときは、送る。
+         *   設定が読めないせいで知らせが届かないより、
+         *   届くほうがまし。
+         */
+        const WANT_KEY: Record<string, string> = {
+            like: "notify_like",
+            comment: "notify_comment",
+            reply: "notify_comment",
+            follow: "notify_follow",
+            new_episode: "notify_new_episode",
+            new_work: "notify_new_work",
+        };
+
+        const wantKey = WANT_KEY[notice.type];
+
+        if (wantKey) {
+            const { data: want } = await admin
+                .from("profiles")
+                .select(wantKey)
+                .eq("user_id", notice.targetId)
+                .maybeSingle();
+
+            /* 切っているときだけ止める。未設定は送る */
+            if (want && (want as Record<string, unknown>)[wantKey] === false) {
+                return none;
+            }
+        }
+
         if (notice.once) {
             const { data: already } = await admin
                 .from("notifications")

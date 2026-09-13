@@ -79,6 +79,24 @@ export default async function EpisodePage({ params }: Props) {
   if (!episode) notFound()
   if (!novel) notFound()
 
+  /*
+   * ★ 作者の全体設定も見る。
+   *
+   *   マイページに「エピソードへのコメントを許可」があり、
+   *   作品ごとの設定と同じことを言っている。
+   *   どちらかが切られていれば、受け付けない。
+   *
+   *   二重にあること自体が分かりにくいが、
+   *   片方だけ効くよりはましなので、両方見る。
+   */
+  const { data: authorProfile } = await supabase
+    .from('profiles')
+    .select('allow_comments')
+    .eq('user_id', novel.author_id)
+    .maybeSingle()
+
+  const authorAllowsComments = authorProfile?.allow_comments
+
   // ===== 予約投稿の自動公開判定 =====
   const isOwner = user?.id === novel.author_id
 
@@ -420,8 +438,9 @@ export default async function EpisodePage({ params }: Props) {
             * ★ 既に書かれたものは、そのまま読める。
             *   あとから切っても、過去のやり取りは消さない。
             */}
-          {novel.allow_comments === false && comments.length === 0 ? null : (
-            <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments} allowNew={novel.allow_comments !== false}/>
+          {(novel.allow_comments === false || authorAllowsComments === false) &&
+          comments.length === 0 ? null : (
+            <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments} allowNew={novel.allow_comments !== false && authorAllowsComments !== false}/>
           )}
         </div>
       </div>
