@@ -107,7 +107,7 @@ export default function ContestEntriesClient({
          */
         <main className="mx-auto w-full max-w-4xl bg-canvas px-5 py-8">
             {/*
-              * 頭の帯。
+              * 頭。
               *
               * ★ コンテストの絵を出す。
               *
@@ -115,40 +115,48 @@ export default function ContestEntriesClient({
               *   一目で分からない。
               *   説明の頁から来た人が、同じ場所にいると分かる。
               *
-              * ★ 絵の上に題名を重ねる。
-              *   絵の下に並べると、そのぶん縦に伸びる。
+              * ★ 絵が無いコンテストもある。
+              *   そのときは文字だけで出す。
               */}
             {contest?.banner_url ? (
-                <div className="relative overflow-hidden rounded-xl">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        src={contest.banner_url}
-                        alt={contest.title || "コンテスト"}
-                        className="h-36 w-full object-cover sm:h-48"
-                    />
+                <div>
+                    <Link
+                        href={`/contest/${contestId}`}
+                        className="text-[12px] text-muted hover:text-ink"
+                    >
+                        ‹ {contest.title || "コンテスト"}の説明へもどる
+                    </Link>
 
-                    {/* 字が読めるよう、下を暗く落とす */}
-                    <div
-                        className="absolute inset-0"
-                        style={{
-                            background:
-                                "linear-gradient(180deg, rgba(0,0,0,.1) 0%, rgba(0,0,0,.62) 100%)",
-                        }}
-                        aria-hidden="true"
-                    />
-
-                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-                        <Link
-                            href={`/contest/${contestId}`}
-                            className="text-[11.5px] text-white/80 hover:text-white"
-                        >
-                            ‹ {contest.title || "コンテスト"}の説明へ
-                        </Link>
-
-                        <h1 className="mt-1 text-lg font-medium text-white sm:text-xl">
-                            応募作品
-                        </h1>
+                    {/*
+                      * コンテストの絵。
+                      *
+                      * ★ 切り取らない。
+                      *
+                      *   前は高さを決めて、はみ出しを切っていた。
+                      *   絵の真ん中だけが横長に残り、
+                      *   何の絵なのか分からなくなっていた。
+                      *
+                      *   絵の形はコンテストごとに違う。
+                      *   こちらで決めた形に押し込まず、
+                      *   そのままの形で出す。
+                      *
+                      * ★ 額に入れる。
+                      *
+                      *   絵をそのまま置くと、地に溶ける。
+                      *   薄い縁と影を付けて、貼ってあるように見せる。
+                      */}
+                    <div className="mt-2.5 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_2px_10px_rgba(40,35,25,.07)]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={contest.banner_url}
+                            alt={contest.title || "コンテスト"}
+                            className="block max-h-[340px] w-full object-contain"
+                        />
                     </div>
+
+                    <h1 className="mt-4 text-xl font-medium text-ink">
+                        応募作品
+                    </h1>
                 </div>
             ) : (
                 <>
