@@ -231,6 +231,27 @@ export default async function EpisodePage({ params }: Props) {
   /* 次の話がまだ無いときだけ出す。続きがあるなら、そちらを読んでもらう */
   const showUpcoming = !nextEp && upcomingEp
 
+  /*
+   * ★ 縦書きの作品では、次と前を入れ替える。
+   *
+   *   縦書きは右から左へ読み進む。
+   *   そこで「次の話」が右にあると、
+   *   読んできた向きと逆になって手が止まる。
+   *
+   *   次は左、前は右。読み進む向きに合わせる。
+   *
+   * ★ 横書きのときは、そのまま。
+   *   左から右なので、次が右で正しい。
+   *
+   * ★ 作者が決めていなければ、縦書きとして扱う。
+   *   小説を読む場所なので、そちらが多い。
+   */
+  const readsRightToLeft = novel.recommended_mode !== 'horizontal'
+
+  /* 読み進む向きに合わせた、矢印と並び */
+  const prevLabel = readsRightToLeft ? '前の話 →' : '← 前の話'
+  const nextLabel = readsRightToLeft ? '← 次の話' : '次の話 →'
+
   try {
     /*
      * ★ 作者が自分の作品を開いたぶんは、印を付けて残す。
@@ -358,9 +379,14 @@ export default async function EpisodePage({ params }: Props) {
             </div>
           )}
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:16,gap:8}}>
-            {prevEp ? <Link href={`/novel/${params.id}/episode/${prevEp.id}`} style={navBtn}>← 前の話</Link> : <div/>}
+            {/* 読み進む向きに合わせて、左右を入れ替える */}
+            {readsRightToLeft
+              ? (nextEp ? <Link href={`/novel/${params.id}/episode/${nextEp.id}`} style={navBtn}>{nextLabel}</Link> : <div/>)
+              : (prevEp ? <Link href={`/novel/${params.id}/episode/${prevEp.id}`} style={navBtn}>{prevLabel}</Link> : <div/>)}
             <Link href={`/novel/${params.id}`} style={{...navBtn,color:'var(--color-text-muted)'}}>目次</Link>
-            {nextEp ? <Link href={`/novel/${params.id}/episode/${nextEp.id}`} style={navBtn}>次の話 →</Link> : <div/>}
+            {readsRightToLeft
+              ? (prevEp ? <Link href={`/novel/${params.id}/episode/${prevEp.id}`} style={navBtn}>{prevLabel}</Link> : <div/>)
+              : (nextEp ? <Link href={`/novel/${params.id}/episode/${nextEp.id}`} style={navBtn}>{nextLabel}</Link> : <div/>)}
           </div>
           {showUpcoming && (
             <div style={{background:'var(--color-info-bg)',border:'1px solid var(--color-info-border)',borderRadius:8,padding:'8px 14px',marginBottom:16,fontSize:12,color:'var(--color-info)',textAlign:'center'}}>
@@ -394,17 +420,26 @@ export default async function EpisodePage({ params }: Props) {
           <div style={{textAlign:'center',marginBottom:16}}>
             <TypoReportButton novelId={params.id} episodeId={params.epId} authorId={novel.author_id} userId={user?.id||null} userName={profile?.display_name||null} novelTitle={novel.title} episodeTitle={episode.title}/>
           </div>
-          <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:16}}>
+          {/*
+            * ★ 読み進む向きに合わせて、左右を入れ替える。
+            *
+            *   縦書きは右から左へ読む。
+            *   「次の話」が右にあると、読んできた向きと逆になる。
+            *
+            *   並びの向きだけを変えて、中身は同じにする。
+            *   書き分けると、片方だけ直し忘れる。
+            */}
+          <div style={{display:'flex',flexDirection:readsRightToLeft ? 'row-reverse' : 'row',justifyContent:'space-between',gap:8,marginBottom:16}}>
             {prevEp ? (
               <Link href={`/novel/${params.id}/episode/${prevEp.id}`}
                 style={{flex:1,textAlign:'center',fontSize:13,color:'var(--color-brand)',border:'1.5px solid var(--color-brand-border)',padding:'10px',borderRadius:10,background:'var(--color-bg-card)',textDecoration:'none'}}>
-                ← 前の話<br/><span style={{fontSize:11,color:'var(--color-text-muted)'}}>{prevEp.title}</span>
+                {prevLabel}<br/><span style={{fontSize:11,color:'var(--color-text-muted)'}}>{prevEp.title}</span>
               </Link>
             ) : <div style={{flex:1}}/>}
             {nextEp ? (
               <Link href={`/novel/${params.id}/episode/${nextEp.id}`}
                 style={{flex:1,textAlign:'center',fontSize:13,color:'var(--color-brand)',border:'1.5px solid var(--color-brand)',padding:'10px',borderRadius:10,background:'var(--color-brand-light)',textDecoration:'none'}}>
-                次の話 →<br/><span style={{fontSize:11,color:'var(--color-text-muted)'}}>{nextEp.title}</span>
+                {nextLabel}<br/><span style={{fontSize:11,color:'var(--color-text-muted)'}}>{nextEp.title}</span>
               </Link>
             ) : (
               <div style={{flex:1,textAlign:'center',fontSize:13,color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'10px',borderRadius:10,background:'var(--color-bg-card)'}}>
