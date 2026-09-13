@@ -2633,6 +2633,10 @@ export const supabaseRepository: Repository = {
             author_name: string;
             char_count: number;
             entered_at: string;
+            cover_url: string | null;
+            cover_is_ai: boolean | null;
+            summary: string;
+            genre: string;
         }[]
     > {
         /*
@@ -2658,17 +2662,41 @@ export const supabaseRepository: Repository = {
             new Set(entries.map((row) => String(row.novel_id))),
         );
 
-        /* いま読める作品だけを拾う */
+        /*
+         * いま読める作品だけを拾う。
+         *
+         * ★ 表紙も一緒に取る。
+         *   本棚で並べるときに要る。
+         *   応募の表には入っていない。
+         */
         const { data: live } = await db()
             .from("novels")
-            .select("id")
+            .select("id, cover_url, cover_is_ai, summary, genre")
             .in("id", workIds)
             .eq("published", true)
             .is("deleted_at", null);
 
-        const readable = new Set(
-            rows<{ id: string }>(live).map((row) => row.id),
-        );
+        const workById = new Map<
+            string,
+            {
+                cover_url: string | null;
+                cover_is_ai: boolean | null;
+                summary: string | null;
+                genre: string | null;
+            }
+        >();
+
+        for (const row of rows<{
+            id: string;
+            cover_url: string | null;
+            cover_is_ai: boolean | null;
+            summary: string | null;
+            genre: string | null;
+        }>(live)) {
+            workById.set(row.id, row);
+        }
+
+        const readable = new Set(workById.keys());
 
         /*
          * ★ 作者名は、引き直す。
@@ -2703,15 +2731,23 @@ export const supabaseRepository: Repository = {
 
         return entries
             .filter((row) => readable.has(String(row.novel_id)))
-            .map((row) => ({
-                work_id: String(row.novel_id),
-                work_title: String(row.work_title ?? ""),
-                author_name:
-                    nameById[String(row.author_id ?? "")] ||
-                    String(row.author_name ?? ""),
-                char_count: Number(row.char_count ?? 0),
-                entered_at: String(row.created_at ?? ""),
-            }));
+            .map((row) => {
+                const work = workById.get(String(row.novel_id));
+
+                return {
+                    work_id: String(row.novel_id),
+                    work_title: String(row.work_title ?? ""),
+                    author_name:
+                        nameById[String(row.author_id ?? "")] ||
+                        String(row.author_name ?? ""),
+                    char_count: Number(row.char_count ?? 0),
+                    entered_at: String(row.created_at ?? ""),
+                    cover_url: work?.cover_url ?? null,
+                    cover_is_ai: work?.cover_is_ai ?? null,
+                    summary: work?.summary ?? "",
+                    genre: work?.genre ?? "",
+                };
+            });
     },
 
     async listMyContestEntries(contestId: string): Promise<ContestEntry[]> {

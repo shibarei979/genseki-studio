@@ -1692,6 +1692,10 @@ export const localRepository: Repository = {
             author_name: row.author_name,
             char_count: row.char_count,
             entered_at: row.entered_at,
+            cover_url: null,
+            cover_is_ai: null,
+            summary: '',
+            genre: '',
         }));
     },
 

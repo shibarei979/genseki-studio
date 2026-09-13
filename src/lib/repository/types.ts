@@ -544,6 +544,10 @@ export interface Repository {
             author_name: string;
             char_count: number;
             entered_at: string;
+            cover_url: string | null;
+            cover_is_ai: boolean | null;
+            summary: string;
+            genre: string;
         }[]
     >;
     createContestEntry(

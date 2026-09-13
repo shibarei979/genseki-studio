@@ -37,6 +37,10 @@ interface Entry {
     author_name: string;
     char_count: number;
     entered_at: string;
+    cover_url: string | null;
+    cover_is_ai: boolean | null;
+    summary: string;
+    genre: string;
 }
 
 /** 見せ方の覚え。開くたびに選び直させない */
@@ -88,6 +92,8 @@ export default function ContestEntriesClient({
         id: entry.work_id,
         title: entry.work_title || "（題名なし）",
         author: entry.author_name || "名もなき作者",
+        cover_url: entry.cover_url,
+        cover_is_ai: entry.cover_is_ai,
     }));
 
     return (
@@ -159,25 +165,53 @@ export default function ContestEntriesClient({
                             <WorkShelf works={shelfWorks} />
                         </div>
                     ) : (
-                        <ul className="mt-4 divide-y divide-line">
+                        /*
+                         * 一覧。
+                         *
+                         * ★ 一列に潰さない。
+                         *
+                         *   前は題名・作者・文字数を横一列に並べていた。
+                         *   狭い画面では題名が切れ、何の作品か分からない。
+                         *
+                         *   題名を大きく、その下に作者とあらすじ。
+                         *   目が題名から入って、そのまま下へ流れる。
+                         *
+                         * ★ あらすじを添える。
+                         *   題名だけでは選べない。
+                         */
+                        <ul className="mt-4 grid gap-2">
                             {entries.map((entry) => (
                                 <li key={entry.work_id}>
                                     <Link
                                         href={`/novel/${entry.work_id}`}
-                                        className="flex items-baseline gap-3 px-2 py-3 hover:bg-forest-tint/40"
+                                        className="block rounded-lg border border-line px-4 py-3.5 hover:border-forest-line hover:bg-forest-tint/30"
                                     >
-                                        <span className="min-w-0 flex-1 truncate text-[14px] text-ink">
+                                        <p className="text-[14.5px] font-medium leading-snug text-ink">
                                             {entry.work_title || "（題名なし）"}
-                                        </span>
+                                        </p>
 
-                                        <span className="shrink-0 text-[12px] text-muted">
-                                            {entry.author_name || "名もなき作者"}
-                                        </span>
-
-                                        {entry.char_count > 0 && (
-                                            <span className="hidden shrink-0 text-[11px] text-faint sm:inline">
-                                                {entry.char_count.toLocaleString()}字
+                                        <p className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11.5px] text-muted">
+                                            <span>
+                                                {entry.author_name || "名もなき作者"}
                                             </span>
+
+                                            {entry.genre && (
+                                                <span className="text-faint">
+                                                    {entry.genre}
+                                                </span>
+                                            )}
+
+                                            {entry.char_count > 0 && (
+                                                <span className="text-faint">
+                                                    {entry.char_count.toLocaleString()}字
+                                                </span>
+                                            )}
+                                        </p>
+
+                                        {entry.summary && (
+                                            <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-muted">
+                                                {entry.summary}
+                                            </p>
                                         )}
                                     </Link>
                                 </li>
