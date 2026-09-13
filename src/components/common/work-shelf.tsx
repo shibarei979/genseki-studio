@@ -40,8 +40,10 @@ export interface ShelfWork {
     author?: string
     /** 表紙の絵。無ければ紙の表紙を作る */
     cover_url?: string | null
-    /** 表紙を AI で作ったか。右上に札を出す */
+    /** 表紙を AI で作ったか。作品ページと同じ印を出す */
     cover_is_ai?: boolean | null
+    /** 印を置く角。作者が選んだもの。決めていなければ右上 */
+    cover_stamp_corner?: "tl" | "tr" | "bl" | "br" | null
     /**
      * 押したときに出す札の中身。
      *
@@ -49,7 +51,6 @@ export interface ShelfWork {
      * 文字の一覧と同じ札を出す。
      */
     novel?: Record<string, unknown>
-    /** 表紙を AI で作ったか。作品ページと同じ印を出す */
 }
 
 export default function WorkShelf({ works }: { works: ShelfWork[] }) {
