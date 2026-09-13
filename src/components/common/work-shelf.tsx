@@ -385,16 +385,16 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                         className="ws_ai"
                                         style={{
                                             top: (work.cover_stamp_corner ?? "tr").startsWith("t")
-                                                ? -5
+                                                ? -7
                                                 : undefined,
                                             bottom: (work.cover_stamp_corner ?? "tr").startsWith("b")
-                                                ? -5
+                                                ? -7
                                                 : undefined,
                                             left: (work.cover_stamp_corner ?? "tr").endsWith("l")
-                                                ? -5
+                                                ? -7
                                                 : undefined,
                                             right: (work.cover_stamp_corner ?? "tr").endsWith("r")
-                                                ? -5
+                                                ? -7
                                                 : undefined,
                                         }}
                                     />

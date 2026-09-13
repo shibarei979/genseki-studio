@@ -145,12 +145,28 @@ export default function ContestEntriesClient({
                       *   絵をそのまま置くと、地に溶ける。
                       *   薄い縁と影を付けて、貼ってあるように見せる。
                       */}
-                    <div className="mt-2.5 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_2px_10px_rgba(40,35,25,.07)]">
+                    <div className="relative mt-2.5 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_2px_10px_rgba(40,35,25,.07)]">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={contest.banner_url}
                             alt={contest.title || "コンテスト"}
                             className="block max-h-[340px] w-full object-contain"
+                        />
+
+                        {/*
+                          * ★ 絵を少し落ち着かせる。
+                          *
+                          *   明るい絵は、下に並ぶ作品より先に目に入る。
+                          *   ここは応募作品を読む場所で、絵は看板。
+                          *   看板が主役になってはいけない。
+                          *
+                          * ★ 全体に薄く掛ける。
+                          *   下半分だけ暗くすると、絵が途中で切れて見える。
+                          */}
+                        <div
+                            className="pointer-events-none absolute inset-0"
+                            style={{ background: "rgba(16, 20, 26, .22)" }}
+                            aria-hidden="true"
                         />
                     </div>
 
