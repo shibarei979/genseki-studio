@@ -300,3 +300,46 @@
         width: 100px;
     }
 }
+
+
+/*
+ * ============================================================
+ * AI で作った表紙の印
+ *
+ * ★ 飾りを書いていなかった。
+ *
+ *   素の文字がそのまま出ていて、
+ *   何の印なのか分からない見た目になっていた。
+ *   「表紙の横に A が出ているが、これは？」という声が届いた。
+ *
+ * ★ 表紙の右上に、小さく重ねる。
+ *   絵の邪魔をせず、見れば分かる大きさに。
+ *
+ * ★ 触れると、言葉が出る（title 属性）。
+ *   2 文字だけでは伝わらない。
+ * ============================================================
+ */
+.ws_ai {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 3;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 20px;
+    height: 15px;
+    padding: 0 4px;
+
+    border-radius: 3px;
+    background: rgba(20, 24, 28, .72);
+    color: #fff;
+
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    line-height: 1;
+    white-space: nowrap;
+}

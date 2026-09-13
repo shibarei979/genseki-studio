@@ -97,7 +97,13 @@ export default function ContestEntriesClient({
     }));
 
     return (
-        <main className="mx-auto w-full max-w-4xl px-5 py-8">
+        /*
+         * ★ 地を少し沈める。
+         *
+         *   札を白にしても、地も白だと浮かない。
+         *   地を落として、札が乗っているように見せる。
+         */
+        <main className="mx-auto w-full max-w-4xl bg-canvas px-5 py-8">
             <Link
                 href={`/contest/${contestId}`}
                 className="text-[12px] text-muted hover:text-ink"
@@ -184,7 +190,14 @@ export default function ContestEntriesClient({
                                 <li key={entry.work_id}>
                                     <Link
                                         href={`/novel/${entry.work_id}`}
-                                        className="block rounded-lg border border-line px-4 py-3.5 hover:border-forest-line hover:bg-forest-tint/30"
+                                        /*
+                                         * ★ 地と分かれる色にする。
+                                         *
+                                         *   枠線だけだと、背景が同じ色なので
+                                         *   一枚の紙に線が引いてあるだけに見える。
+                                         *   1 件ずつの区切りが分からない。
+                                         */
+                                        className="block rounded-lg border border-line bg-surface px-4 py-3.5 shadow-[0_1px_2px_rgba(40,35,25,.04)] hover:border-forest-line hover:bg-forest-tint/40"
                                     >
                                         <p className="text-[14.5px] font-medium leading-snug text-ink">
                                             {entry.work_title || "（題名なし）"}

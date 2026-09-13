@@ -367,7 +367,11 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                   * 題名の紙には、そもそも絵が無い。
                                   */}
                                 {work.cover_url && work.cover_is_ai && (
-                                    <span className="ws_ai" aria-label="AIで作った表紙">
+                                    <span
+                                        className="ws_ai"
+                                        aria-label="AIで作った表紙"
+                                        title="AIで作った表紙"
+                                    >
                                         AI
                                     </span>
                                 )}
