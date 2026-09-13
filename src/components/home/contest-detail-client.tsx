@@ -282,6 +282,28 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                             <span aria-hidden="true">›</span>
                         </Link>
 
+                        {/*
+                          * 応募作品を見に行く。
+                          *
+                          * ★ ここに並べない。
+                          *
+                          *   初めは説明の途中に一覧を挟んだが、
+                          *   読む流れが切れて見にくかった。
+                          *
+                          *   「応募する」の隣に置いて、
+                          *   見たい人だけが別の頁へ行く形にする。
+                          */}
+                        {publicEntries.length > 0 && (
+                            <Link
+                                href={`/contest/${contestId}/entries`}
+                                className="mt-2 flex items-center justify-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium hover:bg-black/[0.03]"
+                                style={{ borderColor: C.teal, color: C.teal }}
+                            >
+                                応募作品を読む（{publicEntries.length}作品）
+                                <span aria-hidden="true">›</span>
+                            </Link>
+                        )}
+
                         {isOpen && remaining >= 0 && (
                             <p className="mt-2 text-center text-[11px] text-muted">
                                 締切まであと {remaining} 日
@@ -419,64 +441,6 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                         ))}
                     </ol>
                 </Section>
-
-                {/*
-                  * 応募作品。
-                  *
-                  * ★ 誰でも読めるようにする。
-                  *
-                  *   コンテストは、読んでもらう場でもある。
-                  *   応募作が誰にも読まれないまま締切を迎えるのは、
-                  *   出した人にとっても、場としても損。
-                  *
-                  * ★ 新しく出したものを上に。
-                  *   早く出した人だけが読まれ続けるのを避ける。
-                  *
-                  * ★ 選考の印は出さない。
-                  *   一次通過などが応募中に見えると、
-                  *   選考そのものが成り立たない。
-                  */}
-                {publicEntries.length > 0 && (
-                    <Section
-                        id="entries"
-                        icon={<ListIcon />}
-                        title={`応募作品（${publicEntries.length}作品）`}
-                    >
-                        <ul className="grid gap-2">
-                            {publicEntries.map((entry) => (
-                                <li key={entry.work_id}>
-                                    <Link
-                                        href={`/novel/${entry.work_id}`}
-                                        className="flex items-baseline gap-3 rounded-lg px-3 py-2.5 hover:bg-black/[0.03]"
-                                    >
-                                        <span
-                                            className="min-w-0 flex-1 truncate text-[13.5px]"
-                                            style={{ color: C.navy }}
-                                        >
-                                            {entry.work_title || "（題名なし）"}
-                                        </span>
-
-                                        <span
-                                            className="shrink-0 text-[11.5px]"
-                                            style={{ color: C.body }}
-                                        >
-                                            {entry.author_name || "名もなき作者"}
-                                        </span>
-
-                                        {entry.char_count > 0 && (
-                                            <span
-                                                className="hidden shrink-0 text-[11px] sm:inline"
-                                                style={{ color: C.body, opacity: 0.7 }}
-                                            >
-                                                {entry.char_count.toLocaleString()}字
-                                            </span>
-                                        )}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </Section>
-                )}
 
                 <Section id="rules" icon={<ListIcon />} title="応募条件">
                     <div className="grid gap-x-4 gap-y-px sm:grid-cols-2">
