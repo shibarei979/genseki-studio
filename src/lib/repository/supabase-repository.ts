@@ -2635,9 +2635,19 @@ export const supabaseRepository: Repository = {
             entered_at: string;
         }[]
     > {
+        /*
+         * ★ 表の列は novel_id。
+         *
+         *   画面の側では work_id と呼んでいるが、
+         *   表に入っているのは novel_id。
+         *   確かめずに work_id で読んでいて、
+         *   1 件も返らなかった。
+         */
         const { data } = await db()
             .from("contest_entries")
-            .select("work_id, work_title, author_name, char_count, created_at")
+            .select(
+                "novel_id, work_title, author_name, author_id, char_count, created_at",
+            )
             .eq("contest_id", contestId)
             .order("created_at", { ascending: false });
 
@@ -2645,7 +2655,7 @@ export const supabaseRepository: Repository = {
         if (entries.length === 0) return [];
 
         const workIds = Array.from(
-            new Set(entries.map((row) => String(row.work_id))),
+            new Set(entries.map((row) => String(row.novel_id))),
         );
 
         /* いま読める作品だけを拾う */
@@ -2660,12 +2670,45 @@ export const supabaseRepository: Repository = {
             rows<{ id: string }>(live).map((row) => row.id),
         );
 
+        /*
+         * ★ 作者名は、引き直す。
+         *
+         *   応募したときに author_name を空で保存していたので、
+         *   表には名前が入っていない。
+         *   いまの名前を引いて出す。
+         */
+        const authorIds = Array.from(
+            new Set(
+                entries
+                    .map((row) => row.author_id as string | undefined)
+                    .filter(Boolean) as string[],
+            ),
+        );
+
+        const nameById: Record<string, string> = {};
+
+        if (authorIds.length > 0) {
+            const { data: people } = await db()
+                .from("public_profiles")
+                .select("user_id, display_name")
+                .in("user_id", authorIds);
+
+            for (const row of rows<{
+                user_id: string;
+                display_name: string | null;
+            }>(people)) {
+                nameById[row.user_id] = row.display_name ?? "";
+            }
+        }
+
         return entries
-            .filter((row) => readable.has(String(row.work_id)))
+            .filter((row) => readable.has(String(row.novel_id)))
             .map((row) => ({
-                work_id: String(row.work_id),
+                work_id: String(row.novel_id),
                 work_title: String(row.work_title ?? ""),
-                author_name: String(row.author_name ?? ""),
+                author_name:
+                    nameById[String(row.author_id ?? "")] ||
+                    String(row.author_name ?? ""),
                 char_count: Number(row.char_count ?? 0),
                 entered_at: String(row.created_at ?? ""),
             }));
