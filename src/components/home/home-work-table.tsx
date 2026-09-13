@@ -726,7 +726,17 @@ function Tile({
                         }}
                     />
 
-                    {/* 表紙 */}
+                    {/*
+                     * 表紙。
+                     *
+                     * ★ 作った表紙があれば、それを出す。
+                     *
+                     *   前は題名から色を決めるだけだった。
+                     *   表紙を作った人の絵が、
+                     *   自分のホームに出てこなかった。
+                     *
+                     *   絵が無い作品は、これまでどおり色の表紙。
+                     */}
                     <span
                         className="absolute inset-y-0 left-0 overflow-hidden rounded-l-[2px] rounded-r-[4px]"
                         style={{
@@ -741,6 +751,26 @@ function Tile({
                             boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.07)",
                         }}
                     >
+                        {/*
+                          * 作った表紙の絵。
+                          *
+                          * ★ 色の表紙の上に重ねる。
+                          *   絵が無ければ、下の色がそのまま見える。
+                          *
+                          * ★ 縦横は切らずに、枠いっぱいに収める。
+                          *   本の形に合わせて切ると、
+                          *   描いた絵の大事な所が落ちる。
+                          */}
+                        {work.cover_url && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                                src={work.cover_url}
+                                alt=""
+                                aria-hidden="true"
+                                className="absolute inset-0 h-full w-full object-cover"
+                            />
+                        )}
+
                         {/*
                          * 背表紙側の陰。
                          * 綴じてある側は光が回らず、必ず暗くなる。
@@ -764,20 +794,29 @@ function Tile({
                         />
 
                         {/* 題名 */}
-                        <span
-                            className="absolute left-0 right-0 px-3"
-                            style={{
-                                top: Math.round(BOOK_HEIGHT * 0.22),
-                                paddingLeft: BOOK.spine + 10,
-                            }}
-                        >
+                        {/*
+                          * 題名。
+                          *
+                          * ★ 作った表紙があるときは出さない。
+                          *   絵の上に重なって、どちらも読めなくなる。
+                          *   題名は、その絵の中に描かれているはず。
+                          */}
+                        {!work.cover_url && (
                             <span
-                                className="line-clamp-2 block text-center font-serif leading-[1.5] tracking-[0.04em]"
-                                style={{ fontSize: BOOK.title, color: cover.ink }}
+                                className="absolute left-0 right-0 px-3"
+                                style={{
+                                    top: Math.round(BOOK_HEIGHT * 0.22),
+                                    paddingLeft: BOOK.spine + 10,
+                                }}
                             >
-                                {work.title || "無題"}
+                                <span
+                                    className="line-clamp-2 block text-center font-serif leading-[1.5] tracking-[0.04em]"
+                                    style={{ fontSize: BOOK.title, color: cover.ink }}
+                                >
+                                    {work.title || "無題"}
+                                </span>
                             </span>
-                        </span>
+                        )}
 
                         {/*
                          * 状態と更新日。
