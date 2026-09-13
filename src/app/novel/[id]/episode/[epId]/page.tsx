@@ -1,4 +1,5 @@
 import { looksLikeBot } from '@/lib/utils/bot'
+import EpisodeNav from '@/components/novel/episode/episode-nav'
 import { nameSource } from '@/lib/utils/view-source'
 import { createClient } from '@/lib/supabase/server'
 import { cookies, headers } from 'next/headers'
@@ -231,26 +232,7 @@ export default async function EpisodePage({ params }: Props) {
   /* 次の話がまだ無いときだけ出す。続きがあるなら、そちらを読んでもらう */
   const showUpcoming = !nextEp && upcomingEp
 
-  /*
-   * ★ 縦書きの作品では、次と前を入れ替える。
-   *
-   *   縦書きは右から左へ読み進む。
-   *   そこで「次の話」が右にあると、
-   *   読んできた向きと逆になって手が止まる。
-   *
-   *   次は左、前は右。読み進む向きに合わせる。
-   *
-   * ★ 横書きのときは、そのまま。
-   *   左から右なので、次が右で正しい。
-   *
-   * ★ 作者が決めていなければ、縦書きとして扱う。
-   *   小説を読む場所なので、そちらが多い。
-   */
-  const readsRightToLeft = novel.recommended_mode !== 'horizontal'
 
-  /* 読み進む向きに合わせた、矢印と並び */
-  const prevLabel = readsRightToLeft ? '前の話 →' : '← 前の話'
-  const nextLabel = readsRightToLeft ? '← 次の話' : '次の話 →'
 
   try {
     /*
@@ -378,16 +360,14 @@ export default async function EpisodePage({ params }: Props) {
               📅 この話は予約投稿中です。{new Date(episode.scheduled_at).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} に公開されます（このプレビューは作者にのみ表示されています）
             </div>
           )}
-          <div style={{display:'flex',justifyContent:'space-between',marginBottom:16,gap:8}}>
-            {/* 読み進む向きに合わせて、左右を入れ替える */}
-            {readsRightToLeft
-              ? (nextEp ? <Link href={`/novel/${params.id}/episode/${nextEp.id}`} style={navBtn}>{nextLabel}</Link> : <div/>)
-              : (prevEp ? <Link href={`/novel/${params.id}/episode/${prevEp.id}`} style={navBtn}>{prevLabel}</Link> : <div/>)}
-            <Link href={`/novel/${params.id}`} style={{...navBtn,color:'var(--color-text-muted)'}}>目次</Link>
-            {readsRightToLeft
-              ? (prevEp ? <Link href={`/novel/${params.id}/episode/${prevEp.id}`} style={navBtn}>{prevLabel}</Link> : <div/>)
-              : (nextEp ? <Link href={`/novel/${params.id}/episode/${nextEp.id}`} style={navBtn}>{nextLabel}</Link> : <div/>)}
-          </div>
+          <EpisodeNav
+            novelId={params.id}
+            prev={prevEp ? { id: prevEp.id, title: prevEp.title } : null}
+            next={nextEp ? { id: nextEp.id, title: nextEp.title } : null}
+            recommended={novel.recommended_mode ?? null}
+            compact
+          />
+
           {showUpcoming && (
             <div style={{background:'var(--color-info-bg)',border:'1px solid var(--color-info-border)',borderRadius:8,padding:'8px 14px',marginBottom:16,fontSize:12,color:'var(--color-info)',textAlign:'center'}}>
               次の話は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃の予定です
@@ -420,29 +400,13 @@ export default async function EpisodePage({ params }: Props) {
           <div style={{textAlign:'center',marginBottom:16}}>
             <TypoReportButton novelId={params.id} episodeId={params.epId} authorId={novel.author_id} userId={user?.id||null} userName={profile?.display_name||null} novelTitle={novel.title} episodeTitle={episode.title}/>
           </div>
-          {/*
-            * ★ 読み進む向きに合わせて、左右を入れ替える。
-            *
-            *   縦書きは右から左へ読む。
-            *   「次の話」が右にあると、読んできた向きと逆になる。
-            *
-            *   並びの向きだけを変えて、中身は同じにする。
-            *   書き分けると、片方だけ直し忘れる。
-            */}
-          <div style={{display:'flex',flexDirection:readsRightToLeft ? 'row-reverse' : 'row',justifyContent:'space-between',gap:8,marginBottom:16}}>
-            {prevEp ? (
-              <Link href={`/novel/${params.id}/episode/${prevEp.id}`}
-                style={{flex:1,textAlign:'center',fontSize:13,color:'var(--color-brand)',border:'1.5px solid var(--color-brand-border)',padding:'10px',borderRadius:10,background:'var(--color-bg-card)',textDecoration:'none'}}>
-                {prevLabel}<br/><span style={{fontSize:11,color:'var(--color-text-muted)'}}>{prevEp.title}</span>
-              </Link>
-            ) : <div style={{flex:1}}/>}
-            {nextEp ? (
-              <Link href={`/novel/${params.id}/episode/${nextEp.id}`}
-                style={{flex:1,textAlign:'center',fontSize:13,color:'var(--color-brand)',border:'1.5px solid var(--color-brand)',padding:'10px',borderRadius:10,background:'var(--color-brand-light)',textDecoration:'none'}}>
-                {nextLabel}<br/><span style={{fontSize:11,color:'var(--color-text-muted)'}}>{nextEp.title}</span>
-              </Link>
-            ) : (
-              <div style={{flex:1,textAlign:'center',fontSize:13,color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'10px',borderRadius:10,background:'var(--color-bg-card)'}}>
+          <EpisodeNav
+            novelId={params.id}
+            prev={prevEp ? { id: prevEp.id, title: prevEp.title } : null}
+            next={nextEp ? { id: nextEp.id, title: nextEp.title } : null}
+            recommended={novel.recommended_mode ?? null}
+            tail={
+              <div style={{textAlign:'center',fontSize:13,color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'10px',borderRadius:10,background:'var(--color-bg-card)'}}>
                 最新話です<br/>
                 {/* 次の予定があるなら、目次に戻る前にそれを見せる */}
                 {showUpcoming ? (
@@ -453,8 +417,9 @@ export default async function EpisodePage({ params }: Props) {
                   <Link href={`/novel/${params.id}`} style={{fontSize:11,color:'var(--color-brand)',textDecoration:'none'}}>目次に戻る</Link>
                 )}
               </div>
-            )}
-          </div>
+            }
+          />
+
           <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,padding:'14px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:12}}>
             <div style={{flex:1}}>
               <Link href={`/novel/${params.id}`} style={{fontSize:14,fontWeight:700,color:'var(--color-text)',textDecoration:'none',display:'block',marginBottom:2}}>{novel.title}</Link>
