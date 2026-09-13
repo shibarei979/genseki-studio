@@ -81,7 +81,11 @@ export default async function AdminAnalyticsPage() {
      * 前は「新しい順に 50 件」から並べ替えていたので、
      * よく読まれている古い作品が一度も出てこなかった。
      */
-    supabase.from('novels').select('id, title, genre').eq('published', true).limit(3000),
+    /* 分けて取る。作品が 1000 を超えると切れる */
+    readAll((from, to) =>
+      supabase.from('novels').select('id, title, genre')
+        .eq('published', true).range(from, to),
+    ).then((data) => ({ data })),
     supabase.from('contests').select('id, title, deadline').eq('is_published', true),
     supabase.from('contest_entries').select('contest_id'),
     supabase.from('user_missions').select('mission_id'),
