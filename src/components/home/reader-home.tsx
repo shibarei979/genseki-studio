@@ -457,7 +457,7 @@ export default async function ReaderHome() {
         .select('novel_id')
         .in('novel_id', ids)
         .eq('is_published', true)
-        .limit(5000),
+        .limit(1000),
     ])
 
     const live = new Set(
@@ -880,7 +880,7 @@ export default async function ReaderHome() {
       .eq('novel_id', first.novel.id)
       .eq('is_published', true)
       .order('ep_number', { ascending: true })
-      .limit(5000)
+      .limit(1000)
 
     const list = eps || []
     const at = list.findIndex((e: any) => e.id === first.epId)

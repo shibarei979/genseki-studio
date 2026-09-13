@@ -19,7 +19,7 @@ export default async function MyCommentsPage({ searchParams }: { searchParams: {
   const kind = ['comment', 'discover'].includes(searchParams.kind || '') ? searchParams.kind : 'all'
 
   // 既読は read_feedbacks に item_key があるかで1件ずつ判定する
-  const { data: readRows } = await supabase.from('read_feedbacks').select('item_key').eq('user_id', user.id).limit(2000)
+  const { data: readRows } = await supabase.from('read_feedbacks').select('item_key').eq('user_id', user.id).limit(1000)
   const readSet = new Set((readRows || []).map((r: any) => r.item_key))
 
   // 自分の作品

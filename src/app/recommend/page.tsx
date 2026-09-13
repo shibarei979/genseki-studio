@@ -155,7 +155,7 @@ export default async function RecommendPage({
             .select("novel_id")
             .in("novel_id", rated.map((n) => n.id))
             .eq("is_published", true)
-            .limit(20000);
+            .limit(1000);
 
         for (const row of (liveEpisodes || []) as { novel_id: string }[]) {
             liveIds.add(row.novel_id);

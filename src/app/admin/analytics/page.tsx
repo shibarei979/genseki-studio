@@ -1,4 +1,5 @@
 import AdminShell from '@/components/admin/admin-shell'
+import { readAll } from '@/lib/utils/read-all'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
@@ -67,7 +68,12 @@ export default async function AdminAnalyticsPage() {
   ] = await Promise.all([
     supabase.from('novels').select('id, genre').eq('published', true),
     supabase.from('likes').select('novel_id'),
-    supabase.from('page_views').select('viewed_at').or('is_bot.is.null,is_bot.eq.false').gte('viewed_at', since30.toISOString()).limit(50000),
+    /* 分けて取る。limit は 1000 行で頭打ちになる */
+    readAll((from, to) =>
+      supabase.from('page_views').select('viewed_at')
+        .or('is_bot.is.null,is_bot.eq.false')
+        .gte('viewed_at', since30.toISOString()).range(from, to),
+    ).then((data) => ({ data })),
     supabase.from('novel_views').select('novel_id, view_count'),
     /*
      * 作品ごとの PV を出すので、新しい 50 件では足りない。
@@ -113,11 +119,11 @@ export default async function AdminAnalyticsPage() {
      * 名前が要らないので、user_id だけ引く。
      */
     supabase.from('page_views').select('user_id').or('is_bot.is.null,is_bot.eq.false')
-      .gte('viewed_at', since30.toISOString()).not('user_id', 'is', null).limit(50000),
+      .gte('viewed_at', since30.toISOString()).not('user_id', 'is', null).limit(1000),
 
     /* 月に一度でも書いた人 */
     supabase.from('episodes').select('novel_id')
-      .gte('created_at', since30.toISOString()).limit(50000),
+      .gte('created_at', since30.toISOString()).limit(1000),
 
     /*
      * 話の数。書かれた量と、読める量を分ける。

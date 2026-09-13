@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { readAll } from '@/lib/utils/read-all'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/layout/header'
@@ -51,11 +52,36 @@ export default async function AnalyticsPage() {
        *   書かないと 1,000 件で切られる。
        *   読まれている作品ほど、途中までしか数えない。
        */
-      epIds.length > 0 ? supabase.from('page_views').select('episode_id, user_id, visitor_id, viewed_at, device').eq('is_author', false).limit(100000).in('episode_id', epIds) : Promise.resolve({ data: [] }),
-      supabase.from('likes').select('novel_id').in('novel_id', novelIds),
-      supabase.from('bookmarks').select('novel_id').in('novel_id', novelIds),
+      /*
+       * ★ 分けて取る。limit は効かない。
+       *
+       *   既定で 1000 行までしか返らない。
+       *   読まれている作品ほど、途中までしか数えない。
+       */
+      epIds.length > 0
+        ? readAll((from, to) =>
+            supabase.from('page_views')
+              .select('episode_id, user_id, visitor_id, viewed_at, device')
+              .eq('is_author', false)
+              .in('episode_id', epIds)
+              .range(from, to),
+          ).then((data) => ({ data }))
+        : Promise.resolve({ data: [] }),
+      readAll((from, to) =>
+        supabase.from('likes').select('novel_id')
+          .in('novel_id', novelIds).range(from, to),
+      ).then((data) => ({ data })),
+      readAll((from, to) =>
+        supabase.from('bookmarks').select('novel_id')
+          .in('novel_id', novelIds).range(from, to),
+      ).then((data) => ({ data })),
       supabase.from('comments').select('novel_id, episode_id, body, user_id, created_at, rating').in('novel_id', novelIds).neq('user_id', user.id).order('created_at', { ascending: false }),
-      epIds.length > 0 ? supabase.from('episode_likes').select('episode_id').in('episode_id', epIds) : Promise.resolve({ data: [] }),
+      epIds.length > 0
+        ? readAll((from, to) =>
+            supabase.from('episode_likes').select('episode_id')
+              .in('episode_id', epIds).range(from, to),
+          ).then((data) => ({ data }))
+        : Promise.resolve({ data: [] }),
       Promise.resolve({ data: [] }),
     ])
 

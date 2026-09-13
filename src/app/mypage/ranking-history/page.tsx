@@ -14,7 +14,7 @@ export default async function RankingHistoryPage() {
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single()
-  const { data: readRows } = await supabase.from('read_feedbacks').select('item_key').eq('user_id', user.id).limit(2000)
+  const { data: readRows } = await supabase.from('read_feedbacks').select('item_key').eq('user_id', user.id).limit(1000)
   const readSet = new Set((readRows || []).map((r: any) => r.item_key))
 
   const { data: history } = await supabase

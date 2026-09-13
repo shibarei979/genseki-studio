@@ -1,4 +1,5 @@
 import LivePresence from "@/components/admin/live-presence"
+import { readAll } from '@/lib/utils/read-all'
 import ErrorPanel from "@/components/admin/error-panel"
 import AdminShell from '@/components/admin/admin-shell'
 import UserJoinPetals from '@/components/admin/user-join-petals'
@@ -410,10 +411,15 @@ export default async function AdminPage({
      * 全員「読者」に入る。プレリリースは作家向けだったので、
      * 実際には居ないはずの読者が 37 人いることになっていた。
      */
-    supabase.from('profiles').select('home_mode').limit(20000),
+    /* 分けて取る。人が 1000 を超えると、割合が狂う */
+    readAll((from, to) =>
+      supabase.from('profiles').select('home_mode').range(from, to),
+    ).then((data) => ({ data })),
 
     /* ジャンル別の作品数。公開しているものだけ数える */
-    supabase.from('novels').select('genre').eq('published', true).limit(20000),
+    readAll((from, to) =>
+      supabase.from('novels').select('genre').eq('published', true).range(from, to),
+    ).then((data) => ({ data })),
 
     /* まだ見ていない通報。運営がいちばん先に気づくべき数字 */
     supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'open'),

@@ -176,7 +176,7 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
     supabase.from('series_novels').select('series_id').eq('novel_id', params.id).maybeSingle(),
     supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, posted_at, illust_url, chapter_id, published, is_published, scheduled_at')
       /* 上限を上げる。既定 1,000 件だと目次の後ろが消える */
-      .eq('novel_id', params.id).order('ep_number', { ascending: true }).limit(5000),
+      .eq('novel_id', params.id).order('ep_number', { ascending: true }).limit(1000),
   ])
   const authorProfile = authorRes.data
   const seriesNovelData = seriesNovelRes.data
