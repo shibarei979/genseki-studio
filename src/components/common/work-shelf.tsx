@@ -367,13 +367,36 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                   * 題名の紙には、そもそも絵が無い。
                                   */}
                                 {work.cover_url && work.cover_is_ai && (
-                                    <span
+                                    /*
+                                     * ★ ほかの画面と同じ印を使う。
+                                     *
+                                     *   前はここだけ「AI」という文字の札だった。
+                                     *   作品ページや設定画面では絵の印を使っている。
+                                     *   同じことを表すものは、同じ形でないと覚えられない。
+                                     *
+                                     * ★ 置く角も、作者が選んだところに合わせる。
+                                     */
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
+                                        src="/images/ai-cover-stamp.png"
+                                        alt="この表紙はAI画像を使っています"
+                                        title="この表紙はAI画像を使っています"
                                         className="ws_ai"
-                                        aria-label="AIで作った表紙"
-                                        title="AIで作った表紙"
-                                    >
-                                        AI
-                                    </span>
+                                        style={{
+                                            top: (work.cover_stamp_corner ?? "tr").startsWith("t")
+                                                ? -3
+                                                : undefined,
+                                            bottom: (work.cover_stamp_corner ?? "tr").startsWith("b")
+                                                ? -3
+                                                : undefined,
+                                            left: (work.cover_stamp_corner ?? "tr").endsWith("l")
+                                                ? -3
+                                                : undefined,
+                                            right: (work.cover_stamp_corner ?? "tr").endsWith("r")
+                                                ? -3
+                                                : undefined,
+                                        }}
+                                    />
                                 )}
 
                                 {/* 上からの光 */}

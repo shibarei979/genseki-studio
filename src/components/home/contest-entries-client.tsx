@@ -39,6 +39,7 @@ interface Entry {
     entered_at: string;
     cover_url: string | null;
     cover_is_ai: boolean | null;
+    cover_stamp_corner: "tl" | "tr" | "bl" | "br" | null;
     summary: string;
     genre: string;
 }
@@ -94,6 +95,7 @@ export default function ContestEntriesClient({
         author: entry.author_name || "名もなき作者",
         cover_url: entry.cover_url,
         cover_is_ai: entry.cover_is_ai,
+        cover_stamp_corner: entry.cover_stamp_corner,
     }));
 
     return (

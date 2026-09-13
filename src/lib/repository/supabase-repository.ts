@@ -2635,6 +2635,7 @@ export const supabaseRepository: Repository = {
             entered_at: string;
             cover_url: string | null;
             cover_is_ai: boolean | null;
+            cover_stamp_corner: "tl" | "tr" | "bl" | "br" | null;
             summary: string;
             genre: string;
         }[]
@@ -2671,7 +2672,7 @@ export const supabaseRepository: Repository = {
          */
         const { data: live } = await db()
             .from("novels")
-            .select("id, cover_url, cover_is_ai, summary, genre")
+            .select("id, cover_url, cover_is_ai, cover_stamp_corner, summary, genre")
             .in("id", workIds)
             .eq("published", true)
             .is("deleted_at", null);
@@ -2681,6 +2682,7 @@ export const supabaseRepository: Repository = {
             {
                 cover_url: string | null;
                 cover_is_ai: boolean | null;
+                cover_stamp_corner: "tl" | "tr" | "bl" | "br" | null;
                 summary: string | null;
                 genre: string | null;
             }
@@ -2690,6 +2692,7 @@ export const supabaseRepository: Repository = {
             id: string;
             cover_url: string | null;
             cover_is_ai: boolean | null;
+            cover_stamp_corner: "tl" | "tr" | "bl" | "br" | null;
             summary: string | null;
             genre: string | null;
         }>(live)) {
@@ -2744,6 +2747,7 @@ export const supabaseRepository: Repository = {
                     entered_at: String(row.created_at ?? ""),
                     cover_url: work?.cover_url ?? null,
                     cover_is_ai: work?.cover_is_ai ?? null,
+                    cover_stamp_corner: work?.cover_stamp_corner ?? null,
                     summary: work?.summary ?? "",
                     genre: work?.genre ?? "",
                 };

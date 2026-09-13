@@ -546,6 +546,7 @@ export interface Repository {
             entered_at: string;
             cover_url: string | null;
             cover_is_ai: boolean | null;
+            cover_stamp_corner: "tl" | "tr" | "bl" | "br" | null;
             summary: string;
             genre: string;
         }[]

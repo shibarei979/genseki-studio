@@ -1694,6 +1694,7 @@ export const localRepository: Repository = {
             entered_at: row.entered_at,
             cover_url: null,
             cover_is_ai: null,
+            cover_stamp_corner: null,
             summary: '',
             genre: '',
         }));
