@@ -415,16 +415,20 @@ export async function POST(request: Request) {
         const wantKey = WANT_KEY[notice.type];
 
         if (wantKey) {
+            /*
+             * ★ 列の名前を組み立てて選ぶので、型が定まらない。
+             *   一度 unknown を挟んでから見る。
+             */
             const { data: want } = await admin
                 .from("profiles")
                 .select(wantKey)
                 .eq("user_id", notice.targetId)
                 .maybeSingle();
 
+            const row = want as unknown as Record<string, unknown> | null;
+
             /* 切っているときだけ止める。未設定は送る */
-            if (want && (want as Record<string, unknown>)[wantKey] === false) {
-                return none;
-            }
+            if (row && row[wantKey] === false) return none;
         }
 
         if (notice.once) {
