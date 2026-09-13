@@ -1147,7 +1147,7 @@ export const supabaseRepository: Repository = {
              *   次に開いたときに元へ戻る。
              */
             .select(
-                "visibility, serial_status, published, allow_comments, allow_likes, moderate_comments",
+                "visibility, serial_status, published, allow_comments, allow_likes, allow_bookmarks, allow_shares, moderate_comments",
             )
             .eq("id", workId)
             .maybeSingle();
@@ -1190,6 +1190,8 @@ export const supabaseRepository: Repository = {
                  */
                 allow_comments: merged.allow_comments ?? true,
                 allow_likes: merged.allow_likes ?? true,
+                allow_bookmarks: merged.allow_bookmarks ?? true,
+                allow_shares: merged.allow_shares ?? true,
                 moderate_comments: merged.moderate_comments ?? false,
             })
             .eq("id", workId);

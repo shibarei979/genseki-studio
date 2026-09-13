@@ -38,6 +38,15 @@ interface Props {
    */
   isAdmin?: boolean
   comments: Comment[]
+  /**
+   * 新しく書けるか。
+   *
+   * ★ 作者が「コメントを受け付ける」を切っていれば false。
+   *
+   *   既に書かれたものは、そのまま読める。
+   *   あとから切っても、過去のやり取りは消さない。
+   */
+  allowNew?: boolean
 }
 
 function StarDisplay({ rating }: { rating?: number | null }) {
@@ -51,7 +60,9 @@ function StarDisplay({ rating }: { rating?: number | null }) {
   )
 }
 
-export default function CommentSection({ novelId, episodeId, userId, userName, userIconUrl, authorId, isAdmin = false, comments: initialComments }: Props) {
+export default function CommentSection({ novelId, episodeId, userId, userName, userIconUrl, authorId, isAdmin = false, comments: initialComments,
+  allowNew = true,
+}: Props) {
   /* 読むのは誰でも。書くときにログインを求める */
   const { guard, prompt } = useLoginRequired(userId)
 
@@ -489,8 +500,19 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
         <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{comments.length}件</span>
       </div>
 
-      {/* 投稿フォーム */}
-      {userId ? (
+      {/*
+        * 投稿フォーム。
+        *
+        * ★ 作者が受け付けていなければ、書く場所を出さない。
+        *   欄だけ出ていると、書こうとして書けない。
+        */}
+      {!allowNew ? (
+        <p style={{ padding: '14px 16px', fontSize: 12, lineHeight: 1.8,
+          color: 'var(--color-text-muted)',
+          borderBottom: '1px solid var(--color-brand-light)' }}>
+          この作品は、コメントを受け付けていません。
+        </p>
+      ) : userId ? (
         <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--color-brand-light)' }}>
           {quotedText ? (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: 'var(--color-brand-light)', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
@@ -565,7 +587,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-            <button onClick={handleSubmit} disabled={posting || !body.trim()}
+            <button onClick={handleSubmit} disabled={posting || !body.trim() || !allowNew}
               style={{ background: 'var(--color-brand)', color: 'var(--color-text-inverse)', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: posting || !body.trim() ? 'not-allowed' : 'pointer', opacity: posting || !body.trim() ? 0.5 : 1 }}>
               {posting ? '投稿中...' : '投稿する'}
             </button>

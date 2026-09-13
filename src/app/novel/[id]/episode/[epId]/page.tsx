@@ -47,7 +47,14 @@ export default async function EpisodePage({ params }: Props) {
   const [profileRes, episodeRes, novelRes] = await Promise.all([
     user ? supabase.from('profiles').select('*').eq('user_id', user.id).single() : Promise.resolve({ data: null }),
     supabase.from('episodes').select('*').eq('id', params.epId).maybeSingle(),
-    supabase.from('novels').select('id, title, genre, is_serial, author_id, views, recommended_mode, age_rating').eq('id', params.id).maybeSingle(),
+    /*
+     * ★ 作者が決めた設定も読む。
+     *
+     *   「コメントを受け付ける」を切っても
+     *   コメント欄が出たままだった。
+     *   保存はされているのに、読者の側が見ていなかった。
+     */
+    supabase.from('novels').select('id, title, genre, is_serial, author_id, views, recommended_mode, age_rating, allow_comments, allow_likes').eq('id', params.id).maybeSingle(),
   ])
   const profile = profileRes.data
   const episode = episodeRes.data
@@ -404,7 +411,18 @@ export default async function EpisodePage({ params }: Props) {
               目次を見る
             </Link>
           </div>
-          <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments}/>
+          {/*
+            * ★ 作者が切っていれば、出さない。
+            *
+            *   受け付けない作品に欄だけ出ていると、
+            *   書こうとして書けない、ということが起きる。
+            *
+            * ★ 既に書かれたものは、そのまま読める。
+            *   あとから切っても、過去のやり取りは消さない。
+            */}
+          {novel.allow_comments === false && comments.length === 0 ? null : (
+            <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments} allowNew={novel.allow_comments !== false}/>
+          )}
         </div>
       </div>
 
