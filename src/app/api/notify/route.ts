@@ -121,7 +121,8 @@ export async function POST(request: Request) {
         if (body.comment_id) {
             const { data: comment } = await admin
                 .from("comments")
-                .select("id, user_id, novel_id, episode_id, parent_id")
+                /* 承認待ちかどうかも見る。知らせ方が変わる */
+                .select("id, user_id, novel_id, episode_id, parent_id, is_approved")
                 .eq("id", body.comment_id)
                 .single();
 
@@ -150,11 +151,30 @@ export async function POST(request: Request) {
                     link,
                 };
             } else {
+                /*
+                 * ★ 承認待ちなら、そう伝える。
+                 *
+                 *   承認制の作品では、書かれても読者には出ない。
+                 *   ふつうの通知だと、作者は
+                 *   「もう出ている」と思って何もしない。
+                 *   そのままコメントが埋もれる。
+                 *
+                 * ★ 行き先も変える。
+                 *
+                 *   ふだんは話の頁へ送るが、
+                 *   承認待ちのときは決める場所へ送る。
+                 *   通知の中では決められないので、
+                 *   決められる所へ連れていく。
+                 */
+                const isPending = comment.is_approved === false;
+
                 notice = {
                     targetId: await authorOf(admin, comment.novel_id),
                     type: "comment",
-                    message: `${name}さんがコメントしました`,
-                    link,
+                    message: isPending
+                        ? `${name}さんからコメントが届きました（承認待ち）`
+                        : `${name}さんがコメントしました`,
+                    link: isPending ? "/mypage#works" : link,
                 };
             }
         }

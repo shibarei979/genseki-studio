@@ -148,13 +148,20 @@ export default function PendingComments() {
     if (isLoading || items.length === 0) return null
 
     return (
+        /*
+         * ★ 目に付く色にする。
+         *
+         *   通知から飛んでくる場所なので、
+         *   来た人がすぐ見つけられないと意味がない。
+         *   ほかの枠と同じ色だと、埋もれる。
+         */
         <section
             style={{
                 marginBottom: 20,
                 padding: '14px 16px',
                 borderRadius: 12,
-                border: '1px solid var(--color-brand-border)',
-                background: 'var(--color-bg-card)',
+                border: '1px solid var(--color-brand)',
+                background: 'var(--color-brand-light)',
             }}
         >
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
