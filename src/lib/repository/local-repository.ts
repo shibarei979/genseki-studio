@@ -1682,6 +1682,19 @@ export const localRepository: Repository = {
     },
 
     /* 端末の中だけで動くときは、応募も自分のものしかない */
+    /** 応募作を、読む人向けに並べる */
+    async listPublicContestEntries(contestId: string) {
+        const all = await this.listContestEntries(contestId);
+
+        return all.map((row) => ({
+            work_id: row.work_id,
+            work_title: row.work_title,
+            author_name: row.author_name,
+            char_count: row.char_count,
+            entered_at: row.entered_at,
+        }));
+    },
+
     async listMyContestEntries(contestId: string): Promise<ContestEntry[]> {
         return this.listContestEntries(contestId);
     },

@@ -2609,6 +2609,68 @@ export const supabaseRepository: Repository = {
         });
     },
 
+    /**
+     * 応募作を、読む人向けに並べる。
+     *
+     * ★ 選考の印は持ち出さない。
+     *
+     *   一次通過や運営の覚え書きが応募中に見えると、
+     *   選考そのものが成り立たない。
+     *   読む列を、ここで絞る。
+     *
+     * ★ 読めない作品は外す。
+     *
+     *   応募したあとに非公開へ戻した作品は、
+     *   開いても「見つかりません」に当たる。
+     *   1 話も出していないものも同じ。
+     */
+    async listPublicContestEntries(
+        contestId: string,
+    ): Promise<
+        {
+            work_id: string;
+            work_title: string;
+            author_name: string;
+            char_count: number;
+            entered_at: string;
+        }[]
+    > {
+        const { data } = await db()
+            .from("contest_entries")
+            .select("work_id, work_title, author_name, char_count, created_at")
+            .eq("contest_id", contestId)
+            .order("created_at", { ascending: false });
+
+        const entries = rows<Record<string, unknown>>(data);
+        if (entries.length === 0) return [];
+
+        const workIds = Array.from(
+            new Set(entries.map((row) => String(row.work_id))),
+        );
+
+        /* いま読める作品だけを拾う */
+        const { data: live } = await db()
+            .from("novels")
+            .select("id")
+            .in("id", workIds)
+            .eq("published", true)
+            .is("deleted_at", null);
+
+        const readable = new Set(
+            rows<{ id: string }>(live).map((row) => row.id),
+        );
+
+        return entries
+            .filter((row) => readable.has(String(row.work_id)))
+            .map((row) => ({
+                work_id: String(row.work_id),
+                work_title: String(row.work_title ?? ""),
+                author_name: String(row.author_name ?? ""),
+                char_count: Number(row.char_count ?? 0),
+                entered_at: String(row.created_at ?? ""),
+            }));
+    },
+
     async listMyContestEntries(contestId: string): Promise<ContestEntry[]> {
         const userId = await currentUser();
         if (!userId) return [];

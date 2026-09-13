@@ -531,6 +531,21 @@ export interface Repository {
      * 全員分を渡すと他人の応募に押し具が付く。
      */
     listMyContestEntries(contestId: string): Promise<ContestEntry[]>;
+
+    /**
+     * 応募作を、読む人向けに並べる。
+     *
+     * 選考の印は持ち出さない。読めない作品は外す。
+     */
+    listPublicContestEntries(contestId: string): Promise<
+        {
+            work_id: string;
+            work_title: string;
+            author_name: string;
+            char_count: number;
+            entered_at: string;
+        }[]
+    >;
     createContestEntry(
         contestId: string,
         input: Omit<ContestEntry, "id" | "contest_id" | "entered_at">,
