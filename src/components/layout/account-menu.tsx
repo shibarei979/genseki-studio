@@ -139,6 +139,31 @@ export default function AccountMenu({ isCurrent }: { isCurrent: boolean }) {
                             </MenuLink>
 
                             {/*
+                              * 保存した作品と、読んだ記録。
+                              *
+                              * ★ マイページの中の札を、ここからも開く。
+                              *
+                              *   いちばん使うのに、いちばん奥にあった。
+                              *   「毎回どこか探している」という声が届いた。
+                              *
+                              *   札そのものは動かさない。
+                              *   入口を一つ増やすだけにする。
+                              */}
+                            <MenuLink
+                                href="/mypage#bookmarks"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                保存した作品
+                            </MenuLink>
+
+                            <MenuLink
+                                href="/mypage#history"
+                                onClick={() => setIsOpen(false)}
+                            >
+                                読んだ記録
+                            </MenuLink>
+
+                            {/*
                              * 上の段から「作品投稿」を外したぶん、ここに置く。
                              * ホーム以外の画面からも書きはじめられるようにするため。
                              */}
