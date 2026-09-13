@@ -14,6 +14,12 @@ export interface MissionStats {
   hasBio?: boolean
   tweetCount?: number
   seriesCount?: number
+  /** 表紙を付けた作品の数 */
+  coverCount?: number
+  /** 自分の作品にもらったいいねの数 */
+  receivedLikeCount?: number
+  /** 自分の作品にもらったコメントの数 */
+  receivedCommentCount?: number
 }
 
 interface Props {
@@ -49,30 +55,80 @@ const CatIcon = ({ cat }: { cat: MissionCat }) => {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={p[cat]}/></svg>
 }
 
-// 読み手10・書き手はさらに5個（計15）。クリアを押すとカードが消え、全達成でタブごと非公開
-export const READER_MISSIONS: Mission[] = [
+/*
+ * ============================================================
+ * ミッション
+ *
+ * ★ 共通 7 ＋ 読む側だけ 8 ＋ 書く側だけ 8 ＝ 23 個。
+ *
+ *   読む向きで見ると 15 個、書く向きで見ると 15 個。
+ *   共通の 7 個は、どちらの一覧にも出る。
+ *
+ * ★ 共通は、両方で数える。
+ *
+ *   同じことをしても、読む向き・書く向きの
+ *   それぞれでポイントが出る。
+ *   作者は読者でもあるので、両方に出るのが自然という判断。
+ *
+ * ★ ポイント
+ *
+ *     1 つ達成        10 pt
+ *     片方 15 個全部  アイテム
+ *     23 個ぜんぶ     300 pt ＋ アイテム
+ * ============================================================
+ */
+
+/** どちらの一覧にも出るもの */
+export const COMMON_MISSIONS: Mission[] = [
   { id: 'first-read',     label: 'はじめての読了',     desc: '作品を1話、最後まで読む',      target: 1,  cat: 'start',    cur: s => s.readCount || 0 },
   { id: 'read-5',         label: '読書の習慣',         desc: '5話読了する',                  target: 5,  cat: 'start',    cur: s => s.readCount || 0 },
-  { id: 'first-follow',   label: '作家をフォロー',     desc: '気になる作家をフォローする',   target: 1,  cat: 'social',   cur: s => s.followCount },
   { id: 'first-like',     label: 'はじめてのいいね',   desc: '作品にいいねを送る',           target: 1,  cat: 'social',   cur: s => s.likeCount },
-  { id: 'like-10',        label: '応援の達人',         desc: 'いいねを10回送る',             target: 10, cat: 'social',   cur: s => s.likeCount },
   { id: 'first-bookmark', label: 'はじめての保存',     desc: '気になる作品を保存する',       target: 1,  cat: 'start',    cur: s => s.bookmarkCount },
   { id: 'first-comment',  label: 'はじめてのコメント', desc: '作品にコメントを書く',         target: 1,  cat: 'social',   cur: s => s.commentCount },
-  { id: 'comment-5',      label: '感想の語り部',       desc: 'コメントを5件書く',            target: 5,  cat: 'social',   cur: s => s.commentCount },
-  { id: 'first-discover', label: 'はじめての発掘',     desc: '作品を発掘・拡散する',         target: 1,  cat: 'discover', cur: s => s.discoverCount },
-  { id: 'discover-3',     label: '原石ハンター',       desc: '3作品を発掘する',              target: 3,  cat: 'discover', cur: s => s.discoverCount },
-]
-export const WRITER_MISSIONS: Mission[] = [
-  { id: 'profile-setup',  label: '自己紹介を書く',     desc: 'プロフィールに自己紹介を設定', target: 1,  cat: 'creator',  cur: s => (s.hasBio ? 1 : 0) },
-  { id: 'first-episode',  label: '投稿する',           desc: '最初の話を投稿する',           target: 1,  cat: 'creator',  cur: s => s.episodeCount },
-  { id: 'episode-5',      label: '5回投稿する',        desc: '話を5回投稿する',              target: 5,  cat: 'creator',  cur: s => s.episodeCount },
-  /* 場所の名で呼ぶ。読む人は「つぶやき」より「コミュニティー」で覚えている */
-  { id: 'first-tweet',    label: 'コミュニティーに書く', desc: 'コミュニティーに投稿する',     target: 1,  cat: 'creator',  cur: s => s.tweetCount || 0 },
-  { id: 'first-series',   label: 'シリーズを作る',     desc: '作品をまとめるシリーズを作成', target: 1,  cat: 'creator',  cur: s => s.seriesCount || 0 },
+  { id: 'first-follow',   label: '作家をフォロー',     desc: '気になる作家をフォローする',   target: 1,  cat: 'social',   cur: s => s.followCount },
+  { id: 'profile-setup',  label: '自己紹介を書く',     desc: 'プロフィールに自己紹介を設定', target: 1,  cat: 'start',    cur: s => (s.hasBio ? 1 : 0) },
 ]
 
+/** 読む向きだけに出るもの */
+export const READER_ONLY_MISSIONS: Mission[] = [
+  { id: 'read-30',        label: '読み込む人',         desc: '30話読了する',                 target: 30, cat: 'start',    cur: s => s.readCount || 0 },
+  { id: 'like-10',        label: '応援の達人',         desc: 'いいねを10回送る',             target: 10, cat: 'social',   cur: s => s.likeCount },
+  { id: 'comment-5',      label: '感想の語り部',       desc: 'コメントを5件書く',            target: 5,  cat: 'social',   cur: s => s.commentCount },
+  { id: 'bookmark-5',     label: '積ん読のはじまり',   desc: '5作品を保存する',              target: 5,  cat: 'start',    cur: s => s.bookmarkCount },
+  { id: 'follow-5',       label: '追いかける人',       desc: '5人の作家をフォローする',      target: 5,  cat: 'social',   cur: s => s.followCount },
+  { id: 'first-discover', label: 'はじめての発掘',     desc: '作品を発掘・拡散する',         target: 1,  cat: 'discover', cur: s => s.discoverCount },
+  { id: 'discover-3',     label: '原石ハンター',       desc: '3作品を発掘する',              target: 3,  cat: 'discover', cur: s => s.discoverCount },
+  { id: 'first-tweet',    label: 'コミュニティーに書く', desc: 'コミュニティーに投稿する',   target: 1,  cat: 'social',   cur: s => s.tweetCount || 0 },
+]
+
+/** 書く向きだけに出るもの */
+export const WRITER_ONLY_MISSIONS: Mission[] = [
+  { id: 'first-work',     label: '作品を作る',         desc: '作品をひとつ作る',             target: 1,  cat: 'creator',  cur: s => s.novelCount },
+  { id: 'first-episode',  label: '投稿する',           desc: '最初の話を投稿する',           target: 1,  cat: 'creator',  cur: s => s.episodeCount },
+  { id: 'episode-5',      label: '5回投稿する',        desc: '話を5回投稿する',              target: 5,  cat: 'creator',  cur: s => s.episodeCount },
+  { id: 'episode-20',     label: '書き続ける人',       desc: '話を20回投稿する',             target: 20, cat: 'creator',  cur: s => s.episodeCount },
+  { id: 'first-series',   label: 'シリーズを作る',     desc: '作品をまとめるシリーズを作成', target: 1,  cat: 'creator',  cur: s => s.seriesCount || 0 },
+  { id: 'first-cover',    label: '表紙をつける',       desc: '作品に表紙を設定する',         target: 1,  cat: 'creator',  cur: s => s.coverCount || 0 },
+  { id: 'got-like',       label: 'はじめての応援',     desc: '自分の作品にいいねをもらう',   target: 1,  cat: 'creator',  cur: s => s.receivedLikeCount || 0 },
+  { id: 'got-comment',    label: 'はじめての感想',     desc: '自分の作品にコメントをもらう', target: 1,  cat: 'creator',  cur: s => s.receivedCommentCount || 0 },
+]
+
+/* 古い呼び名。ほかの場所から読まれているので残す */
+export const READER_MISSIONS: Mission[] = [...COMMON_MISSIONS, ...READER_ONLY_MISSIONS]
+export const WRITER_MISSIONS: Mission[] = WRITER_ONLY_MISSIONS
+
 export default function MissionClient({ user, stats, initialClaimedIds, isWriter }: Props) {
-  const MISSIONS = isWriter ? [...READER_MISSIONS, ...WRITER_MISSIONS] : READER_MISSIONS
+  /*
+   * ★ 向きによって、出す一覧を変える。
+   *
+   *   読む向き  共通 7 ＋ 読む側 8 ＝ 15
+   *   書く向き  共通 7 ＋ 書く側 8 ＝ 15
+   *
+   *   共通の 7 個は、どちらにも出る。
+   */
+  const MISSIONS = isWriter
+    ? [...COMMON_MISSIONS, ...WRITER_ONLY_MISSIONS]
+    : [...COMMON_MISSIONS, ...READER_ONLY_MISSIONS]
   const supabase = createClient()
   const [claimed, setClaimed] = useState(new Set(initialClaimedIds))
   const [claiming, setClaiming] = useState('')
