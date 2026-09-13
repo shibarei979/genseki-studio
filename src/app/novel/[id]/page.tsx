@@ -110,7 +110,22 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
    * 出す前に、どう見えるか確かめたい。
    */
   const isOwner = user?.id === novel.author_id
-  const isOpen = novel.visibility === 'public' && !novel.deleted_at
+
+  /*
+   * ★ 限定公開も読める。
+   *
+   *   「URLを知っている人だけが読めます」と書いてあるのに、
+   *   public 以外は全部弾いていた。
+   *   選んだ瞬間に、誰にも読めなくなっていた。
+   *
+   * ★ 探せる場所には出ない。
+   *   検索・ランキング・ホームは published で絞っているので、
+   *   限定公開はそこに並ばない。
+   *   住所を知っている人だけが辿り着ける。
+   */
+  const isOpen =
+    (novel.visibility === 'public' || novel.visibility === 'limited') &&
+    !novel.deleted_at
 
   if (!isOpen && !isOwner) notFound()
 
