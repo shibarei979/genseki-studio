@@ -848,9 +848,17 @@ function Tile({
 
                         {/*
                          * 状態と更新日。
+                         *
                          * 読ませるためではなく、棚を眺めたときに
                          * 新しい本がどれか分かればよい。
+                         *
+                         * ★ 表紙があるときは出さない。
+                         *
+                         *   絵と題名の帯があるところに、さらに
+                         *   細かい字が重なって読めなくなる。
+                         *   本の上に指を置けば、同じことが出る。
                          */}
+                        {!work.cover_url && (
                         <span
                             className="absolute bottom-2.5 left-0 right-8"
                             style={{ paddingLeft: BOOK.spine + 8 }}
@@ -868,6 +876,7 @@ function Tile({
                                 更新日 {updated}
                             </span>
                         </span>
+                        )}
                     </span>
                 </span>
             </Link>
