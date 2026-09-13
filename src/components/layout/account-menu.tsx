@@ -27,12 +27,39 @@ export default function AccountMenu({ isCurrent }: { isCurrent: boolean }) {
     const [isOpen, setIsOpen] = useState(false);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
+
+    /*
+     * いま、読む向きで見ているか。
+     *
+     * ★ 読む向きのときは「作品を書く」を出さない。
+     *
+     *   読む気で開いている人に、書く道を並べても使わない。
+     *   下の帯（mobile-tab-bar）は既に出し分けているのに、
+     *   このメニューだけ出しっぱなしだった。
+     *
+     * ★ まずクッキーで決める。
+     *   表から読むと一瞬待つので、その間だけ違う形になる。
+     */
+    const [isReader, setIsReader] = useState(false);
+
+    useEffect(() => {
+        const saved = document.cookie
+            .split("; ")
+            .find((one) => one.startsWith("genseki-home-mode="))
+            ?.split("=")[1];
+
+        if (saved) setIsReader(saved === "read");
+    }, []);
     const boxRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         void (async () => {
             try {
-                setProfile(await getRepository().getProfile());
+                const profile = await getRepository().getProfile();
+                setProfile(profile);
+
+                /* 表の値が本物。届いたら、そちらに合わせる */
+                setIsReader(profile?.home_mode === "read");
             } catch {
                 // ログインしていないときは読めない。それでよい
                 setProfile(null);
@@ -172,9 +199,14 @@ export default function AccountMenu({ isCurrent }: { isCurrent: boolean }) {
                               * ヘッダーの「作品を書く」は一覧へ行くので、
                               * こちらは「これから作る」ほうへ送る。
                               */}
-                            <MenuLink href="/post" onClick={() => setIsOpen(false)}>
-                                作品を書く
-                            </MenuLink>
+                            {!isReader && (
+                                <MenuLink
+                                    href="/post"
+                                    onClick={() => setIsOpen(false)}
+                                >
+                                    作品を書く
+                                </MenuLink>
+                            )}
 
                             {isAdmin && (
                                 <MenuLink href="/admin" onClick={() => setIsOpen(false)}>
