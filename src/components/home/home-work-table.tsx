@@ -797,11 +797,39 @@ function Tile({
                         {/*
                           * 題名。
                           *
-                          * ★ 作った表紙があるときは出さない。
-                          *   絵の上に重なって、どちらも読めなくなる。
-                          *   題名は、その絵の中に描かれているはず。
+                          * ★ 表紙があるときは、下に帯を敷いて載せる。
+                          *
+                          *   前は表紙があると題名を消していた。
+                          *   「その絵に題名が描いてあるはず」と考えたが、
+                          *   小さく並ぶと絵の中の字は読めない。
+                          *   どの本か分からなくなった。
+                          *
+                          *   絵の上に直に置くと、明るい絵で読めない。
+                          *   暗い帯を敷いて、その上に白で書く。
+                          *
+                          * ★ 絵が無いときは、これまでどおり真ん中に。
                           */}
-                        {!work.cover_url && (
+                        {work.cover_url ? (
+                            <span
+                                className="absolute bottom-0 left-0 right-0 px-2 pb-2 pt-6"
+                                style={{
+                                    paddingLeft: BOOK.spine + 6,
+                                    background:
+                                        "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.72) 55%)",
+                                }}
+                            >
+                                <span
+                                    className="line-clamp-2 block text-center font-serif leading-[1.4]"
+                                    style={{
+                                        fontSize: BOOK.title,
+                                        color: "#fff",
+                                        textShadow: "0 1px 3px rgba(0,0,0,.6)",
+                                    }}
+                                >
+                                    {work.title || "無題"}
+                                </span>
+                            </span>
+                        ) : (
                             <span
                                 className="absolute left-0 right-0 px-3"
                                 style={{
