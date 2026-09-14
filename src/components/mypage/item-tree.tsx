@@ -258,7 +258,8 @@ export default function ItemTree() {
                 style={{
                     height: 5,
                     borderRadius: 999,
-                    background: 'var(--color-brand-border)',
+                    /* ★ 地は、うんと薄く。同じ色だと満タンに見える */
+                    background: 'rgba(0,0,0,.06)',
                     overflow: 'hidden',
                     marginBottom: 16,
                 }}
@@ -273,57 +274,59 @@ export default function ItemTree() {
                 />
             </div>
 
+            {/*
+              * ★ 見出しを左に、縦に並べる。
+              *
+              *   絵では Lv と説明が左にあり、
+              *   その右に品物が並んでいる。
+              *   横線で区切るより、段が一本の道に見える。
+              */}
             {sortedTiers.map(([tier, list]) => (
-                <section key={tier} style={{ marginBottom: 14 }}>
+                <section
+                    key={tier}
+                    style={{
+                        display: 'flex',
+                        gap: 14,
+                        marginBottom: 12,
+                        alignItems: 'flex-start',
+                    }}
+                >
                     <div
                         style={{
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            gap: 10,
-                            marginBottom: 8,
+                            width: 96,
+                            flexShrink: 0,
+                            paddingTop: 12,
+                            borderLeft: '2px solid var(--color-brand-border)',
+                            paddingLeft: 10,
                         }}
                     >
-                        <span
+                        <div
                             style={{
-                                fontSize: 12.5,
+                                fontSize: 13,
                                 fontWeight: 700,
                                 color: 'var(--color-brand)',
+                                lineHeight: 1.2,
                             }}
                         >
                             {TIER_LABEL[tier]?.title ?? `Lv.${tier}`}
-                        </span>
+                        </div>
 
-                        <span
+                        <div
                             style={{
-                                fontSize: 11,
+                                marginTop: 3,
+                                fontSize: 10.5,
+                                lineHeight: 1.6,
                                 color: 'var(--color-text-faint)',
                             }}
                         >
                             {TIER_LABEL[tier]?.note ?? ''}
-                        </span>
-
-                        <span
-                            style={{
-                                flex: 1,
-                                height: 1,
-                                background: 'var(--color-brand-border)',
-                            }}
-                        />
+                        </div>
                     </div>
 
-                    {/*
-                      * ★ 段の幅いっぱいに広げる。
-                      *
-                      *   auto-fill だと、広い画面で
-                      *   左に寄って右が大きく空く。
-                      *   その段にある数で割って、等分に並べる。
-                      *
-                      * ★ 5 つ入る幅を基準にする。
-                      *   段によって数が違うので、
-                      *   そろえないと大きさがばらつく。
-                      */}
                     <div
                         style={{
+                            flex: 1,
+                            minWidth: 0,
                             display: 'grid',
                             gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
                             gap: 10,
@@ -351,13 +354,24 @@ export default function ItemTree() {
                                         setPicked(item)
                                         setMessage('')
                                     }}
+                                    /*
+                                     * ★ 絵に寄せる。
+                                     *
+                                     *   横に長い箱だと、絵が小さく見えて
+                                     *   余白ばかりが目に入る。
+                                     *   正方形に近づけて、絵を大きく。
+                                     *
+                                     * ★ 薄くしすぎない。
+                                     *   全部が灰色だと、生きている感じがしない。
+                                     *   買えないものも、形は見える濃さに。
+                                     */
                                     style={{
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
-                                        gap: 4,
-                                        padding: '12px 6px',
-                                        borderRadius: 10,
+                                        gap: 5,
+                                        padding: '12px 6px 10px',
+                                        borderRadius: 12,
                                         border:
                                             state === 'owned'
                                                 ? '1.5px solid var(--color-brand)'
@@ -365,7 +379,7 @@ export default function ItemTree() {
                                         background:
                                             state === 'owned'
                                                 ? 'var(--color-brand-light)'
-                                                : 'var(--color-bg-page)',
+                                                : 'var(--color-bg-card)',
                                         cursor:
                                             state === 'coming'
                                                 ? 'default'
@@ -374,22 +388,32 @@ export default function ItemTree() {
                                             state === 'ready' ||
                                             state === 'owned'
                                                 ? 1
-                                                : 0.45,
+                                                : 0.72,
                                     }}
                                 >
                                     {/* 絵。まだ無ければ印だけ */}
                                     <span
                                         style={{
-                                            width: 48,
-                                            height: 48,
-                                            borderRadius: 8,
-                                            background: 'var(--color-bg-card)',
+                                            /*
+                                             * ★ 丸くする。
+                                             *   絵では円で並んでいる。
+                                             *   四角より、集めている感じが出る。
+                                             */
+                                            width: 54,
+                                            height: 54,
+                                            borderRadius: '50%',
+                                            background:
+                                                state === 'owned'
+                                                    ? 'var(--color-bg-card)'
+                                                    : 'var(--color-bg-page)',
                                             border:
-                                                '1px solid var(--color-brand-border)',
+                                                state === 'owned'
+                                                    ? '2px solid var(--color-brand)'
+                                                    : '1px solid var(--color-brand-border)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            fontSize: 17,
+                                            fontSize: 20,
                                             color: 'var(--color-text-faint)',
                                             overflow: 'hidden',
                                         }}
