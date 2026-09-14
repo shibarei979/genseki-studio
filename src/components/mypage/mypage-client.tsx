@@ -2148,7 +2148,7 @@ export default function MypageClient({
   }
 
   const tabContent: Record<Tab, React.ReactNode> = {
-    mypage:'', works:'', typos:'', bookmarks:'', history:'', tweet:'', mission:'', settings:'', series:'',
+    mypage:'', works:'', typos:'', bookmarks:'', history:'', tweet:'', mission:'', items:'', settings:'', series:'',
   }
 
   return (
