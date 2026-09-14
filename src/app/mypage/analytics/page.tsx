@@ -63,6 +63,21 @@ export default async function AnalyticsPage() {
             supabase.from('page_views')
               .select('episode_id, user_id, visitor_id, viewed_at, device')
               .eq('is_author', false)
+              /*
+               * ★ 見回りの機械も外す。
+               *
+               *   作品管理の数は機械を外しているのに、
+               *   ここだけ外していなかった。
+               *   同じ作品で数が食い違い、
+               *   「作品管理の閲覧数が少ない」と見えていた。
+               *
+               *   少ないのではなく、こちらが多すぎた。
+               *
+               * ★ 印を付ける前の記録は、人として数える。
+               *   is_bot = false で絞ると、
+               *   印の無い古いぶんが丸ごと消える。
+               */
+              .or('is_bot.is.null,is_bot.eq.false')
               .in('episode_id', epIds)
               .range(from, to),
           ).then((data) => ({ data }))
