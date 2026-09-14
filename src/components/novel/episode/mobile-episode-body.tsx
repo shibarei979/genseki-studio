@@ -36,7 +36,7 @@ interface Props {
   onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
 }
 
-const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', useRecommend: true, fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
+const DEFAULTS: Settings = { font: 'serif', illustSize: 'wide', useRecommend: true, fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
 
 function fontFamilyOf(font: Settings['font']): string {
   /* 執筆画面と同じ指定にする。名前で書くと当たらず、別の明朝で描かれる */
@@ -348,7 +348,7 @@ function MobileIllust({ url, isAi, size, rec }: {
           style={rec
             ? {width:'100%',height:'auto',borderRadius:8,display:'block'}
             : {maxHeight:illustBox('mobileHorizontal',size).maxHeight,
-               maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+               maxWidth:'100%',objectFit:'contain',height:'auto',width:'auto',borderRadius:8,display:'block'}}/>
         {isAi && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
@@ -390,7 +390,7 @@ function MobileIllustVertical({ url, isAi, size }: { url: string; isAi?: boolean
         <img src={url} alt="挿絵"
           style={{maxHeight:illustBox('mobileVertical',size).maxHeight,
             maxWidth:illustBox('mobileVertical',size).maxWidth,
-            objectFit:'contain',borderRadius:8,display:'block'}}/>
+            objectFit:'contain',height:'auto',width:'auto',borderRadius:8,display:'block'}}/>
         {isAi && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
@@ -622,7 +622,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                   <img src={illustUrl} alt="挿絵"
                     style={{maxHeight:illustBox('mobileVertical',settings.illustSize).maxHeight,
                       maxWidth:illustBox('mobileVertical',settings.illustSize).maxWidth,
-                      objectFit:'contain',borderRadius:8,display:'block'}}/>
+                      objectFit:'contain',height:'auto',width:'auto',borderRadius:8,display:'block'}}/>
                   {illustIsAi && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
@@ -793,7 +793,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={illustUrl} alt="挿絵"
               style={{maxHeight:illustBox('mobileHorizontal',settings.illustSize).maxHeight,
-                maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+                maxWidth:'100%',objectFit:'contain',height:'auto',width:'auto',borderRadius:8,display:'block'}}/>
             {illustIsAi && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"

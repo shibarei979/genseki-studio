@@ -1,5 +1,5 @@
 'use client'
-import { ILLUST_SIZE_LABEL } from '@/config/illust-size'
+import { ILLUST_SHAPE_LABEL } from '@/config/illust-size'
 import { useState, useEffect } from 'react'
 
 export interface Settings {
@@ -12,8 +12,8 @@ export interface Settings {
    *   絵をじっくり見たい人と、
    *   本文を早く読みたい人がいる。
    */
-  /* 大きさ。full は縦横比を問わず全体が入る */
-  illustSize: 'small' | 'medium' | 'large' | 'full'
+  /* 枠の形。tall / square / wide */
+  illustSize: string
   /**
    * 作者のすすめる見せ方を使うか。
    *
@@ -39,7 +39,7 @@ export interface Settings {
   writingModeChosen?: boolean
 }
 
-const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'large', useRecommend: true, lineHeight: 2.1, writingMode: 'horizontal' }
+const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'wide', useRecommend: true, lineHeight: 2.1, writingMode: 'horizontal' }
 const STORAGE_KEY = 'reading_settings'
 
 const FONT_OPTIONS = [
@@ -292,12 +292,20 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                 *            決めていない絵は【大】で出す
                 */}
               <div style={{display:'flex',gap:6}}>
-                {/* 全体は、縦横比を問わず絵がまるごと入る */}
-                {(['small','medium','large','full'] as const).map(key => (
+                {/*
+                  * ★ 形で、どこまで伸ばせるかを決める。
+                  *
+                  *   縦長    高く取れる。幅は狭い
+                  *   正方形  どちらも中くらい
+                  *   横長    幅いっぱい。高さは抑える
+                  *
+                  *   絵は切らない。縦横比も変えない。
+                  */}
+                {(['tall','square','wide'] as const).map(key => (
                   <button key={key}
                     onClick={()=>update({illustSize:key, useRecommend:false})}
                     style={btnBase(settings.useRecommend === false && settings.illustSize === key)}>
-                    {ILLUST_SIZE_LABEL[key]}
+                    {ILLUST_SHAPE_LABEL[key]}
                   </button>
                 ))}
                 <button onClick={()=>update({useRecommend:true})}

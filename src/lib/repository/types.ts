@@ -352,7 +352,7 @@ export interface Repository {
 
     setEpisodeIllustSize(
         id: string,
-        size: "small" | "medium" | "large" | "full" | null,
+        size: string | null,
     ): Promise<void>;
 
     setEpisodeIllustAi(id: string, isAi: boolean): Promise<void>;

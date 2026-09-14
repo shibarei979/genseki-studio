@@ -49,7 +49,7 @@ interface Props {
   onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
 }
 
-const DEFAULTS: Settings = { font: 'serif', illustSize: 'large', useRecommend: true, fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
+const DEFAULTS: Settings = { font: 'serif', illustSize: 'wide', useRecommend: true, fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
 
 /**
  * 横書きの本文の枠の幅。
@@ -803,7 +803,7 @@ function IllustBlock({ url, isAi, size, rec }: {
           style={rec
             ? {width:'100%',height:'auto',borderRadius:8,display:'block'}
             : {maxHeight:illustBox('desktopHorizontal',size).maxHeight,
-               maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+               maxWidth:'100%',objectFit:'contain',height:'auto',width:'auto',borderRadius:8,display:'block'}}/>
         {isAi && (
           /* 表紙・挿絵と同じ印を使う。別の形にすると、何の印か伝わらない */
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -844,7 +844,7 @@ function VerticalIllust({ url, isAi, size }: { url: string; isAi?: boolean; size
         <img src={url} alt="挿絵"
           style={{maxHeight:illustBox('desktopVertical',size).maxHeight,
             maxWidth:illustBox('desktopVertical',size).maxWidth,
-            objectFit:'contain',borderRadius:8,display:'block'}}/>
+            objectFit:'contain',height:'auto',width:'auto',borderRadius:8,display:'block'}}/>
         {isAi && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
@@ -1185,7 +1185,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={illustUrl} alt="挿絵"
                     style={{maxHeight:illustBox('desktopHorizontal',settings.illustSize).maxHeight,
-                      maxWidth:'100%',objectFit:'contain',borderRadius:8,display:'block'}}/>
+                      maxWidth:'100%',objectFit:'contain',height:'auto',width:'auto',borderRadius:8,display:'block'}}/>
                   {illustIsAi && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"
@@ -1428,7 +1428,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], s
                    */
                   maxHeight:illustBox('desktopVertical',illustSize).maxHeight,
                   maxWidth:illustBox('desktopVertical',illustSize).maxWidth,
-                  objectFit:'contain',borderRadius:8,display:'block'}}/>
+                  objectFit:'contain',height:'auto',width:'auto',borderRadius:8,display:'block'}}/>
               {illustIsAi && (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src="/images/ai-cover-stamp.png" alt="AIで作った挿絵" title="AIで作った挿絵"

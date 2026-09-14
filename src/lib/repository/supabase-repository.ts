@@ -1962,7 +1962,7 @@ export const supabaseRepository: Repository = {
 
     async setEpisodeIllustSize(
         id: string,
-        size: "small" | "medium" | "large" | "full" | null,
+        size: string | null,
     ): Promise<void> {
         await db()
             .from("episode_illusts")

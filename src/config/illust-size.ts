@@ -3,137 +3,183 @@
  * 原石航路 Studio
  * 挿絵の大きさ
  *
- * ★ 1 か所にまとめる。
+ * ★ 形と、つまみで決める。
  *
- *   挿絵は 4 か所に出る。
- *     パソコンの縦書き / 横書き
- *     携帯の縦書き / 横書き
+ *   形    どこまで伸ばせるかの上限を決める
+ *   つまみ そこから、どれだけ狭めるか（10〜100%）
  *
- *   それぞれに数字を書くと、片方だけ直して
- *   食い違うことになる。実際、これまで
- *   出す所を 1 つ見落として何度も直した。
+ * ★ 絵は切らない。縦横比は変えない。
+ *
+ *   枠に収まるように縮めるだけ。
+ *   余白は透明なので、絵だけが浮いて見える。
+ *
+ * ★ 形は 3 つ。
+ *
+ *     縦長    高く取れる。幅は狭い
+ *     正方形  高さと幅が同じくらい
+ *     横長    幅いっぱい。高さは抑える
+ *
+ *   横長の絵に縦長の枠を選べば、幅で止まって小さくなる。
+ *   縦書きの本文で、絵が高すぎると読みにくいときに使う。
+ *
+ * ★ 前は 小・中・大 だった。
+ *
+ *   どれも高さで止めていたので、絵の形によって
+ *   「いちばん大きい」が変わってしまった。
+ *   横に長い絵は幅が伸びきらず、
+ *   縦に長い絵は小さくなる。
  * ============================================================
  */
 
+/** 枠の形 */
+export type IllustShape = "tall" | "square" | "wide";
+
+export const ILLUST_SHAPE_LABEL: Record<IllustShape, string> = {
+    tall: "縦長",
+    square: "正方形",
+    wide: "横長",
+};
+
+/* 古い呼び名。表に入っている値を読み替えるのに使う */
 export type IllustSize = "small" | "medium" | "large" | "full";
 
 export const ILLUST_SIZE_LABEL: Record<IllustSize, string> = {
     small: "小",
     medium: "中",
     large: "大",
-    /*
-     * ★ 縦横比を問わず、全体が入る。
-     *
-     *   小・中・大は高さで止めている。
-     *   横に長い絵は、高さで止めると幅が伸びきらず、
-     *   縦に長い絵は、幅で止めると小さくなる。
-     *
-     *   絵の形によって「いちばん大きい」が変わってしまう。
-     *   形を問わず全体が入る選び方を、別に置く。
-     */
     full: "全体",
 };
 
 /**
- * 見え方の寸法。
+ * 枠の寸法。
  *
- * 縦書きは高さが見た目の大きさを決める（横に流れるため）。
- * 横書きは高さで揃える（縦に流れるため）。
+ * ★ 本文の幅に対する割合で持つ。
+ *   画面の広さが変わっても、釣り合いが崩れない。
  *
- * 携帯は画面が狭いので、それぞれ一回り小さくする。
+ * ★ 高さは画面の高さに対する割合。
+ *   縦長を選んだとき、画面からはみ出さないように。
  */
-interface Box {
+interface Frame {
+    /** 本文の幅に対する上限（%） */
+    maxWidth: number;
+    /** 画面の高さに対する上限（vh） */
     maxHeight: number;
-    maxWidth: number | string;
-    /** AI の印の大きさ。絵に対して大きすぎると絵が見えない */
-    stamp: number;
 }
 
-const TABLE: Record<
-    "desktopVertical" | "desktopHorizontal" | "mobileVertical" | "mobileHorizontal",
-    Record<IllustSize, Box>
-> = {
-    desktopVertical: {
-        /*
-         * ★ 幅の上限を外す。
-         *
-         *   縦書きでは、絵の幅が 240px までだった。
-         *   横長の絵（1656×931）を幅 240 に収めると、
-         *   高さは 135 にしかならない。
-         *   【大】を選んでも、指の爪ほどの大きさになる。
-         *
-         *   縦書きで効くのは高さのほう。
-         *   横は、列の高さに収まる範囲で伸ばせばよい。
-         */
-        small: { maxHeight: 200, maxWidth: "100%", stamp: 24 },
-        medium: { maxHeight: 340, maxWidth: "100%", stamp: 30 },
-        large: { maxHeight: 480, maxWidth: "100%", stamp: 38 },
-        /* 列の高さいっぱいまで。横は絵の形に任せる */
-        full: { maxHeight: 9999, maxWidth: "100%", stamp: 38 },
-    },
-    desktopHorizontal: {
-        /*
-         * ★ 上限を引き上げた。
-         *
-         *   本文の幅は 900px 以上あるのに、絵は 260px までだった。
-         *   【大】を選んでも小さいままで、
-         *   「大きさを選べていないのでは」という声が届いた。
-         *
-         *   元の絵より引き伸ばすことはしない。
-         *   小さい絵は、これまでどおりの大きさで出る。
-         */
-        /*
-         * ★ 【大】は、高さでも止めない。
-         *
-         *   1656×931 の絵を高さ 330 に収めると、幅は 587。
-         *   本文は 900 あるのに、そこまでしか広がらない。
-         *   「いちばん大きくしても全体が小さい」のは、これ。
-         *
-         *   幅いっぱいまで伸ばし、縦に長い絵だけ高さで止める。
-         */
-        small: { maxHeight: 180, maxWidth: "100%", stamp: 24 },
-        medium: { maxHeight: 320, maxWidth: "100%", stamp: 30 },
-        large: { maxHeight: 720, maxWidth: "100%", stamp: 38 },
-        /* 高さで止めない。本文の幅いっぱいまで伸ばす */
-        full: { maxHeight: 9999, maxWidth: "100%", stamp: 38 },
-    },
-    mobileVertical: {
-        /* 縦書きの携帯も、幅ではなく高さで決める */
-        small: { maxHeight: 150, maxWidth: "100%", stamp: 22 },
-        medium: { maxHeight: 240, maxWidth: "100%", stamp: 28 },
-        large: { maxHeight: 340, maxWidth: "100%", stamp: 34 },
-        full: { maxHeight: 9999, maxWidth: "100%", stamp: 34 },
-    },
-    mobileHorizontal: {
-        /*
-         * ★ 【大】は高さで止めない。
-         *   携帯の幅は 360 ほど。横長の絵を高さ 260 で止めると、
-         *   幅 460 になって画面に収まらず、結局縮む。
-         *   幅いっぱいまで伸ばすほうが、素直に大きく出る。
-         */
-        small: { maxHeight: 150, maxWidth: "100%", stamp: 22 },
-        medium: { maxHeight: 240, maxWidth: "100%", stamp: 28 },
-        large: { maxHeight: 520, maxWidth: "100%", stamp: 34 },
-        full: { maxHeight: 9999, maxWidth: "100%", stamp: 34 },
-    },
+const FRAME: Record<IllustShape, Frame> = {
+    /* 縦長。高く取れるが、幅は本文の半分まで */
+    tall: { maxWidth: 52, maxHeight: 78 },
+
+    /* 正方形。どちらも中くらい */
+    square: { maxWidth: 72, maxHeight: 60 },
+
+    /* 横長。幅いっぱい。高さは抑える */
+    wide: { maxWidth: 100, maxHeight: 46 },
 };
 
-export function illustBox(
-    where: keyof typeof TABLE,
-    size: string | null | undefined,
-): Box {
-    /*
-     * 知らない値が来たら大にする。
-     *
-     * 昔の話には列そのものが無く、
-     * null で返ってくることがある。
-     * そのとき小さくすると、
-     * 見え方が勝手に変わってしまう。
-     */
-    const key: IllustSize =
-        size === "small" || size === "medium" || size === "full"
-            ? size
-            : "large";
+/** 携帯は、画面が狭いぶん幅を広く取る */
+const FRAME_MOBILE: Record<IllustShape, Frame> = {
+    tall: { maxWidth: 66, maxHeight: 70 },
+    square: { maxWidth: 88, maxHeight: 54 },
+    wide: { maxWidth: 100, maxHeight: 40 },
+};
 
-    return TABLE[where][key];
+/**
+ * 古い値を、新しい形に読み替える。
+ *
+ * ★ すでに入っている挿絵を、そのままにしない。
+ *
+ *   小・中・大で保存された絵が残っている。
+ *   読み替えないと、どれも既定の形で出てしまう。
+ */
+export function shapeOf(value: string | null | undefined): IllustShape {
+    if (value === "tall" || value === "square" || value === "wide") {
+        return value;
+    }
+
+    /* 古い小・中・大は、どれも横長として扱う */
+    return "wide";
+}
+
+/**
+ * 古い値から、つまみの位置を出す。
+ *
+ * 小 40 ／ 中 70 ／ 大・全体 100
+ */
+export function scaleOf(value: string | null | undefined): number {
+    if (value === "small") return 40;
+    if (value === "medium") return 70;
+
+    const asNumber = Number(value);
+    if (Number.isFinite(asNumber) && asNumber >= 10 && asNumber <= 100) {
+        return Math.round(asNumber);
+    }
+
+    return 100;
+}
+
+/** AI の印の大きさ。絵が小さいと、印が絵を食う */
+export function stampOf(scale: number, isMobile: boolean): number {
+    const base = isMobile ? 34 : 38;
+    return Math.max(18, Math.round((base * scale) / 100));
+}
+
+/**
+ * 見せるときの寸法を出す。
+ *
+ * ★ 返すのは CSS にそのまま渡せる形。
+ *   maxWidth は本文に対する %、maxHeight は画面に対する vh。
+ */
+export function illustFrame(options: {
+    shape: IllustShape;
+    /** 10〜100 */
+    scale: number;
+    isMobile?: boolean;
+}): { maxWidth: string; maxHeight: string } {
+    const table = options.isMobile ? FRAME_MOBILE : FRAME;
+    const frame = table[options.shape];
+
+    const scale = Math.min(100, Math.max(10, options.scale)) / 100;
+
+    return {
+        maxWidth: `${Math.round(frame.maxWidth * scale)}%`,
+        maxHeight: `${Math.round(frame.maxHeight * scale)}vh`,
+    };
+}
+
+/**
+ * ============================================================
+ * 古い呼び名。
+ *
+ * ★ 35 か所から呼ばれているので、名前を残す。
+ *
+ *   一度に全部書き換えると、直し漏れが必ず出る。
+ *   中で新しい形に読み替えて、同じ形で返す。
+ *
+ * ★ size には、形とつまみが「wide:80」のように入る。
+ *   古い「large」なども、そのまま渡してよい。
+ * ============================================================
+ */
+export function illustBox(
+    where:
+        | "desktopVertical"
+        | "desktopHorizontal"
+        | "mobileVertical"
+        | "mobileHorizontal",
+    size: string | null | undefined,
+): { maxHeight: string; maxWidth: string; stamp: number } {
+    const isMobile = where.startsWith("mobile");
+
+    const [shapePart, scalePart] = String(size ?? "").split(":");
+
+    const shape = shapeOf(shapePart);
+    const scale = scaleOf(scalePart || shapePart);
+
+    const frame = illustFrame({ shape, scale, isMobile });
+
+    return {
+        maxHeight: frame.maxHeight,
+        maxWidth: frame.maxWidth,
+        stamp: stampOf(scale, isMobile),
+    };
 }

@@ -267,7 +267,7 @@ export interface EpisodeIllust {
      * 置いた人が決めたいときだけ入る。
      */
     /** 大きさ。full は縦横比を問わず全体が入る */
-    size?: "small" | "medium" | "large" | "full" | null;
+    size?: string | null;
     /**
      * 作者がすすめる幅（px）。
      *
