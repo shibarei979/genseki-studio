@@ -323,6 +323,7 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
                     disabled={busy}
                     onChange={(event) => {
                         const file = event.target.files?.[0];
+
                         /* そのまま上げず、切り抜きへ */
                         if (file) setCropTarget(file);
                         event.target.value = "";

@@ -91,6 +91,19 @@ export default function IconCropper({
 
     const dragging = useRef<{ x: number; y: number } | null>(null)
 
+    /*
+     * つまみの下限。絵の全体が入るところ。
+     *
+     * ★ ここまで狭められれば、どんな絵でも全部見える。
+     *   これより小さくしても、余白が増えるだけ。
+     */
+    const minScale = image
+        ? Math.min(
+              VIEW_SIZE / image.width,
+              Math.round(VIEW_SIZE / ratio) / image.height,
+          )
+        : 0.2
+
     useEffect(() => {
         const url = URL.createObjectURL(file)
         const img = new Image()
@@ -101,10 +114,20 @@ export default function IconCropper({
             /*
              * 最初の大きさ。
              *
-             * 短いほうの辺が枠いっぱいになるようにする。
-             * こうすると、どの絵でも隙間なく始まる。
+             * ★ 絵の全体が入るところから始める。
+             *
+             *   前は短いほうの辺を枠いっぱいにしていた（Math.max）。
+             *   枠は埋まるが、長いほうの辺がはみ出して切れる。
+             *
+             *   1656×931 の絵を 1.6 の枠に入れると、
+             *   何もせず「これにする」を押しただけで左右が落ちた。
+             *   「挿絵が切れる」という声は、これ。
+             *
+             *   長いほうに合わせれば（Math.min）、
+             *   余白は出るが全体が入る。
+             *   切りたい人は、そこから大きくすればよい。
              */
-            const fit = Math.max(
+            const fit = Math.min(
                 VIEW_SIZE / img.width,
                 Math.round(VIEW_SIZE / aspect) / img.height,
             )
@@ -116,7 +139,14 @@ export default function IconCropper({
         return () => URL.revokeObjectURL(url)
     }, [file])
 
-    /* 動かせる範囲に収める。枠の外に隙間ができないように */
+    /*
+     * 動かせる範囲に収める。
+     *
+     * ★ 隙間ができてもよい。
+     *
+     *   絵が枠より小さいときは、真ん中に置く。
+     *   はみ出しているときだけ、端まで動かせる。
+     */
     function clamp(next: { x: number; y: number }, s: number) {
         if (!image) return next
 
@@ -371,12 +401,48 @@ export default function IconCropper({
 
                 {/* 大きさ */}
                 <div style={{ marginTop: 16 }}>
-                    <label style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>
-                        大きさ
-                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <label style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>
+                            大きさ
+                        </label>
+
+                        {/*
+                          * ★ 全体が入るところへ、一度で戻せる。
+                          *
+                          *   つまみを端まで動かせば同じことだが、
+                          *   「切りたくない」人にとっては、
+                          *   押すだけで済むほうが早い。
+                          */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                changeScale(minScale)
+                                setPos({ x: 0, y: 0 })
+                            }}
+                            style={{
+                                marginLeft: 'auto',
+                                padding: '3px 10px',
+                                borderRadius: 6,
+                                border: '1px solid var(--color-brand-border)',
+                                background: 'var(--color-bg-card)',
+                                color: 'var(--color-brand)',
+                                fontSize: 11,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            全体が入る大きさ
+                        </button>
+                    </div>
+                    {/*
+                      * ★ 下限は、絵の全体が入るところ。
+                      *
+                      *   0.2 で決め打ちにすると、
+                      *   大きい絵では全体が入る前に止まり、
+                      *   小さい絵では小さくなりすぎる。
+                      */}
                     <input
                         type="range"
-                        min={0.2}
+                        min={minScale}
                         max={3}
                         step={0.01}
                         value={scale}
