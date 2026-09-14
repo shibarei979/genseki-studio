@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import GrantPoints from "@/components/admin/grant-points";
+import PointHolders from "@/components/admin/point-holders";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -96,36 +97,40 @@ export default async function AdminPointsPage() {
         bySource[lot.source] = (bySource[lot.source] ?? 0) + amount;
     }
 
-    /* たくさん持っている人。上から 20 人 */
-    const top = Object.entries(byUser)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20);
+    /*
+     * 利用者を、全員ぶん並べる。
+     *
+     * ★ 0 pt の人も出す。
+     *
+     *   「誰が何 pt 持っているか」を見る場所なので、
+     *   持っていない人も含めて一覧でないと意味がない。
+     *
+     * ★ 多い順。持っていない人は下に集まる。
+     *
+     * ★ profiles を見る。
+     *
+     *   public_profiles は見る人の決まりで絞られる表で、
+     *   運営の鍵でも思ったように引けない。
+     *   名前が出ず、id の頭 8 文字だけが並んでいた。
+     */
+    const { data: everyone } = await admin
+        .from("profiles")
+        .select("user_id, display_name")
+        .limit(20000);
 
-    const nameById = new Map<string, string>();
+    const holders = (everyone ?? [])
+        .map((one: any) => ({
+            id: one.user_id as string,
+            name: (one.display_name as string) || "",
+            points: byUser[one.user_id] ?? 0,
+        }))
+        .sort((a, b) => {
+            const gap = b.points - a.points;
+            if (gap !== 0) return gap;
 
-    if (top.length > 0) {
-        /*
-         * ★ profiles を見る。
-         *
-         *   public_profiles は見る人の決まりで絞られる表で、
-         *   運営の鍵でも思ったように引けないことがある。
-         *   名前が出ず、id の頭 8 文字だけが並んでいた。
-         */
-        const { data: people } = await admin
-            .from("profiles")
-            .select("user_id, display_name")
-            .in(
-                "user_id",
-                top.map(([id]) => id),
-            );
-
-        for (const one of people ?? []) {
-            nameById.set(
-                (one as any).user_id,
-                (one as any).display_name ?? "",
-            );
-        }
-    }
+            /* 同じ数なら、名前の順。並びが毎回変わらないように */
+            return a.name.localeCompare(b.name, "ja");
+        });
 
     const box: React.CSSProperties = {
         border: "1px solid var(--color-brand-border)",
@@ -291,76 +296,21 @@ export default async function AdminPointsPage() {
                 )}
             </section>
 
-            {/* たくさん持っている人 */}
-            <section style={box}>
-                <h2
-                    style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        marginBottom: 4,
-                        color: "var(--color-text)",
-                    }}
-                >
-                    たくさん持っている人
-                </h2>
+            {/*
+              * 誰が何 pt 持っているか。
+              *
+              * ★ 全員ぶん出す。0 pt の人も。
+              *   「誰が持っているか」を見る場所なので、
+              *   持っていない人も含めて一覧でないと意味がない。
+              *
+              * ★ 多い順。
+              *   招待で増やし続けている口座は、上に並ぶ。
+              *
+              * ★ 名前で探せる。
+              *   人が増えると、目で探すのは無理。
+              */}
+            <PointHolders holders={holders} />
 
-                <p
-                    style={{
-                        fontSize: 11,
-                        color: "var(--color-text-faint)",
-                        marginBottom: 10,
-                    }}
-                >
-                    不正を見つけるために出しています。招待で増やし続けている口座は、ここに並びます。
-                </p>
-
-                {top.length === 0 ? (
-                    <p
-                        style={{
-                            fontSize: 12,
-                            color: "var(--color-text-faint)",
-                        }}
-                    >
-                        まだ誰も持っていません。
-                    </p>
-                ) : (
-                    <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                        {top.map(([id, amount]) => (
-                            <li
-                                key={id}
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    gap: 10,
-                                    padding: "6px 0",
-                                    fontSize: 12.5,
-                                    color: "var(--color-text)",
-                                    borderTop: "1px solid var(--color-border)",
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        minWidth: 0,
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        whiteSpace: "nowrap",
-                                    }}
-                                >
-                                    {nameById.get(id) || id.slice(0, 8)}
-                                </span>
-                                <span
-                                    style={{
-                                        flexShrink: 0,
-                                        fontVariantNumeric: "tabular-nums",
-                                    }}
-                                >
-                                    {amount.toLocaleString()} pt
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </section>
         </main>
     );
 }
