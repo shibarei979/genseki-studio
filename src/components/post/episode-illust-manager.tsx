@@ -129,7 +129,7 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
     /** 絵ごとの大きさを決める。空にすると読む人の設定に従う */
     async function handleSize(
         illust: EpisodeIllust,
-        size: "small" | "medium" | "large" | null,
+        size: "small" | "medium" | "large" | "full" | null,
     ) {
         await getRepository().setEpisodeIllustSize(illust.id, size);
         await reload();
@@ -227,7 +227,17 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
                                   */}
                                 <div className="mt-1.5 flex flex-wrap items-center gap-1">
                                     <span className="text-[10.5px] text-faint">大きさ</span>
-                                    {([null, "small", "medium", "large"] as const).map((key) => (
+                                    {/*
+                                      * ★「全体」を足す。
+                                      *
+                                      *   小・中・大は高さで止めている。
+                                      *   横に長い絵は幅が伸びきらず、
+                                      *   縦に長い絵は小さくなる。
+                                      *   絵の形で「いちばん大きい」が変わってしまう。
+                                      *
+                                      *   形を問わず全体が入る選び方を、別に置く。
+                                      */}
+                                    {([null, "small", "medium", "large", "full"] as const).map((key) => (
                                         <button
                                             key={key ?? "auto"}
                                             type="button"

@@ -15,12 +15,23 @@
  * ============================================================
  */
 
-export type IllustSize = "small" | "medium" | "large";
+export type IllustSize = "small" | "medium" | "large" | "full";
 
 export const ILLUST_SIZE_LABEL: Record<IllustSize, string> = {
     small: "小",
     medium: "中",
     large: "大",
+    /*
+     * ★ 縦横比を問わず、全体が入る。
+     *
+     *   小・中・大は高さで止めている。
+     *   横に長い絵は、高さで止めると幅が伸びきらず、
+     *   縦に長い絵は、幅で止めると小さくなる。
+     *
+     *   絵の形によって「いちばん大きい」が変わってしまう。
+     *   形を問わず全体が入る選び方を、別に置く。
+     */
+    full: "全体",
 };
 
 /**
@@ -57,6 +68,8 @@ const TABLE: Record<
         small: { maxHeight: 200, maxWidth: "100%", stamp: 24 },
         medium: { maxHeight: 340, maxWidth: "100%", stamp: 30 },
         large: { maxHeight: 480, maxWidth: "100%", stamp: 38 },
+        /* 列の高さいっぱいまで。横は絵の形に任せる */
+        full: { maxHeight: 9999, maxWidth: "100%", stamp: 38 },
     },
     desktopHorizontal: {
         /*
@@ -81,12 +94,15 @@ const TABLE: Record<
         small: { maxHeight: 180, maxWidth: "100%", stamp: 24 },
         medium: { maxHeight: 320, maxWidth: "100%", stamp: 30 },
         large: { maxHeight: 720, maxWidth: "100%", stamp: 38 },
+        /* 高さで止めない。本文の幅いっぱいまで伸ばす */
+        full: { maxHeight: 9999, maxWidth: "100%", stamp: 38 },
     },
     mobileVertical: {
         /* 縦書きの携帯も、幅ではなく高さで決める */
         small: { maxHeight: 150, maxWidth: "100%", stamp: 22 },
         medium: { maxHeight: 240, maxWidth: "100%", stamp: 28 },
         large: { maxHeight: 340, maxWidth: "100%", stamp: 34 },
+        full: { maxHeight: 9999, maxWidth: "100%", stamp: 34 },
     },
     mobileHorizontal: {
         /*
@@ -98,6 +114,7 @@ const TABLE: Record<
         small: { maxHeight: 150, maxWidth: "100%", stamp: 22 },
         medium: { maxHeight: 240, maxWidth: "100%", stamp: 28 },
         large: { maxHeight: 520, maxWidth: "100%", stamp: 34 },
+        full: { maxHeight: 9999, maxWidth: "100%", stamp: 34 },
     },
 };
 
@@ -114,7 +131,9 @@ export function illustBox(
      * 見え方が勝手に変わってしまう。
      */
     const key: IllustSize =
-        size === "small" || size === "medium" ? size : "large";
+        size === "small" || size === "medium" || size === "full"
+            ? size
+            : "large";
 
     return TABLE[where][key];
 }

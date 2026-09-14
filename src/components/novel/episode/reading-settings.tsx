@@ -291,7 +291,8 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                 *            決めていない絵は【大】で出す
                 */}
               <div style={{display:'flex',gap:6}}>
-                {(['small','medium','large'] as const).map(key => (
+                {/* 全体は、縦横比を問わず絵がまるごと入る */}
+                {(['small','medium','large','full'] as const).map(key => (
                   <button key={key}
                     onClick={()=>update({illustSize:key, useRecommend:false})}
                     style={btnBase(settings.useRecommend === false && settings.illustSize === key)}>
