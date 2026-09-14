@@ -12,7 +12,8 @@ export interface Settings {
    *   絵をじっくり見たい人と、
    *   本文を早く読みたい人がいる。
    */
-  illustSize: 'small' | 'medium' | 'large'
+  /* 大きさ。full は縦横比を問わず全体が入る */
+  illustSize: 'small' | 'medium' | 'large' | 'full'
   /**
    * 作者のすすめる見せ方を使うか。
    *
