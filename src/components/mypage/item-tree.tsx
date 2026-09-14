@@ -398,26 +398,19 @@ export default function ItemTree() {
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
-                                        gap: 6,
-                                        padding: '10px 4px 9px',
-                                        borderRadius: 12,
-                                        border:
-                                            state === 'owned'
-                                                ? '1.5px solid var(--color-brand)'
-                                                : '1px solid var(--color-brand-border)',
-                                        background:
-                                            state === 'owned'
-                                                ? 'var(--color-brand-light)'
-                                                : 'var(--color-bg-card)',
                                         /*
-                                         * ★ 影を足す。
-                                         *   平らなままだと、
-                                         *   紙に線を引いただけに見える。
+                                         * ★ 札の枠をやめる。
+                                         *
+                                         *   絵では丸が主役で、
+                                         *   その下に小さな帯が付いているだけ。
+                                         *   四角い箱で囲うと、
+                                         *   丸が箱の中の飾りに見えてしまう。
                                          */
-                                        boxShadow:
-                                            state === 'owned'
-                                                ? '0 2px 8px rgba(40,90,130,.14)'
-                                                : '0 1px 3px rgba(40,35,25,.05)',
+                                        gap: 5,
+                                        padding: 0,
+                                        border: 'none',
+                                        background: 'none',
+                                        boxShadow: 'none',
                                         /* 前へ伸びる線を、外にはみ出させる */
                                         position: 'relative',
                                         overflow: 'visible',
@@ -496,17 +489,25 @@ export default function ItemTree() {
                                              *   絵では円で並んでいる。
                                              *   四角より、集めている感じが出る。
                                              */
-                                            width: 46,
-                                            height: 46,
+                                            /*
+                                             * ★ 丸を主役にする。
+                                             *   絵では、これがいちばん大きい。
+                                             */
+                                            width: 62,
+                                            height: 62,
                                             borderRadius: '50%',
                                             background:
                                                 state === 'owned'
                                                     ? 'var(--color-bg-card)'
-                                                    : 'var(--color-bg-page)',
+                                                    : 'var(--color-bg-card)',
                                             border:
                                                 state === 'owned'
-                                                    ? '2px solid var(--color-brand)'
+                                                    ? '2.5px solid var(--color-brand)'
                                                     : '1px solid var(--color-brand-border)',
+                                            boxShadow:
+                                                state === 'owned'
+                                                    ? '0 2px 10px rgba(40,90,130,.2)'
+                                                    : '0 1px 4px rgba(40,35,25,.08)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -534,42 +535,57 @@ export default function ItemTree() {
                                         )}
                                     </span>
 
+                                    {/*
+                                      * ★ 名前と値段を、白い帯にまとめる。
+                                      *
+                                      *   絵では丸の下に小さな札が付いている。
+                                      *   文字がそのまま置いてあると、
+                                      *   地に溶けて読みにくい。
+                                      */}
                                     <span
                                         style={{
-                                            fontSize: 10,
-                                            color: 'var(--color-text-muted)',
-                                            textAlign: 'center',
-                                            lineHeight: 1.4,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                            padding: '4px 8px 5px',
+                                            borderRadius: 7,
+                                            background: 'var(--color-bg-card)',
+                                            border:
+                                                '1px solid var(--color-brand-border)',
+                                            boxShadow:
+                                                '0 1px 3px rgba(40,35,25,.06)',
+                                            minWidth: 74,
                                         }}
                                     >
-                                        {/*
-                                          * ★ 種類の名前を出す。
-                                          *
-                                          *   全部「？？？」だと、
-                                          *   何が並んでいるのか分からない。
-                                          *   絵はまだでも、種類は伝えられる。
-                                          *
-                                          * ★ 伏せたものだけ、隠す。
-                                          */}
-                                        {item.is_secret && state !== 'owned'
-                                            ? 'シークレット'
-                                            : KIND_LABEL[item.kind] ?? item.kind}
-                                    </span>
+                                        <span
+                                            style={{
+                                                fontSize: 9.5,
+                                                color: 'var(--color-text-muted)',
+                                                textAlign: 'center',
+                                                lineHeight: 1.3,
+                                            }}
+                                        >
+                                            {item.is_secret && state !== 'owned'
+                                                ? 'シークレット'
+                                                : KIND_LABEL[item.kind] ?? item.kind}
+                                        </span>
 
-                                    <span
-                                        style={{
-                                            fontSize: 10.5,
-                                            fontWeight: 700,
-                                            color:
-                                                state === 'owned'
-                                                    ? 'var(--color-brand)'
-                                                    : 'var(--color-text)',
-                                            fontVariantNumeric: 'tabular-nums',
-                                        }}
-                                    >
-                                        {state === 'owned'
-                                            ? '交換済み'
-                                            : `${(item.free_price ?? 0).toLocaleString()} pt`}
+                                        <span
+                                            style={{
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                color:
+                                                    state === 'owned'
+                                                        ? 'var(--color-brand)'
+                                                        : 'var(--color-text)',
+                                                fontVariantNumeric: 'tabular-nums',
+                                            }}
+                                        >
+                                            {state === 'owned'
+                                                ? '交換済み'
+                                                : `${(item.free_price ?? 0).toLocaleString()} pt`}
+                                        </span>
                                     </span>
                                 </button>
                             )
