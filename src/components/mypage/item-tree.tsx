@@ -87,6 +87,29 @@ const KIND_MARK: Record<string, string> = {
     shelf: '▦',
 }
 
+/*
+ * 種類ごとの色。
+ *
+ * ★ 灰色ばかりだと、生きている感じがしない。
+ *
+ *   絵では品物ごとに色がついていた。
+ *   まだ絵が無くても、色が違えば
+ *   種類の違いが目に入る。
+ *
+ * ★ 濃くしすぎない。
+ *   集めるものが主役なので、印は控えめに。
+ */
+const KIND_COLOR: Record<string, string> = {
+    stamp: '#e8a33d',
+    frame: '#5b8fc9',
+    background: '#5fa88a',
+    badge: '#c98b4b',
+    name_style: '#9a7bc8',
+    bookmark: '#d4776a',
+    cover: '#6a8fa8',
+    shelf: '#7a9a6a',
+}
+
 export default function ItemTree() {
     const [items, setItems] = useState<Item[]>([])
     const [owned, setOwned] = useState<string[]>([])
@@ -283,6 +306,38 @@ export default function ItemTree() {
             </div>
 
             {/*
+              * ★ はじまりの印。
+              *
+              *   絵では、いちばん上に START の看板があった。
+              *   どこから手を付けるかが、一目で分かる。
+              */}
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'flex-start',
+                    marginLeft: 110,
+                    marginBottom: 6,
+                }}
+            >
+                <span
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '3px 14px',
+                        borderRadius: 999,
+                        background: 'var(--color-brand)',
+                        color: 'var(--color-text-inverse)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '.12em',
+                    }}
+                >
+                    START
+                </span>
+            </div>
+
+            {/*
               * ★ 見出しを左に、縦に並べる。
               *
               *   絵では Lv と説明が左にあり、
@@ -454,18 +509,40 @@ export default function ItemTree() {
 
                                         /* 同じ段なら左へ、違う段なら上へ */
                                         return from.tier === item.tier ? (
+                                            /*
+                                             * ★ 丸の縁から縁まで、届かせる。
+                                             *
+                                             *   12px では隙間を渡りきれず、
+                                             *   線が切れて見えていた。
+                                             *   隙間ぶん（gap 12）と、
+                                             *   隣の札の余白まで伸ばす。
+                                             *
+                                             * ★ 高さは丸の真ん中に。
+                                             *   丸は 62px なので 31。
+                                             */
                                             <span
                                                 aria-hidden="true"
                                                 style={{
                                                     position: 'absolute',
                                                     right: '100%',
-                                                    top: 32,
-                                                    width: 12,
+                                                    top: 30,
+                                                    width: 30,
+                                                    marginRight: -9,
                                                     height: 2,
                                                     background: color,
+                                                    zIndex: 0,
                                                 }}
                                             />
                                         ) : (
+                                            /*
+                                             * ★ 上の丸から、この丸へ。
+                                             *
+                                             *   前は 12px しか伸びておらず、
+                                             *   上の札を貫いて見えていた。
+                                             *
+                                             *   札の高さ（約 34）と段の隙間ぶん
+                                             *   まで伸ばし、札の後ろを通す。
+                                             */
                                             <span
                                                 aria-hidden="true"
                                                 style={{
@@ -473,9 +550,11 @@ export default function ItemTree() {
                                                     bottom: '100%',
                                                     left: '50%',
                                                     width: 2,
-                                                    height: 12,
+                                                    height: 48,
                                                     marginLeft: -1,
+                                                    marginBottom: -2,
                                                     background: color,
+                                                    zIndex: 0,
                                                 }}
                                             />
                                         )
@@ -511,8 +590,12 @@ export default function ItemTree() {
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            fontSize: 20,
-                                            color: 'var(--color-text-faint)',
+                                            fontSize: 22,
+                                            /* 種類の色。伏せたものは灰色のまま */
+                                            color: hidden
+                                                ? 'var(--color-text-faint)'
+                                                : (KIND_COLOR[item.kind] ??
+                                                  'var(--color-text-faint)'),
                                             overflow: 'hidden',
                                         }}
                                     >
@@ -550,6 +633,9 @@ export default function ItemTree() {
                                             gap: 1,
                                             padding: '4px 8px 5px',
                                             borderRadius: 7,
+                                            /* 縦線が後ろを通るので、前に置く */
+                                            position: 'relative',
+                                            zIndex: 1,
                                             background: 'var(--color-bg-card)',
                                             border:
                                                 '1px solid var(--color-brand-border)',
