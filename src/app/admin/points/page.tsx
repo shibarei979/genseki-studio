@@ -104,8 +104,15 @@ export default async function AdminPointsPage() {
     const nameById = new Map<string, string>();
 
     if (top.length > 0) {
+        /*
+         * ★ profiles を見る。
+         *
+         *   public_profiles は見る人の決まりで絞られる表で、
+         *   運営の鍵でも思ったように引けないことがある。
+         *   名前が出ず、id の頭 8 文字だけが並んでいた。
+         */
         const { data: people } = await admin
-            .from("public_profiles")
+            .from("profiles")
             .select("user_id, display_name")
             .in(
                 "user_id",
