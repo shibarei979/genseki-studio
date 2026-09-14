@@ -15,6 +15,7 @@ import dynamic from 'next/dynamic'
 
 import Header from '@/components/layout/header'
 import MypageDashboard from '@/components/mypage/mypage-dashboard'
+import ItemTree from '@/components/mypage/item-tree'
 
 /*
  * タブを押すまで読み込まない。
@@ -97,7 +98,7 @@ const ALL_BADGES = [
   { id:'_slot2',      name:'？？？',                  color:'#94a3b8' },
 ]
 
-type Tab = 'mypage' | 'works' | 'typos' | 'bookmarks' | 'history' | 'tweet' | 'mission' | 'settings' | 'series'
+type Tab = 'mypage' | 'works' | 'typos' | 'bookmarks' | 'history' | 'tweet' | 'mission' | 'items' | 'settings' | 'series'
 const TAB_ICONS: Record<string, React.ReactNode> = {
   mypage:    <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
   works:     <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>,
@@ -129,6 +130,8 @@ const TABS: { id: Tab; label: string; hideInFocus?: boolean; writerOnly?: boolea
   { id:'history',   label:'閲覧履歴' },
   /* ミッションは数を競うもの。集中したい人には出さない */
   { id:'mission',   label:'ミッション', hideInFocus: true },
+  /* 集めたポイントで交換する所。いまは運営だけ */
+  { id:'items',     label:'アイテム' },
   { id:'settings',  label:'設定' },
 ]
 
@@ -218,7 +221,7 @@ export default function MypageClient({
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '') as Tab
-      const valid: Tab[] = ['mypage','works','typos','bookmarks','history','tweet','mission','settings','series']
+      const valid: Tab[] = ['mypage','works','typos','bookmarks','history','tweet','mission','items','settings','series']
       if (valid.includes(hash)) return hash
     }
     return 'mypage'
@@ -235,7 +238,7 @@ export default function MypageClient({
   useEffect(() => {
     function onHashChange() {
       const hash = window.location.hash.replace('#', '') as Tab
-      const valid: Tab[] = ['mypage','works','typos','bookmarks','history','tweet','mission','settings','series']
+      const valid: Tab[] = ['mypage','works','typos','bookmarks','history','tweet','mission','items','settings','series']
       if (valid.includes(hash)) setActiveTab(hash)
     }
     window.addEventListener('hashchange', onHashChange)
@@ -506,6 +509,9 @@ export default function MypageClient({
   const [xAccount,         setXAccount]         = useState<string>((profile as any).x_account || '')
   const [xSaving,          setXSaving]          = useState(false)
   const [allowComments,    setAllowComments]    = useState((profile as any).allow_comments !== false)
+
+  /* 運営かどうか。作りかけの札を出すかの判断に使う */
+  const isAdmin = (profile as any).is_admin === true
   const [showGenderModal,  setShowGenderModal]  = useState(false)
   const [showXModal,       setShowXModal]       = useState(false)
 
@@ -584,7 +590,15 @@ export default function MypageClient({
      *
      *   書く向きに切り替えれば、また出る。
      */
-    !(isReaderMode && t.writerOnly)
+    !(isReaderMode && t.writerOnly) &&
+    /*
+     * ★ 作りかけのものは、運営だけに出す。
+     *
+     *   中身がこれからなので、いま出しても
+     *   「？？？」が並ぶだけ。
+     *   品物が揃ったら、ADMIN_ONLY から外す。
+     */
+    !(ADMIN_ONLY.includes(t.id) && !isAdmin)
   )
   /*
    * いま開いているタブが消えたら、マイページへ戻す。
@@ -2151,6 +2165,13 @@ export default function MypageClient({
               {activeTab==='bookmarks' && <BookmarksTab/>}
               {activeTab==='history' && <HistoryTab/>}
               {activeTab==='mission' && <MissionTab/>}
+              {/*
+                * ★ 札を隠すだけでは足りない。
+                *
+                *   #items と打てば、誰でも開けてしまう。
+                *   出す所でも確かめる。
+                */}
+              {activeTab==='items' && isAdmin && <ItemTree/>}
               {activeTab==='settings' && <SettingsTab/>}
               {activeTab==='series' && (
                 <div>
@@ -2225,6 +2246,13 @@ export default function MypageClient({
               {activeTab==='bookmarks' && <BookmarksTab/>}
               {activeTab==='history' && <HistoryTab/>}
               {activeTab==='mission' && <MissionTab/>}
+              {/*
+                * ★ 札を隠すだけでは足りない。
+                *
+                *   #items と打てば、誰でも開けてしまう。
+                *   出す所でも確かめる。
+                */}
+              {activeTab==='items' && isAdmin && <ItemTree/>}
               {activeTab==='settings' && <SettingsTab/>}
               {activeTab==='series' && (
                 <div>
