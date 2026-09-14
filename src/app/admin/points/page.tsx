@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import GrantPoints from "@/components/admin/grant-points";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -164,6 +166,14 @@ export default async function AdminPointsPage() {
             >
                 まだ読む人には出していません。数字が正しく動くかを、ここで確かめます。
             </p>
+
+            {/*
+              * 手で配る。
+              *
+              * ★ 数字が動くのを、ここで確かめる。
+              *   ミッションの条件を満たすには時間がかかる。
+              */}
+            <GrantPoints />
 
             {/* いまの様子 */}
             <div
