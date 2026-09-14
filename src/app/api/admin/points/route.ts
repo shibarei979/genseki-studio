@@ -69,24 +69,62 @@ export async function POST(request: Request) {
             );
         }
 
-        /* 名前で渡されたときは、id を引く */
-        let targetId = body.target;
+        /*
+         * 名前で渡されたときは、id を引く。
+         *
+         * ★ profiles を見る。
+         *
+         *   public_profiles は見る人の決まりで絞られる表で、
+         *   運営の鍵でも思ったように引けないことがある。
+         *   元の表を直接見る。
+         *
+         * ★ 空白は落とす。
+         *   名前に全角の空白が入っていると、打ち写しても当たらない。
+         *
+         * ★ 大文字小文字を区別しない。
+         */
+        let targetId = body.target.trim();
 
         if (!/^[0-9a-f-]{36}$/i.test(targetId)) {
-            const { data: found } = await admin
-                .from("public_profiles")
-                .select("user_id")
-                .eq("display_name", body.target)
-                .maybeSingle();
+            const wanted = targetId;
 
-            if (!found) {
+            const { data: found } = await admin
+                .from("profiles")
+                .select("user_id, display_name")
+                .ilike("display_name", wanted)
+                .limit(2);
+
+            if (!found || found.length === 0) {
+                /* 一部でも当たるものを探して、候補を返す */
+                const { data: near } = await admin
+                    .from("profiles")
+                    .select("display_name")
+                    .ilike("display_name", `%${wanted}%`)
+                    .limit(5);
+
+                const hints = (near ?? [])
+                    .map((one: any) => one.display_name)
+                    .filter(Boolean);
+
                 return NextResponse.json(
-                    { error: "その名前の人が見つかりません" },
+                    {
+                        error:
+                            hints.length > 0
+                                ? `見つかりません。近いのは：${hints.join(" / ")}`
+                                : "その名前の人が見つかりません",
+                    },
                     { status: 404 },
                 );
             }
 
-            targetId = found.user_id;
+            if (found.length > 1) {
+                return NextResponse.json(
+                    { error: "同じ名前の人が複数います。id で指定してください" },
+                    { status: 400 },
+                );
+            }
+
+            targetId = found[0].user_id;
         }
 
         if (body.action === "revoke") {
@@ -136,5 +174,55 @@ export async function POST(request: Request) {
             },
             { status: 500 },
         );
+    }
+}
+
+/**
+ * 名前を探す。
+ *
+ * ★ 打った字に近い人を返す。
+ *
+ *   名前は完全に一致しないと当たらない。
+ *   全角の空白や似た字が入っていると、
+ *   見た目が同じでも別の文字になる。
+ *
+ *   候補から選べば、打ち間違えようがない。
+ */
+export async function GET(request: Request) {
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) return NextResponse.json({ names: [] });
+
+        const admin = createAdminClient();
+
+        const { data: me } = await admin
+            .from("profiles")
+            .select("is_admin")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+        if (me?.is_admin !== true) return NextResponse.json({ names: [] });
+
+        const word = new URL(request.url).searchParams.get("find") ?? "";
+        if (!word.trim()) return NextResponse.json({ names: [] });
+
+        const { data } = await admin
+            .from("profiles")
+            .select("display_name")
+            .ilike("display_name", `%${word.trim()}%`)
+            .limit(10);
+
+        return NextResponse.json({
+            names: (data ?? [])
+                .map((one: any) => one.display_name)
+                .filter(Boolean),
+        });
+    } catch {
+        return NextResponse.json({ names: [] });
     }
 }

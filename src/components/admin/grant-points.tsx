@@ -34,6 +34,27 @@ export default function GrantPoints() {
     const [message, setMessage] = useState("");
     const [askRevoke, setAskRevoke] = useState(false);
 
+    /* 打った字に近い名前。選べば打ち間違いが無い */
+    const [people, setPeople] = useState<string[]>([]);
+
+    async function findPeople(word: string) {
+        if (word.trim().length < 1) {
+            setPeople([]);
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `/api/admin/points?find=${encodeURIComponent(word.trim())}`,
+            );
+
+            const data = (await response.json()) as { names?: string[] };
+            setPeople(data.names ?? []);
+        } catch {
+            /* 探せなくても、打ち込みはできる */
+        }
+    }
+
     async function run(action: "grant" | "revoke") {
         if (!target.trim() || amount <= 0) {
             setMessage("相手と数を入れてください。");
@@ -125,14 +146,33 @@ export default function GrantPoints() {
                     marginTop: 12,
                 }}
             >
+                {/*
+                  * ★ 名前を打つと、候補を出す。
+                  *
+                  *   名前は完全に一致しないと当たらない。
+                  *   全角の空白や、似た字が入っていると、
+                  *   見た目が同じでも別の文字になる。
+                  *
+                  *   候補から選べば、打ち間違えようがない。
+                  */}
                 <input
                     type="text"
                     value={target}
-                    onChange={(e) => setTarget(e.target.value)}
+                    onChange={(e) => {
+                        setTarget(e.target.value);
+                        void findPeople(e.target.value);
+                    }}
+                    list="genseki-people"
                     placeholder="名前 または id"
                     aria-label="配る相手"
                     style={{ ...field, flex: "1 1 200px" }}
                 />
+
+                <datalist id="genseki-people">
+                    {people.map((one) => (
+                        <option key={one} value={one} />
+                    ))}
+                </datalist>
 
                 <input
                     type="number"
