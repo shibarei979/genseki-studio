@@ -48,10 +48,22 @@ export function ageFromBirthdate(
  * 一覧を絞り込むときに使う。
  */
 export function allowedRatings(age: number | null): AgeRatingValue[] {
-    if (age === null) return ["all"];
+    /*
+     * ★ R15 は、生年月日を入れていなくても読める。
+     *
+     *   R15 には、R18 のような明確な決まりが無い。
+     *   ほかの投稿サイトでも「15 歳以上に勧める」という
+     *   目安であって、禁止ではない。
+     *
+     *   入っていない人に読ませないと、
+     *   ほかのサイトから来た人が「読めない」と戸惑う。
+     *
+     * ★ R18 だけは、これまでどおり生年月日で確かめる。
+     *   こちらは明確な決まりがある。
+     */
+    if (age === null) return ["all", "r15"];
     if (age >= 18) return ["all", "r15", "r18"];
-    if (age >= 15) return ["all", "r15"];
-    return ["all"];
+    return ["all", "r15"];
 }
 
 /** 生年月日を入れていないか */
