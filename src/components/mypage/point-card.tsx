@@ -23,6 +23,20 @@ import { useEffect, useState } from 'react'
  * ============================================================
  */
 
+/**
+ * 消えるまで 1 か月を切っているか。
+ *
+ * ★ それより前から出しても、目に入らなくなる。
+ *   本当に気にしてほしいのは、消える間際。
+ */
+function isSoon(at: string): boolean {
+    const left = new Date(at).getTime() - Date.now()
+    if (Number.isNaN(left)) return false
+
+    const month = 1000 * 60 * 60 * 24 * 30
+    return left <= month
+}
+
 export default function PointCard() {
     const [free, setFree] = useState<number | null>(null)
     const [expiresAt, setExpiresAt] = useState<string | null>(null)
@@ -114,10 +128,16 @@ export default function PointCard() {
             {/*
               * 次に消える日。
               *
+              * ★ 1 か月前から出す。
+              *
+              *   半年先の日付を毎日見せても、
+              *   そのうち目に入らなくなる。
+              *   本当に気にしてほしいのは、消える間際。
+              *
               * ★ 出さないと「知らないうちに減った」になる。
               * ★ 何も持っていない人には出さない。
               */}
-            {free > 0 && expiresAt && (
+            {free > 0 && expiresAt && isSoon(expiresAt) && (
                 <p
                     style={{
                         marginTop: 6,
@@ -132,6 +152,7 @@ export default function PointCard() {
                         day: 'numeric',
                     })}
                     に {expiresAmount.toLocaleString()} pt が期限を迎えます。
+                    使わないと消えます。
                 </p>
             )}
 
