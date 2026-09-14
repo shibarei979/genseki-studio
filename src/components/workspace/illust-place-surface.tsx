@@ -120,7 +120,8 @@ export default function IllustPlaceSurface({
                     <img
                         src={illustUrl}
                         alt=""
-                        className="h-8 w-8 shrink-0 rounded border border-line object-cover"
+                        /* 切らずに全体を出す。どの絵か分からなくなる */
+                        className="h-8 w-11 shrink-0 rounded border border-line bg-canvas object-contain"
                     />
                 )}
 

@@ -160,10 +160,20 @@ export default function EpisodeIllustManager({ novelId, episodeId, body, onBefor
                             className="flex items-start gap-3 rounded-lg border border-line p-2.5"
                         >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
+                            {/*
+                              * ★ 切らずに、全体を出す。
+                              *
+                              *   前は 80×80 の四角に切っていた。
+                              *   横長の絵は左右が落ち、
+                              *   どんな絵だったか分からなくなる。
+                              *
+                              *   置き場所や大きさを決める画面なので、
+                              *   絵の形が分からないと決められない。
+                              */}
                             <img
                                 src={illust.url}
                                 alt=""
-                                className="h-20 w-20 shrink-0 rounded-md border border-line object-cover"
+                                className="h-20 w-28 shrink-0 rounded-md border border-line bg-canvas object-contain"
                             />
 
                             <div className="min-w-0 flex-1">

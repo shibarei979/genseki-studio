@@ -43,9 +43,20 @@ const TABLE: Record<
     Record<IllustSize, Box>
 > = {
     desktopVertical: {
-        small: { maxHeight: 160, maxWidth: 120, stamp: 24 },
-        medium: { maxHeight: 250, maxWidth: 180, stamp: 30 },
-        large: { maxHeight: 360, maxWidth: 240, stamp: 38 },
+        /*
+         * ★ 幅の上限を外す。
+         *
+         *   縦書きでは、絵の幅が 240px までだった。
+         *   横長の絵（1656×931）を幅 240 に収めると、
+         *   高さは 135 にしかならない。
+         *   【大】を選んでも、指の爪ほどの大きさになる。
+         *
+         *   縦書きで効くのは高さのほう。
+         *   横は、列の高さに収まる範囲で伸ばせばよい。
+         */
+        small: { maxHeight: 200, maxWidth: "100%", stamp: 24 },
+        medium: { maxHeight: 340, maxWidth: "100%", stamp: 30 },
+        large: { maxHeight: 480, maxWidth: "100%", stamp: 38 },
     },
     desktopHorizontal: {
         /*
@@ -58,19 +69,35 @@ const TABLE: Record<
          *   元の絵より引き伸ばすことはしない。
          *   小さい絵は、これまでどおりの大きさで出る。
          */
-        small: { maxHeight: 150, maxWidth: "100%", stamp: 24 },
-        medium: { maxHeight: 230, maxWidth: "100%", stamp: 30 },
-        large: { maxHeight: 330, maxWidth: "100%", stamp: 38 },
+        /*
+         * ★ 【大】は、高さでも止めない。
+         *
+         *   1656×931 の絵を高さ 330 に収めると、幅は 587。
+         *   本文は 900 あるのに、そこまでしか広がらない。
+         *   「いちばん大きくしても全体が小さい」のは、これ。
+         *
+         *   幅いっぱいまで伸ばし、縦に長い絵だけ高さで止める。
+         */
+        small: { maxHeight: 180, maxWidth: "100%", stamp: 24 },
+        medium: { maxHeight: 320, maxWidth: "100%", stamp: 30 },
+        large: { maxHeight: 720, maxWidth: "100%", stamp: 38 },
     },
     mobileVertical: {
-        small: { maxHeight: 120, maxWidth: 90, stamp: 22 },
-        medium: { maxHeight: 180, maxWidth: 130, stamp: 28 },
-        large: { maxHeight: 260, maxWidth: 180, stamp: 34 },
+        /* 縦書きの携帯も、幅ではなく高さで決める */
+        small: { maxHeight: 150, maxWidth: "100%", stamp: 22 },
+        medium: { maxHeight: 240, maxWidth: "100%", stamp: 28 },
+        large: { maxHeight: 340, maxWidth: "100%", stamp: 34 },
     },
     mobileHorizontal: {
-        small: { maxHeight: 130, maxWidth: "100%", stamp: 22 },
-        medium: { maxHeight: 190, maxWidth: "100%", stamp: 28 },
-        large: { maxHeight: 260, maxWidth: "100%", stamp: 34 },
+        /*
+         * ★ 【大】は高さで止めない。
+         *   携帯の幅は 360 ほど。横長の絵を高さ 260 で止めると、
+         *   幅 460 になって画面に収まらず、結局縮む。
+         *   幅いっぱいまで伸ばすほうが、素直に大きく出る。
+         */
+        small: { maxHeight: 150, maxWidth: "100%", stamp: 22 },
+        medium: { maxHeight: 240, maxWidth: "100%", stamp: 28 },
+        large: { maxHeight: 520, maxWidth: "100%", stamp: 34 },
     },
 };
 
