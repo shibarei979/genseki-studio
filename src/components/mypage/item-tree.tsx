@@ -350,7 +350,7 @@ export default function ItemTree() {
                     style={{
                         display: 'flex',
                         gap: 14,
-                        marginBottom: 12,
+                        marginBottom: 6,
                         alignItems: 'flex-start',
                     }}
                 >
@@ -461,7 +461,14 @@ export default function ItemTree() {
                                          *   四角い箱で囲うと、
                                          *   丸が箱の中の飾りに見えてしまう。
                                          */
-                                        gap: 5,
+                                        /*
+                                         * ★ 札を、丸に重ねる。
+                                         *
+                                         *   絵では丸の下端に札が乗っていて、
+                                         *   一つのものに見える。
+                                         *   離れていると、別々の部品に見える。
+                                         */
+                                        gap: 0,
                                         padding: 0,
                                         border: 'none',
                                         background: 'none',
@@ -546,13 +553,21 @@ export default function ItemTree() {
                                             <span
                                                 aria-hidden="true"
                                                 style={{
+                                                    /*
+                                                     * ★ 丸の上から、上へ伸ばす。
+                                                     *
+                                                     *   前は札の上から伸ばしていたので、
+                                                     *   上の段の札を貫いて見えた。
+                                                     *
+                                                     *   丸の真上から、段の隙間だけ
+                                                     *   伸ばせば、札に触れない。
+                                                     */
                                                     position: 'absolute',
-                                                    bottom: '100%',
+                                                    top: -14,
                                                     left: '50%',
                                                     width: 2,
-                                                    height: 48,
+                                                    height: 14,
                                                     marginLeft: -1,
-                                                    marginBottom: -2,
                                                     background: color,
                                                     zIndex: 0,
                                                 }}
@@ -575,18 +590,30 @@ export default function ItemTree() {
                                             width: 62,
                                             height: 62,
                                             borderRadius: '50%',
-                                            background:
-                                                state === 'owned'
-                                                    ? 'var(--color-bg-card)'
-                                                    : 'var(--color-bg-card)',
+                                            /*
+                                             * ★ 中を、種類の色で薄く塗る。
+                                             *
+                                             *   縁だけ色を付けても、
+                                             *   白い丸が並んでいるだけに見える。
+                                             *   中に色が入ると、
+                                             *   何の品物かが遠目にも分かる。
+                                             *
+                                             * ★ 伏せたものは灰色のまま。
+                                             *   色で中身を当てられては困る。
+                                             */
+                                            background: hidden
+                                                ? 'var(--color-bg-page)'
+                                                : `${KIND_COLOR[item.kind] ?? '#999'}1a`,
                                             border:
                                                 state === 'owned'
                                                     ? '2.5px solid var(--color-brand)'
-                                                    : '1px solid var(--color-brand-border)',
+                                                    : hidden
+                                                      ? '1px solid var(--color-brand-border)'
+                                                      : `1.5px solid ${KIND_COLOR[item.kind] ?? '#999'}55`,
                                             boxShadow:
                                                 state === 'owned'
                                                     ? '0 2px 10px rgba(40,90,130,.2)'
-                                                    : '0 1px 4px rgba(40,35,25,.08)',
+                                                    : '0 1px 4px rgba(40,35,25,.06)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -633,7 +660,8 @@ export default function ItemTree() {
                                             gap: 1,
                                             padding: '4px 8px 5px',
                                             borderRadius: 7,
-                                            /* 縦線が後ろを通るので、前に置く */
+                                            /* 丸の下端に、少し重ねる */
+                                            marginTop: -8,
                                             position: 'relative',
                                             zIndex: 1,
                                             background: 'var(--color-bg-card)',
