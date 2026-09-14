@@ -51,8 +51,50 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
 
     useEffect(() => {
         const to = new URLSearchParams(window.location.search).get("next");
+
         /* 外のサイトへは飛ばさない。「/」で始まる道だけ */
-        if (to && to.startsWith("/") && !to.startsWith("//")) setNextPath(to);
+        if (to && to.startsWith("/") && !to.startsWith("//")) {
+            setNextPath(to);
+            return;
+        }
+
+        /*
+         * ★ next が付いていなくても、来た道へ戻す。
+         *
+         *   読者が作品の頁からメニューでログインを押すと、
+         *   next が付かないままここへ来る。
+         *   そのままだとホームへ放り出され、
+         *   読みかけの作品へ戻るのに探し直すことになる。
+         *
+         *   「Xのリンクから入る→ログインする→トップページ」
+         *   という声は、これ。
+         *
+         * ★ 戻すのは、読む場所だけ。
+         *
+         *   ログインや登録の頁から来たときに戻すと、
+         *   同じ所をぐるぐる回る。
+         */
+        const from = document.referrer;
+        if (!from) return;
+
+        try {
+            const url = new URL(from);
+            if (url.origin !== window.location.origin) return;
+
+            const path = url.pathname + url.search;
+
+            const goodStart =
+                path.startsWith("/novel/") ||
+                path.startsWith("/user/") ||
+                path.startsWith("/contest/") ||
+                path.startsWith("/rooms/") ||
+                path.startsWith("/search") ||
+                path.startsWith("/ranking");
+
+            if (goodStart) setNextPath(path);
+        } catch {
+            /* 読めない住所なら、ホームのまま */
+        }
     }, []);
 
     /*

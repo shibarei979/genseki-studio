@@ -42,6 +42,18 @@ export default function AccountMenu({ isCurrent }: { isCurrent: boolean }) {
      */
     const [isReader, setIsReader] = useState(false);
 
+    /*
+     * いまいる場所。ログインのあと、ここへ戻す。
+     *
+     * ★ 画面が出たあとで読む。
+     *   作り置きの段では、まだ住所が分からない。
+     */
+    const [here, setHere] = useState("/");
+
+    useEffect(() => {
+        setHere(window.location.pathname + window.location.search);
+    }, []);
+
     useEffect(() => {
         const saved = document.cookie
             .split("; ")
@@ -234,7 +246,16 @@ export default function AccountMenu({ isCurrent }: { isCurrent: boolean }) {
                                 どの端末からでも開けます。
                             </p>
 
-                            <MenuLink href="/login" onClick={() => setIsOpen(false)}>
+                            {/*
+                              * ★ いまいる場所を付けて送る。
+                              *
+                              *   付けないと、入ったあとホームへ戻される。
+                              *   読みかけの作品へ戻るのに、探し直すことになる。
+                              */}
+                            <MenuLink
+                                href={`/login?next=${encodeURIComponent(here)}`}
+                                onClick={() => setIsOpen(false)}
+                            >
                                 ログイン・登録
                             </MenuLink>
                         </>
