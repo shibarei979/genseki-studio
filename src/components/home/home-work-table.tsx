@@ -105,6 +105,26 @@ const BOOK_WIDTH = 128;
  * 細長くすると短冊に、正方形に寄せると色板に見える。
  */
 const BOOK_HEIGHT = 166;
+
+/*
+ * 本の幅。表紙の形で変える。
+ *
+ * ★ 高さは変えない。
+ *
+ *   本ごとに高さが違うと、棚板が波打って見える。
+ *   幅だけ変えれば、棚は揃ったまま。
+ *
+ * ★ 縦長が既定。これまでどおりの見え方。
+ */
+const BOOK_WIDTH_BY_SHAPE: Record<string, number> = {
+    tall: BOOK_WIDTH,
+    wide: Math.round(BOOK_HEIGHT * 1.5),
+};
+
+/** その作品の、本の幅 */
+function widthOf(work: { cover_shape?: string | null }): number {
+    return BOOK_WIDTH_BY_SHAPE[work.cover_shape ?? "tall"] ?? BOOK_WIDTH;
+}
 /** 本と本の間 */
 const BOOK_GAP = 24;
 /*
@@ -556,12 +576,42 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                          * 測り終わる前の一瞬は 1 段に全部並べておき、
                          * 測れたら組み直す。
                          */
-                        const perRow = cols || shown.length + 1;
+                        /*
+                         * ★ 冊数ではなく、幅で切り分ける。
+                         *
+                         *   横長の本は、縦長の 1.5 倍の幅がある。
+                         *   冊数で切ると、横長が混ざった段だけ
+                         *   棚からはみ出す。
+                         *
+                         *   幅を足していって、段に入らなくなったら次の段へ。
+                         */
                         const rows: (WorkWithStats | null)[][] = [];
                         const items: (WorkWithStats | null)[] = [...shown, null];
-                        for (let i = 0; i < items.length; i += perRow) {
-                            rows.push(items.slice(i, i + perRow));
+
+                        /* 測れていないあいだは、1 段に全部 */
+                        const roomWidth = cols
+                            ? cols * (BOOK_WIDTH + BOOK_GAP)
+                            : Number.MAX_SAFE_INTEGER;
+
+                        let line: (WorkWithStats | null)[] = [];
+                        let used = 0;
+
+                        for (const item of items) {
+                            /* 「新しい作品を書く」は縦長と同じ幅 */
+                            const w = item ? widthOf(item) : BOOK_WIDTH;
+                            const need = w + BOOK_GAP;
+
+                            if (line.length > 0 && used + need > roomWidth) {
+                                rows.push(line);
+                                line = [];
+                                used = 0;
+                            }
+
+                            line.push(item);
+                            used += need;
                         }
+
+                        if (line.length > 0) rows.push(line);
 
                         return rows.map((row, rowIndex) => (
                             <div key={rowIndex} className="book-shelf-area">
@@ -668,7 +718,7 @@ function Tile({
     return (
         <li
             className="group relative"
-            style={{ width: BOOK_WIDTH, height: BOOK_HEIGHT }}
+            style={{ width: widthOf(work), height: BOOK_HEIGHT }}
         >
             {/*
              * 板に落ちる影。

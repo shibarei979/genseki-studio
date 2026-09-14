@@ -197,6 +197,8 @@ function toWork(row: Record<string, unknown>): Work {
         cover_is_ai: (row.cover_is_ai as boolean | null) ?? false,
         cover_stamp_corner:
             (row.cover_stamp_corner as Work["cover_stamp_corner"]) ?? null,
+        /* 本棚での形。決めていなければ縦長 */
+        cover_shape: (row.cover_shape as Work["cover_shape"]) ?? "tall",
         genre_changed_at: (row.genre_changed_at as string | null) ?? null,
         /*
          * ★ 作者がすすめる読む向き。

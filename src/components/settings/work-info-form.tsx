@@ -179,6 +179,11 @@ export default function WorkInfoForm({
     const [recommendedMode, setRecommendedMode] = useState<
         "vertical" | "horizontal" | null
     >(work.recommended_mode ?? null);
+    /* 本棚での形。決めていなければ縦長 */
+    const [coverShape, setCoverShape] = useState<"tall" | "wide">(
+        work.cover_shape === "wide" ? "wide" : "tall",
+    );
+
     const [isSaving, setIsSaving] = useState(false);
     const [savedMessage, setSavedMessage] = useState("");
 
@@ -254,6 +259,7 @@ export default function WorkInfoForm({
             cover_url: coverUrl,
             cover_is_ai: coverIsAi,
             cover_stamp_corner: stampCorner,
+            cover_shape: coverShape,
             cover_color: coverColor,
         });
         setSavedMessage("保存しました");
@@ -572,6 +578,47 @@ export default function WorkInfoForm({
                                         </div>
                                     </div>
                                 )}
+
+                                {/*
+                                  * 本棚での形。
+                                  *
+                                  * ★ 作者用ホームの本棚は、縦長で固定していた。
+                                  *
+                                  *   正方形や横長の表紙を作った人は、
+                                  *   左右が落ちて「切ないことになっている」と
+                                  *   声が届いた。
+                                  *
+                                  * ★ 高さは変えない。
+                                  *   本ごとに高さが違うと、棚板が波打って見える。
+                                  */}
+                                <div className="mt-3">
+                                    <p className="text-xs text-muted">本棚での形</p>
+
+                                    <div className="mt-1 flex gap-1">
+                                        {([
+                                            ["tall", "縦長"],
+                                            ["wide", "横長"],
+                                        ] as const).map(([key, label]) => (
+                                            <button
+                                                key={key}
+                                                type="button"
+                                                onClick={() => setCoverShape(key)}
+                                                className={[
+                                                    "rounded border px-2.5 py-1 text-[11px]",
+                                                    coverShape === key
+                                                        ? "border-forest bg-forest-tint text-forest"
+                                                        : "border-line text-muted hover:border-forest-line",
+                                                ].join(" ")}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <p className="mt-1 text-[10.5px] leading-relaxed text-faint">
+                                        作者用ホームの本棚で、この作品がどの形で並ぶか。
+                                    </p>
+                                </div>
 
                                 <p className="mt-1.5 rounded-md border border-amber bg-amber-tint/30 px-2.5 py-2 text-[11px] leading-relaxed text-ink">
                                     <strong>ほかの人の絵を無断で使うことはできません。</strong>

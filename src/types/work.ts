@@ -100,6 +100,8 @@ export interface Work {
      * 見せたい所に重なると困る、という声から足した。
      */
     cover_stamp_corner?: "tl" | "tr" | "bl" | "br" | null;
+    /** 本棚での表紙の形。tall 縦長 / wide 横長 */
+    cover_shape?: "tall" | "wide" | null;
     /** 作品の形 */
     format?: WorkFormat | null;
     /** AI をどう使ったか */
