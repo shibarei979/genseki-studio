@@ -145,14 +145,19 @@ export default function PointCard() {
                         color: 'var(--color-text-faint)',
                     }}
                 >
+                    {/*
+                      * ★ 短く。
+                      *
+                      *   年は要らない。1 か月前から出すので、
+                      *   同じ年か、せいぜい年をまたぐ程度。
+                      *   「消えます」だけで、使わないと、は言わずに済む。
+                      */}
                     {new Date(expiresAt).toLocaleDateString('ja-JP', {
                         timeZone: 'Asia/Tokyo',
-                        year: 'numeric',
                         month: 'numeric',
                         day: 'numeric',
                     })}
-                    に {expiresAmount.toLocaleString()} pt が期限を迎えます。
-                    使わないと消えます。
+                    に {expiresAmount.toLocaleString()} pt 消えます
                 </p>
             )}
 
