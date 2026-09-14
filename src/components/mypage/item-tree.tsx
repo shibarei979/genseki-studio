@@ -1,33 +1,30 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 /**
  * ============================================================
  * 原石航路 Studio
  * ItemTree — アイテムツリー
  *
- * ★ 段ごとに並べる。
+ * ★ 格子に置くのをやめ、繋がりから位置を出す。
  *
- *   Lv.1 から Lv.5 へ、下りながら集める。
- *   何があるか分かると、貯める気になる。
+ *   前は「何段目の何番目」を表に持ち、
+ *   そこへ並べて線を引き足していた。
+ *   だから「段ごとの一覧表」にしか見えなかった。
  *
- * ★ 中身が決まっていないものは「？」で出す。
+ *   親子の繋がりを先に読み、
+ *   子の数だけ幅を取って置き直す。
+ *   枝分かれと合流が、そのまま形になる。
  *
- *   絵も名前もこれから作る。
- *   空欄で並べると壊れて見えるので、
- *   「まだ用意していない」と分かる形にする。
+ * ★ 線は SVG で引く。
  *
- * ★ 伏せたものは、買うまで中身を見せない。
+ *   四角い箱の縁に線を足すやり方だと、
+ *   札を貫いたり、途中で切れたりする。
+ *   丸の縁から縁へ、曲げて繋ぐ。
  *
- *   何があるか分からないほうが、集める気になる。
- *
- * ★ 買えるかどうかを、色で分ける。
- *
- *     持っている    印が付く
- *     買える        はっきり
- *     足りない      薄く
- *     前のが要る    薄く、鍵の印
+ * ★ 品物が増えても、置き直しは要らない。
+ *   親を決めれば、位置は勝手に決まる。
  * ============================================================
  */
 
@@ -43,6 +40,13 @@ interface Item {
     requires_item_id: string | null
     is_secret: boolean
     is_active: boolean
+}
+
+/** 置き場所が決まった品物 */
+interface Placed extends Item {
+    x: number
+    y: number
+    state: 'owned' | 'ready' | 'poor' | 'locked' | 'coming'
 }
 
 const TIER_LABEL: Record<number, { title: string; note: string }> = {
@@ -64,18 +68,6 @@ const KIND_LABEL: Record<string, string> = {
     shelf: '本棚背景',
 }
 
-/*
- * 種類ごとの印。
- *
- * ★ 全部を同じ「？」で出すと、何の品物か分からない。
- *
- *   絵がまだ無くても、種類だけは伝わるようにする。
- *   何段目にどんなものが来るかが見えると、
- *   貯める目当てになる。
- *
- * ★ 伏せたものは、これも出さない。
- *   何があるか分からないほうが、集める気になる。
- */
 const KIND_MARK: Record<string, string> = {
     stamp: '☺',
     frame: '◻',
@@ -87,18 +79,6 @@ const KIND_MARK: Record<string, string> = {
     shelf: '▦',
 }
 
-/*
- * 種類ごとの色。
- *
- * ★ 灰色ばかりだと、生きている感じがしない。
- *
- *   絵では品物ごとに色がついていた。
- *   まだ絵が無くても、色が違えば
- *   種類の違いが目に入る。
- *
- * ★ 濃くしすぎない。
- *   集めるものが主役なので、印は控えめに。
- */
 const KIND_COLOR: Record<string, string> = {
     stamp: '#e8a33d',
     frame: '#5b8fc9',
@@ -109,6 +89,13 @@ const KIND_COLOR: Record<string, string> = {
     cover: '#6a8fa8',
     shelf: '#7a9a6a',
 }
+
+/* 置き方の寸法 */
+const NODE = 62
+const GAP_X = 128
+const GAP_Y = 136
+const PAD_X = 108
+const PAD_TOP = 78
 
 export default function ItemTree() {
     const [items, setItems] = useState<Item[]>([])
@@ -164,7 +151,7 @@ export default function ItemTree() {
             if (!response.ok || data.error) {
                 setMessage(data.error ?? 'うまくいきませんでした。')
             } else {
-                setMessage(`${item.name} を交換しました。`)
+                setMessage('交換しました。')
                 await reload()
             }
         } catch {
@@ -174,47 +161,119 @@ export default function ItemTree() {
         setBusy(false)
     }
 
-    if (isLoading) return null
-
-    /* 段ごとにまとめる */
-    const tiers = new Map<number, Item[]>()
-
-    for (const item of items) {
-        if (!tiers.has(item.tier)) tiers.set(item.tier, [])
-        tiers.get(item.tier)!.push(item)
-    }
-
-    for (const list of tiers.values()) {
-        list.sort((a, b) => a.position - b.position)
-    }
-
-    const sortedTiers = Array.from(tiers.entries()).sort((a, b) => a[0] - b[0])
-
-    /** その品物が、いまどういう状態か */
-    function stateOf(item: Item) {
-        if (owned.includes(item.id)) return 'owned' as const
-        if (!item.is_active) return 'coming' as const
-
-        if (item.requires_item_id && !owned.includes(item.requires_item_id)) {
-            return 'locked' as const
+    /*
+     * ★ 繋がりから、置き場所を出す。
+     *
+     *   親を持たないものが START の子。
+     *   子を先に置き、親はその真ん中へ寄せる。
+     *   同じ段で場所がぶつからないよう、左から詰める。
+     */
+    const { placed, width, height } = useMemo(() => {
+        if (items.length === 0) {
+            return { placed: [] as Placed[], width: 600, height: 240 }
         }
 
-        if ((item.free_price ?? 0) > points) return 'poor' as const
-        return 'ready' as const
-    }
+        const stateOf = (item: Item): Placed['state'] => {
+            if (owned.includes(item.id)) return 'owned'
+            if (!item.is_active) return 'coming'
+
+            if (item.requires_item_id && !owned.includes(item.requires_item_id)) {
+                return 'locked'
+            }
+
+            if ((item.free_price ?? 0) > points) return 'poor'
+            return 'ready'
+        }
+
+        const childrenOf = new Map<string, Item[]>()
+
+        for (const item of items) {
+            const key = item.requires_item_id ?? 'root'
+            if (!childrenOf.has(key)) childrenOf.set(key, [])
+            childrenOf.get(key)!.push(item)
+        }
+
+        for (const list of childrenOf.values()) {
+            list.sort((a, b) => a.position - b.position)
+        }
+
+        const slot = new Map<number, number>()
+        const spot = new Map<string, { x: number; y: number }>()
+
+        const walk = (item: Item): number => {
+            const kids = childrenOf.get(item.id) ?? []
+            const y = PAD_TOP + (item.tier - 1) * GAP_Y
+
+            if (kids.length === 0) {
+                const at = slot.get(item.tier) ?? 0
+                slot.set(item.tier, at + 1)
+
+                const x = PAD_X + at * GAP_X
+                spot.set(item.id, { x, y })
+                return x
+            }
+
+            const xs = kids.map((kid) => walk(kid))
+            const mid = (Math.min(...xs) + Math.max(...xs)) / 2
+
+            const at = slot.get(item.tier) ?? 0
+            const least = PAD_X + at * GAP_X
+            const x = Math.max(mid, least)
+
+            slot.set(
+                item.tier,
+                Math.max(at + 1, Math.round((x - PAD_X) / GAP_X) + 1),
+            )
+
+            spot.set(item.id, { x, y })
+            return x
+        }
+
+        for (const root of childrenOf.get('root') ?? []) walk(root)
+
+        /* 置き損ねたものを拾う */
+        for (const item of items) {
+            if (spot.has(item.id)) continue
+
+            const at = slot.get(item.tier) ?? 0
+            slot.set(item.tier, at + 1)
+
+            spot.set(item.id, {
+                x: PAD_X + at * GAP_X,
+                y: PAD_TOP + (item.tier - 1) * GAP_Y,
+            })
+        }
+
+        const list: Placed[] = items.map((item) => ({
+            ...item,
+            ...spot.get(item.id)!,
+            state: stateOf(item),
+        }))
+
+        return {
+            placed: list,
+            width: Math.max(...list.map((one) => one.x)) + PAD_X,
+            height: Math.max(...list.map((one) => one.y)) + 100,
+        }
+    }, [items, owned, points])
+
+    if (isLoading) return null
+
+    const byId = new Map(placed.map((one) => [one.id, one]))
+    const roots = placed.filter((one) => !one.requires_item_id)
+
+    const startX =
+        roots.length > 0
+            ? (Math.min(...roots.map((r) => r.x)) +
+                  Math.max(...roots.map((r) => r.x))) /
+              2
+            : width / 2
 
     return (
         <div
-            /*
-             * ★ 地に、薄い色を敷く。
-             *
-             *   白いままだと、札との境が分からず
-             *   全体がのっぺりする。
-             *   絵では薄い水色の紙の上に並んでいた。
-             */
             style={{
                 background:
-                    'linear-gradient(180deg, var(--color-brand-light) 0%, var(--color-bg-card) 40%)',
+                    'linear-gradient(180deg, var(--color-brand-light) 0%, var(--color-bg-card) 46%)',
                 border: '1px solid var(--color-brand-border)',
                 borderRadius: 14,
                 padding: '18px 20px',
@@ -239,9 +298,7 @@ export default function ItemTree() {
                     アイテムツリー
                 </h2>
 
-                <span
-                    style={{ fontSize: 12, color: 'var(--color-text-muted)' }}
-                >
+                <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                     {owned.length} / {items.length}
                 </span>
 
@@ -278,21 +335,13 @@ export default function ItemTree() {
                 中身はこれから増やしていきます。
             </p>
 
-            {/*
-              * ★ 進み具合を、帯で出す。
-              *
-              *   0 / 20 という数字だけだと、
-              *   どのくらい進んだのかが目で分からない。
-              *   帯があると、あと少しだと分かる。
-              */}
             <div
                 style={{
                     height: 5,
                     borderRadius: 999,
-                    /* ★ 地は、うんと薄く。同じ色だと満タンに見える */
                     background: 'rgba(0,0,0,.06)',
                     overflow: 'hidden',
-                    marginBottom: 16,
+                    marginBottom: 6,
                 }}
             >
                 <div
@@ -306,556 +355,481 @@ export default function ItemTree() {
             </div>
 
             {/*
-              * ★ はじまりの印。
+              * ★ 木そのもの。
               *
-              *   絵では、いちばん上に START の看板があった。
-              *   どこから手を付けるかが、一目で分かる。
+              *   線は SVG で下に敷き、丸はその上に置く。
+              *   線が札を貫かない。
               */}
-            <div
+            <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+                <div
+                    style={{
+                        position: 'relative',
+                        width,
+                        height,
+                        margin: '0 auto',
+                    }}
+                >
+                    {Object.entries(TIER_LABEL).map(([tier, label]) => {
+                        const level = Number(tier)
+                        if (!placed.some((one) => one.tier === level)) return null
+
+                        return (
+                            <div
+                                key={tier}
+                                style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: PAD_TOP + (level - 1) * GAP_Y - 18,
+                                    width: 84,
+                                    pointerEvents: 'none',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        color: 'var(--color-brand)',
+                                    }}
+                                >
+                                    {label.title}
+                                </div>
+                                <div
+                                    style={{
+                                        marginTop: 2,
+                                        fontSize: 9.5,
+                                        lineHeight: 1.5,
+                                        color: 'var(--color-text-faint)',
+                                    }}
+                                >
+                                    {label.note}
+                                </div>
+                            </div>
+                        )
+                    })}
+
+                    <svg
+                        width={width}
+                        height={height}
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            pointerEvents: 'none',
+                        }}
+                        aria-hidden="true"
+                    >
+                        {roots.map((root) => (
+                            <path
+                                key={`start-${root.id}`}
+                                d={elbow(
+                                    startX,
+                                    PAD_TOP - 46,
+                                    root.x,
+                                    root.y - NODE / 2,
+                                )}
+                                fill="none"
+                                stroke={
+                                    root.state === 'owned'
+                                        ? 'var(--color-brand)'
+                                        : 'var(--color-brand-border)'
+                                }
+                                strokeWidth={root.state === 'owned' ? 2.5 : 2}
+                            />
+                        ))}
+
+                        {placed.map((item) => {
+                            if (!item.requires_item_id) return null
+
+                            const from = byId.get(item.requires_item_id)
+                            if (!from) return null
+
+                            const done = owned.includes(from.id)
+
+                            return (
+                                <path
+                                    key={`link-${item.id}`}
+                                    d={elbow(
+                                        from.x,
+                                        from.y + NODE / 2,
+                                        item.x,
+                                        item.y - NODE / 2,
+                                    )}
+                                    fill="none"
+                                    stroke={
+                                        done
+                                            ? 'var(--color-brand)'
+                                            : 'var(--color-brand-border)'
+                                    }
+                                    strokeWidth={done ? 2.5 : 2}
+                                    opacity={done ? 1 : 0.7}
+                                />
+                            )
+                        })}
+                    </svg>
+
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: startX,
+                            top: PAD_TOP - 46,
+                            transform: 'translate(-50%, -50%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 54,
+                            height: 54,
+                            borderRadius: '50%',
+                            background: 'var(--color-brand)',
+                            color: 'var(--color-text-inverse)',
+                            fontSize: 9.5,
+                            fontWeight: 700,
+                            letterSpacing: '.1em',
+                            boxShadow: '0 3px 12px rgba(40,90,130,.28)',
+                        }}
+                    >
+                        START
+                    </div>
+
+                    {placed.map((item) => (
+                        <Node
+                            key={item.id}
+                            item={item}
+                            onPick={() => {
+                                setPicked(item)
+                                setMessage('')
+                            }}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {picked && (
+                <Detail
+                    item={picked}
+                    owned={owned.includes(picked.id)}
+                    points={points}
+                    busy={busy}
+                    message={message}
+                    onClose={() => setPicked(null)}
+                    onExchange={() => void exchange(picked)}
+                />
+            )}
+        </div>
+    )
+}
+
+/**
+ * 親から子へ引く線。
+ *
+ * ★ 斜めではなく、縦・横で曲げる。
+ *
+ *   斜めの線が交差すると、
+ *   どれがどれに繋がっているか分からなくなる。
+ *   縦に降りて、横へ寄って、また縦に降りる。
+ */
+function elbow(x1: number, y1: number, x2: number, y2: number): string {
+    if (Math.abs(x1 - x2) < 1) return `M${x1} ${y1} L${x2} ${y2}`
+
+    const mid = y1 + (y2 - y1) / 2
+    const r = 12
+    const dir = x2 > x1 ? 1 : -1
+
+    return [
+        `M${x1} ${y1}`,
+        `L${x1} ${mid - r}`,
+        `Q${x1} ${mid} ${x1 + r * dir} ${mid}`,
+        `L${x2 - r * dir} ${mid}`,
+        `Q${x2} ${mid} ${x2} ${mid + r}`,
+        `L${x2} ${y2}`,
+    ].join(' ')
+}
+
+/** 品物ひとつ */
+function Node({ item, onPick }: { item: Placed; onPick: () => void }) {
+    const hidden = item.is_secret && item.state !== 'owned'
+    const color = KIND_COLOR[item.kind] ?? '#999'
+
+    /* いちばん奥の品物は、大きく */
+    const isGoal = item.tier >= 5
+    const size = isGoal ? 80 : NODE
+
+    return (
+        <button
+            type="button"
+            disabled={item.state === 'coming'}
+            onClick={onPick}
+            style={{
+                position: 'absolute',
+                left: item.x,
+                top: item.y,
+                transform: 'translate(-50%, -50%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: 0,
+                border: 'none',
+                background: 'none',
+                cursor: item.state === 'coming' ? 'default' : 'pointer',
+                opacity:
+                    item.state === 'ready' || item.state === 'owned' ? 1 : 0.62,
+            }}
+        >
+            <span
+                style={{
+                    position: 'relative',
+                    width: size,
+                    height: size,
+                    borderRadius: '50%',
+                    background: hidden ? 'var(--color-bg-page)' : `${color}1a`,
+                    border:
+                        item.state === 'owned'
+                            ? '2.5px solid var(--color-brand)'
+                            : item.state === 'ready'
+                              ? `2px solid ${color}`
+                              : hidden
+                                ? '1px solid var(--color-brand-border)'
+                                : `1.5px solid ${color}55`,
+                    boxShadow:
+                        item.state === 'owned'
+                            ? '0 2px 12px rgba(40,90,130,.24)'
+                            : item.state === 'ready'
+                              ? `0 0 0 4px ${color}18`
+                              : '0 1px 4px rgba(40,35,25,.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: isGoal ? 28 : 22,
+                    color: hidden ? 'var(--color-text-faint)' : color,
+                    overflow: 'hidden',
+                }}
+            >
+                {!hidden && item.asset_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                        src={item.asset_url}
+                        alt=""
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                        }}
+                    />
+                ) : hidden ? (
+                    isGoal ? '🔒' : '?'
+                ) : (
+                    (KIND_MARK[item.kind] ?? '?')
+                )}
+
+                {item.state === 'owned' && (
+                    <span
+                        style={{
+                            position: 'absolute',
+                            top: -2,
+                            right: -2,
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            background: 'var(--color-brand)',
+                            color: '#fff',
+                            fontSize: 11,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        ✓
+                    </span>
+                )}
+            </span>
+
+            <span
                 style={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginLeft: 110,
-                    marginBottom: 6,
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 1,
+                    marginTop: -8,
+                    padding: '4px 9px 5px',
+                    borderRadius: 7,
+                    background: 'var(--color-bg-card)',
+                    border: '1px solid var(--color-brand-border)',
+                    boxShadow: '0 1px 3px rgba(40,35,25,.07)',
+                    minWidth: 72,
                 }}
             >
                 <span
                     style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '3px 14px',
-                        borderRadius: 999,
-                        background: 'var(--color-brand)',
-                        color: 'var(--color-text-inverse)',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '.12em',
+                        fontSize: 9.5,
+                        color: 'var(--color-text-muted)',
+                        whiteSpace: 'nowrap',
                     }}
                 >
-                    START
+                    {hidden ? 'シークレット' : KIND_LABEL[item.kind] ?? item.kind}
                 </span>
+
+                <span
+                    style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color:
+                            item.state === 'owned'
+                                ? 'var(--color-brand)'
+                                : 'var(--color-text)',
+                        fontVariantNumeric: 'tabular-nums',
+                    }}
+                >
+                    {item.state === 'owned'
+                        ? '交換済み'
+                        : `${(item.free_price ?? 0).toLocaleString()} pt`}
+                </span>
+            </span>
+        </button>
+    )
+}
+
+/** 選んだ品物の中身 */
+function Detail({
+    item,
+    owned,
+    points,
+    busy,
+    message,
+    onClose,
+    onExchange,
+}: {
+    item: Item
+    owned: boolean
+    points: number
+    busy: boolean
+    message: string
+    onClose: () => void
+    onExchange: () => void
+}) {
+    const hidden = item.is_secret && !owned
+    const price = item.free_price ?? 0
+
+    return (
+        <div
+            style={{
+                marginTop: 8,
+                padding: '14px 16px',
+                borderRadius: 12,
+                border: '1px solid var(--color-brand)',
+                background: 'var(--color-brand-light)',
+            }}
+        >
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 10,
+                    flexWrap: 'wrap',
+                }}
+            >
+                <span
+                    style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: 'var(--color-text)',
+                    }}
+                >
+                    {hidden ? 'シークレット' : item.name}
+                </span>
+
+                <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                    {KIND_LABEL[item.kind] ?? item.kind}
+                </span>
+
+                <button
+                    type="button"
+                    onClick={onClose}
+                    style={{
+                        marginLeft: 'auto',
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        fontSize: 11,
+                        color: 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                    }}
+                >
+                    閉じる
+                </button>
             </div>
 
-            {/*
-              * ★ 見出しを左に、縦に並べる。
-              *
-              *   絵では Lv と説明が左にあり、
-              *   その右に品物が並んでいる。
-              *   横線で区切るより、段が一本の道に見える。
-              */}
-            {sortedTiers.map(([tier, list]) => (
-                <section
-                    key={tier}
+            <p
+                style={{
+                    marginTop: 6,
+                    fontSize: 11.5,
+                    lineHeight: 1.8,
+                    color: 'var(--color-text-muted)',
+                }}
+            >
+                {hidden
+                    ? '交換するまで、中身は分かりません。'
+                    : item.description ||
+                      'この品物の説明は、これから用意します。'}
+            </p>
+
+            {owned ? (
+                <p
                     style={{
-                        display: 'flex',
-                        gap: 14,
-                        marginBottom: 6,
-                        alignItems: 'flex-start',
+                        marginTop: 8,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: 'var(--color-brand)',
                     }}
                 >
-                    <div
-                        style={{
-                            width: 96,
-                            flexShrink: 0,
-                            paddingTop: 12,
-                            borderLeft: '2px solid var(--color-brand-border)',
-                            paddingLeft: 10,
-                        }}
-                    >
-                        <div
-                            style={{
-                                fontSize: 13,
-                                fontWeight: 700,
-                                color: 'var(--color-brand)',
-                                lineHeight: 1.2,
-                            }}
-                        >
-                            {TIER_LABEL[tier]?.title ?? `Lv.${tier}`}
-                        </div>
-
-                        <div
-                            style={{
-                                marginTop: 3,
-                                fontSize: 10.5,
-                                lineHeight: 1.6,
-                                color: 'var(--color-text-faint)',
-                            }}
-                        >
-                            {TIER_LABEL[tier]?.note ?? ''}
-                        </div>
-                    </div>
-
-                    {/*
-                      * ★ 繋がりの線を、札の後ろに引く。
-                      *
-                      *   絵では品物どうしが枝で繋がっている。
-                      *   並んでいるだけだと、
-                      *   集める道筋に見えない。
-                      *
-                      *   札の高さの真ん中に、横一本。
-                      *   札がその上に乗るので、線は隙間だけ見える。
-                      */}
-                    <div
-                        style={{
-                            flex: 1,
-                            minWidth: 0,
-                            position: 'relative',
-                            display: 'grid',
-                            /*
-                             * ★ 札を狭く、たくさん並べる。
-                             *
-                             *   5 等分だと 1 つが大きくなりすぎて、
-                             *   絵とは別物に見える。
-                             *   絵では小さな丸が並んでいる。
-                             *
-                             *   幅を決めて左から詰める。
-                             *   段によって数が違っても、大きさは揃う。
-                             */
-                            gridTemplateColumns: 'repeat(auto-fill, 104px)',
-                            gap: 12,
-                        }}
-                    >
-                        {list.map((item) => {
-                            const state = stateOf(item)
-
-                            /* 伏せたものと、まだ用意していないもの */
-                            /*
-                             * ★ 絵を隠すのは、伏せたものだけ。
-                             *
-                             *   まだ用意していないものは、
-                             *   種類だけ見せる。
-                             *   何が来るか分かるほうが、貯める目当てになる。
-                             */
-                            const hidden = item.is_secret && state !== 'owned'
-
-                            return (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    disabled={state === 'coming'}
-                                    onClick={() => {
-                                        setPicked(item)
-                                        setMessage('')
-                                    }}
-                                    /*
-                                     * ★ 絵に寄せる。
-                                     *
-                                     *   横に長い箱だと、絵が小さく見えて
-                                     *   余白ばかりが目に入る。
-                                     *   正方形に近づけて、絵を大きく。
-                                     *
-                                     * ★ 薄くしすぎない。
-                                     *   全部が灰色だと、生きている感じがしない。
-                                     *   買えないものも、形は見える濃さに。
-                                     */
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        /*
-                                         * ★ 札の枠をやめる。
-                                         *
-                                         *   絵では丸が主役で、
-                                         *   その下に小さな帯が付いているだけ。
-                                         *   四角い箱で囲うと、
-                                         *   丸が箱の中の飾りに見えてしまう。
-                                         */
-                                        /*
-                                         * ★ 札を、丸に重ねる。
-                                         *
-                                         *   絵では丸の下端に札が乗っていて、
-                                         *   一つのものに見える。
-                                         *   離れていると、別々の部品に見える。
-                                         */
-                                        gap: 0,
-                                        padding: 0,
-                                        border: 'none',
-                                        background: 'none',
-                                        boxShadow: 'none',
-                                        /* 前へ伸びる線を、外にはみ出させる */
-                                        position: 'relative',
-                                        overflow: 'visible',
-                                        zIndex: 1,
-                                        cursor:
-                                            state === 'coming'
-                                                ? 'default'
-                                                : 'pointer',
-                                        opacity:
-                                            state === 'ready' ||
-                                            state === 'owned'
-                                                ? 1
-                                                : 0.72,
-                                    }}
-                                >
-                                    {/*
-                                      * ★ 前の品物へ伸びる線。
-                                      *
-                                      *   どれを取ったら次が買えるかを、
-                                      *   目で辿れるようにする。
-                                      *   並んでいるだけでは、木にならない。
-                                      *
-                                      * ★ 前が同じ段なら、左へ。
-                                      *   違う段なら、上へ。
-                                      *
-                                      * ★ 前の品物を持っていれば、線を濃くする。
-                                      *   どこまで進んだかが、道として見える。
-                                      */}
-                                    {item.requires_item_id && (() => {
-                                        const from = items.find(
-                                            (one) =>
-                                                one.id === item.requires_item_id,
-                                        )
-
-                                        if (!from) return null
-
-                                        const done = owned.includes(from.id)
-                                        const color = done
-                                            ? 'var(--color-brand)'
-                                            : 'var(--color-brand-border)'
-
-                                        /* 同じ段なら左へ、違う段なら上へ */
-                                        return from.tier === item.tier ? (
-                                            /*
-                                             * ★ 丸の縁から縁まで、届かせる。
-                                             *
-                                             *   12px では隙間を渡りきれず、
-                                             *   線が切れて見えていた。
-                                             *   隙間ぶん（gap 12）と、
-                                             *   隣の札の余白まで伸ばす。
-                                             *
-                                             * ★ 高さは丸の真ん中に。
-                                             *   丸は 62px なので 31。
-                                             */
-                                            <span
-                                                aria-hidden="true"
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: '100%',
-                                                    top: 30,
-                                                    width: 30,
-                                                    marginRight: -9,
-                                                    height: 2,
-                                                    background: color,
-                                                    zIndex: 0,
-                                                }}
-                                            />
-                                        ) : (
-                                            /*
-                                             * ★ 上の丸から、この丸へ。
-                                             *
-                                             *   前は 12px しか伸びておらず、
-                                             *   上の札を貫いて見えていた。
-                                             *
-                                             *   札の高さ（約 34）と段の隙間ぶん
-                                             *   まで伸ばし、札の後ろを通す。
-                                             */
-                                            <span
-                                                aria-hidden="true"
-                                                style={{
-                                                    /*
-                                                     * ★ 丸の上から、上へ伸ばす。
-                                                     *
-                                                     *   前は札の上から伸ばしていたので、
-                                                     *   上の段の札を貫いて見えた。
-                                                     *
-                                                     *   丸の真上から、段の隙間だけ
-                                                     *   伸ばせば、札に触れない。
-                                                     */
-                                                    position: 'absolute',
-                                                    top: -14,
-                                                    left: '50%',
-                                                    width: 2,
-                                                    height: 14,
-                                                    marginLeft: -1,
-                                                    background: color,
-                                                    zIndex: 0,
-                                                }}
-                                            />
-                                        )
-                                    })()}
-
-                                    {/* 絵。まだ無ければ印だけ */}
-                                    <span
-                                        style={{
-                                            /*
-                                             * ★ 丸くする。
-                                             *   絵では円で並んでいる。
-                                             *   四角より、集めている感じが出る。
-                                             */
-                                            /*
-                                             * ★ 丸を主役にする。
-                                             *   絵では、これがいちばん大きい。
-                                             */
-                                            width: 62,
-                                            height: 62,
-                                            borderRadius: '50%',
-                                            /*
-                                             * ★ 中を、種類の色で薄く塗る。
-                                             *
-                                             *   縁だけ色を付けても、
-                                             *   白い丸が並んでいるだけに見える。
-                                             *   中に色が入ると、
-                                             *   何の品物かが遠目にも分かる。
-                                             *
-                                             * ★ 伏せたものは灰色のまま。
-                                             *   色で中身を当てられては困る。
-                                             */
-                                            background: hidden
-                                                ? 'var(--color-bg-page)'
-                                                : `${KIND_COLOR[item.kind] ?? '#999'}1a`,
-                                            border:
-                                                state === 'owned'
-                                                    ? '2.5px solid var(--color-brand)'
-                                                    : hidden
-                                                      ? '1px solid var(--color-brand-border)'
-                                                      : `1.5px solid ${KIND_COLOR[item.kind] ?? '#999'}55`,
-                                            boxShadow:
-                                                state === 'owned'
-                                                    ? '0 2px 10px rgba(40,90,130,.2)'
-                                                    : '0 1px 4px rgba(40,35,25,.06)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: 22,
-                                            /* 種類の色。伏せたものは灰色のまま */
-                                            color: hidden
-                                                ? 'var(--color-text-faint)'
-                                                : (KIND_COLOR[item.kind] ??
-                                                  'var(--color-text-faint)'),
-                                            overflow: 'hidden',
-                                        }}
-                                    >
-                                        {!hidden && item.asset_url ? (
-                                            /* eslint-disable-next-line @next/next/no-img-element */
-                                            <img
-                                                src={item.asset_url}
-                                                alt=""
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    objectFit: 'contain',
-                                                }}
-                                            />
-                                        ) : hidden ? (
-                                            '?'
-                                        ) : (
-                                            /* 絵がまだ無くても、種類は伝える */
-                                            (KIND_MARK[item.kind] ?? '?')
-                                        )}
-                                    </span>
-
-                                    {/*
-                                      * ★ 名前と値段を、白い帯にまとめる。
-                                      *
-                                      *   絵では丸の下に小さな札が付いている。
-                                      *   文字がそのまま置いてあると、
-                                      *   地に溶けて読みにくい。
-                                      */}
-                                    <span
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            gap: 1,
-                                            padding: '4px 8px 5px',
-                                            borderRadius: 7,
-                                            /* 丸の下端に、少し重ねる */
-                                            marginTop: -8,
-                                            position: 'relative',
-                                            zIndex: 1,
-                                            background: 'var(--color-bg-card)',
-                                            border:
-                                                '1px solid var(--color-brand-border)',
-                                            boxShadow:
-                                                '0 1px 3px rgba(40,35,25,.06)',
-                                            minWidth: 74,
-                                        }}
-                                    >
-                                        <span
-                                            style={{
-                                                fontSize: 9.5,
-                                                color: 'var(--color-text-muted)',
-                                                textAlign: 'center',
-                                                lineHeight: 1.3,
-                                            }}
-                                        >
-                                            {item.is_secret && state !== 'owned'
-                                                ? 'シークレット'
-                                                : KIND_LABEL[item.kind] ?? item.kind}
-                                        </span>
-
-                                        <span
-                                            style={{
-                                                fontSize: 11,
-                                                fontWeight: 700,
-                                                color:
-                                                    state === 'owned'
-                                                        ? 'var(--color-brand)'
-                                                        : 'var(--color-text)',
-                                                fontVariantNumeric: 'tabular-nums',
-                                            }}
-                                        >
-                                            {state === 'owned'
-                                                ? '交換済み'
-                                                : `${(item.free_price ?? 0).toLocaleString()} pt`}
-                                        </span>
-                                    </span>
-                                </button>
-                            )
-                        })}
-                    </div>
-                </section>
-            ))}
-
-            {/* 選んだ品物 */}
-            {picked && (
-                <div
+                    交換済みです。
+                </p>
+            ) : !item.is_active ? (
+                <p
                     style={{
-                        marginTop: 4,
-                        padding: '14px 16px',
-                        borderRadius: 12,
-                        border: '1px solid var(--color-brand)',
-                        background: 'var(--color-brand-light)',
+                        marginTop: 8,
+                        fontSize: 12,
+                        color: 'var(--color-text-muted)',
                     }}
                 >
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            gap: 10,
-                            flexWrap: 'wrap',
-                        }}
-                    >
-                        <span
-                            style={{
-                                fontSize: 13,
-                                fontWeight: 700,
-                                color: 'var(--color-text)',
-                            }}
-                        >
-                            {picked.is_secret && !owned.includes(picked.id)
-                                ? 'シークレット'
-                                : picked.name}
-                        </span>
+                    この品物は、まだ用意していません。
+                </p>
+            ) : (
+                <button
+                    type="button"
+                    disabled={busy || price > points}
+                    onClick={onExchange}
+                    style={{
+                        marginTop: 10,
+                        padding: '8px 20px',
+                        borderRadius: 8,
+                        border: 'none',
+                        background:
+                            price > points
+                                ? 'var(--color-brand-border)'
+                                : 'var(--color-brand)',
+                        color:
+                            price > points
+                                ? 'var(--color-text-muted)'
+                                : 'var(--color-text-inverse)',
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        cursor: price > points ? 'not-allowed' : 'pointer',
+                    }}
+                >
+                    {price > points
+                        ? `あと ${(price - points).toLocaleString()} pt`
+                        : `${price.toLocaleString()} pt で交換する`}
+                </button>
+            )}
 
-                        <span
-                            style={{
-                                fontSize: 11,
-                                color: 'var(--color-text-muted)',
-                            }}
-                        >
-                            {KIND_LABEL[picked.kind] ?? picked.kind}
-                        </span>
-
-                        <button
-                            type="button"
-                            onClick={() => setPicked(null)}
-                            style={{
-                                marginLeft: 'auto',
-                                background: 'none',
-                                border: 'none',
-                                padding: 0,
-                                fontSize: 11,
-                                color: 'var(--color-text-muted)',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            閉じる
-                        </button>
-                    </div>
-
-                    <p
-                        style={{
-                            marginTop: 6,
-                            fontSize: 11.5,
-                            lineHeight: 1.8,
-                            color: 'var(--color-text-muted)',
-                        }}
-                    >
-                        {picked.is_secret && !owned.includes(picked.id)
-                            ? '交換するまで、中身は分かりません。'
-                            : picked.description ||
-                              'この品物の説明は、これから用意します。'}
-                    </p>
-
-                    {(() => {
-                        const state = stateOf(picked)
-
-                        if (state === 'owned') {
-                            return (
-                                <p
-                                    style={{
-                                        marginTop: 8,
-                                        fontSize: 12,
-                                        color: 'var(--color-brand)',
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    交換済みです。
-                                </p>
-                            )
-                        }
-
-                        if (state === 'locked') {
-                            return (
-                                <p
-                                    style={{
-                                        marginTop: 8,
-                                        fontSize: 12,
-                                        color: 'var(--color-text-muted)',
-                                    }}
-                                >
-                                    前の品物を交換すると、選べるようになります。
-                                </p>
-                            )
-                        }
-
-                        return (
-                            <button
-                                type="button"
-                                disabled={busy || state === 'poor'}
-                                onClick={() => void exchange(picked)}
-                                style={{
-                                    marginTop: 10,
-                                    padding: '8px 20px',
-                                    borderRadius: 8,
-                                    border: 'none',
-                                    background:
-                                        state === 'poor'
-                                            ? 'var(--color-brand-border)'
-                                            : 'var(--color-brand)',
-                                    color:
-                                        state === 'poor'
-                                            ? 'var(--color-text-muted)'
-                                            : 'var(--color-text-inverse)',
-                                    fontSize: 12.5,
-                                    fontWeight: 700,
-                                    cursor:
-                                        state === 'poor'
-                                            ? 'not-allowed'
-                                            : 'pointer',
-                                }}
-                            >
-                                {state === 'poor'
-                                    ? `あと ${((picked.free_price ?? 0) - points).toLocaleString()} pt`
-                                    : `${(picked.free_price ?? 0).toLocaleString()} pt で交換する`}
-                            </button>
-                        )
-                    })()}
-
-                    {message && (
-                        <p
-                            style={{
-                                marginTop: 8,
-                                fontSize: 11.5,
-                                color: 'var(--color-text)',
-                            }}
-                        >
-                            {message}
-                        </p>
-                    )}
-                </div>
+            {message && (
+                <p
+                    style={{
+                        marginTop: 8,
+                        fontSize: 11.5,
+                        color: 'var(--color-text)',
+                    }}
+                >
+                    {message}
+                </p>
             )}
         </div>
     )
