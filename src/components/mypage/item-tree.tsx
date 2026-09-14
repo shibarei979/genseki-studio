@@ -64,6 +64,29 @@ const KIND_LABEL: Record<string, string> = {
     shelf: '本棚背景',
 }
 
+/*
+ * 種類ごとの印。
+ *
+ * ★ 全部を同じ「？」で出すと、何の品物か分からない。
+ *
+ *   絵がまだ無くても、種類だけは伝わるようにする。
+ *   何段目にどんなものが来るかが見えると、
+ *   貯める目当てになる。
+ *
+ * ★ 伏せたものは、これも出さない。
+ *   何があるか分からないほうが、集める気になる。
+ */
+const KIND_MARK: Record<string, string> = {
+    stamp: '☺',
+    frame: '◻',
+    background: '▨',
+    badge: '★',
+    name_style: 'Aa',
+    bookmark: '❧',
+    cover: '▤',
+    shelf: '▦',
+}
+
 export default function ItemTree() {
     const [items, setItems] = useState<Item[]>([])
     const [owned, setOwned] = useState<string[]>([])
@@ -217,15 +240,41 @@ export default function ItemTree() {
                     fontSize: 11.5,
                     lineHeight: 1.8,
                     color: 'var(--color-text-faint)',
-                    marginBottom: 14,
+                    marginBottom: 10,
                 }}
             >
                 集めたポイントで、スタンプやプロフィールの飾りと交換できます。
                 中身はこれから増やしていきます。
             </p>
 
+            {/*
+              * ★ 進み具合を、帯で出す。
+              *
+              *   0 / 20 という数字だけだと、
+              *   どのくらい進んだのかが目で分からない。
+              *   帯があると、あと少しだと分かる。
+              */}
+            <div
+                style={{
+                    height: 5,
+                    borderRadius: 999,
+                    background: 'var(--color-brand-border)',
+                    overflow: 'hidden',
+                    marginBottom: 16,
+                }}
+            >
+                <div
+                    style={{
+                        width: `${items.length > 0 ? Math.round((owned.length / items.length) * 100) : 0}%`,
+                        height: '100%',
+                        background: 'var(--color-brand)',
+                        transition: 'width .3s ease',
+                    }}
+                />
+            </div>
+
             {sortedTiers.map(([tier, list]) => (
-                <section key={tier} style={{ marginBottom: 18 }}>
+                <section key={tier} style={{ marginBottom: 14 }}>
                     <div
                         style={{
                             display: 'flex',
@@ -262,11 +311,21 @@ export default function ItemTree() {
                         />
                     </div>
 
+                    {/*
+                      * ★ 段の幅いっぱいに広げる。
+                      *
+                      *   auto-fill だと、広い画面で
+                      *   左に寄って右が大きく空く。
+                      *   その段にある数で割って、等分に並べる。
+                      *
+                      * ★ 5 つ入る幅を基準にする。
+                      *   段によって数が違うので、
+                      *   そろえないと大きさがばらつく。
+                      */}
                     <div
                         style={{
                             display: 'grid',
-                            gridTemplateColumns:
-                                'repeat(auto-fill, minmax(92px, 1fr))',
+                            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
                             gap: 10,
                         }}
                     >
@@ -274,9 +333,14 @@ export default function ItemTree() {
                             const state = stateOf(item)
 
                             /* 伏せたものと、まだ用意していないもの */
-                            const hidden =
-                                state === 'coming' ||
-                                (item.is_secret && state !== 'owned')
+                            /*
+                             * ★ 絵を隠すのは、伏せたものだけ。
+                             *
+                             *   まだ用意していないものは、
+                             *   種類だけ見せる。
+                             *   何が来るか分かるほうが、貯める目当てになる。
+                             */
+                            const hidden = item.is_secret && state !== 'owned'
 
                             return (
                                 <button
@@ -292,7 +356,7 @@ export default function ItemTree() {
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         gap: 4,
-                                        padding: '10px 6px',
+                                        padding: '12px 6px',
                                         borderRadius: 10,
                                         border:
                                             state === 'owned'
@@ -316,8 +380,8 @@ export default function ItemTree() {
                                     {/* 絵。まだ無ければ印だけ */}
                                     <span
                                         style={{
-                                            width: 40,
-                                            height: 40,
+                                            width: 48,
+                                            height: 48,
                                             borderRadius: 8,
                                             background: 'var(--color-bg-card)',
                                             border:
@@ -341,8 +405,11 @@ export default function ItemTree() {
                                                     objectFit: 'contain',
                                                 }}
                                             />
-                                        ) : (
+                                        ) : hidden ? (
                                             '?'
+                                        ) : (
+                                            /* 絵がまだ無くても、種類は伝える */
+                                            (KIND_MARK[item.kind] ?? '?')
                                         )}
                                     </span>
 
@@ -354,10 +421,17 @@ export default function ItemTree() {
                                             lineHeight: 1.4,
                                         }}
                                     >
-                                        {hidden
-                                            ? state === 'coming'
-                                                ? '？？？'
-                                                : 'シークレット'
+                                        {/*
+                                          * ★ 種類の名前を出す。
+                                          *
+                                          *   全部「？？？」だと、
+                                          *   何が並んでいるのか分からない。
+                                          *   絵はまだでも、種類は伝えられる。
+                                          *
+                                          * ★ 伏せたものだけ、隠す。
+                                          */}
+                                        {item.is_secret && state !== 'owned'
+                                            ? 'シークレット'
                                             : KIND_LABEL[item.kind] ?? item.kind}
                                     </span>
 
