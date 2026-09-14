@@ -60,31 +60,57 @@ export default function PointBadge() {
         <Link
             href="/mypage"
             aria-label={`無料ポイント ${points}`}
+            /*
+             * ★ 枠で囲う。
+             *
+             *   ただ字が並んでいるだけだと、
+             *   隣の切り替えと地続きに見えて、
+             *   どこからどこまでが何なのか分からない。
+             *
+             * ★ 右に間を空ける。
+             *   切り替えに近すぎて、押し間違える。
+             */
             style={{
                 display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                lineHeight: 1.15,
-                padding: "2px 10px",
-                borderRadius: 8,
+                alignItems: "baseline",
+                gap: 5,
+                marginRight: 6,
+                padding: "3px 11px",
+                borderRadius: 999,
+                border: "1px solid var(--color-brand-border)",
+                background: "var(--color-brand-light)",
                 textDecoration: "none",
-                color: "var(--color-text-muted)",
+                lineHeight: 1.2,
             }}
         >
-            <span style={{ fontSize: 9.5, letterSpacing: ".04em" }}>
-                無料pt
+            <span
+                style={{
+                    fontSize: 9.5,
+                    letterSpacing: ".04em",
+                    color: "var(--color-text-muted)",
+                }}
+            >
+                無料
             </span>
 
             <span
                 style={{
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: 700,
                     color: "var(--color-brand)",
                     fontVariantNumeric: "tabular-nums",
                 }}
             >
                 {points.toLocaleString()}
+            </span>
+
+            <span
+                style={{
+                    fontSize: 9.5,
+                    color: "var(--color-text-muted)",
+                }}
+            >
+                pt
             </span>
         </Link>
     );

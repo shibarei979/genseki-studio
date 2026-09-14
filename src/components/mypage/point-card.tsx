@@ -75,12 +75,18 @@ export default function PointCard() {
     if (free === null) return null
 
     return (
+        /*
+         * ★ ほかの枠と、同じ形にする。
+         *
+         *   「最近の投稿作品」「下書き」「閲覧履歴」と
+         *   同じ並びに入るので、形が違うとそこだけ浮く。
+         */
         <section
             style={{
                 background: 'var(--color-bg-card)',
                 border: '1px solid var(--color-brand-border)',
-                borderRadius: 12,
-                padding: '16px 20px',
+                borderRadius: 14,
+                padding: '18px 20px',
                 marginBottom: 16,
             }}
         >
@@ -94,9 +100,9 @@ export default function PointCard() {
             >
                 <span
                     style={{
-                        fontSize: 11.5,
-                        color: 'var(--color-text-muted)',
-                        letterSpacing: '.04em',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: 'var(--color-text)',
                     }}
                 >
                     無料ポイント

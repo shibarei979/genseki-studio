@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import PointCard from '@/components/mypage/point-card'
 import { READER_MISSIONS, WRITER_MISSIONS, type MissionStats } from '@/components/mypage/mission-client'
 
 interface Props {
