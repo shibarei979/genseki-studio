@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 
 import EntryImage from "@/components/common/entry-image";
 import AccountMenu from "@/components/layout/account-menu";
+import PointBadge from "@/components/layout/point-badge";
 import ModeToggle from "@/components/layout/mode-toggle";
 import RoomPresenceBar from "@/components/room/room-presence-bar";
 import { useMyNotifications } from "@/hooks/use-my-notifications";
@@ -541,6 +542,19 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
 
                 {/* 右端。通知とアイコンのあいだを空ける */}
                 <div className="ml-auto flex shrink-0 items-center gap-3.5">
+                    {/*
+                      * いま持っている無料ポイント。
+                      *
+                      * ★ 切り替えの左に置く。
+                      *   入っている人にだけ出る。
+                      *
+                      * ★ 狭い画面では出さない。
+                      *   携帯では、マイページの枠で見せる。
+                      */}
+                    <span className="hidden sm:block">
+                        <PointBadge />
+                    </span>
+
                     {/*
                       * 執筆向き／読書向きの切り替え。
                       * ベルの横。押すとすぐ入れ替わる。

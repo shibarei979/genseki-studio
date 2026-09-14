@@ -15,6 +15,7 @@ import dynamic from 'next/dynamic'
 
 import Header from '@/components/layout/header'
 import MypageDashboard from '@/components/mypage/mypage-dashboard'
+import PointCard from '@/components/mypage/point-card'
 
 /*
  * タブを押すまで読み込まない。
@@ -872,6 +873,14 @@ export default function MypageClient({
   // ===== マイページタブ =====
   const MypageTab = () => (
     <div>
+      {/*
+        * いま持っている無料ポイント。
+        *
+        * ★ 携帯では、ここだけが見せ場。
+        *   頭の帯は狭いので、携帯では出していない。
+        */}
+      <PointCard />
+
       {!profile.birthdate && (
         /*
          * 未設定の促し。
