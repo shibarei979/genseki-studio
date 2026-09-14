@@ -189,6 +189,14 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
       </div>
       {/* 右：ミッション進捗＋活動サマリー */}
       <div style={{ flex: '1 1 260px', minWidth: 260, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/*
+          * いま持っている無料ポイント。
+          *
+          * ★ ミッションの上に置く。
+          *   ポイントはミッションで貯まるので、
+          *   その入り口のすぐ上にあるのが分かりやすい。
+          */}
+        <PointCard />
         {Missions}
         {Summary}
       </div>
