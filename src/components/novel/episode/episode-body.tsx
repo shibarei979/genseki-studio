@@ -782,8 +782,22 @@ function IllustBlock({ url, isAi, size, rec }: {
       maxWidth: rec ? '100%' : 'min(75%, 640px)',
       /* ★ 作者のすすめがあるときは、寄せもそのとおりに */
       ...(rec ? { transform: `translateX(${rec.align / 4}%)` } : {})}}>
+      {/*
+        * ★ すすめる幅は、画面からはみ出させない。
+        *
+        *   幅は px で持っていて、1200 まで選べる。
+        *   編集画面では読む幅を基準に縮めて見せているので、
+        *   そこでは収まって見える。
+        *
+        *   読む画面ではそのまま px で置いていたため、
+        *   狭い画面や、本文より広い幅を選んだときに
+        *   はみ出して右が切れていた。
+        *
+        *   「挿絵が切れる。サイズを変えても直らない」という声は、これ。
+        *   切っているのは大きさの設定ではなく、すすめる幅のほう。
+        */}
       <span style={{position:'relative',display:'inline-block',maxWidth:'100%',
-        ...(rec ? { width: rec.width } : {})}}>
+        ...(rec ? { width: 'min(100%, ' + rec.width + 'px)' } : {})}}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="挿絵"
           style={rec

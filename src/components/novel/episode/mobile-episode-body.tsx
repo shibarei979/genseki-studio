@@ -335,7 +335,14 @@ function MobileIllust({ url, isAi, size, rec }: {
     <span style={{display:'block',margin:'24px auto',textAlign:'center',maxWidth:'90%'}}>
       <span style={{position:'relative',display:'inline-block',maxWidth:'100%',
         /* 作者のすすめがあるときは、その幅で。画面より広ければ画面に合わせる */
-        ...(rec ? { width: Math.min(rec.width, 10000) } : {})}}>
+        /*
+         * ★ 画面からはみ出させない。
+         *
+         *   10000 で止めても、実際には何も止まっていない。
+         *   すすめる幅は 1200 まで選べるので、
+         *   携帯では必ずはみ出して切れる。
+         */
+        ...(rec ? { width: 'min(100%, ' + rec.width + 'px)' } : {})}}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="挿絵"
           style={rec
