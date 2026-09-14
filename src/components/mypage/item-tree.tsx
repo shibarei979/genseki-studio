@@ -182,8 +182,16 @@ export default function ItemTree() {
 
     return (
         <div
+            /*
+             * ★ 地に、薄い色を敷く。
+             *
+             *   白いままだと、札との境が分からず
+             *   全体がのっぺりする。
+             *   絵では薄い水色の紙の上に並んでいた。
+             */
             style={{
-                background: 'var(--color-bg-card)',
+                background:
+                    'linear-gradient(180deg, var(--color-brand-light) 0%, var(--color-bg-card) 40%)',
                 border: '1px solid var(--color-brand-border)',
                 borderRadius: 14,
                 padding: '18px 20px',
@@ -323,15 +331,50 @@ export default function ItemTree() {
                         </div>
                     </div>
 
+                    {/*
+                      * ★ 繋がりの線を、札の後ろに引く。
+                      *
+                      *   絵では品物どうしが枝で繋がっている。
+                      *   並んでいるだけだと、
+                      *   集める道筋に見えない。
+                      *
+                      *   札の高さの真ん中に、横一本。
+                      *   札がその上に乗るので、線は隙間だけ見える。
+                      */}
                     <div
                         style={{
                             flex: 1,
                             minWidth: 0,
+                            position: 'relative',
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-                            gap: 10,
+                            /*
+                             * ★ 札を狭く、たくさん並べる。
+                             *
+                             *   5 等分だと 1 つが大きくなりすぎて、
+                             *   絵とは別物に見える。
+                             *   絵では小さな丸が並んでいる。
+                             *
+                             *   幅を決めて左から詰める。
+                             *   段によって数が違っても、大きさは揃う。
+                             */
+                            gridTemplateColumns: 'repeat(auto-fill, 104px)',
+                            gap: 12,
                         }}
                     >
+                        {/* 後ろに引く横線。札の隙間だけ見える */}
+                        <span
+                            aria-hidden="true"
+                            style={{
+                                position: 'absolute',
+                                left: 52,
+                                right: 52,
+                                top: '50%',
+                                height: 2,
+                                background: 'var(--color-brand-border)',
+                                zIndex: 0,
+                            }}
+                        />
+
                         {list.map((item) => {
                             const state = stateOf(item)
 
@@ -369,8 +412,8 @@ export default function ItemTree() {
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
-                                        gap: 5,
-                                        padding: '12px 6px 10px',
+                                        gap: 6,
+                                        padding: '10px 4px 9px',
                                         borderRadius: 12,
                                         border:
                                             state === 'owned'
@@ -380,6 +423,18 @@ export default function ItemTree() {
                                             state === 'owned'
                                                 ? 'var(--color-brand-light)'
                                                 : 'var(--color-bg-card)',
+                                        /*
+                                         * ★ 影を足す。
+                                         *   平らなままだと、
+                                         *   紙に線を引いただけに見える。
+                                         */
+                                        boxShadow:
+                                            state === 'owned'
+                                                ? '0 2px 8px rgba(40,90,130,.14)'
+                                                : '0 1px 3px rgba(40,35,25,.05)',
+                                        /* 後ろの線より前に置く */
+                                        position: 'relative',
+                                        zIndex: 1,
                                         cursor:
                                             state === 'coming'
                                                 ? 'default'
@@ -399,8 +454,8 @@ export default function ItemTree() {
                                              *   絵では円で並んでいる。
                                              *   四角より、集めている感じが出る。
                                              */
-                                            width: 54,
-                                            height: 54,
+                                            width: 46,
+                                            height: 46,
                                             borderRadius: '50%',
                                             background:
                                                 state === 'owned'
