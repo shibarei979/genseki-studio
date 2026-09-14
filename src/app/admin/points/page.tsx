@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import GrantPoints from "@/components/admin/grant-points";
+import ItemEditor from "@/components/admin/item-editor";
 import PointHolders from "@/components/admin/point-holders";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -310,6 +311,16 @@ export default async function AdminPointsPage() {
               *   人が増えると、目で探すのは無理。
               */}
             <PointHolders holders={holders} />
+
+            {/*
+              * 品物と、繋がり。
+              *
+              * ★ ここで決めた繋がりが、
+              *   アイテムツリーの線になる。
+              */}
+            <div style={{ marginTop: 24 }}>
+                <ItemEditor />
+            </div>
 
         </main>
     );

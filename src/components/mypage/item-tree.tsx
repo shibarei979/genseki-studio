@@ -361,20 +361,6 @@ export default function ItemTree() {
                             gap: 12,
                         }}
                     >
-                        {/* 後ろに引く横線。札の隙間だけ見える */}
-                        <span
-                            aria-hidden="true"
-                            style={{
-                                position: 'absolute',
-                                left: 52,
-                                right: 52,
-                                top: '50%',
-                                height: 2,
-                                background: 'var(--color-brand-border)',
-                                zIndex: 0,
-                            }}
-                        />
-
                         {list.map((item) => {
                             const state = stateOf(item)
 
@@ -432,8 +418,9 @@ export default function ItemTree() {
                                             state === 'owned'
                                                 ? '0 2px 8px rgba(40,90,130,.14)'
                                                 : '0 1px 3px rgba(40,35,25,.05)',
-                                        /* 後ろの線より前に置く */
+                                        /* 前へ伸びる線を、外にはみ出させる */
                                         position: 'relative',
+                                        overflow: 'visible',
                                         zIndex: 1,
                                         cursor:
                                             state === 'coming'
@@ -446,6 +433,61 @@ export default function ItemTree() {
                                                 : 0.72,
                                     }}
                                 >
+                                    {/*
+                                      * ★ 前の品物へ伸びる線。
+                                      *
+                                      *   どれを取ったら次が買えるかを、
+                                      *   目で辿れるようにする。
+                                      *   並んでいるだけでは、木にならない。
+                                      *
+                                      * ★ 前が同じ段なら、左へ。
+                                      *   違う段なら、上へ。
+                                      *
+                                      * ★ 前の品物を持っていれば、線を濃くする。
+                                      *   どこまで進んだかが、道として見える。
+                                      */}
+                                    {item.requires_item_id && (() => {
+                                        const from = items.find(
+                                            (one) =>
+                                                one.id === item.requires_item_id,
+                                        )
+
+                                        if (!from) return null
+
+                                        const done = owned.includes(from.id)
+                                        const color = done
+                                            ? 'var(--color-brand)'
+                                            : 'var(--color-brand-border)'
+
+                                        /* 同じ段なら左へ、違う段なら上へ */
+                                        return from.tier === item.tier ? (
+                                            <span
+                                                aria-hidden="true"
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: '100%',
+                                                    top: 32,
+                                                    width: 12,
+                                                    height: 2,
+                                                    background: color,
+                                                }}
+                                            />
+                                        ) : (
+                                            <span
+                                                aria-hidden="true"
+                                                style={{
+                                                    position: 'absolute',
+                                                    bottom: '100%',
+                                                    left: '50%',
+                                                    width: 2,
+                                                    height: 12,
+                                                    marginLeft: -1,
+                                                    background: color,
+                                                }}
+                                            />
+                                        )
+                                    })()}
+
                                     {/* 絵。まだ無ければ印だけ */}
                                     <span
                                         style={{
