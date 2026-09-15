@@ -103,9 +103,9 @@ const KIND_COLOR: Record<string, string> = {
  * ★ 縦に長くなってよい。
  *   送って見られる。横に潰すほうが読みにくい。
  */
-const NODE = 82
-const GAP_X = 124
-const GAP_Y = 168
+const NODE = 76
+const GAP_X = 112
+const GAP_Y = 146
 const PAD_X = 190 /* 左の見出しに、札が重ならないだけ空ける */
 const PAD_TOP = 126 /* START のぶん。上に離す */
 
@@ -578,7 +578,7 @@ export default function ItemTree() {
                                     startX,
                                     PAD_TOP - 84,
                                     root.x,
-                                    root.y - NODE / 2,
+                                    root.y - NODE / 2 - 9,
                                 )}
                                 fill="none"
                                 stroke={
@@ -612,7 +612,13 @@ export default function ItemTree() {
                                         from.x,
                                         from.y + NODE / 2 + LABEL_H,
                                         item.x,
-                                        item.y - NODE / 2,
+                                        /*
+                                         * ★ 輪のぶん、手前で止める。
+                                         *
+                                         *   丸の縁ちょうどで止めると、
+                                         *   外に巻いた輪を線が貫いて見える。
+                                         */
+                                        item.y - NODE / 2 - 9,
                                     )}
                                     fill="none"
                                     /*
@@ -631,8 +637,13 @@ export default function ItemTree() {
                                               ? '#5b8fc9'
                                               : 'rgba(0,0,0,.1)'
                                     }
+                                    /*
+                                     * ★ 線は細く。
+                                     *   太いと骨組みが主役になり、
+                                     *   丸が飾りに見える。
+                                     */
                                     strokeWidth={
-                                        done ? 3.5 : item.state === 'ready' ? 3 : 2.5
+                                        done ? 2.5 : item.state === 'ready' ? 2.5 : 1.5
                                     }
                                     strokeLinecap="round"
                                     opacity={done || item.state === 'ready' ? 1 : 0.8}
@@ -808,10 +819,13 @@ function Node({
                     width: size,
                     height: size,
                     borderRadius: '50%',
-                    /* 中は白。絵が入ったとき、色が濁らない */
-                    background: hidden
-                        ? 'linear-gradient(180deg,#f2f5f7,#e8edf1)'
-                        : `linear-gradient(180deg,#fff, ${color}14)`,
+                    /*
+                     * ★ 中は白一色。
+                     *
+                     *   色を敷くと、絵が入ったときに濁る。
+                     *   ここは額の中。色は外の装飾で出す。
+                     */
+                    background: '#fff',
                     /*
                      * ★ 取れるものは、金色で光らせる。
                      *
@@ -831,15 +845,46 @@ function Node({
                      *   絵が無いいまは、器だけが見える。
                      *   絵が入れば、そのまま額になる。
                      */
-                    border: '3px solid #fff',
+                    /*
+                     * ★ 白い丸のまわりに、輪を重ねる。
+                     *
+                     *   縁の線 1 本だけだと、平たい円に見える。
+                     *   内側に細い輪、外に太い輪、
+                     *   さらに外に淡い光。三重にすると、
+                     *   絵が額に収まっているように見える。
+                     *
+                     * ★ 状態は、外の輪の色で表す。
+                     *   中を塗ると、絵が入ったとき濁る。
+                     */
+                    border: 'none',
                     boxShadow:
                         item.state === 'owned'
-                            ? '0 0 0 3px #5fa88a, 0 4px 16px rgba(95,168,138,.34)'
+                            ? [
+                                  '0 0 0 1px rgba(255,255,255,.9)',
+                                  '0 0 0 4px #5fa88a',
+                                  '0 0 0 8px rgba(95,168,138,.16)',
+                                  '0 6px 18px rgba(60,120,100,.28)',
+                              ].join(', ')
                             : item.state === 'ready'
-                              ? '0 0 0 3px #d9a441, 0 0 0 9px rgba(217,164,65,.18), 0 4px 18px rgba(217,164,65,.34)'
+                              ? [
+                                    '0 0 0 1px rgba(255,255,255,.9)',
+                                    '0 0 0 4px #d9a441',
+                                    '0 0 0 9px rgba(217,164,65,.2)',
+                                    '0 0 0 14px rgba(217,164,65,.08)',
+                                    '0 6px 20px rgba(190,140,50,.3)',
+                                ].join(', ')
                               : hidden
-                                ? '0 0 0 1.5px rgba(120,160,185,.4), 0 2px 8px rgba(40,60,80,.08)'
-                                : `0 0 0 2px ${color}55, 0 2px 10px rgba(40,60,80,.1)`,
+                                ? [
+                                      '0 0 0 1px rgba(255,255,255,.9)',
+                                      '0 0 0 2px rgba(120,160,185,.34)',
+                                      '0 3px 10px rgba(40,60,80,.09)',
+                                  ].join(', ')
+                                : [
+                                      '0 0 0 1px rgba(255,255,255,.9)',
+                                      `0 0 0 3px ${color}66`,
+                                      `0 0 0 7px ${color}14`,
+                                      '0 3px 12px rgba(40,60,80,.11)',
+                                  ].join(', '),
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
