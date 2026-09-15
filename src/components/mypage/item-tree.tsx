@@ -92,10 +92,18 @@ const KIND_COLOR: Record<string, string> = {
 
 /* 置き方の寸法 */
 const NODE = 62
-const GAP_X = 128
-const GAP_Y = 136
-const PAD_X = 108
-const PAD_TOP = 78
+const GAP_X = 152 /* 隣どうしの間。広いほど木が横に伸びる */
+const GAP_Y = 152 /* 札のぶん、少し広く */
+const PAD_X = 190 /* 左の見出しに、札が重ならないだけ空ける */
+const PAD_TOP = 126 /* START のぶん。上に離す */
+
+/*
+ * 丸の下に付く札の高さ。
+ *
+ * ★ 線を引くときに要る。
+ *   丸の下端から出すと、札を貫いてしまう。
+ */
+const LABEL_H = 38
 
 export default function ItemTree() {
     const [items, setItems] = useState<Item[]>([])
@@ -360,6 +368,16 @@ export default function ItemTree() {
               *   線は SVG で下に敷き、丸はその上に置く。
               *   線が札を貫かない。
               */}
+            {/*
+              * ★ 木を、枠の幅に合わせて広げる。
+              *
+              *   置き場所は 128px 間隔で決めているので、
+              *   広い画面では右が大きく空く。
+              *   枠に合わせて引き伸ばせば、真ん中に収まる。
+              *
+              * ★ 狭い画面では、送って見る。
+              *   縮めすぎると、札の字が読めなくなる。
+              */}
             <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
                 <div
                     style={{
@@ -367,6 +385,7 @@ export default function ItemTree() {
                         width,
                         height,
                         margin: '0 auto',
+                        minWidth: width,
                     }}
                 >
                     {Object.entries(TIER_LABEL).map(([tier, label]) => {
@@ -422,7 +441,7 @@ export default function ItemTree() {
                                 key={`start-${root.id}`}
                                 d={elbow(
                                     startX,
-                                    PAD_TOP - 46,
+                                    PAD_TOP - 84,
                                     root.x,
                                     root.y - NODE / 2,
                                 )}
@@ -447,9 +466,16 @@ export default function ItemTree() {
                             return (
                                 <path
                                     key={`link-${item.id}`}
+                                    /*
+                                     * ★ 線は、札の下から出す。
+                                     *
+                                     *   丸の下端から出すと、
+                                     *   その下にある札を貫いてしまう。
+                                     *   札の高さ（約 46）ぶん下げる。
+                                     */
                                     d={elbow(
                                         from.x,
-                                        from.y + NODE / 2,
+                                        from.y + NODE / 2 + LABEL_H,
                                         item.x,
                                         item.y - NODE / 2,
                                     )}
@@ -470,7 +496,7 @@ export default function ItemTree() {
                         style={{
                             position: 'absolute',
                             left: startX,
-                            top: PAD_TOP - 46,
+                            top: PAD_TOP - 84,
                             transform: 'translate(-50%, -50%)',
                             display: 'flex',
                             alignItems: 'center',
