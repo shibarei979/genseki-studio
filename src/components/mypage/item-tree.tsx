@@ -91,9 +91,21 @@ const KIND_COLOR: Record<string, string> = {
 }
 
 /* 置き方の寸法 */
-const NODE = 76 /* 丸の直径。木が主役なので、大きめに */
-const GAP_X = 146
-const GAP_Y = 148
+/*
+ * 置き方の寸法。
+ *
+ * ★ 目指す絵の比率に合わせる。
+ *
+ *   絵では、丸どうしの間が丸 1.5 個ぶんほど。
+ *   段の間は丸 2 個ぶん。
+ *   詰まっていることで、集まりに見える。
+ *
+ * ★ 縦に長くなってよい。
+ *   送って見られる。横に潰すほうが読みにくい。
+ */
+const NODE = 82
+const GAP_X = 124
+const GAP_Y = 168
 const PAD_X = 190 /* 左の見出しに、札が重ならないだけ空ける */
 const PAD_TOP = 126 /* START のぶん。上に離す */
 
@@ -292,11 +304,32 @@ export default function ItemTree() {
     return (
         <div
             style={{
-                background:
-                    'linear-gradient(180deg, var(--color-brand-light) 0%, var(--color-bg-card) 46%)',
-                border: '1px solid var(--color-brand-border)',
-                borderRadius: 14,
-                padding: '18px 20px',
+                /*
+                 * ★ 紙の地を作る。
+                 *
+                 *   白い板に丸が置いてあるだけだと、
+                 *   管理画面にしか見えない。
+                 *
+                 *   淡い水色の紙に、上から光が差す。
+                 *   細かい格子を敷いて、紙の目を出す。
+                 */
+                position: 'relative',
+                background: `
+                    radial-gradient(900px 300px at 50% -60px, rgba(255,255,255,.9), transparent 70%),
+                    linear-gradient(180deg, #eaf2f7 0%, #f4f9fb 38%, #fbfdfe 100%)
+                `,
+                backgroundImage: `
+                    radial-gradient(900px 300px at 50% -60px, rgba(255,255,255,.9), transparent 70%),
+                    linear-gradient(rgba(90,140,170,.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(90,140,170,.05) 1px, transparent 1px),
+                    linear-gradient(180deg, #eaf2f7 0%, #f4f9fb 38%, #fbfdfe 100%)
+                `,
+                backgroundSize: '100% 100%, 28px 28px, 28px 28px, 100% 100%',
+                border: '1px solid rgba(120,160,185,.28)',
+                borderRadius: 16,
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,.7)',
+                padding: '18px 20px 26px',
+                overflow: 'hidden',
             }}
         >
             <div
@@ -479,15 +512,37 @@ export default function ItemTree() {
                                      *   Lv が説明文ではなく、
                                      *   上から下へ進む道に見える。
                                      */
-                                    borderLeft: '3px solid var(--color-brand-border)',
+                                    borderLeft: '2px solid rgba(120,160,185,.35)',
                                     pointerEvents: 'none',
                                 }}
                             >
+                                {/*
+                                  * ★ 菱形の印。
+                                  *
+                                  *   縦線の上に置くと、
+                                  *   道の途中にある関所に見える。
+                                  *   ただの見出しではなく、
+                                  *   進行の段だと分かる。
+                                  */}
+                                <span
+                                    style={{
+                                        position: 'absolute',
+                                        left: -7,
+                                        top: 4,
+                                        width: 11,
+                                        height: 11,
+                                        background: '#fff',
+                                        border: '2px solid var(--color-brand)',
+                                        transform: 'rotate(45deg)',
+                                    }}
+                                />
+
                                 <div
                                     style={{
-                                        fontSize: 12,
+                                        fontSize: 13,
                                         fontWeight: 700,
                                         color: 'var(--color-brand)',
+                                        letterSpacing: '.02em',
                                     }}
                                 >
                                     {label.title}
@@ -753,27 +808,38 @@ function Node({
                     width: size,
                     height: size,
                     borderRadius: '50%',
-                    background: hidden ? 'var(--color-bg-page)' : `${color}1a`,
+                    /* 中は白。絵が入ったとき、色が濁らない */
+                    background: hidden
+                        ? 'linear-gradient(180deg,#f2f5f7,#e8edf1)'
+                        : `linear-gradient(180deg,#fff, ${color}14)`,
                     /*
                      * ★ 取れるものは、金色で光らせる。
                      *
                      *   「あと少しで取れそう」が、
                      *   目に飛び込むようにする。
                      */
-                    border:
-                        item.state === 'owned'
-                            ? '3px solid #5fa88a'
-                            : item.state === 'ready'
-                              ? '3px solid #d9a441'
-                              : hidden
-                                ? '1.5px solid var(--color-brand-border)'
-                                : `2px solid ${color}44`,
+                    /*
+                     * ★ 器を作る。
+                     *
+                     *   絵を入れる場所なので、
+                     *   中は白く、外に二重の縁を巻く。
+                     *
+                     *     内側  細い白。絵を額から浮かせる
+                     *     外側  状態の色。太く
+                     *     その外 光。買えるものだけ強く
+                     *
+                     *   絵が無いいまは、器だけが見える。
+                     *   絵が入れば、そのまま額になる。
+                     */
+                    border: '3px solid #fff',
                     boxShadow:
                         item.state === 'owned'
-                            ? '0 3px 14px rgba(95,168,138,.3)'
+                            ? '0 0 0 3px #5fa88a, 0 4px 16px rgba(95,168,138,.34)'
                             : item.state === 'ready'
-                              ? '0 0 0 5px rgba(217,164,65,.2), 0 3px 14px rgba(217,164,65,.3)'
-                              : '0 1px 5px rgba(40,35,25,.07)',
+                              ? '0 0 0 3px #d9a441, 0 0 0 9px rgba(217,164,65,.18), 0 4px 18px rgba(217,164,65,.34)'
+                              : hidden
+                                ? '0 0 0 1.5px rgba(120,160,185,.4), 0 2px 8px rgba(40,60,80,.08)'
+                                : `0 0 0 2px ${color}55, 0 2px 10px rgba(40,60,80,.1)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
