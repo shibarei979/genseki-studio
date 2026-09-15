@@ -91,9 +91,9 @@ const KIND_COLOR: Record<string, string> = {
 }
 
 /* 置き方の寸法 */
-const NODE = 62
-const GAP_X = 152 /* 隣どうしの間。広いほど木が横に伸びる */
-const GAP_Y = 152 /* 札のぶん、少し広く */
+const NODE = 76 /* 丸の直径。木が主役なので、大きめに */
+const GAP_X = 146
+const GAP_Y = 148
 const PAD_X = 190 /* 左の見出しに、札が重ならないだけ空ける */
 const PAD_TOP = 126 /* START のぶん。上に離す */
 
@@ -112,6 +112,18 @@ export default function ItemTree() {
     const [isLoading, setIsLoading] = useState(true)
 
     const [picked, setPicked] = useState<Item | null>(null)
+
+
+    /*
+     * 種類で絞る。
+     *
+     * ★ 品物が増えると、木が横に伸びて探しにくい。
+     *   欲しい種類だけ見られるようにする。
+     *
+     * ★ 絞っても、木の形は崩さない。
+     *   外れたものは薄くして、繋がりは残す。
+     */
+    const [filter, setFilter] = useState<string>('all')
     const [busy, setBusy] = useState(false)
     const [message, setMessage] = useState('')
 
@@ -343,9 +355,59 @@ export default function ItemTree() {
                 中身はこれから増やしていきます。
             </p>
 
+            {/*
+              * ★ 種類で絞る。
+              *
+              *   品物が増えると、木が横に伸びて探しにくい。
+              *   外れたものは薄くするだけで、繋がりは残す。
+              */}
             <div
                 style={{
-                    height: 5,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 6,
+                    marginBottom: 10,
+                }}
+            >
+                {([
+                    ['all', 'すべて'],
+                    ['stamp', 'スタンプ'],
+                    ['frame', 'フレーム'],
+                    ['background', '背景'],
+                    ['other', 'その他'],
+                ] as const).map(([key, label]) => (
+                    <button
+                        key={key}
+                        type="button"
+                        onClick={() => setFilter(key)}
+                        style={{
+                            padding: '4px 14px',
+                            borderRadius: 999,
+                            border:
+                                filter === key
+                                    ? '1px solid var(--color-brand)'
+                                    : '1px solid var(--color-brand-border)',
+                            background:
+                                filter === key
+                                    ? 'var(--color-brand)'
+                                    : 'var(--color-bg-card)',
+                            color:
+                                filter === key
+                                    ? 'var(--color-text-inverse)'
+                                    : 'var(--color-text-muted)',
+                            fontSize: 11.5,
+                            fontWeight: filter === key ? 700 : 400,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            <div
+                style={{
+                    height: 7,
                     borderRadius: 999,
                     background: 'rgba(0,0,0,.06)',
                     overflow: 'hidden',
@@ -378,7 +440,17 @@ export default function ItemTree() {
               * ★ 狭い画面では、送って見る。
               *   縮めすぎると、札の字が読めなくなる。
               */}
-            <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+            {/*
+              * ★ 木と、詳しい欄を横に並べる。
+              *
+              *   下に出すと、押すたびに画面が伸び縮みして
+              *   木のどこを見ていたか分からなくなる。
+              *   横に置けば、木を見ながら中身を確かめられる。
+              *
+              * ★ 狭い画面では、下に回り込む。
+              */}
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ overflowX: 'auto', paddingBottom: 8, flex: '1 1 460px', minWidth: 0 }}>
                 <div
                     style={{
                         position: 'relative',
@@ -399,7 +471,15 @@ export default function ItemTree() {
                                     position: 'absolute',
                                     left: 0,
                                     top: PAD_TOP + (level - 1) * GAP_Y - 18,
-                                    width: 84,
+                                    width: 110,
+                                    paddingLeft: 12,
+                                    /*
+                                     * ★ 縦の道を引く。
+                                     *
+                                     *   Lv が説明文ではなく、
+                                     *   上から下へ進む道に見える。
+                                     */
+                                    borderLeft: '3px solid var(--color-brand-border)',
                                     pointerEvents: 'none',
                                 }}
                             >
@@ -480,13 +560,27 @@ export default function ItemTree() {
                                         item.y - NODE / 2,
                                     )}
                                     fill="none"
+                                    /*
+                                     * ★ 道の様子で、線の色を変える。
+                                     *
+                                     *   取った道   緑。歩いた跡
+                                     *   次の道     青。ここから進める
+                                     *   まだの道   薄い灰
+                                     *
+                                     *   攻略の道筋が、色で見える。
+                                     */
                                     stroke={
                                         done
-                                            ? 'var(--color-brand)'
-                                            : 'var(--color-brand-border)'
+                                            ? '#5fa88a'
+                                            : item.state === 'ready'
+                                              ? '#5b8fc9'
+                                              : 'rgba(0,0,0,.1)'
                                     }
-                                    strokeWidth={done ? 2.5 : 2}
-                                    opacity={done ? 1 : 0.7}
+                                    strokeWidth={
+                                        done ? 3.5 : item.state === 'ready' ? 3 : 2.5
+                                    }
+                                    strokeLinecap="round"
+                                    opacity={done || item.state === 'ready' ? 1 : 0.8}
                                 />
                             )
                         })}
@@ -515,30 +609,72 @@ export default function ItemTree() {
                         START
                     </div>
 
-                    {placed.map((item) => (
-                        <Node
-                            key={item.id}
-                            item={item}
-                            onPick={() => {
-                                setPicked(item)
-                                setMessage('')
-                            }}
-                        />
-                    ))}
+                    {placed.map((item) => {
+                        /*
+                         * ★ 絞りから外れたものは、薄くする。
+                         *
+                         *   消すと木が崩れて、
+                         *   どこが繋がっていたか分からなくなる。
+                         */
+                        const inFilter =
+                            filter === 'all' ||
+                            item.kind === filter ||
+                            (filter === 'other' &&
+                                !['stamp', 'frame', 'background'].includes(
+                                    item.kind,
+                                ))
+
+                        return (
+                            <Node
+                                key={item.id}
+                                item={item}
+                                dim={!inFilter}
+                                onPick={() => {
+                                    setPicked(item)
+                                    setMessage('')
+                                }}
+                            />
+                        )
+                    })}
                 </div>
             </div>
 
-            {picked && (
-                <Detail
-                    item={picked}
-                    owned={owned.includes(picked.id)}
-                    points={points}
-                    busy={busy}
-                    message={message}
-                    onClose={() => setPicked(null)}
-                    onExchange={() => void exchange(picked)}
-                />
-            )}
+            <div style={{ flex: '0 0 250px', minWidth: 230 }}>
+                {picked ? (
+                    <Detail
+                        item={picked}
+                        owned={owned.includes(picked.id)}
+                        points={points}
+                        busy={busy}
+                        message={message}
+                        onClose={() => setPicked(null)}
+                        onExchange={() => void exchange(picked)}
+                    />
+                ) : (
+                    /*
+                     * ★ 何も選んでいないときも、場所を空けておく。
+                     *
+                     *   選ぶたびに木が横へずれると、
+                     *   見ていた所を見失う。
+                     */
+                    <div
+                        style={{
+                            padding: '20px 16px',
+                            borderRadius: 12,
+                            border: '1px dashed var(--color-brand-border)',
+                            fontSize: 11.5,
+                            lineHeight: 1.9,
+                            color: 'var(--color-text-faint)',
+                            textAlign: 'center',
+                        }}
+                    >
+                        アイテムを押すと、
+                        <br />
+                        ここに詳しく出ます。
+                    </div>
+                )}
+            </div>
+            </div>
         </div>
     )
 }
@@ -570,7 +706,16 @@ function elbow(x1: number, y1: number, x2: number, y2: number): string {
 }
 
 /** 品物ひとつ */
-function Node({ item, onPick }: { item: Placed; onPick: () => void }) {
+function Node({
+    item,
+    dim,
+    onPick,
+}: {
+    item: Placed
+    /** 絞りから外れているか。薄くするだけで、消さない */
+    dim?: boolean
+    onPick: () => void
+}) {
     const hidden = item.is_secret && item.state !== 'owned'
     const color = KIND_COLOR[item.kind] ?? '#999'
 
@@ -595,8 +740,11 @@ function Node({ item, onPick }: { item: Placed; onPick: () => void }) {
                 border: 'none',
                 background: 'none',
                 cursor: item.state === 'coming' ? 'default' : 'pointer',
-                opacity:
-                    item.state === 'ready' || item.state === 'owned' ? 1 : 0.62,
+                opacity: dim
+                    ? 0.2
+                    : item.state === 'ready' || item.state === 'owned'
+                      ? 1
+                      : 0.62,
             }}
         >
             <span
@@ -606,20 +754,26 @@ function Node({ item, onPick }: { item: Placed; onPick: () => void }) {
                     height: size,
                     borderRadius: '50%',
                     background: hidden ? 'var(--color-bg-page)' : `${color}1a`,
+                    /*
+                     * ★ 取れるものは、金色で光らせる。
+                     *
+                     *   「あと少しで取れそう」が、
+                     *   目に飛び込むようにする。
+                     */
                     border:
                         item.state === 'owned'
-                            ? '2.5px solid var(--color-brand)'
+                            ? '3px solid #5fa88a'
                             : item.state === 'ready'
-                              ? `2px solid ${color}`
+                              ? '3px solid #d9a441'
                               : hidden
-                                ? '1px solid var(--color-brand-border)'
-                                : `1.5px solid ${color}55`,
+                                ? '1.5px solid var(--color-brand-border)'
+                                : `2px solid ${color}44`,
                     boxShadow:
                         item.state === 'owned'
-                            ? '0 2px 12px rgba(40,90,130,.24)'
+                            ? '0 3px 14px rgba(95,168,138,.3)'
                             : item.state === 'ready'
-                              ? `0 0 0 4px ${color}18`
-                              : '0 1px 4px rgba(40,35,25,.06)',
+                              ? '0 0 0 5px rgba(217,164,65,.2), 0 3px 14px rgba(217,164,65,.3)'
+                              : '0 1px 5px rgba(40,35,25,.07)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
