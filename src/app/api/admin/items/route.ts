@@ -100,6 +100,7 @@ export async function POST(request: Request) {
             "requires_item_id",
             "is_secret",
             "is_active",
+            "hint",
         ];
 
         const patch: Record<string, unknown> = {};

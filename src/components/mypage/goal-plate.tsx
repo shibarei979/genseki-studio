@@ -16,10 +16,10 @@ export function GoalPlate({
     caption: string
     width?: number
 }) {
-    const h = Math.round((width * 184) / 400)
+    const h = Math.round((width * 204) / 400)
 
     return (
-        <svg viewBox="0 0 400 184" width={width} height={h} aria-hidden="true">
+        <svg viewBox="0 -20 400 204" width={width} height={h} aria-hidden="true">
             <defs>
                 <radialGradient id="gp-plate" cx=".5" cy=".34" r=".78">
                     <stop offset="0%" stopColor="#265a86" />
@@ -32,10 +32,19 @@ export function GoalPlate({
                     <stop offset="62%" stopColor="#c69c4a" />
                     <stop offset="100%" stopColor="#8e6a2c" />
                 </linearGradient>
+                <linearGradient id="gp-crown" x1="0" y1="0" x2="0.3" y2="1">
+                    <stop offset="0%" stopColor="#fff2cc" />
+                    <stop offset="30%" stopColor="#ecd08c" />
+                    <stop offset="58%" stopColor="#cfa552" />
+                    <stop offset="100%" stopColor="#9c7430" />
+                </linearGradient>
                 <linearGradient id="gp-text" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#fffaea" />
                     <stop offset="100%" stopColor="#e9d49b" />
                 </linearGradient>
+                <clipPath id="gp-clip">
+                    <path d={PLATE} />
+                </clipPath>
                 <radialGradient id="gp-glow">
                     <stop offset="0%" stopColor="#ffe6a8" stopOpacity=".5" />
                     <stop offset="55%" stopColor="#a9ded0" stopOpacity=".2" />
@@ -56,8 +65,38 @@ export function GoalPlate({
 
             <ellipse cx="200" cy="92" rx="200" ry="90" fill="url(#gp-glow)" />
 
+            {/* 板の落ち影 */}
+            <path
+                d={PLATE}
+                fill="#0a1c31"
+                opacity=".3"
+                transform="translate(0 5)"
+            />
+
             <path d={PLATE} fill="url(#gp-plate)" />
             <path d={PLATE} fill="url(#gp-inner)" />
+
+            {/* 斜めの照り。平らな板に見せない */}
+            <g clipPath="url(#gp-clip)">
+                <path
+                    d="M-40 150 L140 -30 L200 -30 L20 150 Z"
+                    fill="#ffffff"
+                    opacity=".05"
+                />
+                <path
+                    d="M40 170 L230 -20 L258 -20 L68 170 Z"
+                    fill="#ffffff"
+                    opacity=".035"
+                />
+                {/* 縁の内側の暗がり */}
+                <path
+                    d={PLATE}
+                    fill="none"
+                    stroke="#04101e"
+                    strokeWidth="14"
+                    opacity=".45"
+                />
+            </g>
 
             {/* 奥の輪。地が平らに見えないように */}
             <g opacity=".1" stroke="#cfe6f5" fill="none">
@@ -68,8 +107,24 @@ export function GoalPlate({
             <path
                 d={PLATE}
                 fill="none"
+                stroke="#6b4e1d"
+                strokeWidth="5"
+                opacity=".8"
+            />
+            <path
+                d={PLATE}
+                fill="none"
                 stroke="url(#gp-gold)"
-                strokeWidth="3"
+                strokeWidth="3.4"
+            />
+            <path
+                d={PLATE}
+                fill="none"
+                stroke="#fff4d2"
+                strokeWidth="1"
+                opacity=".5"
+                strokeDasharray="120 400"
+                strokeDashoffset="-40"
             />
             <path
                 d={PLATE_IN}
@@ -93,18 +148,59 @@ export function GoalPlate({
             </g>
 
             {/* 王冠 */}
-            <g transform="translate(200 13) scale(1.12)">
+            <g transform="translate(200 8) scale(1.16)">
+                {/* 影。板の上に載っているように */}
+                <ellipse cx="0" cy="20" rx="28" ry="4" fill="#07172a" opacity=".45" />
+
+                {/* 三つの山。奥に布 */}
                 <path
-                    d="M-26 16 L-26 -1 L-14 7 L0 -11 L14 7 L26 -1 L26 16 Z"
-                    fill="url(#gp-gold)"
-                    stroke="#8e6a2c"
-                    strokeWidth="1"
+                    d="M-28 14 L-28 -6 L-15 4 L0 -16 L15 4 L28 -6 L28 14 Z"
+                    fill="url(#gp-crown)"
+                    stroke="#8a6526"
+                    strokeWidth="1.1"
                     strokeLinejoin="round"
                 />
-                <path d="M-26 16 H26" stroke="#8e6a2c" strokeWidth="1.6" />
-                <path d="M0 -17 l3.4 4 -3.4 4 -3.4 -4 Z" fill="#a8dcf0" />
-                <circle cx="-26" cy="-2" r="2.4" fill="#fbeec2" />
-                <circle cx="26" cy="-2" r="2.4" fill="#fbeec2" />
+                {/* 山のあいだの窪みに、濃い影 */}
+                <path
+                    d="M-15 4 L-8 14 H8 L15 4 L0 -16 Z"
+                    fill="#6f4f1c"
+                    opacity=".28"
+                />
+                {/* 左上に光の筋 */}
+                <path
+                    d="M-28 -6 L-15 4 L-15 8 L-28 -1 Z"
+                    fill="#fff6d8"
+                    opacity=".6"
+                />
+
+                {/* 台座 */}
+                <rect
+                    x="-30"
+                    y="13"
+                    width="60"
+                    height="9"
+                    rx="3"
+                    fill="url(#gp-crown)"
+                    stroke="#8a6526"
+                    strokeWidth="1.1"
+                />
+                <path d="M-27 16 H27" stroke="#fff3cf" strokeWidth="1.2" opacity=".55" />
+
+                {/* 台座の玉 */}
+                {[-20, -10, 0, 10, 20].map((x) => (
+                    <circle key={x} cx={x} cy="17.5" r="2.1" fill="#f7e6b4" />
+                ))}
+
+                {/* 山の先の宝玉 */}
+                <circle cx="-28" cy="-8" r="3" fill="#cdefff" stroke="#c9a44f" strokeWidth="1.1" />
+                <circle cx="28" cy="-8" r="3" fill="#cdefff" stroke="#c9a44f" strokeWidth="1.1" />
+                <path
+                    d="M0 -24 l4.5 5.5 -4.5 5.5 -4.5 -5.5 Z"
+                    fill="#cdefff"
+                    stroke="#7fa9c4"
+                    strokeWidth=".9"
+                />
+                <path d="M0 -22 l1.8 3 -1.8 3 -1.8 -3 Z" fill="#ffffff" opacity=".9" />
             </g>
 
             {/* 鍵 */}

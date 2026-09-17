@@ -27,6 +27,7 @@ interface Item {
     name: string
     description: string
     asset_url: string | null
+    hint?: string | null
     free_price: number | null
     tier: number
     position: number
@@ -139,6 +140,7 @@ export default function ItemEditor() {
             >
                 「前の品物」を決めると、アイテムツリーに線が引かれます。
                 「絵」は public/items に置いた絵の場所です（例 /items/it-book.webp）。
+                「出る条件」は、伏せた品物に指を乗せたときに出る文です。
                 中身が揃うまでは「出す」を切っておいてください。
             </p>
 
@@ -179,6 +181,7 @@ export default function ItemEditor() {
                             <th style={{ padding: '4px 6px' }}>値段</th>
                             <th style={{ padding: '4px 6px' }}>前の品物</th>
                             <th style={{ padding: '4px 6px' }}>伏せる</th>
+                            <th style={{ padding: '4px 6px' }}>出る条件</th>
                             <th style={{ padding: '4px 6px' }}>出す</th>
                         </tr>
                     </thead>
@@ -329,6 +332,26 @@ export default function ItemEditor() {
                                                 is_secret: e.target.checked,
                                             })
                                         }
+                                    />
+                                </td>
+
+                                {/*
+                                  * 出る条件。
+                                  *
+                                  * ★ 伏せた品物に指を乗せると、ここに書いた文が出る。
+                                  * ★ 空のままだと「まだ決まっていません」と出る。
+                                  */}
+                                <td style={{ padding: '5px 6px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="感想を10回送ると現れます"
+                                        defaultValue={item.hint ?? ''}
+                                        onBlur={(e) =>
+                                            void save(item.id, {
+                                                hint: e.target.value.trim(),
+                                            })
+                                        }
+                                        style={{ ...field, width: 190 }}
                                     />
                                 </td>
 

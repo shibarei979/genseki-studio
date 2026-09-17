@@ -41,6 +41,15 @@ interface Item {
     requires_item_id: string | null
     is_secret: boolean
     is_active: boolean
+    /*
+     * 出る条件。
+     *
+     * ★ シークレットに「？」しか出ないと、諦められる。
+     *   「感想を10回送ると現れる」と書いてあれば、取りに行く。
+     *
+     * ★ 古い作りから来た返事には無いことがある。
+     */
+    hint?: string | null
 }
 
 /** 置き場所が決まった品物 */
@@ -177,6 +186,18 @@ export default function ItemTree() {
     const [message, setMessage] = useState('')
 
     /*
+     * ★ 手に入れた瞬間を、そこで見せる。
+     *
+     *   いちばんの見せ場なのに、
+     *   下に小さく「交換しました」と出るだけだった。
+     *   取った額で光らせる。
+     */
+    const [burstId, setBurstId] = useState<string | null>(null)
+
+    /* 指を乗せているもの。条件の吹き出しを出す */
+    const [hoverId, setHoverId] = useState<string | null>(null)
+
+    /*
      * 枠の幅を測る。
      *
      * ★ 狭い画面では、木を縮めて丸ごと入れる。
@@ -252,7 +273,9 @@ export default function ItemTree() {
             if (!response.ok || data.error) {
                 setMessage(data.error ?? 'うまくいきませんでした。')
             } else {
-                setMessage('交換しました。')
+                setMessage('手に入れました。')
+                setBurstId(item.id)
+                window.setTimeout(() => setBurstId(null), 1500)
                 await reload()
             }
         } catch {
@@ -401,6 +424,38 @@ export default function ItemTree() {
             : 1
 
     /*
+     * 指を乗せているものと、そこに出す言葉。
+     *
+     * ★ 伏せてあるものは、出る条件。
+     * ★ 前の品物が要るものは、その名前。
+     * ★ それ以外は、品物の名前。
+     */
+    const hovered = placed.find((one) => one.id === hoverId) ?? null
+
+    const hoverText = (() => {
+        if (!hovered) return ''
+
+        const veiled = hovered.is_secret && hovered.state !== 'owned'
+
+        if (veiled) {
+            return hovered.hint
+                ? hovered.hint
+                : '出る条件は、まだ決まっていません。'
+        }
+
+        if (hovered.state === 'locked') {
+            const from = placed.find(
+                (one) => one.id === hovered.requires_item_id,
+            )
+            return from ? `先に「${from.name}」が要ります` : hovered.name
+        }
+
+        if (hovered.state === 'coming') return `${hovered.name}（準備中）`
+
+        return hovered.name
+    })()
+
+    /*
      * 次に手が届くもの。
      *
      * ★ 前の品物が揃っていて、まだ持っていなくて、
@@ -463,6 +518,29 @@ export default function ItemTree() {
                 }
                 @media (prefers-reduced-motion: reduce) {
                     .gtree-breathe { animation: none !important; }
+                    .gtree-burst { display: none !important; }
+                }
+
+                /* 手に入れた瞬間 */
+                @keyframes gtree-pop {
+                    0%   { transform: translate(-50%, -50%) scale(.55); }
+                    45%  { transform: translate(-50%, -50%) scale(1.3); }
+                    70%  { transform: translate(-50%, -50%) scale(.94); }
+                    100% { transform: translate(-50%, -50%) scale(1); }
+                }
+                @keyframes gtree-wave {
+                    0%   { transform: translate(-50%, -50%) scale(.5); opacity: .95; }
+                    100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+                }
+                @keyframes gtree-fly {
+                    0%   { transform: rotate(var(--a)) translateY(-6px) scale(.3); opacity: 1; }
+                    70%  { opacity: 1; }
+                    100% { transform: rotate(var(--a)) translateY(-78px) scale(1.1); opacity: 0; }
+                }
+                @keyframes gtree-flash {
+                    0%   { opacity: 0; }
+                    18%  { opacity: .85; }
+                    100% { opacity: 0; }
                 }
             `}</style>
 
@@ -901,6 +979,10 @@ export default function ItemTree() {
                                     item={item}
                                     dim={!inFilter}
                                     chosen={item.id === pickedId}
+                                    burst={item.id === burstId}
+                                    onHover={(on) =>
+                                        setHoverId(on ? item.id : null)
+                                    }
                                     onPick={() => {
                                         setPickedId(item.id)
                                         setMessage('')
@@ -908,6 +990,60 @@ export default function ItemTree() {
                                 />
                             )
                         })}
+                        {/*
+                          * ★ 指を乗せたら、出る条件を見せる。
+                          *
+                          *   「？」だけだと、諦めて通り過ぎる。
+                          *   条件が見えれば、取りに行く。
+                          *
+                          * ★ 吹き出しは額の外に出るので、
+                          *   額の中ではなく、木の板に置く。
+                          */}
+                        {hovered && (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    left: hovered.x,
+                                    top:
+                                        hovered.y -
+                                        (hovered.tier >= 5 ? 86 : NODE / 2) -
+                                        12,
+                                    transform: 'translate(-50%, -100%)',
+                                    /*
+                                     * ★ 幅は中身なり。
+                                     *   放っておくと、右端に近い額では
+                                     *   細長い短冊になって読めない。
+                                     */
+                                    width: 'max-content',
+                                    maxWidth: 220,
+                                    padding: '7px 11px',
+                                    borderRadius: 9,
+                                    background: 'rgba(19,47,77,.95)',
+                                    color: '#f1e7cf',
+                                    fontSize: 11,
+                                    lineHeight: 1.65,
+                                    textAlign: 'center',
+                                    boxShadow: '0 6px 16px rgba(10,30,50,.35)',
+                                    pointerEvents: 'none',
+                                    zIndex: 5,
+                                }}
+                            >
+                                {hoverText}
+
+                                <span
+                                    style={{
+                                        position: 'absolute',
+                                        left: '50%',
+                                        bottom: -5,
+                                        marginLeft: -5,
+                                        width: 10,
+                                        height: 10,
+                                        background: 'rgba(19,47,77,.95)',
+                                        transform: 'rotate(45deg)',
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
                     </div>
                 </div>
@@ -1126,6 +1262,87 @@ function elbow(x1: number, y1: number, x2: number, y2: number): string {
     ].join(' ')
 }
 
+/**
+ * 手に入れた瞬間の光。
+ *
+ * ★ 額の上に一瞬だけ重ねる。
+ *   輪が広がり、粒が飛び、白く光る。
+ */
+function Burst() {
+    return (
+        <span
+            className="gtree-burst"
+            aria-hidden="true"
+            style={{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                width: 0,
+                height: 0,
+                pointerEvents: 'none',
+            }}
+        >
+            <span
+                style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: 120,
+                    height: 120,
+                    marginLeft: -60,
+                    marginTop: -60,
+                    borderRadius: '50%',
+                    background:
+                        'radial-gradient(circle, rgba(255,240,200,.95) 0%, rgba(255,215,120,.5) 45%, rgba(255,215,120,0) 70%)',
+                    animation: 'gtree-flash .8s ease-out',
+                    opacity: 0,
+                }}
+            />
+
+            {[0, 1].map((n) => (
+                <span
+                    key={n}
+                    style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        width: 96,
+                        height: 96,
+                        borderRadius: '50%',
+                        border: '3px solid rgba(233,196,120,.9)',
+                        animation: `gtree-wave ${0.9 + n * 0.25}s ease-out ${n * 0.18}s`,
+                        opacity: 0,
+                    }}
+                />
+            ))}
+
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((a, i) => (
+                <span
+                    key={a}
+                    style={
+                        {
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            width: 9,
+                            height: 9,
+                            marginLeft: -4.5,
+                            marginTop: -4.5,
+                            background:
+                                i % 2 === 0 ? '#f6e2ab' : '#ffffff',
+                            clipPath:
+                                'polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%)',
+                            '--a': `${a}deg`,
+                            animation: `gtree-fly ${0.85 + (i % 3) * 0.12}s ease-out`,
+                            opacity: 0,
+                        } as React.CSSProperties
+                    }
+                />
+            ))}
+        </span>
+    )
+}
+
 /** どの額を使うか */
 function ringOf(item: Placed, hidden: boolean): string {
     if (item.state === 'owned') return RING.owned
@@ -1140,14 +1357,19 @@ function Node({
     item,
     dim,
     chosen,
+    burst,
     onPick,
+    onHover,
 }: {
     item: Placed
     /** 絞りから外れているか。薄くするだけで、消さない */
     dim?: boolean
     /** いま右の欄に出ているか */
     chosen?: boolean
+    /** いま手に入れたところか */
+    burst?: boolean
     onPick: () => void
+    onHover: (on: boolean) => void
 }) {
     const hidden = item.is_secret && item.state !== 'owned'
 
@@ -1210,6 +1432,10 @@ function Node({
              *   中身は右の欄で伝えればよい。
              */
             onClick={onPick}
+            onMouseEnter={() => onHover(true)}
+            onMouseLeave={() => onHover(false)}
+            onFocus={() => onHover(true)}
+            onBlur={() => onHover(false)}
             style={{
                 position: 'absolute',
                 left: item.x,
@@ -1281,9 +1507,14 @@ function Node({
                             height: `${ART * 100}%`,
                             objectFit: 'contain',
                             opacity: item.state === 'coming' ? 0.55 : 1,
+                            animation: burst
+                                ? 'gtree-pop .7s cubic-bezier(.2,1.4,.5,1)'
+                                : undefined,
                         }}
                     />
                 )}
+
+                {burst && <Burst />}
             </span>
 
             <span
@@ -1551,10 +1782,27 @@ function Detail({
                     }}
                 >
                     {hidden
-                        ? '交換するまで、中身は分かりません。'
+                        ? (item.hint ??
+                          '交換するまで、中身は分かりません。')
                         : item.description ||
                           'この品物の説明は、これから用意します。'}
                 </p>
+
+                {/*
+                  * ★ 伏せてあるものは、出る条件を先に見せる。
+                  *   何も手がかりが無いと、諦められる。
+                  */}
+                {hidden && item.hint && (
+                    <p
+                        style={{
+                            marginTop: 6,
+                            fontSize: 10.5,
+                            color: 'var(--color-text-faint)',
+                        }}
+                    >
+                        これが、この品物の出る条件です。
+                    </p>
+                )}
 
                 {!owned && item.is_active && (
                     <div
