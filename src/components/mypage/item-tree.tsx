@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { GoalPlate } from './goal-plate'
+
 /**
  * ============================================================
  * 原石航路 Studio
@@ -103,14 +105,13 @@ const RING: Record<string, string> = {
 const STAND_IN = '/items/stamp-saikou.webp'
 
 /*
- * いちばん奥の札。
+ * いちばん奥の札の幅。
  *
- * ★ 絵に「? ? ?」と「2,000 pt」が描き込まれている。
- *   値段を変えるときは、絵も描き直すこと。
- *   中身を出したあとは、丸い額に戻る。
+ * ★ 札そのものは goal-plate.tsx で描いている。
+ *   絵にすると値段を焼き込むことになり、
+ *   値段を変えるたびに描き直しになる。
  */
-const GOAL_PLATE = '/items/goal-plate.webp'
-const GOAL_W = 268
+const GOAL_W = 316
 
 /*
  * 置き方の寸法。
@@ -118,11 +119,20 @@ const GOAL_W = 268
  * ★ 額が絵になったぶん、大きくする。
  *   小さいと、中の絵が潰れて何か分からない。
  */
-const NODE = 104
-const GAP_X = 150
-const GAP_Y = 190
+const NODE = 126
+const GAP_X = 166
+const GAP_Y = 218
 const PAD_X = 150 /* 左の見出しに、額が重ならないだけ空ける */
-const PAD_TOP = 158 /* START のぶん。上に離す */
+const PAD_TOP = 182 /* START のぶん。上に離す */
+
+/*
+ * START の大きさ。
+ *
+ * ★ 額と釣り合わせる。
+ *   小さいと、木の出発点ではなく
+ *   ただの印に見える。
+ */
+const START = 104
 
 /*
  * 線を、額のどれだけ下から出すか。
@@ -390,6 +400,21 @@ export default function ItemTree() {
             ? Math.max(0.7, boxWidth / width)
             : 1
 
+    /*
+     * 次に手が届くもの。
+     *
+     * ★ 前の品物が揃っていて、まだ持っていなくて、
+     *   いちばん安いもの。いま目指すべき一個。
+     */
+    const next =
+        placed
+            .filter(
+                (one) =>
+                    one.state === 'poor' &&
+                    (one.free_price ?? 0) > points,
+            )
+            .sort((a, b) => (a.free_price ?? 0) - (b.free_price ?? 0))[0] ?? null
+
     const startX =
         roots.length > 0
             ? (Math.min(...roots.map((r) => r.x)) +
@@ -422,6 +447,25 @@ export default function ItemTree() {
                 overflow: 'hidden',
             }}
         >
+            {/*
+              * ★ いま取れるものを、ゆっくり明滅させる。
+              *
+              *   金の額は目立つが、止まっていると
+              *   「飾り」として流し見られてしまう。
+              *   息をするように光ると、目が止まる。
+              *
+              * ★ 動きを嫌う設定の人には、動かさない。
+              */}
+            <style>{`
+                @keyframes gtree-breathe {
+                    0%, 100% { filter: drop-shadow(0 0 5px rgba(217,164,65,.5)); }
+                    50%      { filter: drop-shadow(0 0 15px rgba(217,164,65,.95)); }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .gtree-breathe { animation: none !important; }
+                }
+            `}</style>
+
             {/*
               * ★ 地の絵は、別の板にして上から溶かす。
               *
@@ -695,6 +739,35 @@ export default function ItemTree() {
                                     >
                                         {label.note}
                                     </div>
+
+                                    {/*
+                                      * ★ その段を取りきったら、旗を立てる。
+                                      *   区切りがあると、次の段へ進みたくなる。
+                                      */}
+                                    {placed
+                                        .filter((one) => one.tier === level)
+                                        .every((one) =>
+                                            owned.includes(one.id),
+                                        ) && (
+                                        <div
+                                            style={{
+                                                display: 'inline-block',
+                                                marginTop: 5,
+                                                padding: '1px 8px',
+                                                borderRadius: 999,
+                                                background:
+                                                    'linear-gradient(180deg, #e6c47e, #c49a45)',
+                                                color: '#3b2c0d',
+                                                fontSize: 9,
+                                                fontWeight: 700,
+                                                letterSpacing: '.08em',
+                                                boxShadow:
+                                                    '0 1px 3px rgba(120,90,20,.35)',
+                                            }}
+                                        >
+                                            制覇
+                                        </div>
+                                    )}
                                 </div>
                             )
                         })}
@@ -714,7 +787,7 @@ export default function ItemTree() {
                                     key={`start-${root.id}`}
                                     d={elbow(
                                         startX,
-                                        PAD_TOP - 96,
+                                        PAD_TOP - 128,
                                         root.x,
                                         root.y - NODE / 2 - 2,
                                     )}
@@ -753,7 +826,7 @@ export default function ItemTree() {
                                                 (item.tier >= 5 &&
                                                 item.is_secret &&
                                                 item.state !== 'owned'
-                                                    ? 72
+                                                    ? 78
                                                     : NODE / 2 + 2),
                                         )}
                                         fill="none"
@@ -781,13 +854,13 @@ export default function ItemTree() {
                             style={{
                                 position: 'absolute',
                                 left: startX,
-                                top: PAD_TOP - 96,
+                                top: PAD_TOP - 128,
                                 transform: 'translate(-50%, -50%)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: 64,
-                                height: 64,
+                                width: START,
+                                height: START,
                                 borderRadius: '50%',
                                 /*
                                  * ★ START も、絵の額に合わせる。
@@ -797,16 +870,16 @@ export default function ItemTree() {
                                 background:
                                     'radial-gradient(120% 120% at 50% 18%, #35708f 0%, #234b68 52%, #16324a 100%)',
                                 color: '#f6efdc',
-                                fontSize: 10,
+                                fontSize: 14,
                                 fontWeight: 700,
-                                letterSpacing: '.12em',
+                                letterSpacing: '.14em',
                                 textShadow: '0 1px 2px rgba(0,0,0,.4)',
                                 boxShadow: [
                                     'inset 0 0 0 2px rgba(226,196,124,.85)',
                                     'inset 0 2px 6px rgba(255,255,255,.22)',
-                                    '0 0 0 4px rgba(255,255,255,.9)',
-                                    '0 0 0 6px rgba(150,185,205,.45)',
-                                    '0 6px 18px rgba(30,70,100,.32)',
+                                    '0 0 0 5px rgba(255,255,255,.92)',
+                                    '0 0 0 8px rgba(150,185,205,.45)',
+                                    '0 8px 22px rgba(30,70,100,.34)',
                                 ].join(', '),
                             }}
                         >
@@ -978,6 +1051,48 @@ export default function ItemTree() {
                                         {points.toLocaleString()} pt
                                     </b>
                                 </div>
+
+                                {/*
+                                  * ★ 次の一個を名指しする。
+                                  *
+                                  *   「あと 150 pt」と出ていると、
+                                  *   その額まで貯める気になる。
+                                  *   木を眺めるだけで終わらせない。
+                                  */}
+                                {next && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPickedId(next.id)}
+                                        style={{
+                                            display: 'block',
+                                            width: '100%',
+                                            marginTop: 12,
+                                            padding: '8px 10px',
+                                            borderRadius: 9,
+                                            border: '1px solid rgba(217,164,65,.5)',
+                                            background: 'rgba(217,164,65,.12)',
+                                            fontSize: 11,
+                                            lineHeight: 1.7,
+                                            color: '#8a6a25',
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        次は「
+                                        {next.is_secret
+                                            ? 'シークレット'
+                                            : next.name}
+                                        」
+                                        <br />
+                                        <b style={{ fontSize: 12 }}>
+                                            あと{' '}
+                                            {(
+                                                (next.free_price ?? 0) - points
+                                            ).toLocaleString()}{' '}
+                                            pt
+                                        </b>
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}
@@ -1074,11 +1189,10 @@ function Node({
                         : 'drop-shadow(0 5px 12px rgba(40,70,95,.2))',
                 }}
             >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                    src={GOAL_PLATE}
-                    alt=""
-                    style={{ width: '100%', height: 'auto', display: 'block' }}
+                <GoalPlate
+                    price={item.free_price ?? 0}
+                    caption="まだ見ぬアイテムがここに"
+                    width={GOAL_W}
                 />
             </button>
         )
@@ -1116,11 +1230,16 @@ function Node({
             }}
         >
             <span
+                className={item.state === 'ready' ? 'gtree-breathe' : undefined}
                 style={{
                     position: 'relative',
                     width: size,
                     height: size,
                     display: 'block',
+                    animation:
+                        item.state === 'ready' && !chosen
+                            ? 'gtree-breathe 2.4s ease-in-out infinite'
+                            : undefined,
                     /*
                      * ★ 選んでいるものは、後ろを光らせる。
                      *   額の形を崩さずに、居場所が分かる。
@@ -1324,8 +1443,8 @@ function Detail({
                     style={{
                         position: 'relative',
                         display: 'block',
-                        width: 132,
-                        height: 132,
+                        width: 140,
+                        height: 140,
                         margin: '2px auto 10px',
                         filter: 'drop-shadow(0 4px 10px rgba(40,70,95,.18))',
                     }}
