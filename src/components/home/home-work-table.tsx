@@ -97,6 +97,27 @@ const STATE_STYLE: Record<
  * 1 冊が倍近くまで太り、指定した大きさで表示されない。
  * 余りは右端の空きとして残す。
  */
+/**
+ * 話の数の出し方。
+ *
+ * ★ 出している数を主にする。
+ *
+ *   下書きまで数えると、読者から見える数と食い違う。
+ *   「全4話なのに目次で1話しか出ない」と言われたのは、これ。
+ *
+ * ★ 下書きがあれば、そえて出す。
+ *
+ *   作者は「あと3話ある」ことを知っていたい。
+ *   消してしまうと、書きかけを見失う。
+ */
+function epLabel(list: { is_published?: boolean }[]): string {
+    const open = list.filter((one) => one.is_published !== false).length;
+    const draft = list.length - open;
+
+    if (open === 0) return draft > 0 ? `下書き${draft}話` : "まだ話がありません";
+    return draft > 0 ? `全${open}話・下書き${draft}` : `全${open}話`;
+}
+
 const BOOK_WIDTH = 128;
 /*
  * 本 1 冊の高さ。棚板の位置もここから決まる。
@@ -520,8 +541,17 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
 
                                         <span className="mt-0.5 flex items-center gap-2 text-[10px] text-faint">
                                             <span>
+                                                {/*
+                                                  * ★ 出している数を出す。
+                                                  *
+                                                  *   前は下書きも数えていた。
+                                                  *   4 話あっても 1 話しか出していなければ、
+                                                  *   読者には 1 話しか見えない。
+                                                  *   なのに「全4話」と出ていたので、
+                                                  *   「目次に1話しか出ない」と驚かせた。
+                                                  */}
                                                 {own.length > 0
-                                                    ? `全${own.length}話`
+                                                    ? epLabel(own)
                                                     : `${formatNumber(work.total_char_count)}字`}
                                             </span>
                                             <span>·</span>
@@ -712,7 +742,7 @@ function Tile({
     const updated = work.updated_at.slice(0, 10).replace(/-/g, "/");
     const amount =
         episodes.length > 0
-            ? `全${episodes.length}話`
+            ? epLabel(episodes)
             : `${formatNumber(work.total_char_count)}字`;
 
     return (
