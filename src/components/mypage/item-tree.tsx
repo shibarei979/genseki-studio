@@ -502,7 +502,7 @@ export default function ItemTree() {
                  *   そのままだと、字も額も絵に負ける。
                  */
                 position: 'relative',
-                background: '#eef6f9',
+                background: '#dde8eb',
                 border: '1px solid rgba(120,160,185,.3)',
                 borderRadius: 16,
                 boxShadow: [
@@ -556,26 +556,28 @@ export default function ItemTree() {
             `}</style>
 
             {/*
-              * ★ 地の絵は、別の板にして上から溶かす。
+              * ★ 地の絵は、板いっぱいに敷く。
               *
-              *   板そのものの背景にすると、
-              *   板の高さで絵の出方が変わり、
-              *   真ん中に水平線が横切る。
-              *   上に敷いて、下へ消す。
+              *   前は上の方にだけ敷いて下へ消していたので、
+              *   木の下半分が、ただの薄い水色になっていた。
+              *
+              *   絵の下に水を継ぎ足して縦に長くしてあるので、
+              *   板がどれだけ伸びても、下まで景色が続く。
+              *
+              * ★ 上から薄い白を重ねて、字と額を立たせる。
+              *   下のほうは薄くしすぎない。空き地に見える。
               */}
             <div
                 aria-hidden="true"
                 style={{
                     position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    height: 780,
-                    background: 'url(/items/tree-bg.webp) center top / 100% auto no-repeat',
+                    inset: 0,
+                    background:
+                        'url(/items/tree-bg.webp) center top / 100% auto no-repeat',
                     WebkitMaskImage:
-                        'linear-gradient(180deg, rgba(0,0,0,.95) 12%, rgba(0,0,0,.62) 52%, rgba(0,0,0,0) 100%)',
+                        'linear-gradient(180deg, rgba(0,0,0,.95) 0%, rgba(0,0,0,.7) 45%, rgba(0,0,0,.62) 100%)',
                     maskImage:
-                        'linear-gradient(180deg, rgba(0,0,0,.95) 12%, rgba(0,0,0,.62) 52%, rgba(0,0,0,0) 100%)',
+                        'linear-gradient(180deg, rgba(0,0,0,.95) 0%, rgba(0,0,0,.7) 45%, rgba(0,0,0,.62) 100%)',
                     pointerEvents: 'none',
                 }}
             />

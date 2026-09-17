@@ -15,7 +15,7 @@
 
 /** 絵の中で、字を置く高さ（絵の高さに対する割合） */
 const AT = {
-    unknown: 45.6,
+    unknown: 44.1,
     price: 58.43,
     rule: 69.88,
     caption: 80.42,
@@ -71,7 +71,7 @@ export function GoalPlate({
                     left: '50%',
                     top: `${AT.unknown}%`,
                     transform: 'translate(-50%, -50%)',
-                    fontSize: size(5.4),
+                    fontSize: size(4.4),
                     letterSpacing: '.3em',
                     textIndent: '.3em',
                     color: '#ded2b4',
@@ -81,6 +81,64 @@ export function GoalPlate({
             >
                 ???
             </span>
+
+            {/*
+              * ★ 地の照り返し。
+              *
+              *   字のところを消したとき、
+              *   絵にあった真ん中のほのかな明るみも消えた。
+              *   平らに見えるので、戻す。
+              */}
+            <span
+                style={{
+                    position: 'absolute',
+                    left: '20%',
+                    right: '20%',
+                    top: '26%',
+                    bottom: '14%',
+                    borderRadius: '50%',
+                    background:
+                        'radial-gradient(ellipse at 50% 45%, rgba(150,196,228,.12) 0%, rgba(120,170,210,.05) 48%, rgba(0,0,0,0) 72%)',
+                    pointerEvents: 'none',
+                }}
+            />
+
+            {/*
+              * ★ 値段の両脇の細い罫。
+              *   絵にあったものを、同じ場所に引き直す。
+              */}
+            {([
+                [24.1, 31.9, 'left'],
+                [68.1, 75.9, 'right'],
+            ] as const).map(([from, to, side]) => (
+                <span key={side}>
+                    <span
+                        style={{
+                            position: 'absolute',
+                            left: `${from}%`,
+                            width: `${to - from}%`,
+                            top: `${AT.price}%`,
+                            height: 1,
+                            transform: 'translateY(-50%)',
+                            background:
+                                side === 'left'
+                                    ? 'linear-gradient(90deg, rgba(206,172,108,0), rgba(206,172,108,.9))'
+                                    : 'linear-gradient(90deg, rgba(206,172,108,.9), rgba(206,172,108,0))',
+                        }}
+                    />
+                    <span
+                        style={{
+                            position: 'absolute',
+                            left: `${side === 'left' ? from : to}%`,
+                            top: `${AT.price}%`,
+                            width: size(1.1),
+                            height: size(1.1),
+                            transform: 'translate(-50%, -50%) rotate(45deg)',
+                            background: '#d6b26a',
+                        }}
+                    />
+                </span>
+            ))}
 
             {/*
               * ★ 値段と両脇の光は、ひとつの行にまとめる。
@@ -105,9 +163,10 @@ export function GoalPlate({
 
                 <span
                     style={{
-                        fontSize: size(7.4),
+                        fontSize: size(8.2),
                         fontWeight: 700,
-                        fontFamily: "Georgia, 'Times New Roman', serif",
+                        fontFamily:
+                            "'Times New Roman', 'Liberation Serif', Georgia, serif",
                         color: '#fdf6e2',
                         textShadow:
                             '0 0 10px rgba(255,232,178,.6), 0 0 22px rgba(255,214,130,.35)',
@@ -154,7 +213,7 @@ export function GoalPlate({
                     left: '50%',
                     top: `${AT.caption}%`,
                     transform: 'translate(-50%, -50%)',
-                    fontSize: size(2.9),
+                    fontSize: size(2.7),
                     letterSpacing: '.08em',
                     color: '#e4d8bd',
                     whiteSpace: 'nowrap',
