@@ -67,13 +67,26 @@ export default function BlockButton({ targetId, userId, initialBlocked, initialM
       {showMenu && (
         <>
           <div style={{position:'fixed',inset:0,zIndex:99}} onClick={()=>setShowMenu(false)}/>
-          <div style={{position:'absolute',right:0,top:'calc(100% + 4px)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',zIndex:100,minWidth:'min(160px, 100%)',overflow:'hidden'}}>
+          {/*
+            * ★ 幅を、はっきり決める。
+            *
+            *   前は min(160px, 100%) と書いていた。
+            *   この 100% は画面ではなく、外側の箱を指す。
+            *   外側は「⋯」の押し具だけなので 30px ほどしかない。
+            *
+            *     min(160px, 30px) → 30px
+            *
+            *   30px の箱に文字を入れれば、1 文字ずつ折り返す。
+            *   「縦書きで斬新ですね」と言われたのは、これ。
+            *   縦書きではなく、ただ潰れていた。
+            */}
+          <div style={{position:'absolute',right:0,top:'calc(100% + 4px)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',zIndex:100,width:'max-content',minWidth:160,overflow:'hidden'}}>
             <button onClick={handleMute}
-              style={{width:'100%',padding:'10px 14px',border:'none',borderBottom:'1px solid var(--color-brand-border)',background:'none',fontSize:13,color:muted?'var(--color-danger)':'var(--color-text)',cursor:'pointer',textAlign:'left' as const}}>
+              style={{width:'100%',padding:'10px 14px',border:'none',borderBottom:'1px solid var(--color-brand-border)',background:'none',fontSize:13,color:muted?'var(--color-danger)':'var(--color-text)',cursor:'pointer',textAlign:'left' as const,whiteSpace:'nowrap' as const}}>
               {muted ? 'ミュート解除' : 'ミュートする'}
             </button>
             <button onClick={handleBlock}
-              style={{width:'100%',padding:'10px 14px',border:'none',background:'none',fontSize:13,color:blocked?'var(--color-danger)':'var(--color-text)',cursor:'pointer',textAlign:'left' as const}}>
+              style={{width:'100%',padding:'10px 14px',border:'none',background:'none',fontSize:13,color:blocked?'var(--color-danger)':'var(--color-text)',cursor:'pointer',textAlign:'left' as const,whiteSpace:'nowrap' as const}}>
               {blocked ? 'ブロック解除' : 'ブロックする'}
             </button>
           </div>
