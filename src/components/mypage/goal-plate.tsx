@@ -16,10 +16,10 @@ export function GoalPlate({
     caption: string
     width?: number
 }) {
-    const h = Math.round((width * 204) / 400)
+    const h = Math.round((width * 212) / 400)
 
     return (
-        <svg viewBox="0 -20 400 204" width={width} height={h} aria-hidden="true">
+        <svg viewBox="0 -28 400 212" width={width} height={h} aria-hidden="true">
             <defs>
                 <radialGradient id="gp-plate" cx=".5" cy=".34" r=".78">
                     <stop offset="0%" stopColor="#265a86" />
@@ -32,12 +32,15 @@ export function GoalPlate({
                     <stop offset="62%" stopColor="#c69c4a" />
                     <stop offset="100%" stopColor="#8e6a2c" />
                 </linearGradient>
-                <linearGradient id="gp-crown" x1="0" y1="0" x2="0.3" y2="1">
-                    <stop offset="0%" stopColor="#fff2cc" />
-                    <stop offset="30%" stopColor="#ecd08c" />
-                    <stop offset="58%" stopColor="#cfa552" />
-                    <stop offset="100%" stopColor="#9c7430" />
+                <linearGradient id="gp-crown" x1="0" y1="0" x2="0.1" y2="1">
+                    <stop offset="0%" stopColor="#fffaea" />
+                    <stop offset="30%" stopColor="#fbeec4" />
+                    <stop offset="66%" stopColor="#f0d795" />
+                    <stop offset="100%" stopColor="#dfb96b" />
                 </linearGradient>
+                <filter id="gp-soft" x="-60%" y="-60%" width="220%" height="220%">
+                    <feGaussianBlur stdDeviation="7" />
+                </filter>
                 <linearGradient id="gp-text" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#fffaea" />
                     <stop offset="100%" stopColor="#e9d49b" />
@@ -148,59 +151,59 @@ export function GoalPlate({
             </g>
 
             {/* 王冠 */}
-            <g transform="translate(200 8) scale(1.16)">
-                {/* 影。板の上に載っているように */}
-                <ellipse cx="0" cy="20" rx="28" ry="4" fill="#07172a" opacity=".45" />
+            <g transform="translate(200 4)">
+                {/* 後ろの光 */}
+                <ellipse
+                    cx="0"
+                    cy="-6"
+                    rx="56"
+                    ry="30"
+                    fill="#ffdf9a"
+                    opacity=".4"
+                    filter="url(#gp-soft)"
+                />
 
-                {/* 三つの山。奥に布 */}
+                {/* 影。板に載っている */}
+                <ellipse cx="0" cy="18" rx="38" ry="4.5" fill="#07172a" opacity=".38" />
+
+                {/*
+                  * ★ 五つの峰。
+                  *
+                  *   外の二つは外向きに張り出し、
+                  *   真ん中がいちばん高い。
+                  *   角を丸めた太い縁取りで、描いた絵に寄せる。
+                  */}
                 <path
-                    d="M-28 14 L-28 -6 L-15 4 L0 -16 L15 4 L28 -6 L28 14 Z"
+                    d={CROWN}
                     fill="url(#gp-crown)"
-                    stroke="#8a6526"
-                    strokeWidth="1.1"
+                    stroke="#b5842f"
+                    strokeWidth="3.4"
                     strokeLinejoin="round"
-                />
-                {/* 山のあいだの窪みに、濃い影 */}
-                <path
-                    d="M-15 4 L-8 14 H8 L15 4 L0 -16 Z"
-                    fill="#6f4f1c"
-                    opacity=".28"
-                />
-                {/* 左上に光の筋 */}
-                <path
-                    d="M-28 -6 L-15 4 L-15 8 L-28 -1 Z"
-                    fill="#fff6d8"
-                    opacity=".6"
+                    strokeLinecap="round"
                 />
 
-                {/* 台座 */}
-                <rect
-                    x="-30"
-                    y="13"
-                    width="60"
-                    height="9"
-                    rx="3"
-                    fill="url(#gp-crown)"
-                    stroke="#8a6526"
-                    strokeWidth="1.1"
-                />
-                <path d="M-27 16 H27" stroke="#fff3cf" strokeWidth="1.2" opacity=".55" />
-
-                {/* 台座の玉 */}
-                {[-20, -10, 0, 10, 20].map((x) => (
-                    <circle key={x} cx={x} cy="17.5" r="2.1" fill="#f7e6b4" />
-                ))}
-
-                {/* 山の先の宝玉 */}
-                <circle cx="-28" cy="-8" r="3" fill="#cdefff" stroke="#c9a44f" strokeWidth="1.1" />
-                <circle cx="28" cy="-8" r="3" fill="#cdefff" stroke="#c9a44f" strokeWidth="1.1" />
+                {/* 底の帯。台座の厚みを出す */}
                 <path
-                    d="M0 -24 l4.5 5.5 -4.5 5.5 -4.5 -5.5 Z"
-                    fill="#cdefff"
-                    stroke="#7fa9c4"
-                    strokeWidth=".9"
+                    d="M-38 6 Q0 12 38 6 Q0 20 -38 6 Z"
+                    fill="#e0b76b"
+                    opacity=".5"
                 />
-                <path d="M0 -22 l1.8 3 -1.8 3 -1.8 -3 Z" fill="#ffffff" opacity=".9" />
+
+                {/* 真ん中の氷の星 */}
+                <g transform="translate(0 -4)">
+                    <path
+                        d="M0 -15 Q1.8 -2 13 0 Q1.8 2 0 15 Q-1.8 2 -13 0 Q-1.8 -2 0 -15 Z"
+                        fill="#d2edfc"
+                        stroke="#8fc3dd"
+                        strokeWidth="1.1"
+                        strokeLinejoin="round"
+                    />
+                    <path
+                        d="M0 -8 Q.9 -1.1 6.5 0 Q.9 1.1 0 8 Q-.9 1.1 -6.5 0 Q-.9 -1.1 0 -8 Z"
+                        fill="#ffffff"
+                        opacity=".92"
+                    />
+                </g>
             </g>
 
             {/* 鍵 */}
@@ -224,7 +227,7 @@ export function GoalPlate({
 
             <text
                 x="200"
-                y="78"
+                y="76"
                 textAnchor="middle"
                 fill="#ded2b2"
                 fontSize="14"
@@ -235,7 +238,7 @@ export function GoalPlate({
 
             <text
                 x="200"
-                y="116"
+                y="112"
                 textAnchor="middle"
                 fill="url(#gp-text)"
                 fontSize="32"
@@ -247,14 +250,14 @@ export function GoalPlate({
             </text>
 
             <g opacity=".8">
-                <path d="M118 130 H188" stroke="#c69c4a" strokeWidth=".8" />
-                <path d="M212 130 H282" stroke="#c69c4a" strokeWidth=".8" />
-                <path d="M200 125 l4.5 5 -4.5 5 -4.5 -5 Z" fill="#e3c47e" />
+                <path d="M118 126 H188" stroke="#c69c4a" strokeWidth=".8" />
+                <path d="M212 126 H282" stroke="#c69c4a" strokeWidth=".8" />
+                <path d="M200 121 l4.5 5 -4.5 5 -4.5 -5 Z" fill="#e3c47e" />
             </g>
 
             <text
                 x="200"
-                y="146"
+                y="142"
                 textAnchor="middle"
                 fill="#cfc4a6"
                 fontSize="10.5"
@@ -273,6 +276,28 @@ export function GoalPlate({
         </svg>
     )
 }
+
+/*
+ * 王冠の形。
+ *
+ * ★ 見本に合わせて、峰は五つ。
+ *   外の二つは外へ張り出し、下すぼまり。
+ *   底は、板の丸みに沿って少し下へふくらむ。
+ */
+const CROWN = [
+    'M-38 13',
+    'L-44 -16',
+    'L-34 -8',
+    'L-25 -23',
+    'L-14 -8',
+    'L0 -33',
+    'L14 -8',
+    'L25 -23',
+    'L34 -8',
+    'L44 -16',
+    'L38 13',
+    'Q0 20 -38 13 Z',
+].join(' ')
 
 /* 角を切り込んだ札の形 */
 const PLATE = [

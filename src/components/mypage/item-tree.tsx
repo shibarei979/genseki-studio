@@ -120,7 +120,7 @@ const STAND_IN = '/items/stamp-saikou.webp'
  *   絵にすると値段を焼き込むことになり、
  *   値段を変えるたびに描き直しになる。
  */
-const GOAL_W = 316
+const GOAL_W = 268
 
 /*
  * 置き方の寸法。
@@ -128,20 +128,31 @@ const GOAL_W = 316
  * ★ 額が絵になったぶん、大きくする。
  *   小さいと、中の絵が潰れて何か分からない。
  */
-const NODE = 126
-const GAP_X = 166
-const GAP_Y = 218
+const NODE = 104
+const GAP_X = 150
+const GAP_Y = 190
 const PAD_X = 150 /* 左の見出しに、額が重ならないだけ空ける */
-const PAD_TOP = 182 /* START のぶん。上に離す */
 
 /*
- * START の大きさ。
+ * START のぶん、上に空ける。
  *
- * ★ 額と釣り合わせる。
- *   小さいと、木の出発点ではなく
- *   ただの印に見える。
+ * ★ START の丸・幹・横木・枝の四つが
+ *   収まるだけの高さが要る。
  */
-const START = 104
+const PAD_TOP = 186
+
+/** START の大きさ */
+const START = 66
+
+/*
+ * START から下りる横木の高さ。
+ *
+ * ★ 前は曲線の折れ位置を成り行きに任せていたので、
+ *   横木が START の丸の中を通っていた。
+ *   丸の下から幹を下ろし、ここで横に渡し、
+ *   そこから各々の額へ下ろす。
+ */
+const BUS = PAD_TOP - NODE / 2 - 22
 
 /*
  * 線を、額のどれだけ下から出すか。
@@ -584,6 +595,9 @@ export default function ItemTree() {
                     border: '1px solid rgba(120,160,185,.28)',
                     boxShadow: '0 2px 10px rgba(40,70,95,.06)',
                     marginBottom: 14,
+                    maxWidth: 1180,
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
                 }}
             >
             <div
@@ -713,6 +727,11 @@ export default function ItemTree() {
               *   下に出すと、押すたびに画面が伸び縮みして
               *   木のどこを見ていたか分からなくなる。
               */}
+            {/*
+              * ★ 広い画面で、伸ばしきらない。
+              *   横いっぱいに広げると、右下が
+              *   ただの空き地になる。
+              */}
             <div
                 style={{
                     position: 'relative',
@@ -720,6 +739,8 @@ export default function ItemTree() {
                     gap: 16,
                     alignItems: 'flex-start',
                     flexWrap: 'wrap',
+                    maxWidth: 1180,
+                    margin: '0 auto',
                 }}
             >
                 <div
@@ -860,14 +881,24 @@ export default function ItemTree() {
                             }}
                             aria-hidden="true"
                         >
+                            {/* 幹。START の丸の下から、横木まで */}
+                            <path
+                                d={`M${startX} ${PAD_TOP - 120 + START / 2} V${BUS}`}
+                                fill="none"
+                                stroke="rgba(74,112,138,.5)"
+                                strokeWidth={3}
+                                strokeLinecap="round"
+                            />
+
                             {roots.map((root) => (
                                 <path
                                     key={`start-${root.id}`}
                                     d={elbow(
                                         startX,
-                                        PAD_TOP - 128,
+                                        PAD_TOP - 120 + START / 2,
                                         root.x,
                                         root.y - NODE / 2 - 2,
+                                        BUS,
                                     )}
                                     fill="none"
                                     stroke={
@@ -896,15 +927,17 @@ export default function ItemTree() {
                                             from.y + NODE / 2 + LABEL_H,
                                             item.x,
                                             /*
-                                             * ★ 目標の札は丸より背が高い。
-                                             *   丸の寸法で止めると、
-                                             *   線の先が札の下に隠れる。
+                                             * ★ 目標の札は、王冠のぶん背が高い。
+                                             *   王冠の手前で止めると、
+                                             *   線の先が宙に浮いて見える。
+                                             *   札の中まで伸ばし、
+                                             *   王冠に隠してしまう。
                                              */
                                             item.y -
                                                 (item.tier >= 5 &&
                                                 item.is_secret &&
                                                 item.state !== 'owned'
-                                                    ? 78
+                                                    ? 34
                                                     : NODE / 2 + 2),
                                         )}
                                         fill="none"
@@ -932,7 +965,7 @@ export default function ItemTree() {
                             style={{
                                 position: 'absolute',
                                 left: startX,
-                                top: PAD_TOP - 128,
+                                top: PAD_TOP - 120,
                                 transform: 'translate(-50%, -50%)',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1245,11 +1278,25 @@ export default function ItemTree() {
  *   斜めの線が交差すると、
  *   どれがどれに繋がっているか分からなくなる。
  */
-function elbow(x1: number, y1: number, x2: number, y2: number): string {
+function elbow(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    /** 横に渡す高さ。渡さなければ、間の 62% のところ */
+    at?: number,
+): string {
     if (Math.abs(x1 - x2) < 1) return `M${x1} ${y1} L${x2} ${y2}`
 
-    const mid = y1 + (y2 - y1) * 0.62
-    const r = 14
+    const mid = at ?? y1 + (y2 - y1) * 0.62
+    /*
+     * ★ 丸みは、上下の間合いに収まる範囲で。
+     *   間が狭いのに大きく丸めると、線が行き過ぎて折り返す。
+     */
+    const r = Math.max(
+        3,
+        Math.min(14, Math.abs(mid - y1), Math.abs(y2 - mid), Math.abs(x2 - x1) / 2),
+    )
     const dir = x2 > x1 ? 1 : -1
 
     return [
@@ -1674,8 +1721,8 @@ function Detail({
                     style={{
                         position: 'relative',
                         display: 'block',
-                        width: 140,
-                        height: 140,
+                        width: 132,
+                        height: 132,
                         margin: '2px auto 10px',
                         filter: 'drop-shadow(0 4px 10px rgba(40,70,95,.18))',
                     }}
