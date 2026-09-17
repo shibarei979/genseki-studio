@@ -516,6 +516,11 @@ export default function MypageClient({
   }, [extra])
   const [foldersLoaded,    setFoldersLoaded]    = useState(false)
   const [muteList,         setMuteList]         = useState<any[]>([])
+
+  /* 名前で探すときの、打った字と結果 */
+  const [findWord,         setFindWord]         = useState('')
+  const [found,            setFound]            = useState<any[]>([])
+  const [finding,          setFinding]          = useState(false)
   const [blockMuteLoaded,  setBlockMuteLoaded]  = useState(false)
   const [gender,           setGender]           = useState<string>((profile as any).gender || '')
   const [xAccount,         setXAccount]         = useState<string>((profile as any).x_account || '')
@@ -1831,6 +1836,60 @@ export default function MypageClient({
       setMuteList(prev => prev.filter(u => u.id !== targetId))
     }
 
+    /*
+     * ★ 名前で探して、その場で足す。
+     *
+     *   前は、相手の頁まで行かないと押せなかった。
+     *   一度ブロックを解いた人を、もう一度止めたいとき、
+     *   その人の頁を探し直すことになる。
+     *
+     *   ここで探せれば、それが要らない。
+     *
+     * ★ 公開の見え方から引く。
+     *   profiles 本体は本人と運営だけに閉じてある。
+     */
+    async function findPeople(word: string) {
+      const needle = word.trim()
+
+      if (needle.length < 1) {
+        setFound([])
+        return
+      }
+
+      setFinding(true)
+
+      try {
+        const { data } = await supabase
+          .from('public_profiles')
+          .select('user_id, display_name, icon_url')
+          .ilike('display_name', `%${needle}%`)
+          .neq('user_id', profile.user_id)
+          .limit(12)
+
+        setFound(
+          (data || []).map((one: any) => ({
+            id: one.user_id,
+            display_name: one.display_name,
+            icon_url: one.icon_url,
+          })),
+        )
+      } catch {
+        /* 探せなくても、ほかは動く */
+      }
+
+      setFinding(false)
+    }
+
+    async function handleBlock(person: any) {
+      await supabase.from('user_blocks').insert({ blocker_id: profile.user_id, blocked_id: person.id })
+      setBlockList(prev => [...prev.filter(u => u.id !== person.id), person])
+    }
+
+    async function handleMute(person: any) {
+      await supabase.from('user_mutes').insert({ muter_id: profile.user_id, muted_id: person.id })
+      setMuteList(prev => [...prev.filter(u => u.id !== person.id), person])
+    }
+
     const UserRow = ({ u, onRemove, label }: { u:any; onRemove:()=>void; label:string }) => (
       <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:'1px solid var(--color-brand-border)'}}>
         {u.icon_url
@@ -1853,6 +1912,82 @@ export default function MypageClient({
             <div style={{marginBottom:4}}>🚫 <strong>ブロック</strong>：相手はあなたの作品にコメントできなくなります。</div>
             <div>🔇 <strong>ミュート</strong>：相手のコメントがあなたには表示されなくなります。相手には通知されません。</div>
           </div>
+        </div>
+
+        {/*
+          * 名前で探して、その場で足す。
+          *
+          * ★ 相手の頁まで行かなくてよくする。
+          *
+          *   前は、作者の頁を開いて「⋯」を押すしかなかった。
+          *   一度解いた人をもう一度止めたいとき、
+          *   その人の頁を探し直すことになる。
+          */}
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:8}}>
+            名前で探して追加
+          </div>
+
+          <input
+            type="text"
+            value={findWord}
+            onChange={(e) => {
+              setFindWord(e.target.value)
+              void findPeople(e.target.value)
+            }}
+            placeholder="作者の名前"
+            aria-label="作者の名前で探す"
+            style={{width:'min(100%, 280px)',border:'1px solid var(--color-brand-border)',borderRadius:8,padding:'7px 11px',fontSize:13,background:'var(--color-bg)',color:'var(--color-text)'}}
+          />
+
+          {findWord.trim().length > 0 && (
+            <div style={{marginTop:10}}>
+              {finding ? (
+                <div style={{fontSize:12,color:'var(--color-text-faint)'}}>探しています…</div>
+              ) : found.length === 0 ? (
+                <div style={{fontSize:12,color:'var(--color-text-faint)'}}>見つかりません。</div>
+              ) : (
+                found.map((person: any) => {
+                  const isBlocked = blockList.some((u:any) => u.id === person.id)
+                  const isMuted   = muteList.some((u:any) => u.id === person.id)
+
+                  return (
+                    <div key={person.id}
+                      style={{display:'flex',alignItems:'center',gap:10,padding:'9px 0',borderBottom:'1px solid var(--color-brand-border)'}}>
+                      {person.icon_url
+                        ? <img src={person.icon_url} style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',flexShrink:0}} alt=""/>
+                        : <div style={{width:32,height:32,borderRadius:'50%',background:'var(--color-brand-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'var(--color-brand)',fontWeight:700,flexShrink:0}}>{person.display_name?.[0]||'?'}</div>
+                      }
+
+                      <span style={{flex:1,minWidth:0,fontSize:13,color:'var(--color-text)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {person.display_name}
+                      </span>
+
+                      {/* もう入っている人には、押し具を出さない */}
+                      <button
+                        type="button"
+                        disabled={isMuted}
+                        onClick={() => void handleMute(person)}
+                        style={{fontSize:12,padding:'4px 12px',border:'1px solid var(--color-brand-border)',borderRadius:8,background:'none',color:isMuted?'var(--color-text-faint)':'var(--color-text-muted)',cursor:isMuted?'default':'pointer'}}>
+                        {isMuted ? 'ミュート中' : 'ミュート'}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isBlocked}
+                        onClick={() => {
+                          if (!confirm(`${person.display_name} さんをブロックしますか？\nブロックすると相手はコメントできなくなります。`)) return
+                          void handleBlock(person)
+                        }}
+                        style={{fontSize:12,padding:'4px 12px',border:'1px solid var(--color-danger)',borderRadius:8,background:'none',color:isBlocked?'var(--color-text-faint)':'var(--color-danger)',cursor:isBlocked?'default':'pointer'}}>
+                        {isBlocked ? 'ブロック中' : 'ブロック'}
+                      </button>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          )}
         </div>
         <div style={{marginBottom:24}}>
           <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:8}}>ブロック中（{blockList.length}人）</div>
