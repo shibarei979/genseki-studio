@@ -174,7 +174,48 @@ export default async function SearchPage({ searchParams }: Props) {
       if (nameIds.length > 0) parts.push(`author_id.in.(${nameIds.join(',')})`)
       query = (query as any).or(parts.join(','))
     }
-    if (exclude) query = (query as any).not('title', 'ilike', `%${exclude}%`)
+    /*
+     * 除外する言葉。
+     *
+     * ★ 作者名でも外せるようにする。
+     *
+     *   前は題名しか見ていなかった。
+     *   「この作者は読まない」と決めた人が、
+     *   探すたびに目にすることになる。
+     *
+     *   ブロックやミュートは、相手に対して重い。
+     *   「いまは読みたくない」だけなら、
+     *   ここで外せるほうが気楽。
+     *
+     * ★ あらすじも見る。
+     *   題名に出ない言葉で避けたい人がいる。
+     */
+    if (exclude) {
+      const { data: hitAuthors } = await supabase
+        .from('public_profiles')
+        .select('user_id')
+        .ilike('display_name', `%${exclude}%`)
+
+      const badIds = (hitAuthors || []).map((a: any) => a.user_id)
+
+      query = (query as any)
+        .not('title', 'ilike', `%${exclude}%`)
+        .not('summary', 'ilike', `%${exclude}%`)
+
+      if (badIds.length > 0) {
+        /*
+         * その作者の作品を外す。
+         *
+         * 相手が多いと住所が長くなりすぎて通らないので、
+         * 上限を決めておく。
+         */
+        query = (query as any).not(
+          'author_id',
+          'in',
+          `(${badIds.slice(0, 200).join(',')})`,
+        )
+      }
+    }
     if (authorQ) {
       const { data: matchedAuthors } = await supabase
         .from('public_profiles').select('user_id').ilike('display_name', `%${authorQ}%`)

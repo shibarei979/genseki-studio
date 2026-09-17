@@ -355,7 +355,7 @@ export default function SearchForm({
         <div style={{flex:1}}>
           <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:4}}>除外キーワード</div>
           <input value={exclude} onChange={e=>setExclude(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder="含まない言葉を入力" style={inp}/>
+            placeholder="含まない言葉・作者名" style={inp}/>
           <div style={{marginTop:4}}>
             <button type="button" onClick={()=>setShowExHistory(!showExHistory)}
               style={{fontSize:10,color:'var(--color-text-muted)',background:'none',border:'none',cursor:'pointer',padding:0,display:'flex',alignItems:'center',gap:3}}>
