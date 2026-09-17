@@ -48,7 +48,17 @@ export default function BlockButton({ targetId, userId, initialBlocked, initialM
   }
 
   return (
-    <div style={{position:'relative'}}>
+    /*
+     * ★ 押し具に張り付かせる。
+     *
+     *   ただの div は横いっぱいに広がる。
+     *   すると下の right:0 が指すのは、
+     *   その広い箱の右端であって、「⋯」の右端ではない。
+     *
+     *   inline-block にすれば、箱が「⋯」の大きさになる。
+     *   そこで初めて、真下に出る。
+     */
+    <div style={{position:'relative',display:'inline-block'}}>
       <button
         onClick={() => setShowMenu(!showMenu)}
         disabled={loading}
@@ -80,7 +90,7 @@ export default function BlockButton({ targetId, userId, initialBlocked, initialM
             *   「縦書きで斬新ですね」と言われたのは、これ。
             *   縦書きではなく、ただ潰れていた。
             */}
-          <div style={{position:'absolute',right:0,top:'calc(100% + 4px)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',zIndex:100,width:'max-content',minWidth:160,overflow:'hidden'}}>
+          <div style={{position:'absolute',right:0,top:'calc(100% + 4px)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,boxShadow:'0 4px 16px rgba(0,0,0,0.12)',zIndex:100,width:'max-content',minWidth:132,overflow:'hidden'}}>
             <button onClick={handleMute}
               style={{width:'100%',padding:'10px 14px',border:'none',borderBottom:'1px solid var(--color-brand-border)',background:'none',fontSize:13,color:muted?'var(--color-danger)':'var(--color-text)',cursor:'pointer',textAlign:'left' as const,whiteSpace:'nowrap' as const}}>
               {muted ? 'ミュート解除' : 'ミュートする'}
