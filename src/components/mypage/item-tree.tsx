@@ -123,7 +123,14 @@ export default function ItemTree() {
     const [points, setPoints] = useState(0)
     const [isLoading, setIsLoading] = useState(true)
 
-    const [picked, setPicked] = useState<Item | null>(null)
+    /*
+     * ★ 選んだものは、id で覚える。
+     *
+     *   品物そのものを覚えると、交換したあとも
+     *   古い中身のまま残り、「交換済み」に変わらない。
+     *   id なら、読み直すたびに今の様子が付いてくる。
+     */
+    const [pickedId, setPickedId] = useState<string | null>(null)
 
 
     /*
@@ -292,6 +299,7 @@ export default function ItemTree() {
     if (isLoading) return null
 
     const byId = new Map(placed.map((one) => [one.id, one]))
+    const picked = placed.find((one) => one.id === pickedId) ?? null
     const roots = placed.filter((one) => !one.requires_item_id)
 
     const startX =
@@ -695,8 +703,9 @@ export default function ItemTree() {
                                 key={item.id}
                                 item={item}
                                 dim={!inFilter}
+                                chosen={item.id === pickedId}
                                 onPick={() => {
-                                    setPicked(item)
+                                    setPickedId(item.id)
                                     setMessage('')
                                 }}
                             />
@@ -705,15 +714,34 @@ export default function ItemTree() {
                 </div>
             </div>
 
-            <div style={{ flex: '0 0 250px', minWidth: 230 }}>
+            {/*
+              * ★ 右の欄は、送っても付いてくる。
+              *
+              *   木は縦に長い。下のほうの丸を押したとき、
+              *   欄が上に置いたままだと見えない。
+              */}
+            <div
+                style={{
+                    flex: '0 0 274px',
+                    minWidth: 250,
+                    position: 'sticky',
+                    top: 8,
+                    alignSelf: 'flex-start',
+                }}
+            >
                 {picked ? (
                     <Detail
                         item={picked}
-                        owned={owned.includes(picked.id)}
+                        all={placed}
+                        ownedIds={owned}
                         points={points}
                         busy={busy}
                         message={message}
-                        onClose={() => setPicked(null)}
+                        onClose={() => setPickedId(null)}
+                        onJump={(id) => {
+                            setPickedId(id)
+                            setMessage('')
+                        }}
                         onExchange={() => void exchange(picked)}
                     />
                 ) : (
@@ -722,21 +750,54 @@ export default function ItemTree() {
                      *
                      *   選ぶたびに木が横へずれると、
                      *   見ていた所を見失う。
+                     *
+                     * ★ 空でも、同じ形の額を出しておく。
+                     *   点線の箱だけだと、作りかけに見える。
                      */
                     <div
                         style={{
-                            padding: '20px 16px',
-                            borderRadius: 12,
-                            border: '1px dashed var(--color-brand-border)',
-                            fontSize: 11.5,
-                            lineHeight: 1.9,
-                            color: 'var(--color-text-faint)',
+                            padding: '30px 18px 34px',
+                            borderRadius: 14,
+                            border: '1px solid rgba(120,160,185,.3)',
+                            background:
+                                'linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%)',
+                            boxShadow: '0 2px 10px rgba(40,70,95,.06)',
                             textAlign: 'center',
                         }}
                     >
-                        アイテムを押すと、
-                        <br />
-                        ここに詳しく出ます。
+                        <span
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 92,
+                                height: 92,
+                                margin: '0 auto 14px',
+                                borderRadius: '50%',
+                                background: '#fff',
+                                boxShadow: [
+                                    '0 0 0 1px rgba(255,255,255,.9)',
+                                    '0 0 0 3px rgba(120,160,185,.28)',
+                                    '0 0 0 7px rgba(120,160,185,.08)',
+                                ].join(', '),
+                                fontSize: 26,
+                                color: 'var(--color-text-faint)',
+                            }}
+                        >
+                            ？
+                        </span>
+
+                        <p
+                            style={{
+                                fontSize: 11.5,
+                                lineHeight: 1.9,
+                                color: 'var(--color-text-faint)',
+                            }}
+                        >
+                            気になるアイテムを押すと、
+                            <br />
+                            ここに詳しく出ます。
+                        </p>
                     </div>
                 )}
             </div>
@@ -775,11 +836,14 @@ function elbow(x1: number, y1: number, x2: number, y2: number): string {
 function Node({
     item,
     dim,
+    chosen,
     onPick,
 }: {
     item: Placed
     /** 絞りから外れているか。薄くするだけで、消さない */
     dim?: boolean
+    /** いま右の欄に出ているか */
+    chosen?: boolean
     onPick: () => void
 }) {
     const hidden = item.is_secret && item.state !== 'owned'
@@ -798,7 +862,15 @@ function Node({
                 position: 'absolute',
                 left: item.x,
                 top: item.y,
-                transform: 'translate(-50%, -50%)',
+                /*
+                 * ★ 選んでいるものは、少し大きく。
+                 *   右の欄とどれが繋がっているか、ひと目で分かる。
+                 */
+                transform: chosen
+                    ? 'translate(-50%, -50%) scale(1.08)'
+                    : 'translate(-50%, -50%)',
+                transition: 'transform .16s ease',
+                zIndex: chosen ? 3 : 1,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -885,6 +957,8 @@ function Node({
                                       `0 0 0 7px ${color}14`,
                                       '0 3px 12px rgba(40,60,80,.11)',
                                   ].join(', '),
+                    outline: chosen ? '2px dashed var(--color-brand)' : 'none',
+                    outlineOffset: 9,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -977,151 +1051,772 @@ function Node({
     )
 }
 
-/** 選んだ品物の中身 */
+/**
+ * 選んだ品物の中身。
+ *
+ * ★ 目指す絵と同じ、右に立てる額にする。
+ *
+ *   前は「名前・説明・ボタン」だけの札だった。
+ *   絵が主役の画面なのに、右が字ばかりでは釣り合わない。
+ *
+ *   上に大きな額、下に使い道と仲間。
+ *   絵が入る場所を先に作っておけば、
+ *   描き上がったものを入れるだけで形になる。
+ */
 function Detail({
     item,
-    owned,
+    all,
+    ownedIds,
     points,
     busy,
     message,
     onClose,
+    onJump,
     onExchange,
 }: {
-    item: Item
-    owned: boolean
+    item: Placed
+    /** 木に並んでいる全部。仲間と、前提を引くのに要る */
+    all: Placed[]
+    ownedIds: string[]
     points: number
     busy: boolean
     message: string
     onClose: () => void
+    /** 仲間を押したとき、そちらへ移る */
+    onJump: (id: string) => void
     onExchange: () => void
 }) {
+    const owned = ownedIds.includes(item.id)
     const hidden = item.is_secret && !owned
     const price = item.free_price ?? 0
+    const color = KIND_COLOR[item.kind] ?? '#7a93a8'
+
+    /* 先に取っておく必要のあるもの */
+    const needs = item.requires_item_id
+        ? (all.find((one) => one.id === item.requires_item_id) ?? null)
+        : null
+    const needsDone = needs ? ownedIds.includes(needs.id) : true
+
+    /*
+     * 同じ種類の仲間。
+     *
+     * ★ ひとつ見ると、似たものも見たくなる。
+     *   木の中から探し直さずに済む。
+     */
+    const kin = all
+        .filter((one) => one.kind === item.kind && one.id !== item.id)
+        .sort((a, b) => a.tier - b.tier || a.position - b.position)
+        .slice(0, 4)
 
     return (
         <div
             style={{
-                marginTop: 8,
-                padding: '14px 16px',
-                borderRadius: 12,
-                border: '1px solid var(--color-brand)',
-                background: 'var(--color-brand-light)',
+                borderRadius: 14,
+                border: '1px solid rgba(120,160,185,.32)',
+                background: '#fff',
+                boxShadow: '0 4px 16px rgba(40,70,95,.1)',
+                overflow: 'hidden',
             }}
         >
+            {/*
+              * ★ 上の帯。
+              *
+              *   種類の色をここだけに敷く。
+              *   額の中まで塗ると、絵が入ったとき濁る。
+              */}
             <div
                 style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: 10,
-                    flexWrap: 'wrap',
+                    position: 'relative',
+                    padding: '16px 16px 18px',
+                    background: `linear-gradient(180deg, ${color}1f 0%, ${color}08 60%, rgba(255,255,255,0) 100%)`,
+                    borderBottom: '1px solid rgba(120,160,185,.16)',
+                    textAlign: 'center',
                 }}
             >
-                <span
-                    style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: 'var(--color-text)',
-                    }}
-                >
-                    {hidden ? 'シークレット' : item.name}
-                </span>
-
-                <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                    {KIND_LABEL[item.kind] ?? item.kind}
-                </span>
-
                 <button
                     type="button"
                     onClick={onClose}
+                    aria-label="閉じる"
                     style={{
-                        marginLeft: 'auto',
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        fontSize: 11,
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        border: '1px solid rgba(120,160,185,.3)',
+                        background: 'rgba(255,255,255,.8)',
+                        fontSize: 12,
+                        lineHeight: 1,
                         color: 'var(--color-text-muted)',
                         cursor: 'pointer',
                     }}
                 >
-                    閉じる
+                    ✕
                 </button>
-            </div>
 
-            <p
-                style={{
-                    marginTop: 6,
-                    fontSize: 11.5,
-                    lineHeight: 1.8,
-                    color: 'var(--color-text-muted)',
-                }}
-            >
-                {hidden
-                    ? '交換するまで、中身は分かりません。'
-                    : item.description ||
-                      'この品物の説明は、これから用意します。'}
-            </p>
-
-            {owned ? (
-                <p
+                {/*
+                  * ★ 大きな額。
+                  *
+                  *   木の丸と同じ作りを、そのまま大きくする。
+                  *   押したものが、そのまま右に来たと分かる。
+                  */}
+                <span
                     style={{
-                        marginTop: 8,
-                        fontSize: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 104,
+                        height: 104,
+                        margin: '2px auto 12px',
+                        borderRadius: '50%',
+                        background: '#fff',
+                        overflow: 'hidden',
+                        fontSize: 38,
+                        color: hidden ? 'var(--color-text-faint)' : color,
+                        boxShadow: owned
+                            ? [
+                                  '0 0 0 1px rgba(255,255,255,.9)',
+                                  '0 0 0 5px #5fa88a',
+                                  '0 0 0 10px rgba(95,168,138,.16)',
+                                  '0 8px 22px rgba(60,120,100,.24)',
+                              ].join(', ')
+                            : item.state === 'ready'
+                              ? [
+                                    '0 0 0 1px rgba(255,255,255,.9)',
+                                    '0 0 0 5px #d9a441',
+                                    '0 0 0 11px rgba(217,164,65,.2)',
+                                    '0 8px 22px rgba(190,140,50,.26)',
+                                ].join(', ')
+                              : [
+                                    '0 0 0 1px rgba(255,255,255,.9)',
+                                    `0 0 0 4px ${color}66`,
+                                    `0 0 0 9px ${color}14`,
+                                    '0 6px 18px rgba(40,60,80,.1)',
+                                ].join(', '),
+                    }}
+                >
+                    {!hidden && item.asset_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                            src={item.asset_url}
+                            alt=""
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                            }}
+                        />
+                    ) : hidden ? (
+                        '🔒'
+                    ) : (
+                        (KIND_MARK[item.kind] ?? '?')
+                    )}
+                </span>
+
+                <div
+                    style={{
+                        fontSize: 15,
                         fontWeight: 700,
-                        color: 'var(--color-brand)',
-                    }}
-                >
-                    交換済みです。
-                </p>
-            ) : !item.is_active ? (
-                <p
-                    style={{
-                        marginTop: 8,
-                        fontSize: 12,
-                        color: 'var(--color-text-muted)',
-                    }}
-                >
-                    この品物は、まだ用意していません。
-                </p>
-            ) : (
-                <button
-                    type="button"
-                    disabled={busy || price > points}
-                    onClick={onExchange}
-                    style={{
-                        marginTop: 10,
-                        padding: '8px 20px',
-                        borderRadius: 8,
-                        border: 'none',
-                        background:
-                            price > points
-                                ? 'var(--color-brand-border)'
-                                : 'var(--color-brand)',
-                        color:
-                            price > points
-                                ? 'var(--color-text-muted)'
-                                : 'var(--color-text-inverse)',
-                        fontSize: 12.5,
-                        fontWeight: 700,
-                        cursor: price > points ? 'not-allowed' : 'pointer',
-                    }}
-                >
-                    {price > points
-                        ? `あと ${(price - points).toLocaleString()} pt`
-                        : `${price.toLocaleString()} pt で交換する`}
-                </button>
-            )}
-
-            {message && (
-                <p
-                    style={{
-                        marginTop: 8,
-                        fontSize: 11.5,
+                        lineHeight: 1.5,
                         color: 'var(--color-text)',
                     }}
                 >
-                    {message}
+                    {hidden ? 'シークレット' : item.name}
+                </div>
+
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        gap: 5,
+                        marginTop: 7,
+                        flexWrap: 'wrap',
+                    }}
+                >
+                    <span
+                        style={{
+                            padding: '2px 10px',
+                            borderRadius: 999,
+                            background: `${color}1f`,
+                            color: '#4a5a66',
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                        }}
+                    >
+                        {KIND_LABEL[item.kind] ?? item.kind}
+                    </span>
+
+                    <span
+                        style={{
+                            padding: '2px 10px',
+                            borderRadius: 999,
+                            background: 'rgba(120,160,185,.14)',
+                            color: '#4a5a66',
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                        }}
+                    >
+                        {TIER_LABEL[item.tier]?.title ?? `Lv.${item.tier}`}
+                    </span>
+
+                    {owned && (
+                        <span
+                            style={{
+                                padding: '2px 10px',
+                                borderRadius: 999,
+                                background: 'rgba(95,168,138,.18)',
+                                color: '#3d7a63',
+                                fontSize: 10.5,
+                                fontWeight: 700,
+                            }}
+                        >
+                            交換済み
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            <div style={{ padding: '14px 16px 16px' }}>
+                <p
+                    style={{
+                        fontSize: 11.5,
+                        lineHeight: 1.9,
+                        color: 'var(--color-text-muted)',
+                    }}
+                >
+                    {hidden
+                        ? '交換するまで、中身は分かりません。'
+                        : item.description ||
+                          'この品物の説明は、これから用意します。'}
                 </p>
-            )}
+
+                {/*
+                  * ★ 値段は、行に分けて置く。
+                  *
+                  *   ボタンの字だけだと、
+                  *   手持ちと見比べられない。
+                  */}
+                {!owned && item.is_active && (
+                    <div
+                        style={{
+                            marginTop: 12,
+                            padding: '9px 12px',
+                            borderRadius: 9,
+                            background: 'rgba(120,160,185,.08)',
+                            fontSize: 11.5,
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                color: 'var(--color-text-muted)',
+                            }}
+                        >
+                            <span>必要なポイント</span>
+                            <b
+                                style={{
+                                    color: 'var(--color-text)',
+                                    fontVariantNumeric: 'tabular-nums',
+                                }}
+                            >
+                                {price.toLocaleString()} pt
+                            </b>
+                        </div>
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginTop: 4,
+                                color: 'var(--color-text-faint)',
+                            }}
+                        >
+                            <span>手持ち</span>
+                            <span
+                                style={{
+                                    fontVariantNumeric: 'tabular-nums',
+                                }}
+                            >
+                                {points.toLocaleString()} pt
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {/*
+                  * ★ 先に取っておくものを出す。
+                  *
+                  *   押せない理由が分からないと、
+                  *   壊れていると思われる。
+                  */}
+                {needs && !needsDone && (
+                    <button
+                        type="button"
+                        onClick={() => onJump(needs.id)}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            marginTop: 10,
+                            padding: '8px 12px',
+                            borderRadius: 9,
+                            border: '1px solid rgba(217,164,65,.45)',
+                            background: 'rgba(217,164,65,.1)',
+                            fontSize: 11,
+                            lineHeight: 1.7,
+                            color: '#8a6a25',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        先に「
+                        {needs.is_secret && !ownedIds.includes(needs.id)
+                            ? 'シークレット'
+                            : needs.name}
+                        」が要ります
+                    </button>
+                )}
+
+                {owned ? (
+                    <p
+                        style={{
+                            marginTop: 12,
+                            padding: '9px 12px',
+                            borderRadius: 9,
+                            background: 'rgba(95,168,138,.12)',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: '#3d7a63',
+                            textAlign: 'center',
+                        }}
+                    >
+                        交換済みです
+                    </p>
+                ) : !item.is_active ? (
+                    <p
+                        style={{
+                            marginTop: 12,
+                            padding: '9px 12px',
+                            borderRadius: 9,
+                            background: 'rgba(120,160,185,.1)',
+                            fontSize: 11.5,
+                            color: 'var(--color-text-muted)',
+                            textAlign: 'center',
+                        }}
+                    >
+                        この品物は、まだ用意していません。
+                    </p>
+                ) : (
+                    <button
+                        type="button"
+                        disabled={busy || price > points || !needsDone}
+                        onClick={onExchange}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            marginTop: 12,
+                            padding: '10px 16px',
+                            borderRadius: 9,
+                            border: 'none',
+                            background:
+                                price > points || !needsDone
+                                    ? 'rgba(120,160,185,.22)'
+                                    : 'var(--color-brand)',
+                            color:
+                                price > points || !needsDone
+                                    ? 'var(--color-text-muted)'
+                                    : 'var(--color-text-inverse)',
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            cursor:
+                                price > points || !needsDone
+                                    ? 'not-allowed'
+                                    : 'pointer',
+                        }}
+                    >
+                        {!needsDone
+                            ? 'まだ交換できません'
+                            : price > points
+                              ? `あと ${(price - points).toLocaleString()} pt`
+                              : `${price.toLocaleString()} pt で交換する`}
+                    </button>
+                )}
+
+                {message && (
+                    <p
+                        style={{
+                            marginTop: 8,
+                            fontSize: 11.5,
+                            textAlign: 'center',
+                            color: 'var(--color-text)',
+                        }}
+                    >
+                        {message}
+                    </p>
+                )}
+
+                {/*
+                  * ★ 使い道を見せる。
+                  *
+                  *   名前と値段だけでは、
+                  *   取ったあと何が変わるのか分からない。
+                  *   出る場所を、形で示す。
+                  */}
+                {!hidden && (
+                    <>
+                        <Line label="使い道" />
+                        <Usage kind={item.kind} color={color} item={item} />
+                    </>
+                )}
+
+                {kin.length > 0 && (
+                    <>
+                        <Line label="同じ種類" />
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: 8,
+                                flexWrap: 'wrap',
+                            }}
+                        >
+                            {kin.map((one) => {
+                                const veil =
+                                    one.is_secret && !ownedIds.includes(one.id)
+
+                                return (
+                                    <button
+                                        key={one.id}
+                                        type="button"
+                                        onClick={() => onJump(one.id)}
+                                        title={veil ? 'シークレット' : one.name}
+                                        style={{
+                                            width: 48,
+                                            height: 48,
+                                            borderRadius: '50%',
+                                            border: 'none',
+                                            background: '#fff',
+                                            boxShadow: ownedIds.includes(one.id)
+                                                ? '0 0 0 1px #fff, 0 0 0 3px #5fa88a'
+                                                : `0 0 0 1px #fff, 0 0 0 2px ${color}55`,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 17,
+                                            color: veil
+                                                ? 'var(--color-text-faint)'
+                                                : color,
+                                            cursor: 'pointer',
+                                            overflow: 'hidden',
+                                            padding: 0,
+                                        }}
+                                    >
+                                        {!veil && one.asset_url ? (
+                                            /* eslint-disable-next-line @next/next/no-img-element */
+                                            <img
+                                                src={one.asset_url}
+                                                alt=""
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'contain',
+                                                }}
+                                            />
+                                        ) : veil ? (
+                                            '?'
+                                        ) : (
+                                            (KIND_MARK[one.kind] ?? '?')
+                                        )}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    )
+}
+
+/** 小さな見出しの線 */
+function Line({ label }: { label: string }) {
+    return (
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                margin: '16px 0 9px',
+            }}
+        >
+            <span
+                style={{
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    letterSpacing: '.06em',
+                    color: 'var(--color-text-faint)',
+                    whiteSpace: 'nowrap',
+                }}
+            >
+                {label}
+            </span>
+            <span
+                style={{
+                    flex: 1,
+                    height: 1,
+                    background: 'rgba(120,160,185,.22)',
+                }}
+            />
+        </div>
+    )
+}
+
+/**
+ * 使い道の見本。
+ *
+ * ★ 絵が無くても、出る場所は見せられる。
+ *
+ *   スタンプなら、感想の吹き出しの中。
+ *   フレームなら、丸い顔の周り。
+ *   背景なら、部屋の地。
+ *
+ *   器だけ先に作っておけば、
+ *   絵ができたとき、そのまま収まる。
+ */
+function Usage({
+    kind,
+    color,
+    item,
+}: {
+    kind: string
+    color: string
+    item: Placed
+}) {
+    const mark = KIND_MARK[kind] ?? '?'
+
+    const box: React.CSSProperties = {
+        padding: 12,
+        borderRadius: 10,
+        background:
+            'linear-gradient(180deg, rgba(120,160,185,.07) 0%, rgba(120,160,185,.03) 100%)',
+        border: '1px solid rgba(120,160,185,.16)',
+    }
+
+    const note: React.CSSProperties = {
+        marginTop: 7,
+        fontSize: 10.5,
+        lineHeight: 1.7,
+        color: 'var(--color-text-faint)',
+    }
+
+    const art = (size: number) =>
+        item.asset_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+                src={item.asset_url}
+                alt=""
+                style={{ width: size, height: size, objectFit: 'contain' }}
+            />
+        ) : (
+            <span style={{ fontSize: size * 0.62, color }}>{mark}</span>
+        )
+
+    if (kind === 'stamp') {
+        return (
+            <div style={box}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <span
+                        style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: '50%',
+                            background: 'rgba(120,160,185,.22)',
+                            flex: '0 0 auto',
+                        }}
+                    />
+
+                    <span
+                        style={{
+                            flex: 1,
+                            padding: '8px 10px',
+                            borderRadius: '2px 10px 10px 10px',
+                            background: '#fff',
+                            border: '1px solid rgba(120,160,185,.2)',
+                        }}
+                    >
+                        <span
+                            style={{
+                                display: 'block',
+                                height: 6,
+                                width: '76%',
+                                borderRadius: 3,
+                                background: 'rgba(120,160,185,.2)',
+                            }}
+                        />
+                        <span
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 46,
+                                height: 46,
+                                marginTop: 8,
+                                borderRadius: 8,
+                                background: `${color}12`,
+                                border: `1px dashed ${color}66`,
+                            }}
+                        >
+                            {art(30)}
+                        </span>
+                    </span>
+                </div>
+
+                <p style={note}>感想やコメントに、貼って送れます。</p>
+            </div>
+        )
+    }
+
+    if (kind === 'frame' || kind === 'name_style') {
+        return (
+            <div style={box}>
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                    }}
+                >
+                    <span
+                        style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: '50%',
+                            background: 'rgba(120,160,185,.22)',
+                            boxShadow:
+                                kind === 'frame'
+                                    ? `0 0 0 2px #fff, 0 0 0 5px ${color}`
+                                    : 'none',
+                            flex: '0 0 auto',
+                        }}
+                    />
+
+                    <span style={{ flex: 1 }}>
+                        <span
+                            style={{
+                                display: 'block',
+                                height: 8,
+                                width: '62%',
+                                borderRadius: 4,
+                                background:
+                                    kind === 'name_style'
+                                        ? `linear-gradient(90deg, ${color}, ${color}44)`
+                                        : 'rgba(120,160,185,.3)',
+                            }}
+                        />
+                        <span
+                            style={{
+                                display: 'block',
+                                height: 6,
+                                width: '40%',
+                                marginTop: 6,
+                                borderRadius: 3,
+                                background: 'rgba(120,160,185,.16)',
+                            }}
+                        />
+                    </span>
+                </div>
+
+                <p style={note}>
+                    {kind === 'frame'
+                        ? 'プロフィールの顔まわりに付きます。'
+                        : 'プロフィールの名前を飾ります。'}
+                </p>
+            </div>
+        )
+    }
+
+    if (kind === 'background' || kind === 'shelf') {
+        return (
+            <div style={box}>
+                <span
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: 74,
+                        borderRadius: 8,
+                        background: item.asset_url
+                            ? `center / cover no-repeat url(${item.asset_url})`
+                            : `repeating-linear-gradient(45deg, ${color}14 0 10px, ${color}08 10px 20px)`,
+                        border: '1px solid rgba(120,160,185,.2)',
+                    }}
+                >
+                    {!item.asset_url && (
+                        <span
+                            style={{
+                                fontSize: 11,
+                                color: 'var(--color-text-faint)',
+                            }}
+                        >
+                            {kind === 'shelf' ? '本棚の地' : '部屋の地'}
+                        </span>
+                    )}
+                </span>
+
+                <p style={note}>
+                    {kind === 'shelf'
+                        ? '本棚の後ろに敷かれます。'
+                        : 'ページの後ろに敷かれます。'}
+                </p>
+            </div>
+        )
+    }
+
+    if (kind === 'badge') {
+        return (
+            <div style={box}>
+                <span
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '4px 12px',
+                        borderRadius: 999,
+                        background: '#fff',
+                        border: `1px solid ${color}77`,
+                        fontSize: 11,
+                        color: '#4a5a66',
+                    }}
+                >
+                    {art(14)}
+                    {item.name}
+                </span>
+
+                <p style={note}>名前のとなりに出ます。</p>
+            </div>
+        )
+    }
+
+    return (
+        <div style={box}>
+            <span
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 58,
+                    height: 76,
+                    borderRadius: '3px 7px 7px 3px',
+                    background: '#fff',
+                    border: '1px solid rgba(120,160,185,.22)',
+                    borderLeft: `5px solid ${color}`,
+                }}
+            >
+                {art(26)}
+            </span>
+
+            <p style={note}>本の見た目に使えます。</p>
         </div>
     )
 }
