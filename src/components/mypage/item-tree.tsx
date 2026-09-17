@@ -1,30 +1,29 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 /**
  * ============================================================
  * 原石航路 Studio
  * ItemTree — アイテムツリー
  *
- * ★ 格子に置くのをやめ、繋がりから位置を出す。
+ * ★ 額は、絵で作る。
  *
- *   前は「何段目の何番目」を表に持ち、
- *   そこへ並べて線を引き足していた。
- *   だから「段ごとの一覧表」にしか見えなかった。
+ *   丸に影を重ねて額に見せようとしていたが、
+ *   どう積んでも「白い円」にしかならなかった。
+ *   描いた額を敷き、その上に品物の絵を載せる。
  *
- *   親子の繋がりを先に読み、
- *   子の数だけ幅を取って置き直す。
- *   枝分かれと合流が、そのまま形になる。
+ *   六つの額は、どれも同じ大きさに揃えてある。
+ *   中の白い面の真ん中が、絵の中心。
+ *   どの額に入れ替えても、絵はずれない。
  *
- * ★ 線は SVG で引く。
+ * ★ 地も、絵で作る。
  *
- *   四角い箱の縁に線を足すやり方だと、
- *   札を貫いたり、途中で切れたりする。
- *   丸の縁から縁へ、曲げて繋ぐ。
+ *   薄い水色を塗るだけでは、紙に見えなかった。
+ *   空と海を敷く。上に薄い白を重ねて、字を読ませる。
  *
- * ★ 品物が増えても、置き直しは要らない。
- *   親を決めれば、位置は勝手に決まる。
+ * ★ 繋がりから位置を出すのは、前のまま。
+ *   親を決めれば、置き場所は勝手に決まる。
  * ============================================================
  */
 
@@ -51,9 +50,9 @@ interface Placed extends Item {
 
 const TIER_LABEL: Record<number, { title: string; note: string }> = {
     1: { title: 'Lv.1', note: 'はじめの一歩' },
-    2: { title: 'Lv.2', note: '自分らしさを表現しよう' },
-    3: { title: 'Lv.3', note: 'もっと楽しく、もっとつながる' },
-    4: { title: 'Lv.4', note: '特別なアイテムでさらに先へ' },
+    2: { title: 'Lv.2', note: '自分らしく飾る' },
+    3: { title: 'Lv.3', note: 'もっとつながる' },
+    4: { title: 'Lv.4', note: '特別な品へ' },
     5: { title: 'Lv.5', note: 'まだ見ぬ景色へ' },
 }
 
@@ -68,54 +67,80 @@ const KIND_LABEL: Record<string, string> = {
     shelf: '本棚背景',
 }
 
-const KIND_MARK: Record<string, string> = {
-    stamp: '☺',
-    frame: '◻',
-    background: '▨',
-    badge: '★',
-    name_style: 'Aa',
-    bookmark: '❧',
-    cover: '▤',
-    shelf: '▦',
-}
-
 const KIND_COLOR: Record<string, string> = {
-    stamp: '#e8a33d',
-    frame: '#5b8fc9',
-    background: '#5fa88a',
-    badge: '#c98b4b',
-    name_style: '#9a7bc8',
-    bookmark: '#d4776a',
-    cover: '#6a8fa8',
-    shelf: '#7a9a6a',
+    stamp: '#d99a3c',
+    frame: '#4f86c0',
+    background: '#4f9c82',
+    badge: '#bf8244',
+    name_style: '#8e72bd',
+    bookmark: '#c96f63',
+    cover: '#5f849c',
+    shelf: '#719161',
 }
 
-/* 置き方の寸法 */
+/*
+ * 額の絵。
+ *
+ * ★ 六つとも、同じ大きさに揃えてある。
+ *   中の白い面の真ん中が、絵の中心に来る。
+ */
+const RING: Record<string, string> = {
+    owned: '/items/ring-owned.webp',
+    ready: '/items/ring-ready.webp',
+    poor: '/items/ring-normal.webp',
+    coming: '/items/ring-normal.webp',
+    locked: '/items/ring-locked.webp',
+    secret: '/items/ring-secret.webp',
+    goal: '/items/ring-goal.webp',
+}
+
+/*
+ * 品物の絵が無いあいだ、代わりに出す絵。
+ *
+ * ★ 空の額ばかりだと、出来上がりの見当がつかない。
+ *   絵が付いた品物から、順に差し替わる。
+ */
+const STAND_IN = '/items/stamp-saikou.webp'
+
+/*
+ * いちばん奥の札。
+ *
+ * ★ 絵に「? ? ?」と「2,000 pt」が描き込まれている。
+ *   値段を変えるときは、絵も描き直すこと。
+ *   中身を出したあとは、丸い額に戻る。
+ */
+const GOAL_PLATE = '/items/goal-plate.webp'
+const GOAL_W = 268
+
 /*
  * 置き方の寸法。
  *
- * ★ 目指す絵の比率に合わせる。
- *
- *   絵では、丸どうしの間が丸 1.5 個ぶんほど。
- *   段の間は丸 2 個ぶん。
- *   詰まっていることで、集まりに見える。
- *
- * ★ 縦に長くなってよい。
- *   送って見られる。横に潰すほうが読みにくい。
+ * ★ 額が絵になったぶん、大きくする。
+ *   小さいと、中の絵が潰れて何か分からない。
  */
-const NODE = 76
-const GAP_X = 112
-const GAP_Y = 146
-const PAD_X = 190 /* 左の見出しに、札が重ならないだけ空ける */
-const PAD_TOP = 126 /* START のぶん。上に離す */
+const NODE = 104
+const GAP_X = 150
+const GAP_Y = 190
+const PAD_X = 150 /* 左の見出しに、額が重ならないだけ空ける */
+const PAD_TOP = 158 /* START のぶん。上に離す */
 
 /*
- * 丸の下に付く札の高さ。
+ * 線を、額のどれだけ下から出すか。
  *
- * ★ 線を引くときに要る。
- *   丸の下端から出すと、札を貫いてしまう。
+ * ★ 札の裏は通してよい。
+ *
+ *   前は札を避けて、札の下から線を出していた。
+ *   すると段の間に見える線が二十数ピクセルしかなく、
+ *   繋がっているように見えなかった。
+ *
+ *   札は白く塗り潰してあるので、
+ *   裏を通った線は見えない。
+ *   額の下から出せば、札の下に続いて出てくる。
  */
-const LABEL_H = 38
+const LABEL_H = -4
+
+/** 中の絵が占める割合。額の白い面に合わせてある */
+const ART = 0.56
 
 export default function ItemTree() {
     const [items, setItems] = useState<Item[]>([])
@@ -128,16 +153,11 @@ export default function ItemTree() {
      *
      *   品物そのものを覚えると、交換したあとも
      *   古い中身のまま残り、「交換済み」に変わらない。
-     *   id なら、読み直すたびに今の様子が付いてくる。
      */
     const [pickedId, setPickedId] = useState<string | null>(null)
 
-
     /*
      * 種類で絞る。
-     *
-     * ★ 品物が増えると、木が横に伸びて探しにくい。
-     *   欲しい種類だけ見られるようにする。
      *
      * ★ 絞っても、木の形は崩さない。
      *   外れたものは薄くして、繋がりは残す。
@@ -145,6 +165,38 @@ export default function ItemTree() {
     const [filter, setFilter] = useState<string>('all')
     const [busy, setBusy] = useState(false)
     const [message, setMessage] = useState('')
+
+    /*
+     * 枠の幅を測る。
+     *
+     * ★ 狭い画面では、木を縮めて丸ごと入れる。
+     *
+     *   横に送って見る作りだと、
+     *   真ん中に寄せた木の左半分に手が届かない。
+     *   （中央寄せしたものが枠からはみ出すと、
+     *     左へは送れない）
+     *
+     *   縮めれば、送らずに全体が見える。
+     */
+    const boxRef = useRef<HTMLDivElement | null>(null)
+    const [boxWidth, setBoxWidth] = useState(0)
+
+    useEffect(() => {
+        /*
+         * ★ 読み込みが終わってから測る。
+         *
+         *   読み込み中は何も描いていないので、
+         *   最初の一回では枠がまだ無い。
+         */
+        const box = boxRef.current
+        if (!box) return
+
+        const watch = new ResizeObserver(() => setBoxWidth(box.clientWidth))
+        watch.observe(box)
+        setBoxWidth(box.clientWidth)
+
+        return () => watch.disconnect()
+    }, [isLoading])
 
     const reload = useCallback(async () => {
         try {
@@ -283,6 +335,32 @@ export default function ItemTree() {
             })
         }
 
+        /*
+         * ★ その段にひとつしかないものは、親の真下へ寄せる。
+         *
+         *   葉は左から詰めて置くので、
+         *   いちばん奥の一個が左端に落ちて、
+         *   段の見出しに重なっていた。
+         */
+        const perTier = new Map<number, Item[]>()
+        for (const item of items) {
+            if (!perTier.has(item.tier)) perTier.set(item.tier, [])
+            perTier.get(item.tier)!.push(item)
+        }
+
+        for (const [, only] of perTier) {
+            if (only.length !== 1) continue
+
+            const lone = only[0]
+            const parent = lone.requires_item_id
+                ? spot.get(lone.requires_item_id)
+                : null
+            if (!parent) continue
+
+            const here = spot.get(lone.id)!
+            spot.set(lone.id, { x: Math.max(parent.x, PAD_X), y: here.y })
+        }
+
         const list: Placed[] = items.map((item) => ({
             ...item,
             ...spot.get(item.id)!,
@@ -291,8 +369,8 @@ export default function ItemTree() {
 
         return {
             placed: list,
-            width: Math.max(...list.map((one) => one.x)) + PAD_X,
-            height: Math.max(...list.map((one) => one.y)) + 100,
+            width: Math.max(...list.map((one) => one.x)) + 96,
+            height: Math.max(...list.map((one) => one.y)) + 126,
         }
     }, [items, owned, points])
 
@@ -300,7 +378,17 @@ export default function ItemTree() {
 
     const byId = new Map(placed.map((one) => [one.id, one]))
     const picked = placed.find((one) => one.id === pickedId) ?? null
+
     const roots = placed.filter((one) => !one.requires_item_id)
+
+    /*
+     * ★ 入りきらないときだけ縮める。
+     *   半分より小さくすると字が読めないので、そこで止める。
+     */
+    const fit =
+        boxWidth > 0 && width > boxWidth
+            ? Math.max(0.7, boxWidth / width)
+            : 1
 
     const startX =
         roots.length > 0
@@ -313,33 +401,69 @@ export default function ItemTree() {
         <div
             style={{
                 /*
-                 * ★ 紙の地を作る。
+                 * ★ 地に絵を敷く。
                  *
-                 *   白い板に丸が置いてあるだけだと、
-                 *   管理画面にしか見えない。
+                 *   空と海の絵を上に置き、
+                 *   その下は絵の水の色で埋める。
+                 *   継ぎ目が出ない。
                  *
-                 *   淡い水色の紙に、上から光が差す。
-                 *   細かい格子を敷いて、紙の目を出す。
+                 * ★ 白い薄布を一枚かける。
+                 *   そのままだと、字も額も絵に負ける。
                  */
                 position: 'relative',
-                background: `
-                    radial-gradient(900px 300px at 50% -60px, rgba(255,255,255,.9), transparent 70%),
-                    linear-gradient(180deg, #eaf2f7 0%, #f4f9fb 38%, #fbfdfe 100%)
-                `,
-                backgroundImage: `
-                    radial-gradient(900px 300px at 50% -60px, rgba(255,255,255,.9), transparent 70%),
-                    linear-gradient(rgba(90,140,170,.05) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(90,140,170,.05) 1px, transparent 1px),
-                    linear-gradient(180deg, #eaf2f7 0%, #f4f9fb 38%, #fbfdfe 100%)
-                `,
-                backgroundSize: '100% 100%, 28px 28px, 28px 28px, 100% 100%',
-                border: '1px solid rgba(120,160,185,.28)',
+                background: '#eef6f9',
+                border: '1px solid rgba(120,160,185,.3)',
                 borderRadius: 16,
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,.7)',
+                boxShadow: [
+                    'inset 0 1px 0 rgba(255,255,255,.8)',
+                    'inset 0 0 70px rgba(255,255,255,.5)',
+                ].join(', '),
                 padding: '18px 20px 26px',
                 overflow: 'hidden',
             }}
         >
+            {/*
+              * ★ 地の絵は、別の板にして上から溶かす。
+              *
+              *   板そのものの背景にすると、
+              *   板の高さで絵の出方が変わり、
+              *   真ん中に水平線が横切る。
+              *   上に敷いて、下へ消す。
+              */}
+            <div
+                aria-hidden="true"
+                style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: 780,
+                    background: 'url(/items/tree-bg.webp) center top / 100% auto no-repeat',
+                    WebkitMaskImage:
+                        'linear-gradient(180deg, rgba(0,0,0,.95) 12%, rgba(0,0,0,.62) 52%, rgba(0,0,0,0) 100%)',
+                    maskImage:
+                        'linear-gradient(180deg, rgba(0,0,0,.95) 12%, rgba(0,0,0,.62) 52%, rgba(0,0,0,0) 100%)',
+                    pointerEvents: 'none',
+                }}
+            />
+
+            {/*
+              * ★ 見出しは、白い板に載せる。
+              *
+              *   地の絵に直に置くと、
+              *   薄い字が絵に負けて読めない。
+              */}
+            <div
+                style={{
+                    position: 'relative',
+                    padding: '12px 14px 10px',
+                    borderRadius: 12,
+                    background: 'rgba(255,255,255,.82)',
+                    border: '1px solid rgba(120,160,185,.28)',
+                    boxShadow: '0 2px 10px rgba(40,70,95,.06)',
+                    marginBottom: 14,
+                }}
+            >
             <div
                 style={{
                     display: 'flex',
@@ -388,7 +512,7 @@ export default function ItemTree() {
                 style={{
                     fontSize: 11.5,
                     lineHeight: 1.8,
-                    color: 'var(--color-text-faint)',
+                    color: 'var(--color-text-muted)',
                     marginBottom: 10,
                 }}
             >
@@ -396,12 +520,6 @@ export default function ItemTree() {
                 中身はこれから増やしていきます。
             </p>
 
-            {/*
-              * ★ 種類で絞る。
-              *
-              *   品物が増えると、木が横に伸びて探しにくい。
-              *   外れたものは薄くするだけで、繋がりは残す。
-              */}
             <div
                 style={{
                     display: 'flex',
@@ -427,11 +545,11 @@ export default function ItemTree() {
                             border:
                                 filter === key
                                     ? '1px solid var(--color-brand)'
-                                    : '1px solid var(--color-brand-border)',
+                                    : '1px solid rgba(120,160,185,.45)',
                             background:
                                 filter === key
                                     ? 'var(--color-brand)'
-                                    : 'var(--color-bg-card)',
+                                    : 'rgba(255,255,255,.78)',
                             color:
                                 filter === key
                                     ? 'var(--color-text-inverse)'
@@ -450,7 +568,8 @@ export default function ItemTree() {
                 style={{
                     height: 7,
                     borderRadius: 999,
-                    background: 'rgba(0,0,0,.06)',
+                    background: 'rgba(120,160,185,.16)',
+                    border: '1px solid rgba(120,160,185,.28)',
                     overflow: 'hidden',
                     marginBottom: 6,
                 }}
@@ -459,348 +578,410 @@ export default function ItemTree() {
                     style={{
                         width: `${items.length > 0 ? Math.round((owned.length / items.length) * 100) : 0}%`,
                         height: '100%',
-                        background: 'var(--color-brand)',
+                        background:
+                            'linear-gradient(90deg, #d9a441, #e8c479)',
                         transition: 'width .3s ease',
                     }}
                 />
             </div>
-
-            {/*
-              * ★ 木そのもの。
-              *
-              *   線は SVG で下に敷き、丸はその上に置く。
-              *   線が札を貫かない。
-              */}
-            {/*
-              * ★ 木を、枠の幅に合わせて広げる。
-              *
-              *   置き場所は 128px 間隔で決めているので、
-              *   広い画面では右が大きく空く。
-              *   枠に合わせて引き伸ばせば、真ん中に収まる。
-              *
-              * ★ 狭い画面では、送って見る。
-              *   縮めすぎると、札の字が読めなくなる。
-              */}
-            {/*
-              * ★ 木と、詳しい欄を横に並べる。
-              *
-              *   下に出すと、押すたびに画面が伸び縮みして
-              *   木のどこを見ていたか分からなくなる。
-              *   横に置けば、木を見ながら中身を確かめられる。
-              *
-              * ★ 狭い画面では、下に回り込む。
-              */}
-            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <div style={{ overflowX: 'auto', paddingBottom: 8, flex: '1 1 460px', minWidth: 0 }}>
-                <div
-                    style={{
-                        position: 'relative',
-                        width,
-                        height,
-                        margin: '0 auto',
-                        minWidth: width,
-                    }}
-                >
-                    {Object.entries(TIER_LABEL).map(([tier, label]) => {
-                        const level = Number(tier)
-                        if (!placed.some((one) => one.tier === level)) return null
-
-                        return (
-                            <div
-                                key={tier}
-                                style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: PAD_TOP + (level - 1) * GAP_Y - 18,
-                                    width: 110,
-                                    paddingLeft: 12,
-                                    /*
-                                     * ★ 縦の道を引く。
-                                     *
-                                     *   Lv が説明文ではなく、
-                                     *   上から下へ進む道に見える。
-                                     */
-                                    borderLeft: '2px solid rgba(120,160,185,.35)',
-                                    pointerEvents: 'none',
-                                }}
-                            >
-                                {/*
-                                  * ★ 菱形の印。
-                                  *
-                                  *   縦線の上に置くと、
-                                  *   道の途中にある関所に見える。
-                                  *   ただの見出しではなく、
-                                  *   進行の段だと分かる。
-                                  */}
-                                <span
-                                    style={{
-                                        position: 'absolute',
-                                        left: -7,
-                                        top: 4,
-                                        width: 11,
-                                        height: 11,
-                                        background: '#fff',
-                                        border: '2px solid var(--color-brand)',
-                                        transform: 'rotate(45deg)',
-                                    }}
-                                />
-
-                                <div
-                                    style={{
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        color: 'var(--color-brand)',
-                                        letterSpacing: '.02em',
-                                    }}
-                                >
-                                    {label.title}
-                                </div>
-                                <div
-                                    style={{
-                                        marginTop: 2,
-                                        fontSize: 9.5,
-                                        lineHeight: 1.5,
-                                        color: 'var(--color-text-faint)',
-                                    }}
-                                >
-                                    {label.note}
-                                </div>
-                            </div>
-                        )
-                    })}
-
-                    <svg
-                        width={width}
-                        height={height}
-                        style={{
-                            position: 'absolute',
-                            inset: 0,
-                            pointerEvents: 'none',
-                        }}
-                        aria-hidden="true"
-                    >
-                        {roots.map((root) => (
-                            <path
-                                key={`start-${root.id}`}
-                                d={elbow(
-                                    startX,
-                                    PAD_TOP - 84,
-                                    root.x,
-                                    root.y - NODE / 2 - 9,
-                                )}
-                                fill="none"
-                                stroke={
-                                    root.state === 'owned'
-                                        ? 'var(--color-brand)'
-                                        : 'var(--color-brand-border)'
-                                }
-                                strokeWidth={root.state === 'owned' ? 2.5 : 2}
-                            />
-                        ))}
-
-                        {placed.map((item) => {
-                            if (!item.requires_item_id) return null
-
-                            const from = byId.get(item.requires_item_id)
-                            if (!from) return null
-
-                            const done = owned.includes(from.id)
-
-                            return (
-                                <path
-                                    key={`link-${item.id}`}
-                                    /*
-                                     * ★ 線は、札の下から出す。
-                                     *
-                                     *   丸の下端から出すと、
-                                     *   その下にある札を貫いてしまう。
-                                     *   札の高さ（約 46）ぶん下げる。
-                                     */
-                                    d={elbow(
-                                        from.x,
-                                        from.y + NODE / 2 + LABEL_H,
-                                        item.x,
-                                        /*
-                                         * ★ 輪のぶん、手前で止める。
-                                         *
-                                         *   丸の縁ちょうどで止めると、
-                                         *   外に巻いた輪を線が貫いて見える。
-                                         */
-                                        item.y - NODE / 2 - 9,
-                                    )}
-                                    fill="none"
-                                    /*
-                                     * ★ 道の様子で、線の色を変える。
-                                     *
-                                     *   取った道   緑。歩いた跡
-                                     *   次の道     青。ここから進める
-                                     *   まだの道   薄い灰
-                                     *
-                                     *   攻略の道筋が、色で見える。
-                                     */
-                                    stroke={
-                                        done
-                                            ? '#5fa88a'
-                                            : item.state === 'ready'
-                                              ? '#5b8fc9'
-                                              : 'rgba(0,0,0,.1)'
-                                    }
-                                    /*
-                                     * ★ 線は細く。
-                                     *   太いと骨組みが主役になり、
-                                     *   丸が飾りに見える。
-                                     */
-                                    strokeWidth={
-                                        done ? 2.5 : item.state === 'ready' ? 2.5 : 1.5
-                                    }
-                                    strokeLinecap="round"
-                                    opacity={done || item.state === 'ready' ? 1 : 0.8}
-                                />
-                            )
-                        })}
-                    </svg>
-
-                    <div
-                        style={{
-                            position: 'absolute',
-                            left: startX,
-                            top: PAD_TOP - 84,
-                            transform: 'translate(-50%, -50%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 54,
-                            height: 54,
-                            borderRadius: '50%',
-                            background: 'var(--color-brand)',
-                            color: 'var(--color-text-inverse)',
-                            fontSize: 9.5,
-                            fontWeight: 700,
-                            letterSpacing: '.1em',
-                            boxShadow: '0 3px 12px rgba(40,90,130,.28)',
-                        }}
-                    >
-                        START
-                    </div>
-
-                    {placed.map((item) => {
-                        /*
-                         * ★ 絞りから外れたものは、薄くする。
-                         *
-                         *   消すと木が崩れて、
-                         *   どこが繋がっていたか分からなくなる。
-                         */
-                        const inFilter =
-                            filter === 'all' ||
-                            item.kind === filter ||
-                            (filter === 'other' &&
-                                !['stamp', 'frame', 'background'].includes(
-                                    item.kind,
-                                ))
-
-                        return (
-                            <Node
-                                key={item.id}
-                                item={item}
-                                dim={!inFilter}
-                                chosen={item.id === pickedId}
-                                onPick={() => {
-                                    setPickedId(item.id)
-                                    setMessage('')
-                                }}
-                            />
-                        )
-                    })}
-                </div>
             </div>
 
             {/*
-              * ★ 右の欄は、送っても付いてくる。
-              *
-              *   木は縦に長い。下のほうの丸を押したとき、
-              *   欄が上に置いたままだと見えない。
+              * ★ 木と、詳しい欄を横に並べる。
+              *   下に出すと、押すたびに画面が伸び縮みして
+              *   木のどこを見ていたか分からなくなる。
               */}
             <div
                 style={{
-                    flex: '0 0 274px',
-                    minWidth: 250,
-                    position: 'sticky',
-                    top: 8,
-                    alignSelf: 'flex-start',
+                    position: 'relative',
+                    display: 'flex',
+                    gap: 16,
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
                 }}
             >
-                {picked ? (
-                    <Detail
-                        item={picked}
-                        all={placed}
-                        ownedIds={owned}
-                        points={points}
-                        busy={busy}
-                        message={message}
-                        onClose={() => setPickedId(null)}
-                        onJump={(id) => {
-                            setPickedId(id)
-                            setMessage('')
-                        }}
-                        onExchange={() => void exchange(picked)}
-                    />
-                ) : (
-                    /*
-                     * ★ 何も選んでいないときも、場所を空けておく。
-                     *
-                     *   選ぶたびに木が横へずれると、
-                     *   見ていた所を見失う。
-                     *
-                     * ★ 空でも、同じ形の額を出しておく。
-                     *   点線の箱だけだと、作りかけに見える。
-                     */
+                <div
+                    ref={boxRef}
+                    style={{
+                        overflowX: 'auto',
+                        paddingBottom: 8,
+                        flex: '1 1 480px',
+                        minWidth: 0,
+                        /*
+                         * ★ 入るときは真ん中、はみ出すときは左から。
+                         *
+                         *   ただ真ん中に寄せると、はみ出した左半分に
+                         *   手が届かなくなる（左へは送れない）。
+                         *   safe を付けると、はみ出すときだけ左端に付く。
+                         */
+                        display: 'flex',
+                        justifyContent: 'safe center',
+                    }}
+                >
                     <div
                         style={{
-                            padding: '30px 18px 34px',
-                            borderRadius: 14,
-                            border: '1px solid rgba(120,160,185,.3)',
-                            background:
-                                'linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%)',
-                            boxShadow: '0 2px 10px rgba(40,70,95,.06)',
-                            textAlign: 'center',
+                            /*
+                             * ★ 縮めたぶん、場所も詰める。
+                             *   縮めても元の大きさで場所を取ると、
+                             *   下に大きな余白が残る。
+                             */
+                            flex: '0 0 auto',
+                            width: width * fit,
+                            height: height * fit,
                         }}
                     >
-                        <span
+                    <div
+                        style={{
+                            position: 'relative',
+                            width,
+                            height,
+                            transform: fit < 1 ? `scale(${fit})` : undefined,
+                            transformOrigin: 'top left',
+                        }}
+                    >
+                        {Object.entries(TIER_LABEL).map(([tier, label]) => {
+                            const level = Number(tier)
+                            if (!placed.some((one) => one.tier === level))
+                                return null
+
+                            return (
+                                <div
+                                    key={tier}
+                                    style={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: PAD_TOP + (level - 1) * GAP_Y - 20,
+                                        width: 130,
+                                        paddingLeft: 12,
+                                        borderLeft:
+                                            '2px solid rgba(96,140,170,.55)',
+                                        pointerEvents: 'none',
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            position: 'absolute',
+                                            left: -7,
+                                            top: 4,
+                                            width: 11,
+                                            height: 11,
+                                            background: '#fff',
+                                            border: '2px solid var(--color-brand)',
+                                            transform: 'rotate(45deg)',
+                                        }}
+                                    />
+
+                                    <div
+                                        style={{
+                                            fontSize: 13,
+                                            fontWeight: 700,
+                                            color: 'var(--color-brand)',
+                                            letterSpacing: '.02em',
+                                            textShadow:
+                                                '0 1px 0 rgba(255,255,255,.9)',
+                                        }}
+                                    >
+                                        {label.title}
+                                    </div>
+                                    <div
+                                        style={{
+                                            marginTop: 2,
+                                            fontSize: 9.5,
+                                            lineHeight: 1.5,
+                                            color: '#6d8190',
+                                            textShadow:
+                                                '0 1px 0 rgba(255,255,255,.9)',
+                                        }}
+                                    >
+                                        {label.note}
+                                    </div>
+                                </div>
+                            )
+                        })}
+
+                        <svg
+                            width={width}
+                            height={height}
                             style={{
+                                position: 'absolute',
+                                inset: 0,
+                                pointerEvents: 'none',
+                            }}
+                            aria-hidden="true"
+                        >
+                            {roots.map((root) => (
+                                <path
+                                    key={`start-${root.id}`}
+                                    d={elbow(
+                                        startX,
+                                        PAD_TOP - 96,
+                                        root.x,
+                                        root.y - NODE / 2 - 2,
+                                    )}
+                                    fill="none"
+                                    stroke={
+                                        root.state === 'owned'
+                                            ? '#4f9c82'
+                                            : 'rgba(74,112,138,.5)'
+                                    }
+                                    strokeWidth={3}
+                                    strokeLinecap="round"
+                                />
+                            ))}
+
+                            {placed.map((item) => {
+                                if (!item.requires_item_id) return null
+
+                                const from = byId.get(item.requires_item_id)
+                                if (!from) return null
+
+                                const done = owned.includes(from.id)
+
+                                return (
+                                    <path
+                                        key={`link-${item.id}`}
+                                        d={elbow(
+                                            from.x,
+                                            from.y + NODE / 2 + LABEL_H,
+                                            item.x,
+                                            /*
+                                             * ★ 目標の札は丸より背が高い。
+                                             *   丸の寸法で止めると、
+                                             *   線の先が札の下に隠れる。
+                                             */
+                                            item.y -
+                                                (item.tier >= 5 &&
+                                                item.is_secret &&
+                                                item.state !== 'owned'
+                                                    ? 72
+                                                    : NODE / 2 + 2),
+                                        )}
+                                        fill="none"
+                                        /*
+                                         * ★ 道の様子で、線の色を変える。
+                                         *   取った道 緑／次の道 金／まだの道 薄灰
+                                         */
+                                        stroke={
+                                            done
+                                                ? '#4f9c82'
+                                                : item.state === 'ready'
+                                                  ? '#d9a441'
+                                                  : 'rgba(74,112,138,.38)'
+                                        }
+                                        strokeWidth={
+                                            done || item.state === 'ready' ? 3 : 2
+                                        }
+                                        strokeLinecap="round"
+                                    />
+                                )
+                            })}
+                        </svg>
+
+                        <div
+                            style={{
+                                position: 'absolute',
+                                left: startX,
+                                top: PAD_TOP - 96,
+                                transform: 'translate(-50%, -50%)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: 92,
-                                height: 92,
-                                margin: '0 auto 14px',
+                                width: 64,
+                                height: 64,
                                 borderRadius: '50%',
-                                background: '#fff',
+                                /*
+                                 * ★ START も、絵の額に合わせる。
+                                 *   平たい紺の丸のままだと、
+                                 *   ここだけ描き足したように見える。
+                                 */
+                                background:
+                                    'radial-gradient(120% 120% at 50% 18%, #35708f 0%, #234b68 52%, #16324a 100%)',
+                                color: '#f6efdc',
+                                fontSize: 10,
+                                fontWeight: 700,
+                                letterSpacing: '.12em',
+                                textShadow: '0 1px 2px rgba(0,0,0,.4)',
                                 boxShadow: [
-                                    '0 0 0 1px rgba(255,255,255,.9)',
-                                    '0 0 0 3px rgba(120,160,185,.28)',
-                                    '0 0 0 7px rgba(120,160,185,.08)',
+                                    'inset 0 0 0 2px rgba(226,196,124,.85)',
+                                    'inset 0 2px 6px rgba(255,255,255,.22)',
+                                    '0 0 0 4px rgba(255,255,255,.9)',
+                                    '0 0 0 6px rgba(150,185,205,.45)',
+                                    '0 6px 18px rgba(30,70,100,.32)',
                                 ].join(', '),
-                                fontSize: 26,
-                                color: 'var(--color-text-faint)',
                             }}
                         >
-                            ？
-                        </span>
+                            START
+                        </div>
 
-                        <p
+                        {placed.map((item) => {
+                            const inFilter =
+                                filter === 'all' ||
+                                item.kind === filter ||
+                                (filter === 'other' &&
+                                    !['stamp', 'frame', 'background'].includes(
+                                        item.kind,
+                                    ))
+
+                            return (
+                                <Node
+                                    key={item.id}
+                                    item={item}
+                                    dim={!inFilter}
+                                    chosen={item.id === pickedId}
+                                    onPick={() => {
+                                        setPickedId(item.id)
+                                        setMessage('')
+                                    }}
+                                />
+                            )
+                        })}
+                    </div>
+                    </div>
+                </div>
+
+                {/*
+                  * ★ 右の欄は、送っても付いてくる。
+                  *   木は縦に長い。下のほうの額を押したとき、
+                  *   欄が上に置いたままだと見えない。
+                  */}
+                <div
+                    style={{
+                        flex: '0 0 278px',
+                        minWidth: 252,
+                        position: 'sticky',
+                        top: 8,
+                        alignSelf: 'flex-start',
+                    }}
+                >
+                    {picked ? (
+                        <Detail
+                            item={picked}
+                            all={placed}
+                            ownedIds={owned}
+                            points={points}
+                            busy={busy}
+                            message={message}
+                            onClose={() => setPickedId(null)}
+                            onJump={(id) => {
+                                setPickedId(id)
+                                setMessage('')
+                            }}
+                            onExchange={() => void exchange(picked)}
+                        />
+                    ) : (
+                        <div
                             style={{
-                                fontSize: 11.5,
-                                lineHeight: 1.9,
-                                color: 'var(--color-text-faint)',
+                                padding: '26px 18px 30px',
+                                borderRadius: 14,
+                                border: '1px solid rgba(120,160,185,.34)',
+                                background: 'rgba(255,255,255,.82)',
+                                boxShadow: '0 2px 12px rgba(40,70,95,.08)',
+                                textAlign: 'center',
                             }}
                         >
-                            気になるアイテムを押すと、
-                            <br />
-                            ここに詳しく出ます。
-                        </p>
-                    </div>
-                )}
-            </div>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={RING.secret}
+                                alt=""
+                                style={{
+                                    width: 96,
+                                    height: 96,
+                                    margin: '0 auto 12px',
+                                    display: 'block',
+                                    opacity: 0.85,
+                                }}
+                            />
+
+                            <p
+                                style={{
+                                    fontSize: 11.5,
+                                    lineHeight: 1.9,
+                                    color: 'var(--color-text-muted)',
+                                }}
+                            >
+                                気になるアイテムを押すと、
+                                <br />
+                                ここに詳しく出ます。
+                            </p>
+
+                            {/*
+                              * ★ 何も選んでいないあいだは、
+                              *   いまの進み具合を出しておく。
+                              *   空の箱が右に立っているだけにしない。
+                              */}
+                            <div
+                                style={{
+                                    marginTop: 16,
+                                    paddingTop: 14,
+                                    borderTop: '1px solid rgba(120,160,185,.22)',
+                                    fontSize: 11.5,
+                                    textAlign: 'left',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        color: 'var(--color-text-muted)',
+                                    }}
+                                >
+                                    <span>交換したもの</span>
+                                    <b
+                                        style={{
+                                            color: 'var(--color-text)',
+                                            fontVariantNumeric: 'tabular-nums',
+                                        }}
+                                    >
+                                        {owned.length} / {items.length}
+                                    </b>
+                                </div>
+
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        marginTop: 5,
+                                        color: 'var(--color-text-muted)',
+                                    }}
+                                >
+                                    <span>いま交換できる</span>
+                                    <b
+                                        style={{
+                                            color: '#9a7326',
+                                            fontVariantNumeric: 'tabular-nums',
+                                        }}
+                                    >
+                                        {
+                                            placed.filter(
+                                                (one) => one.state === 'ready',
+                                            ).length
+                                        }{' '}
+                                        個
+                                    </b>
+                                </div>
+
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        marginTop: 5,
+                                        color: 'var(--color-text-muted)',
+                                    }}
+                                >
+                                    <span>手持ち</span>
+                                    <b
+                                        style={{
+                                            color: 'var(--color-brand)',
+                                            fontVariantNumeric: 'tabular-nums',
+                                        }}
+                                    >
+                                        {points.toLocaleString()} pt
+                                    </b>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )
@@ -810,16 +991,14 @@ export default function ItemTree() {
  * 親から子へ引く線。
  *
  * ★ 斜めではなく、縦・横で曲げる。
- *
  *   斜めの線が交差すると、
  *   どれがどれに繋がっているか分からなくなる。
- *   縦に降りて、横へ寄って、また縦に降りる。
  */
 function elbow(x1: number, y1: number, x2: number, y2: number): string {
     if (Math.abs(x1 - x2) < 1) return `M${x1} ${y1} L${x2} ${y2}`
 
-    const mid = y1 + (y2 - y1) / 2
-    const r = 12
+    const mid = y1 + (y2 - y1) * 0.62
+    const r = 14
     const dir = x2 > x1 ? 1 : -1
 
     return [
@@ -830,6 +1009,15 @@ function elbow(x1: number, y1: number, x2: number, y2: number): string {
         `Q${x2} ${mid} ${x2} ${mid + r}`,
         `L${x2} ${y2}`,
     ].join(' ')
+}
+
+/** どの額を使うか */
+function ringOf(item: Placed, hidden: boolean): string {
+    if (item.state === 'owned') return RING.owned
+    if (hidden) return RING.secret
+    if (item.state === 'locked') return RING.locked
+    if (item.tier >= 5) return RING.goal
+    return RING[item.state] ?? RING.poor
 }
 
 /** 品物ひとつ */
@@ -847,27 +1035,73 @@ function Node({
     onPick: () => void
 }) {
     const hidden = item.is_secret && item.state !== 'owned'
-    const color = KIND_COLOR[item.kind] ?? '#999'
 
     /* いちばん奥の品物は、大きく */
     const isGoal = item.tier >= 5
-    const size = isGoal ? 80 : NODE
+    const size = isGoal ? 128 : NODE
+
+    const art = item.asset_url ?? STAND_IN
+
+    /*
+     * ★ いちばん奥で、まだ中身を伏せているものは、
+     *   丸ではなく横長の札で出す。
+     *
+     *   絵に値段と「まだ見ぬアイテムがここに」が
+     *   描き込まれているので、下の札は付けない。
+     */
+    if (isGoal && hidden) {
+        return (
+            <button
+                type="button"
+                onClick={onPick}
+                style={{
+                    position: 'absolute',
+                    left: item.x,
+                    top: item.y,
+                    transform: chosen
+                        ? 'translate(-50%, -50%) scale(1.05)'
+                        : 'translate(-50%, -50%)',
+                    transition: 'transform .16s ease',
+                    zIndex: chosen ? 3 : 1,
+                    width: GOAL_W,
+                    padding: 0,
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                    opacity: dim ? 0.28 : 1,
+                    filter: chosen
+                        ? 'drop-shadow(0 0 12px rgba(217,164,65,.9))'
+                        : 'drop-shadow(0 5px 12px rgba(40,70,95,.2))',
+                }}
+            >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src={GOAL_PLATE}
+                    alt=""
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
+                />
+            </button>
+        )
+    }
 
     return (
         <button
             type="button"
-            disabled={item.state === 'coming'}
+            /*
+             * ★ どの様子でも、押せる。
+             *
+             *   前は「まだ用意していない」ものを押せなくしていた。
+             *   置いてあるのは全部まだ用意前なので、
+             *   どれを押しても何も起きなかった。
+             *   中身は右の欄で伝えればよい。
+             */
             onClick={onPick}
             style={{
                 position: 'absolute',
                 left: item.x,
                 top: item.y,
-                /*
-                 * ★ 選んでいるものは、少し大きく。
-                 *   右の欄とどれが繋がっているか、ひと目で分かる。
-                 */
                 transform: chosen
-                    ? 'translate(-50%, -50%) scale(1.08)'
+                    ? 'translate(-50%, -50%) scale(1.07)'
                     : 'translate(-50%, -50%)',
                 transition: 'transform .16s ease',
                 zIndex: chosen ? 3 : 1,
@@ -877,12 +1111,8 @@ function Node({
                 padding: 0,
                 border: 'none',
                 background: 'none',
-                cursor: item.state === 'coming' ? 'default' : 'pointer',
-                opacity: dim
-                    ? 0.2
-                    : item.state === 'ready' || item.state === 'owned'
-                      ? 1
-                      : 0.62,
+                cursor: 'pointer',
+                opacity: dim ? 0.28 : 1,
             }}
         >
             <span
@@ -890,119 +1120,50 @@ function Node({
                     position: 'relative',
                     width: size,
                     height: size,
-                    borderRadius: '50%',
+                    display: 'block',
                     /*
-                     * ★ 中は白一色。
-                     *
-                     *   色を敷くと、絵が入ったときに濁る。
-                     *   ここは額の中。色は外の装飾で出す。
+                     * ★ 選んでいるものは、後ろを光らせる。
+                     *   額の形を崩さずに、居場所が分かる。
                      */
-                    background: '#fff',
-                    /*
-                     * ★ 取れるものは、金色で光らせる。
-                     *
-                     *   「あと少しで取れそう」が、
-                     *   目に飛び込むようにする。
-                     */
-                    /*
-                     * ★ 器を作る。
-                     *
-                     *   絵を入れる場所なので、
-                     *   中は白く、外に二重の縁を巻く。
-                     *
-                     *     内側  細い白。絵を額から浮かせる
-                     *     外側  状態の色。太く
-                     *     その外 光。買えるものだけ強く
-                     *
-                     *   絵が無いいまは、器だけが見える。
-                     *   絵が入れば、そのまま額になる。
-                     */
-                    /*
-                     * ★ 白い丸のまわりに、輪を重ねる。
-                     *
-                     *   縁の線 1 本だけだと、平たい円に見える。
-                     *   内側に細い輪、外に太い輪、
-                     *   さらに外に淡い光。三重にすると、
-                     *   絵が額に収まっているように見える。
-                     *
-                     * ★ 状態は、外の輪の色で表す。
-                     *   中を塗ると、絵が入ったとき濁る。
-                     */
-                    border: 'none',
-                    boxShadow:
-                        item.state === 'owned'
-                            ? [
-                                  '0 0 0 1px rgba(255,255,255,.9)',
-                                  '0 0 0 4px #5fa88a',
-                                  '0 0 0 8px rgba(95,168,138,.16)',
-                                  '0 6px 18px rgba(60,120,100,.28)',
-                              ].join(', ')
-                            : item.state === 'ready'
-                              ? [
-                                    '0 0 0 1px rgba(255,255,255,.9)',
-                                    '0 0 0 4px #d9a441',
-                                    '0 0 0 9px rgba(217,164,65,.2)',
-                                    '0 0 0 14px rgba(217,164,65,.08)',
-                                    '0 6px 20px rgba(190,140,50,.3)',
-                                ].join(', ')
-                              : hidden
-                                ? [
-                                      '0 0 0 1px rgba(255,255,255,.9)',
-                                      '0 0 0 2px rgba(120,160,185,.34)',
-                                      '0 3px 10px rgba(40,60,80,.09)',
-                                  ].join(', ')
-                                : [
-                                      '0 0 0 1px rgba(255,255,255,.9)',
-                                      `0 0 0 3px ${color}66`,
-                                      `0 0 0 7px ${color}14`,
-                                      '0 3px 12px rgba(40,60,80,.11)',
-                                  ].join(', '),
-                    outline: chosen ? '2px dashed var(--color-brand)' : 'none',
-                    outlineOffset: 9,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: isGoal ? 28 : 22,
-                    color: hidden ? 'var(--color-text-faint)' : color,
-                    overflow: 'hidden',
+                    filter: chosen
+                        ? 'drop-shadow(0 0 10px rgba(217,164,65,.85))'
+                        : 'drop-shadow(0 4px 8px rgba(40,70,95,.16))',
                 }}
             >
-                {!hidden && item.asset_url ? (
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src={ringOf(item, hidden)}
+                    alt=""
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                    }}
+                />
+
+                {/*
+                  * ★ 中の絵は、額の上に載せる。
+                  *
+                  *   額の白い面は塗り潰してあるので、
+                  *   後ろに置くと透けて見えない。
+                  */}
+                {!hidden && item.state !== 'locked' && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                        src={item.asset_url}
+                        src={art}
                         alt=""
                         style={{
-                            width: '100%',
-                            height: '100%',
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: `${ART * 100}%`,
+                            height: `${ART * 100}%`,
                             objectFit: 'contain',
+                            opacity: item.state === 'coming' ? 0.55 : 1,
                         }}
                     />
-                ) : hidden ? (
-                    isGoal ? '🔒' : '?'
-                ) : (
-                    (KIND_MARK[item.kind] ?? '?')
-                )}
-
-                {item.state === 'owned' && (
-                    <span
-                        style={{
-                            position: 'absolute',
-                            top: -2,
-                            right: -2,
-                            width: 20,
-                            height: 20,
-                            borderRadius: '50%',
-                            background: 'var(--color-brand)',
-                            color: '#fff',
-                            fontSize: 11,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}
-                    >
-                        ✓
-                    </span>
                 )}
             </span>
 
@@ -1012,13 +1173,15 @@ function Node({
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 1,
-                    marginTop: -8,
-                    padding: '4px 9px 5px',
-                    borderRadius: 7,
-                    background: 'var(--color-bg-card)',
-                    border: '1px solid var(--color-brand-border)',
-                    boxShadow: '0 1px 3px rgba(40,35,25,.07)',
-                    minWidth: 72,
+                    marginTop: -10,
+                    padding: '4px 10px 5px',
+                    borderRadius: 8,
+                    background: 'rgba(255,255,255,.94)',
+                    border: '1px solid rgba(120,160,185,.4)',
+                    boxShadow: '0 2px 6px rgba(40,70,95,.14)',
+                    minWidth: 76,
+                    position: 'relative',
+                    zIndex: 2,
                 }}
             >
                 <span
@@ -1033,18 +1196,31 @@ function Node({
 
                 <span
                     style={{
-                        fontSize: 11,
+                        fontSize: 11.5,
                         fontWeight: 700,
                         color:
                             item.state === 'owned'
-                                ? 'var(--color-brand)'
-                                : 'var(--color-text)',
+                                ? '#3d7a63'
+                                : item.state === 'ready'
+                                  ? '#9a7326'
+                                  : item.state === 'coming'
+                                    ? 'var(--color-text-faint)'
+                                    : 'var(--color-text)',
                         fontVariantNumeric: 'tabular-nums',
+                        whiteSpace: 'nowrap',
                     }}
                 >
+                    {/*
+                      * ★ まだ用意していないものに値段を出さない。
+                      *
+                      *   「50 pt」と出ていれば、取れると思う。
+                      *   取れないものは、そう書く。
+                      */}
                     {item.state === 'owned'
                         ? '交換済み'
-                        : `${(item.free_price ?? 0).toLocaleString()} pt`}
+                        : item.state === 'coming'
+                          ? '準備中'
+                          : `${(item.free_price ?? 0).toLocaleString()} pt`}
                 </span>
             </span>
         </button>
@@ -1054,12 +1230,7 @@ function Node({
 /**
  * 選んだ品物の中身。
  *
- * ★ 目指す絵と同じ、右に立てる額にする。
- *
- *   前は「名前・説明・ボタン」だけの札だった。
- *   絵が主役の画面なのに、右が字ばかりでは釣り合わない。
- *
- *   上に大きな額、下に使い道と仲間。
+ * ★ 上に大きな額、下に使い道と仲間。
  *   絵が入る場所を先に作っておけば、
  *   描き上がったものを入れるだけで形になる。
  */
@@ -1089,7 +1260,8 @@ function Detail({
     const owned = ownedIds.includes(item.id)
     const hidden = item.is_secret && !owned
     const price = item.free_price ?? 0
-    const color = KIND_COLOR[item.kind] ?? '#7a93a8'
+    const color = KIND_COLOR[item.kind] ?? '#5f849c'
+    const art = item.asset_url ?? STAND_IN
 
     /* 先に取っておく必要のあるもの */
     const needs = item.requires_item_id
@@ -1097,12 +1269,7 @@ function Detail({
         : null
     const needsDone = needs ? ownedIds.includes(needs.id) : true
 
-    /*
-     * 同じ種類の仲間。
-     *
-     * ★ ひとつ見ると、似たものも見たくなる。
-     *   木の中から探し直さずに済む。
-     */
+    /* 同じ種類の仲間 */
     const kin = all
         .filter((one) => one.kind === item.kind && one.id !== item.id)
         .sort((a, b) => a.tier - b.tier || a.position - b.position)
@@ -1112,24 +1279,18 @@ function Detail({
         <div
             style={{
                 borderRadius: 14,
-                border: '1px solid rgba(120,160,185,.32)',
-                background: '#fff',
-                boxShadow: '0 4px 16px rgba(40,70,95,.1)',
+                border: '1px solid rgba(120,160,185,.4)',
+                background: 'rgba(255,255,255,.96)',
+                boxShadow: '0 6px 22px rgba(40,70,95,.14)',
                 overflow: 'hidden',
             }}
         >
-            {/*
-              * ★ 上の帯。
-              *
-              *   種類の色をここだけに敷く。
-              *   額の中まで塗ると、絵が入ったとき濁る。
-              */}
             <div
                 style={{
                     position: 'relative',
-                    padding: '16px 16px 18px',
-                    background: `linear-gradient(180deg, ${color}1f 0%, ${color}08 60%, rgba(255,255,255,0) 100%)`,
-                    borderBottom: '1px solid rgba(120,160,185,.16)',
+                    padding: '14px 16px 16px',
+                    background: `linear-gradient(180deg, ${color}22 0%, ${color}0a 62%, rgba(255,255,255,0) 100%)`,
+                    borderBottom: '1px solid rgba(120,160,185,.18)',
                     textAlign: 'center',
                 }}
             >
@@ -1144,8 +1305,8 @@ function Detail({
                         width: 24,
                         height: 24,
                         borderRadius: '50%',
-                        border: '1px solid rgba(120,160,185,.3)',
-                        background: 'rgba(255,255,255,.8)',
+                        border: '1px solid rgba(120,160,185,.34)',
+                        background: 'rgba(255,255,255,.85)',
                         fontSize: 12,
                         lineHeight: 1,
                         color: 'var(--color-text-muted)',
@@ -1156,61 +1317,46 @@ function Detail({
                 </button>
 
                 {/*
-                  * ★ 大きな額。
-                  *
-                  *   木の丸と同じ作りを、そのまま大きくする。
-                  *   押したものが、そのまま右に来たと分かる。
+                  * ★ 木で押した額を、そのまま大きくする。
+                  *   押したものが右に来たと、ひと目で分かる。
                   */}
                 <span
                     style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 104,
-                        height: 104,
-                        margin: '2px auto 12px',
-                        borderRadius: '50%',
-                        background: '#fff',
-                        overflow: 'hidden',
-                        fontSize: 38,
-                        color: hidden ? 'var(--color-text-faint)' : color,
-                        boxShadow: owned
-                            ? [
-                                  '0 0 0 1px rgba(255,255,255,.9)',
-                                  '0 0 0 5px #5fa88a',
-                                  '0 0 0 10px rgba(95,168,138,.16)',
-                                  '0 8px 22px rgba(60,120,100,.24)',
-                              ].join(', ')
-                            : item.state === 'ready'
-                              ? [
-                                    '0 0 0 1px rgba(255,255,255,.9)',
-                                    '0 0 0 5px #d9a441',
-                                    '0 0 0 11px rgba(217,164,65,.2)',
-                                    '0 8px 22px rgba(190,140,50,.26)',
-                                ].join(', ')
-                              : [
-                                    '0 0 0 1px rgba(255,255,255,.9)',
-                                    `0 0 0 4px ${color}66`,
-                                    `0 0 0 9px ${color}14`,
-                                    '0 6px 18px rgba(40,60,80,.1)',
-                                ].join(', '),
+                        position: 'relative',
+                        display: 'block',
+                        width: 132,
+                        height: 132,
+                        margin: '2px auto 10px',
+                        filter: 'drop-shadow(0 4px 10px rgba(40,70,95,.18))',
                     }}
                 >
-                    {!hidden && item.asset_url ? (
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={ringOf(item, hidden)}
+                        alt=""
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            width: '100%',
+                            height: '100%',
+                        }}
+                    />
+
+                    {!hidden && item.state !== 'locked' && (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img
-                            src={item.asset_url}
+                            src={art}
                             alt=""
                             style={{
-                                width: '100%',
-                                height: '100%',
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                width: `${ART * 100}%`,
+                                height: `${ART * 100}%`,
                                 objectFit: 'contain',
                             }}
                         />
-                    ) : hidden ? (
-                        '🔒'
-                    ) : (
-                        (KIND_MARK[item.kind] ?? '?')
                     )}
                 </span>
 
@@ -1238,8 +1384,8 @@ function Detail({
                         style={{
                             padding: '2px 10px',
                             borderRadius: 999,
-                            background: `${color}1f`,
-                            color: '#4a5a66',
+                            background: `${color}26`,
+                            color: '#3f5462',
                             fontSize: 10.5,
                             fontWeight: 700,
                         }}
@@ -1251,8 +1397,8 @@ function Detail({
                         style={{
                             padding: '2px 10px',
                             borderRadius: 999,
-                            background: 'rgba(120,160,185,.14)',
-                            color: '#4a5a66',
+                            background: 'rgba(120,160,185,.18)',
+                            color: '#3f5462',
                             fontSize: 10.5,
                             fontWeight: 700,
                         }}
@@ -1265,8 +1411,8 @@ function Detail({
                             style={{
                                 padding: '2px 10px',
                                 borderRadius: 999,
-                                background: 'rgba(95,168,138,.18)',
-                                color: '#3d7a63',
+                                background: 'rgba(79,156,130,.2)',
+                                color: '#37705b',
                                 fontSize: 10.5,
                                 fontWeight: 700,
                             }}
@@ -1291,19 +1437,13 @@ function Detail({
                           'この品物の説明は、これから用意します。'}
                 </p>
 
-                {/*
-                  * ★ 値段は、行に分けて置く。
-                  *
-                  *   ボタンの字だけだと、
-                  *   手持ちと見比べられない。
-                  */}
                 {!owned && item.is_active && (
                     <div
                         style={{
                             marginTop: 12,
                             padding: '9px 12px',
                             borderRadius: 9,
-                            background: 'rgba(120,160,185,.08)',
+                            background: 'rgba(120,160,185,.1)',
                             fontSize: 11.5,
                         }}
                     >
@@ -1334,23 +1474,13 @@ function Detail({
                             }}
                         >
                             <span>手持ち</span>
-                            <span
-                                style={{
-                                    fontVariantNumeric: 'tabular-nums',
-                                }}
-                            >
+                            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 {points.toLocaleString()} pt
                             </span>
                         </div>
                     </div>
                 )}
 
-                {/*
-                  * ★ 先に取っておくものを出す。
-                  *
-                  *   押せない理由が分からないと、
-                  *   壊れていると思われる。
-                  */}
                 {needs && !needsDone && (
                     <button
                         type="button"
@@ -1361,8 +1491,8 @@ function Detail({
                             marginTop: 10,
                             padding: '8px 12px',
                             borderRadius: 9,
-                            border: '1px solid rgba(217,164,65,.45)',
-                            background: 'rgba(217,164,65,.1)',
+                            border: '1px solid rgba(217,164,65,.5)',
+                            background: 'rgba(217,164,65,.12)',
                             fontSize: 11,
                             lineHeight: 1.7,
                             color: '#8a6a25',
@@ -1384,10 +1514,10 @@ function Detail({
                             marginTop: 12,
                             padding: '9px 12px',
                             borderRadius: 9,
-                            background: 'rgba(95,168,138,.12)',
+                            background: 'rgba(79,156,130,.14)',
                             fontSize: 12,
                             fontWeight: 700,
-                            color: '#3d7a63',
+                            color: '#37705b',
                             textAlign: 'center',
                         }}
                     >
@@ -1399,8 +1529,9 @@ function Detail({
                             marginTop: 12,
                             padding: '9px 12px',
                             borderRadius: 9,
-                            background: 'rgba(120,160,185,.1)',
+                            background: 'rgba(120,160,185,.12)',
                             fontSize: 11.5,
+                            lineHeight: 1.8,
                             color: 'var(--color-text-muted)',
                             textAlign: 'center',
                         }}
@@ -1421,12 +1552,12 @@ function Detail({
                             border: 'none',
                             background:
                                 price > points || !needsDone
-                                    ? 'rgba(120,160,185,.22)'
-                                    : 'var(--color-brand)',
+                                    ? 'rgba(120,160,185,.24)'
+                                    : 'linear-gradient(180deg, #d9a441, #c08c2f)',
                             color:
                                 price > points || !needsDone
                                     ? 'var(--color-text-muted)'
-                                    : 'var(--color-text-inverse)',
+                                    : '#fff',
                             fontSize: 12.5,
                             fontWeight: 700,
                             cursor:
@@ -1456,17 +1587,10 @@ function Detail({
                     </p>
                 )}
 
-                {/*
-                  * ★ 使い道を見せる。
-                  *
-                  *   名前と値段だけでは、
-                  *   取ったあと何が変わるのか分からない。
-                  *   出る場所を、形で示す。
-                  */}
                 {!hidden && (
                     <>
                         <Line label="使い道" />
-                        <Usage kind={item.kind} color={color} item={item} />
+                        <Usage kind={item.kind} color={color} art={art} item={item} />
                     </>
                 )}
 
@@ -1474,13 +1598,7 @@ function Detail({
                     <>
                         <Line label="同じ種類" />
 
-                        <div
-                            style={{
-                                display: 'flex',
-                                gap: 8,
-                                flexWrap: 'wrap',
-                            }}
-                        >
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             {kin.map((one) => {
                                 const veil =
                                     one.is_secret && !ownedIds.includes(one.id)
@@ -1492,41 +1610,43 @@ function Detail({
                                         onClick={() => onJump(one.id)}
                                         title={veil ? 'シークレット' : one.name}
                                         style={{
-                                            width: 48,
-                                            height: 48,
-                                            borderRadius: '50%',
+                                            position: 'relative',
+                                            width: 54,
+                                            height: 54,
                                             border: 'none',
-                                            background: '#fff',
-                                            boxShadow: ownedIds.includes(one.id)
-                                                ? '0 0 0 1px #fff, 0 0 0 3px #5fa88a'
-                                                : `0 0 0 1px #fff, 0 0 0 2px ${color}55`,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: 17,
-                                            color: veil
-                                                ? 'var(--color-text-faint)'
-                                                : color,
-                                            cursor: 'pointer',
-                                            overflow: 'hidden',
+                                            background: 'none',
                                             padding: 0,
+                                            cursor: 'pointer',
                                         }}
                                     >
-                                        {!veil && one.asset_url ? (
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={ringOf(one, veil)}
+                                            alt=""
+                                            style={{
+                                                position: 'absolute',
+                                                inset: 0,
+                                                width: '100%',
+                                                height: '100%',
+                                            }}
+                                        />
+
+                                        {!veil && one.state !== 'locked' && (
                                             /* eslint-disable-next-line @next/next/no-img-element */
                                             <img
-                                                src={one.asset_url}
+                                                src={one.asset_url ?? STAND_IN}
                                                 alt=""
                                                 style={{
-                                                    width: '100%',
-                                                    height: '100%',
+                                                    position: 'absolute',
+                                                    left: '50%',
+                                                    top: '50%',
+                                                    transform:
+                                                        'translate(-50%, -50%)',
+                                                    width: `${ART * 100}%`,
+                                                    height: `${ART * 100}%`,
                                                     objectFit: 'contain',
                                                 }}
                                             />
-                                        ) : veil ? (
-                                            '?'
-                                        ) : (
-                                            (KIND_MARK[one.kind] ?? '?')
                                         )}
                                     </button>
                                 )
@@ -1565,7 +1685,7 @@ function Line({ label }: { label: string }) {
                 style={{
                     flex: 1,
                     height: 1,
-                    background: 'rgba(120,160,185,.22)',
+                    background: 'rgba(120,160,185,.26)',
                 }}
             />
         </div>
@@ -1575,32 +1695,27 @@ function Line({ label }: { label: string }) {
 /**
  * 使い道の見本。
  *
- * ★ 絵が無くても、出る場所は見せられる。
- *
- *   スタンプなら、感想の吹き出しの中。
- *   フレームなら、丸い顔の周り。
- *   背景なら、部屋の地。
- *
- *   器だけ先に作っておけば、
- *   絵ができたとき、そのまま収まる。
+ * ★ 出る場所を、形で示す。
+ *   名前と値段だけでは、
+ *   取ったあと何が変わるのか分からない。
  */
 function Usage({
     kind,
     color,
+    art,
     item,
 }: {
     kind: string
     color: string
+    art: string
     item: Placed
 }) {
-    const mark = KIND_MARK[kind] ?? '?'
-
     const box: React.CSSProperties = {
         padding: 12,
         borderRadius: 10,
         background:
-            'linear-gradient(180deg, rgba(120,160,185,.07) 0%, rgba(120,160,185,.03) 100%)',
-        border: '1px solid rgba(120,160,185,.16)',
+            'linear-gradient(180deg, rgba(120,160,185,.08) 0%, rgba(120,160,185,.03) 100%)',
+        border: '1px solid rgba(120,160,185,.18)',
     }
 
     const note: React.CSSProperties = {
@@ -1610,17 +1725,15 @@ function Usage({
         color: 'var(--color-text-faint)',
     }
 
-    const art = (size: number) =>
-        item.asset_url ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-                src={item.asset_url}
-                alt=""
-                style={{ width: size, height: size, objectFit: 'contain' }}
-            />
-        ) : (
-            <span style={{ fontSize: size * 0.62, color }}>{mark}</span>
-        )
+    /* eslint-disable-next-line @next/next/no-img-element */
+    const picture = (size: number) => (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+            src={art}
+            alt=""
+            style={{ width: size, height: size, objectFit: 'contain' }}
+        />
+    )
 
     if (kind === 'stamp') {
         return (
@@ -1631,7 +1744,7 @@ function Usage({
                             width: 26,
                             height: 26,
                             borderRadius: '50%',
-                            background: 'rgba(120,160,185,.22)',
+                            background: 'rgba(120,160,185,.24)',
                             flex: '0 0 auto',
                         }}
                     />
@@ -1642,7 +1755,7 @@ function Usage({
                             padding: '8px 10px',
                             borderRadius: '2px 10px 10px 10px',
                             background: '#fff',
-                            border: '1px solid rgba(120,160,185,.2)',
+                            border: '1px solid rgba(120,160,185,.22)',
                         }}
                     >
                         <span
@@ -1651,7 +1764,7 @@ function Usage({
                                 height: 6,
                                 width: '76%',
                                 borderRadius: 3,
-                                background: 'rgba(120,160,185,.2)',
+                                background: 'rgba(120,160,185,.22)',
                             }}
                         />
                         <span
@@ -1659,15 +1772,10 @@ function Usage({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: 46,
-                                height: 46,
                                 marginTop: 8,
-                                borderRadius: 8,
-                                background: `${color}12`,
-                                border: `1px dashed ${color}66`,
                             }}
                         >
-                            {art(30)}
+                            {picture(64)}
                         </span>
                     </span>
                 </div>
@@ -1680,26 +1788,42 @@ function Usage({
     if (kind === 'frame' || kind === 'name_style') {
         return (
             <div style={box}>
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                    }}
-                >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span
                         style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: '50%',
-                            background: 'rgba(120,160,185,.22)',
-                            boxShadow:
-                                kind === 'frame'
-                                    ? `0 0 0 2px #fff, 0 0 0 5px ${color}`
-                                    : 'none',
+                            position: 'relative',
+                            width: 52,
+                            height: 52,
                             flex: '0 0 auto',
                         }}
-                    />
+                    >
+                        <span
+                            style={{
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                width: 34,
+                                height: 34,
+                                borderRadius: '50%',
+                                background: 'rgba(120,160,185,.3)',
+                            }}
+                        />
+                        {kind === 'frame' && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                                src={art}
+                                alt=""
+                                style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'contain',
+                                }}
+                            />
+                        )}
+                    </span>
 
                     <span style={{ flex: 1 }}>
                         <span
@@ -1711,7 +1835,7 @@ function Usage({
                                 background:
                                     kind === 'name_style'
                                         ? `linear-gradient(90deg, ${color}, ${color}44)`
-                                        : 'rgba(120,160,185,.3)',
+                                        : 'rgba(120,160,185,.32)',
                             }}
                         />
                         <span
@@ -1721,7 +1845,7 @@ function Usage({
                                 width: '40%',
                                 marginTop: 6,
                                 borderRadius: 3,
-                                background: 'rgba(120,160,185,.16)',
+                                background: 'rgba(120,160,185,.18)',
                             }}
                         />
                     </span>
@@ -1744,25 +1868,12 @@ function Usage({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        height: 74,
+                        height: 78,
                         borderRadius: 8,
-                        background: item.asset_url
-                            ? `center / cover no-repeat url(${item.asset_url})`
-                            : `repeating-linear-gradient(45deg, ${color}14 0 10px, ${color}08 10px 20px)`,
-                        border: '1px solid rgba(120,160,185,.2)',
+                        background: `center / cover no-repeat url(${art})`,
+                        border: '1px solid rgba(120,160,185,.22)',
                     }}
-                >
-                    {!item.asset_url && (
-                        <span
-                            style={{
-                                fontSize: 11,
-                                color: 'var(--color-text-faint)',
-                            }}
-                        >
-                            {kind === 'shelf' ? '本棚の地' : '部屋の地'}
-                        </span>
-                    )}
-                </span>
+                />
 
                 <p style={note}>
                     {kind === 'shelf'
@@ -1786,10 +1897,10 @@ function Usage({
                         background: '#fff',
                         border: `1px solid ${color}77`,
                         fontSize: 11,
-                        color: '#4a5a66',
+                        color: '#3f5462',
                     }}
                 >
-                    {art(14)}
+                    {picture(16)}
                     {item.name}
                 </span>
 
@@ -1805,15 +1916,16 @@ function Usage({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 58,
-                    height: 76,
+                    width: 62,
+                    height: 82,
                     borderRadius: '3px 7px 7px 3px',
                     background: '#fff',
-                    border: '1px solid rgba(120,160,185,.22)',
+                    border: '1px solid rgba(120,160,185,.24)',
                     borderLeft: `5px solid ${color}`,
+                    overflow: 'hidden',
                 }}
             >
-                {art(26)}
+                {picture(40)}
             </span>
 
             <p style={note}>本の見た目に使えます。</p>

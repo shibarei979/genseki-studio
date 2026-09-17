@@ -138,6 +138,7 @@ export default function ItemEditor() {
                 }}
             >
                 「前の品物」を決めると、アイテムツリーに線が引かれます。
+                「絵」は public/items に置いた絵の場所です（例 /items/it-book.webp）。
                 中身が揃うまでは「出す」を切っておいてください。
             </p>
 
@@ -174,6 +175,7 @@ export default function ItemEditor() {
                             <th style={{ padding: '4px 6px' }}>並び</th>
                             <th style={{ padding: '4px 6px' }}>種類</th>
                             <th style={{ padding: '4px 6px' }}>名前</th>
+                            <th style={{ padding: '4px 6px' }}>絵</th>
                             <th style={{ padding: '4px 6px' }}>値段</th>
                             <th style={{ padding: '4px 6px' }}>前の品物</th>
                             <th style={{ padding: '4px 6px' }}>伏せる</th>
@@ -245,6 +247,28 @@ export default function ItemEditor() {
                                         onBlur={(e) =>
                                             void save(item.id, {
                                                 name: e.target.value,
+                                            })
+                                        }
+                                        style={{ ...field, width: 150 }}
+                                    />
+                                </td>
+
+                                {/*
+                                  * 絵の場所。
+                                  *
+                                  * ★ public/items に置いた絵なら
+                                  *   /items/〇〇.webp と書く。
+                                  * ★ 空のままなら、仮の絵が出る。
+                                  */}
+                                <td style={{ padding: '5px 6px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="/items/〇〇.webp"
+                                        defaultValue={item.asset_url ?? ''}
+                                        onBlur={(e) =>
+                                            void save(item.id, {
+                                                asset_url:
+                                                    e.target.value.trim() || null,
                                             })
                                         }
                                         style={{ ...field, width: 150 }}
