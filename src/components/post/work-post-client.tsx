@@ -656,6 +656,23 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                             </p>
 
                             {/*
+                              * ★ 出していない話を、数えて言う。
+                              *
+                              *   「1 / 4話が投稿済み」だけでは静かすぎる。
+                              *   引き算をして、はじめて足りないと気づく。
+                              */}
+                            {episodes.length - posted > 0 && (
+                                <p className="mt-2.5 rounded-md bg-[var(--color-amber-tint)] px-3 py-2 text-[11.5px] leading-relaxed text-ink">
+                                    <strong>
+                                        まだ出していない話が
+                                        {episodes.length - posted}話あります。
+                                    </strong>
+                                    <br />
+                                    出すまで、読者の目次には出ません。
+                                </p>
+                            )}
+
+                            {/*
                              * 読者から見た姿を確かめる。
                              * 出したあとで気づくより、先に見ておくほうがよい。
                              */}

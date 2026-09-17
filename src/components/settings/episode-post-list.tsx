@@ -84,6 +84,28 @@ export default function EpisodePostList({
                     )}
                 </p>
 
+                {/*
+                  * ★ 出していない話を、数えて言う。
+                  *
+                  *   「1 / 4話が投稿済み」だけでは静かすぎる。
+                  *   引き算をして、はじめて足りないと気づく。
+                  *
+                  *   出していない数を、そのまま言う。
+                  *   読者に見えていないことも、続けて言う。
+                  *
+                  *   「全4話なのに目次で1話しか出ない」という
+                  *   問い合わせが続いたので、ここで止める。
+                  */}
+                {episodes.length - posted > 0 && (
+                    <p className="mt-3 rounded-md bg-[var(--color-amber-tint)] px-3.5 py-2.5 text-xs leading-relaxed text-ink">
+                        <strong>
+                            まだ出していない話が{episodes.length - posted}話あります。
+                        </strong>
+                        <br />
+                        出すまで、読者の目次には出ません。
+                    </p>
+                )}
+
                 {!isWorkPublic && episodes.length > 0 && (
                     <p className="mt-3 rounded-md bg-[var(--color-amber-tint)] px-3.5 py-2.5 text-xs leading-relaxed text-ink">
                         作品が公開されていません。

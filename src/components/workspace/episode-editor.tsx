@@ -545,7 +545,11 @@ export default function EpisodeEditor({
                 </div>
 
                 <div className="thin-scroll flex w-full shrink-0 items-center gap-2 overflow-x-auto text-[11px] text-muted lg:w-auto lg:gap-2.5">
-                    <SaveIndicator state={state} savedAt={savedAt} />
+                    <SaveIndicator
+                        state={state}
+                        savedAt={savedAt}
+                        isDraft={episode.is_published === false}
+                    />
                     <span>{formatNumber(countChars(body))}文字</span>
                     <button
                         type="button"
@@ -923,17 +927,46 @@ export default function EpisodeEditor({
     );
 }
 
-function SaveIndicator({ state, savedAt }: { state: string; savedAt: string | null }) {
+function SaveIndicator({
+    state,
+    savedAt,
+    isDraft,
+}: {
+    state: string;
+    savedAt: string | null;
+    /** まだ出していない話か */
+    isDraft?: boolean;
+}) {
     if (state === "saving") return <span>保存中</span>;
     if (state === "pending") return <span className="text-faint">未保存の変更</span>;
+
     /*
-     * 保存できたときは青緑にする。
+     * ★ 出していない話は、そう言う。
      *
-     * 黒のままだと、他の文字に紛れて気づかない。
-     * 「保存された」と分かることが、書く人の安心になる。
+     *   「自動保存済み」とだけ出ていると、
+     *   保存した＝出た、と思う人がいる。
+     *   実際「全4話なのに目次で1話しか出ない」という
+     *   問い合わせが続いた。
+     *
+     *   保存できたことと、出ていないことは別のこと。
+     *   同じ場所で、両方言う。
+     *
+     * ★ 色も分ける。
+     *     出ている  青緑。安心してよい
+     *     下書き    琥珀。まだ途中
      */
-    if (state === "saved" && savedAt)
+    if (state === "saved" && savedAt) {
+        if (isDraft) {
+            return (
+                <span className="text-amber">
+                    下書きに保存 {formatTime(savedAt)}・まだ出していません
+                </span>
+            );
+        }
+
         return <span className="text-forest">自動保存済み {formatTime(savedAt)}</span>;
+    }
+
     return <span className="text-faint">自動保存</span>;
 }
 
