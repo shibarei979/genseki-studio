@@ -31,9 +31,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         { path: "/about", changeFrequency: "monthly", priority: 0.5 },
         /*
          * 検索から来た人が最初に見る所。
-         * 探す・ランキング・おすすめは、そこから作品へ入る入口になる。
+         * ランキング・おすすめは、そこから作品へ入る入口になる。
+         *
+         * ★ /search は地図に載せない。
+         *
+         *   自分の中の検索結果を検索エンジンに預けるのは、
+         *   Google が明確に避けるよう言っている作りで、
+         *   「中身の薄いページ」として数えられる。
+         *   入口としては、ランキングと一覧で足りる。
          */
-        { path: "/search", changeFrequency: "daily", priority: 0.9 },
         { path: "/ranking", changeFrequency: "daily", priority: 0.9 },
         { path: "/recommend", changeFrequency: "daily", priority: 0.8 },
         { path: "/works", changeFrequency: "daily", priority: 0.7 },

@@ -30,6 +30,22 @@ export default function robots(): MetadataRoute.Robots {
                     "/rooms/",
                     "/login",
                     "/auth/",
+
+                    /*
+                     * ★ 絞り込んだ検索結果は、拾わせない。
+                     *
+                     *   言葉・ジャンル・並び順の組み合わせは
+                     *   いくらでも作れるので、中身の薄いページが
+                     *   際限なく検索エンジンに溜まる。
+                     *   Google は、これを品質の低い作りとして扱う。
+                     *
+                     *   作品そのものは sitemap で直に渡しているので、
+                     *   ここを塞いでも作品が拾われなくなることはない。
+                     */
+                    "/search?",
+                    "/works?",
+                    "/ranking?",
+                    "/recommend?",
                 ],
             },
         ],
