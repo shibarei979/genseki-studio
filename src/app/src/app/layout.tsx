@@ -165,6 +165,21 @@ const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
  */
 const adsenseClient = "ca-pub-6967115026241459";
 
+/*
+ * Google アナリティクス（GA4）。
+ *
+ * ★ 画面の移り変わりは、GA 側の「拡張計測機能」が拾う。
+ *   このサイトは頁を丸ごと読み直さない作りだが、
+ *   履歴の変化を GA が見ているので、別の仕込みは要らない。
+ *
+ * ★ 本番の住所でだけ数える。
+ *
+ *   手元での作業や、Vercel の試しの配置まで数えると、
+ *   自分の足跡で数字が濁る。
+ *   下の script の中で、住所を見てから数え始める。
+ */
+const gaId = "G-9KLY4SXWXL";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="ja" className={`${notoSans.variable} ${notoSerif.variable}`}>
@@ -181,6 +196,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     crossOrigin="anonymous"
                     src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
                 />
+
+                {gaId && (
+                    <>
+                        <Script
+                            id="ga-src"
+                            strategy="afterInteractive"
+                            src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+                        />
+                        <Script id="ga-init" strategy="afterInteractive">
+                            {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+if (location.hostname === 'gensekikoro.com' || location.hostname === 'www.gensekikoro.com') {
+  gtag('config', '${gaId}');
+}`}
+                        </Script>
+                    </>
+                )}
 
                 {gtmId && (
                     <>
