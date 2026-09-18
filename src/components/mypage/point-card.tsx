@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 
+import { createClient } from '@/lib/supabase/client'
+
 /**
  * ============================================================
  * 原石航路 Studio
@@ -37,12 +39,70 @@ function isSoon(at: string): boolean {
     return left <= month
 }
 
+
+/**
+ * この人は運営か。
+ *
+ * ★ ポイントは、まだ試している最中。
+ *
+ *   読む人に見えてしまうと、
+ *   「これは何に使えるのか」と聞かれることになる。
+ *   中身が揃うまでは、運営だけに見せる。
+ *
+ * ★ 開けるときは、この gate を外すだけでよい。
+ */
+function useIsOperator(): boolean | null {
+    const [isOperator, setIsOperator] = useState<boolean | null>(null)
+
+    useEffect(() => {
+        let alive = true
+
+        void (async () => {
+            try {
+                const supabase = createClient()
+                const { data: auth } = await supabase.auth.getUser()
+                const userId = auth.user?.id
+
+                if (!userId) {
+                    if (alive) setIsOperator(false)
+                    return
+                }
+
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('is_admin')
+                    .eq('user_id', userId)
+                    .maybeSingle()
+
+                if (alive) {
+                    setIsOperator(
+                        (data as { is_admin?: boolean } | null)?.is_admin ===
+                            true,
+                    )
+                }
+            } catch {
+                /* 調べられなければ、出さない */
+                if (alive) setIsOperator(false)
+            }
+        })()
+
+        return () => {
+            alive = false
+        }
+    }, [])
+
+    return isOperator
+}
+
 export default function PointCard() {
     const [free, setFree] = useState<number | null>(null)
     const [expiresAt, setExpiresAt] = useState<string | null>(null)
     const [expiresAmount, setExpiresAmount] = useState(0)
+    const isOperator = useIsOperator()
 
     useEffect(() => {
+        if (isOperator !== true) return
+
         let alive = true
 
         void (async () => {
@@ -69,7 +129,10 @@ export default function PointCard() {
         return () => {
             alive = false
         }
-    }, [])
+    }, [isOperator])
+
+    /* いまは運営だけに見せている */
+    if (isOperator !== true) return null
 
     /* 読めていないあいだは、場所を取らない */
     if (free === null) return null
