@@ -502,7 +502,7 @@ export default function ItemTree() {
                  *   そのままだと、字も額も絵に負ける。
                  */
                 position: 'relative',
-                background: '#dde8eb',
+                background: '#eef5fa',
                 border: '1px solid rgba(120,160,185,.3)',
                 borderRadius: 16,
                 boxShadow: [
@@ -558,11 +558,14 @@ export default function ItemTree() {
             {/*
               * ★ 地の絵は、板いっぱいに敷く。
               *
-              *   前は上の方にだけ敷いて下へ消していたので、
-              *   木の下半分が、ただの薄い水色になっていた。
+              *   縦長の絵をもらったので、そのまま使う。
               *
-              *   絵の下に水を継ぎ足して縦に長くしてあるので、
-              *   板がどれだけ伸びても、下まで景色が続く。
+              * ★ 幅に合わせず、板を覆うように伸ばす。
+              *
+              *   幅だけ合わせると、板が絵より縦に長いとき
+              *   下が余って、そこだけ空き地になる。
+              *   覆うように置けば、どんな形の板でも埋まる。
+              *   （横に長い画面では、下のほうが切れる）
               *
               * ★ 上から薄い白を重ねて、字と額を立たせる。
               *   下のほうは薄くしすぎない。空き地に見える。
@@ -573,7 +576,7 @@ export default function ItemTree() {
                     position: 'absolute',
                     inset: 0,
                     background:
-                        'url(/items/tree-bg.webp) center top / 100% auto no-repeat',
+                        'url(/items/tree-bg.webp) center top / cover no-repeat',
                     WebkitMaskImage:
                         'linear-gradient(180deg, rgba(0,0,0,.95) 0%, rgba(0,0,0,.7) 45%, rgba(0,0,0,.62) 100%)',
                     maskImage:
@@ -800,6 +803,7 @@ export default function ItemTree() {
                                         paddingLeft: 12,
                                         borderLeft:
                                             '2px solid rgba(96,140,170,.55)',
+                                        boxShadow: '-1px 0 0 rgba(255,255,255,.7)',
                                         pointerEvents: 'none',
                                     }}
                                 >
@@ -822,8 +826,16 @@ export default function ItemTree() {
                                             fontWeight: 700,
                                             color: 'var(--color-brand)',
                                             letterSpacing: '.02em',
-                                            textShadow:
-                                                '0 1px 0 rgba(255,255,255,.9)',
+                                            /*
+                                             * ★ 白い光を背負わせる。
+                                             *   下のほうは景色が細かいので、
+                                             *   影一枚では字が埋もれる。
+                                             */
+                                            textShadow: [
+                                                '0 1px 0 rgba(255,255,255,.95)',
+                                                '0 0 6px rgba(255,255,255,.95)',
+                                                '0 0 14px rgba(255,255,255,.85)',
+                                            ].join(', '),
                                         }}
                                     >
                                         {label.title}
@@ -833,9 +845,12 @@ export default function ItemTree() {
                                             marginTop: 2,
                                             fontSize: 9.5,
                                             lineHeight: 1.5,
-                                            color: '#6d8190',
-                                            textShadow:
-                                                '0 1px 0 rgba(255,255,255,.9)',
+                                            color: '#5f7585',
+                                            textShadow: [
+                                                '0 1px 0 rgba(255,255,255,.95)',
+                                                '0 0 6px rgba(255,255,255,.95)',
+                                                '0 0 12px rgba(255,255,255,.85)',
+                                            ].join(', '),
                                         }}
                                     >
                                         {label.note}
