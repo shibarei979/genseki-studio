@@ -85,6 +85,64 @@ interface Props {
   contests?: { id: string; title: string }[]
 }
 
+/**
+ * 入れた言葉の控え。
+ *
+ * ★ キーワードの欄だけ履歴があって、
+ *   題名・作者名の欄には無かった。
+ *
+ *   同じ作者をもう一度探すことは多いのに、
+ *   毎回打ち直しになっていた。
+ *
+ * ★ 見た目と操作は、キーワードの履歴と同じにする。
+ *   欄ごとに作法が違うと、覚え直しになる。
+ */
+function HistoryBox({
+  title, empty, items, value, open, onToggle, onPick, onClear,
+}: {
+  title: string
+  empty: string
+  items: string[]
+  value: string
+  open: boolean
+  onToggle: () => void
+  onPick: (word: string) => void
+  onClear: () => void
+}) {
+  return (
+    <div style={{marginTop:4}}>
+      <button type="button" onClick={onToggle}
+        style={{fontSize:10,color:'var(--color-text-muted)',background:'none',border:'none',cursor:'pointer',padding:0,display:'flex',alignItems:'center',gap:3}}>
+        {title}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          style={{transition:'transform .15s',transform:open?'rotate(180deg)':'rotate(0deg)'}}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      {open && (
+        <div style={{marginTop:4,padding:'8px',background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:8}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+            <span style={{fontSize:10,color:'var(--color-text-faint)'}}>最近の検索</span>
+            <button type="button" onClick={onClear}
+              style={{fontSize:10,color:'var(--color-text-faint)',background:'none',border:'none',cursor:'pointer',padding:0}}>クリア</button>
+          </div>
+          {items.length === 0
+            ? <div style={{fontSize:11,color:'var(--color-text-faint)'}}>{empty}</div>
+            : <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+              {items.map((h,i) => (
+                <button key={i} type="button" onClick={()=>onPick(h)}
+                  style={{padding:'2px 9px',borderRadius:10,fontSize:11,cursor:'pointer',
+                    background:value===h?'var(--color-brand)':'var(--color-bg-card)',color:value===h?'var(--color-bg-card)':'var(--color-text-muted)',
+                    border:`1px solid ${value===h?'var(--color-brand)':'var(--color-brand-border)'}`}}>{h}</button>
+              ))}
+            </div>
+          }
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SearchForm({
   defaultQ='', defaultExclude='', defaultGenre='', defaultType='',
   defaultSerial='', defaultTag='', defaultSort='new', ageVerified=false, defaultDiscover=false,
@@ -141,6 +199,10 @@ export default function SearchForm({
   const [showHistory,        setShowHistory]        = useState(false)
   const [exHistory,          setExHistory]          = useState<string[]>([])
   const [showExHistory,      setShowExHistory]      = useState(false)
+  const [nameHistory,        setNameHistory]        = useState<string[]>([])
+  const [showNameHistory,    setShowNameHistory]    = useState(false)
+  const [authorHistory,      setAuthorHistory]      = useState<string[]>([])
+  const [showAuthorHistory,  setShowAuthorHistory]  = useState(false)
   const [showMoods,          setShowMoods]          = useState(false)
   const [activeMoods,        setActiveMoods]        = useState<string[]>([])
   const [isMobile,           setIsMobile]           = useState(false)
@@ -159,6 +221,10 @@ export default function SearchForm({
       if (saved) setHistory(JSON.parse(saved))
       const savedEx = localStorage.getItem('exclude_history')
       if (savedEx) setExHistory(JSON.parse(savedEx))
+      const savedName = localStorage.getItem('name_history')
+      if (savedName) setNameHistory(JSON.parse(savedName))
+      const savedAuthor = localStorage.getItem('author_history')
+      if (savedAuthor) setAuthorHistory(JSON.parse(savedAuthor))
     } catch {}
   }, [])
 
@@ -203,6 +269,20 @@ export default function SearchForm({
         const neh = [exclude.trim(), ...exHistory.filter(h => h !== exclude.trim())].slice(0, MAX_HISTORY)
         setExHistory(neh)
         localStorage.setItem('exclude_history', JSON.stringify(neh))
+      } catch {}
+    }
+    if (name.trim()) {
+      try {
+        const nn = [name.trim(), ...nameHistory.filter(h => h !== name.trim())].slice(0, MAX_HISTORY)
+        setNameHistory(nn)
+        localStorage.setItem('name_history', JSON.stringify(nn))
+      } catch {}
+    }
+    if (author.trim()) {
+      try {
+        const na = [author.trim(), ...authorHistory.filter(h => h !== author.trim())].slice(0, MAX_HISTORY)
+        setAuthorHistory(na)
+        localStorage.setItem('author_history', JSON.stringify(na))
       } catch {}
     }
     /*
@@ -287,6 +367,16 @@ export default function SearchForm({
         <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:4}}>タイトル・作者名</div>
         <input value={name} onChange={e=>setName(e.target.value)} onKeyDown={handleKeyDown}
           placeholder="作品のタイトル、または作者名で検索" style={inp}/>
+        <HistoryBox
+          title="検索履歴"
+          empty="まだ検索履歴がありません"
+          items={nameHistory}
+          value={name}
+          open={showNameHistory}
+          onToggle={()=>setShowNameHistory(!showNameHistory)}
+          onPick={(w)=>setName(w)}
+          onClear={()=>{setNameHistory([]);try{localStorage.removeItem('name_history')}catch{}}}
+        />
       </div>
 
       {/* キーワード・除外 */}
@@ -355,7 +445,7 @@ export default function SearchForm({
         <div style={{flex:1}}>
           <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:4}}>除外キーワード</div>
           <input value={exclude} onChange={e=>setExclude(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder="含まない言葉・作者名" style={inp}/>
+            placeholder="含まない言葉を入力" style={inp}/>
           <div style={{marginTop:4}}>
             <button type="button" onClick={()=>setShowExHistory(!showExHistory)}
               style={{fontSize:10,color:'var(--color-text-muted)',background:'none',border:'none',cursor:'pointer',padding:0,display:'flex',alignItems:'center',gap:3}}>
@@ -566,6 +656,16 @@ export default function SearchForm({
             <input value={author} onChange={e=>setAuthor(e.target.value)}
               placeholder="作者名を入力..."
               style={{width:'100%',padding:'7px 10px',border:'1.5px solid var(--color-brand-border)',borderRadius:8,fontSize:12,outline:'none'}}/>
+            <HistoryBox
+              title="作者名の履歴"
+              empty="まだ作者名の履歴がありません"
+              items={authorHistory}
+              value={author}
+              open={showAuthorHistory}
+              onToggle={()=>setShowAuthorHistory(!showAuthorHistory)}
+              onPick={(w)=>setAuthor(w)}
+              onClear={()=>{setAuthorHistory([]);try{localStorage.removeItem('author_history')}catch{}}}
+            />
           </div>
         </div>
       )}
