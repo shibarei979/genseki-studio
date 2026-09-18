@@ -153,10 +153,72 @@ export const viewport: Viewport = {
  */
 const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
 
+/*
+ * AdSense の番号。
+ *
+ * ★ 所有権の確認は、上の metadata の other と
+ *   public/ads.txt の 2 つで済んでいる。
+ *   ここで読むのは、審査に通ったあと広告を出すため。
+ *
+ * ★ 審査が済むまでは、読み込んでも何も出ない。
+ *   先に入れておいて構わない。
+ */
+const adsenseClient = "ca-pub-6967115026241459";
+
+/*
+ * Google アナリティクス（GA4）。
+ *
+ * ★ 画面の移り変わりは、GA 側の「拡張計測機能」が拾う。
+ *   このサイトは頁を丸ごと読み直さない作りだが、
+ *   履歴の変化を GA が見ているので、別の仕込みは要らない。
+ *
+ * ★ 本番の住所でだけ数える。
+ *
+ *   手元での作業や、Vercel の試しの配置まで数えると、
+ *   自分の足跡で数字が濁る。
+ *   下の script の中で、住所を見てから数え始める。
+ */
+const gaId = "G-9KLY4SXWXL";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="ja" className={`${notoSans.variable} ${notoSerif.variable}`}>
             <body>
+                {/*
+                  * 広告。
+                  *
+                  * ★ Google が置き場所を決める形（自動広告）。
+                  *   どこに出すかは AdSense の画面で調整する。
+                  */}
+                {/*
+                  * ★ next/script ではなく、直に置く。
+                  *
+                  *   next/script（afterInteractive）だと、
+                  *   この作りでは読み込まれなかった。
+                  *   下の JSON-LD と同じ書き方なら、
+                  *   組み上がった頁にそのまま入る。
+                  */}
+                <script
+                    async
+                    crossOrigin="anonymous"
+                    src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
+                />
+
+                <script
+                    async
+                    src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+                />
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+if (location.hostname === 'gensekikoro.com' || location.hostname === 'www.gensekikoro.com') {
+  gtag('config', '${gaId}');
+}`,
+                    }}
+                />
+
                 {gtmId && (
                     <>
                         <Script id="gtm" strategy="afterInteractive">

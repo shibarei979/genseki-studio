@@ -190,30 +190,34 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   * ★ Google が置き場所を決める形（自動広告）。
                   *   どこに出すかは AdSense の画面で調整する。
                   */}
-                <Script
-                    id="adsense"
-                    strategy="afterInteractive"
+                {/*
+                  * ★ next/script ではなく、直に置く。
+                  *
+                  *   next/script（afterInteractive）だと、
+                  *   この作りでは読み込まれなかった。
+                  *   下の JSON-LD と同じ書き方なら、
+                  *   組み上がった頁にそのまま入る。
+                  */}
+                <script
+                    async
                     crossOrigin="anonymous"
                     src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
                 />
 
-                {gaId && (
-                    <>
-                        <Script
-                            id="ga-src"
-                            strategy="afterInteractive"
-                            src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-                        />
-                        <Script id="ga-init" strategy="afterInteractive">
-                            {`window.dataLayer = window.dataLayer || [];
+                <script
+                    async
+                    src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+                />
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 if (location.hostname === 'gensekikoro.com' || location.hostname === 'www.gensekikoro.com') {
   gtag('config', '${gaId}');
-}`}
-                        </Script>
-                    </>
-                )}
+}`,
+                    }}
+                />
 
                 {gtmId && (
                     <>
