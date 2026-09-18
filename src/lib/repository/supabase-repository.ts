@@ -15,6 +15,7 @@
  */
 
 import type { BackupFile, BackupSummary } from "@/lib/backup/format";
+import { countChars } from "@/lib/utils/text";
 import { jstDay } from "@/lib/utils/jst";
 import type { Repository, StudioCounts } from "@/lib/repository/types";
 import { createClient } from "@/lib/supabase/client";
@@ -771,8 +772,19 @@ export const supabaseRepository: Repository = {
         if (patch.title !== undefined) next.title = patch.title;
         if (patch.body !== undefined) {
             next.body = patch.body;
-            // 文字数はここで数える。読むたびに数え直さずに済む
-            next.char_count = patch.body.replace(/\s/g, "").length;
+            /*
+             * 文字数はここで数える。読むたびに数え直さずに済む。
+             *
+             * ★ 数え方は、書く画面と同じものを使う。
+             *
+             *   前はここだけ「空白を全部消して数える」だった。
+             *   書く画面は countChars（ルビの記法を外し、改行だけ数えない）。
+             *   同じ話なのに、画面によって数が違っていた。
+             *
+             *   ルビを振るほど DB 側が増え、
+             *   字下げの全角空白があると逆に減っていた。
+             */
+            next.char_count = countChars(patch.body);
         }
         if (patch.status !== undefined) next.draft_status = patch.status;
         if (patch.ep_number !== undefined) next.ep_number = patch.ep_number;
@@ -1081,7 +1093,7 @@ export const supabaseRepository: Repository = {
                         novel_id: workId,
                         title: row.title,
                         body: row.body,
-                        char_count: row.body.replace(/\s/g, "").length,
+                        char_count: countChars(row.body),
                         ep_number: next++,
                     })),
                 )
