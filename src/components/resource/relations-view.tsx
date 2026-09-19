@@ -29,12 +29,19 @@ interface Props {
     entries: ResourceEntry[];
     pages: ResourcePage[];
     episodes: Episode[];
+    /*
+     * ★ 終わるのを待てるようにする。
+     *
+     *   行きと帰りを続けて結ぶとき、
+     *   前の一本が入り終わってから次を入れないと、
+     *   読み直しが重なって片方が消えることがある。
+     */
     onCreate: (
         fromId: string,
         toId: string,
         label: string,
         lineStyle: "dashed" | "solid" | "arrow" | null,
-    ) => void;
+    ) => void | Promise<void>;
     onUpdate: (relationId: string, patch: Partial<ResourceRelation>) => void;
     onDelete: (relation: ResourceRelation) => void;
     onUpdatePage: (patch: Partial<ResourcePage>) => void;
@@ -129,6 +136,25 @@ export default function RelationsView({
     const [newStyle, setNewStyle] = useState<
         "dashed" | "solid" | "arrow" | null
     >(null);
+
+    /*
+     * 帰りの名前。
+     *
+     * ★ 向きのある間柄は、行きと帰りで言い分が違う。
+     *
+     *   「AはBを慕う」「BはAを疎む」のように、
+     *   片側だけでは足りないことがある。
+     *   これまでは、出発点と到達点を入れ替えて
+     *   もう一度結ぶしかなかった。
+     *
+     *   ここに書いておけば、帰りの一本も一緒に入る。
+     *
+     * ★ 空のままなら、行きだけ。
+     *
+     * ★ 矢印のときだけ出す。
+     *   向きの無い線に帰りの名前を付けても、意味がない。
+     */
+    const [backLabel, setBackLabel] = useState("");
 
     const entryById = new Map(entries.map((entry) => [entry.id, entry]));
     const pageById = new Map(pages.map((page) => [page.id, page]));
@@ -252,12 +278,64 @@ export default function RelationsView({
                                 ))}
                             </div>
 
+                            {/*
+                              * 帰りの名前。
+                              *
+                              * ★ 矢印を選んだときだけ出す。
+                              *
+                              *   いつも出しておくと 1 行に収まらないうえ、
+                              *   向きの無い線では使い道がない。
+                              *
+                              * ★ 空のままでも結べる。
+                              *   片側だけの間柄のほうが多い。
+                              */}
+                            {newStyle === "arrow" && (
+                                <label className="flex items-center gap-1">
+                                    <span
+                                        className="text-sm text-faint"
+                                        aria-hidden="true"
+                                    >
+                                        ←
+                                    </span>
+
+                                    <input
+                                        type="text"
+                                        value={backLabel}
+                                        onChange={(e) => setBackLabel(e.target.value)}
+                                        placeholder="帰りの名前（任意）"
+                                        aria-label="帰りの関係の名前"
+                                        title="到達点から出発点への名前。書くと、帰りの矢印も一緒に引きます"
+                                        className="w-36 rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
+                                    />
+                                </label>
+                            )}
+
                             <button
                                 type="button"
                                 disabled={!canCreate}
-                                onClick={() => {
-                                    onCreate(fromId, toId, label.trim(), newStyle);
+                                onClick={async () => {
+                                    await onCreate(
+                                        fromId,
+                                        toId,
+                                        label.trim(),
+                                        newStyle,
+                                    );
+
+                                    /*
+                                     * ★ 帰りの一本。
+                                     *
+                                     *   出発点と到達点を入れ替えて、もう一本引く。
+                                     *   図では、行きと帰りが別々の弧になる。
+                                     */
+                                    const back =
+                                        newStyle === "arrow" ? backLabel.trim() : "";
+
+                                    if (back) {
+                                        await onCreate(toId, fromId, back, "arrow");
+                                    }
+
                                     setLabel("");
+                                    setBackLabel("");
                                 }}
                                 className="rounded-md bg-forest px-4 py-1.5 text-sm text-white hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-40"
                             >
