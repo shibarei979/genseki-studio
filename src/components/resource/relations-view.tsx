@@ -30,11 +30,10 @@ interface Props {
     pages: ResourcePage[];
     episodes: Episode[];
     /*
-     * ★ 終わるのを待てるようにする。
+     * ★ 終わるのを待てるようにしておく。
      *
      *   行きと帰りを続けて結ぶとき、
-     *   前の一本が入り終わってから次を入れないと、
-     *   読み直しが重なって片方が消えることがある。
+     *   一本目が入り終わってから二本目を入れる。
      */
     onCreate: (
         fromId: string,
@@ -140,19 +139,18 @@ export default function RelationsView({
     /*
      * 帰りの名前。
      *
-     * ★ 向きのある間柄は、行きと帰りで言い分が違う。
+     * ★ 下の段の「関係を追加 ←」に書く。
      *
+     *   向きのある間柄は、行きと帰りで言い分が違う。
      *   「AはBを慕う」「BはAを疎む」のように、
      *   片側だけでは足りないことがある。
-     *   これまでは、出発点と到達点を入れ替えて
-     *   もう一度結ぶしかなかった。
      *
-     *   ここに書いておけば、帰りの一本も一緒に入る。
+     *   これまでは、出発点と到達点を選び直して
+     *   もう一度結ぶしかなかった。
+     *   下の段に書いておけば、帰りの一本も一緒に入る。
      *
      * ★ 空のままなら、行きだけ。
-     *
-     * ★ 矢印のときだけ出す。
-     *   向きの無い線に帰りの名前を付けても、意味がない。
+     *   片側だけの間柄のほうが多い。
      */
     const [backLabel, setBackLabel] = useState("");
 
@@ -278,38 +276,6 @@ export default function RelationsView({
                                 ))}
                             </div>
 
-                            {/*
-                              * 帰りの名前。
-                              *
-                              * ★ 矢印を選んだときだけ出す。
-                              *
-                              *   いつも出しておくと 1 行に収まらないうえ、
-                              *   向きの無い線では使い道がない。
-                              *
-                              * ★ 空のままでも結べる。
-                              *   片側だけの間柄のほうが多い。
-                              */}
-                            {newStyle === "arrow" && (
-                                <label className="flex items-center gap-1">
-                                    <span
-                                        className="text-sm text-faint"
-                                        aria-hidden="true"
-                                    >
-                                        ←
-                                    </span>
-
-                                    <input
-                                        type="text"
-                                        value={backLabel}
-                                        onChange={(e) => setBackLabel(e.target.value)}
-                                        placeholder="帰りの名前（任意）"
-                                        aria-label="帰りの関係の名前"
-                                        title="到達点から出発点への名前。書くと、帰りの矢印も一緒に引きます"
-                                        className="w-36 rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
-                                    />
-                                </label>
-                            )}
-
                             <button
                                 type="button"
                                 disabled={!canCreate}
@@ -325,13 +291,13 @@ export default function RelationsView({
                                      * ★ 帰りの一本。
                                      *
                                      *   出発点と到達点を入れ替えて、もう一本引く。
+                                     *   線の形は、行きと同じものを使う。
                                      *   図では、行きと帰りが別々の弧になる。
                                      */
-                                    const back =
-                                        newStyle === "arrow" ? backLabel.trim() : "";
+                                    const back = backLabel.trim();
 
                                     if (back) {
-                                        await onCreate(toId, fromId, back, "arrow");
+                                        await onCreate(toId, fromId, back, newStyle);
                                     }
 
                                     setLabel("");
@@ -360,6 +326,46 @@ export default function RelationsView({
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        {/*
+                          * 下の段。帰りの関係。
+                          *
+                          * ★ 上の段と同じ並びにする。
+                          *
+                          *   上は「関係を追加 A → B」、
+                          *   下は「関係を追加 A ← B」。
+                          *   矢の向きだけが違う、同じ形の行にすれば、
+                          *   何を書く欄なのか、見ただけで分かる。
+                          *
+                          * ★ 押し具は増やさない。
+                          *   上の「結ぶ」で、二本まとめて入る。
+                          */}
+                        <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2">
+                            <span className="text-xs text-muted">関係を追加</span>
+
+                            <span className="rounded-md border border-line bg-canvas px-3 py-1.5 text-sm text-muted">
+                                {entryById.get(fromId)?.name || "出発点"}
+                            </span>
+
+                            <span className="text-sm text-faint">←</span>
+
+                            <span className="rounded-md border border-line bg-canvas px-3 py-1.5 text-sm text-muted">
+                                {entryById.get(toId)?.name || "到達点"}
+                            </span>
+
+                            <input
+                                type="text"
+                                value={backLabel}
+                                onChange={(e) => setBackLabel(e.target.value)}
+                                placeholder="帰りの名前（任意）"
+                                aria-label="帰りの関係の名前"
+                                className="w-36 rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
+                            />
+
+                            <span className="text-[11px] text-faint">
+                                書くと、帰りの一本も一緒に結びます
+                            </span>
                         </div>
 
                         <ul className="mt-2 flex flex-wrap gap-1.5">
