@@ -294,7 +294,8 @@ export default function RelationsView({
                                      *   線の形は、行きと同じものを使う。
                                      *   図では、行きと帰りが別々の弧になる。
                                      */
-                                    const back = backLabel.trim();
+                                    const back =
+                                        newStyle === "arrow" ? backLabel.trim() : "";
 
                                     if (back) {
                                         await onCreate(toId, fromId, back, newStyle);
@@ -331,38 +332,47 @@ export default function RelationsView({
                         {/*
                           * 下の段。帰りの関係。
                           *
-                          * ★ 上の段と同じ並びにする。
+                          * ★ 矢印のときだけ出す。
                           *
-                          *   上は「関係を追加 A → B」、
-                          *   下は「関係を追加 A ← B」。
-                          *   矢の向きだけが違う、同じ形の行にすれば、
-                          *   何を書く欄なのか、見ただけで分かる。
+                          *   向きの無い線に、帰りの一本を足しても
+                          *   同じ線が二本重なるだけで意味がない。
+                          *   線の形を選び直すと、段が消える。
+                          *
+                          * ★ 矢の向きは、上と同じ。人だけ入れ替える。
+                          *
+                          *   上は「アルちゃん → エバ」、
+                          *   下は「エバ → アルちゃん」。
+                          *   矢を裏返すと、どちらから読むのか迷う。
+                          *   向きを揃えて中身を入れ替えれば、
+                          *   どちらの行も左から右に読める。
                           *
                           * ★ 押し具は増やさない。
                           *   上の「結ぶ」で、二本まとめて入る。
                           */}
-                        <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2">
-                            <span className="text-xs text-muted">関係を追加</span>
+                        {newStyle === "arrow" && (
+                            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2">
+                                <span className="text-xs text-muted">関係を追加</span>
 
-                            <span className="rounded-md border border-line bg-canvas px-3 py-1.5 text-sm text-muted">
-                                {entryById.get(fromId)?.name || "出発点"}
-                            </span>
+                                <span className="rounded-md border border-line bg-canvas px-3 py-1.5 text-sm text-muted">
+                                    {entryById.get(toId)?.name || "到達点"}
+                                </span>
 
-                            <span className="text-sm text-faint">←</span>
+                                <span className="text-sm text-faint">→</span>
 
-                            <span className="rounded-md border border-line bg-canvas px-3 py-1.5 text-sm text-muted">
-                                {entryById.get(toId)?.name || "到達点"}
-                            </span>
+                                <span className="rounded-md border border-line bg-canvas px-3 py-1.5 text-sm text-muted">
+                                    {entryById.get(fromId)?.name || "出発点"}
+                                </span>
 
-                            <input
-                                type="text"
-                                value={backLabel}
-                                onChange={(e) => setBackLabel(e.target.value)}
-                                placeholder="帰りの名前（任意）"
-                                aria-label="帰りの関係の名前"
-                                className="w-36 rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
-                            />
-                        </div>
+                                <input
+                                    type="text"
+                                    value={backLabel}
+                                    onChange={(e) => setBackLabel(e.target.value)}
+                                    placeholder="関係ラベルを入力"
+                                    aria-label="帰りの関係の名前"
+                                    className="w-36 rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
+                                />
+                            </div>
+                        )}
 
                         <ul className="mt-2 flex flex-wrap gap-1.5">
                             {PRESETS.map((preset) => (
