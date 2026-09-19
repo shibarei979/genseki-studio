@@ -362,10 +362,6 @@ export default function RelationsView({
                                 aria-label="帰りの関係の名前"
                                 className="w-36 rounded-md border border-line px-3 py-1.5 text-sm outline-none focus:border-forest"
                             />
-
-                            <span className="text-[11px] text-faint">
-                                書くと、帰りの一本も一緒に結びます
-                            </span>
                         </div>
 
                         <ul className="mt-2 flex flex-wrap gap-1.5">
