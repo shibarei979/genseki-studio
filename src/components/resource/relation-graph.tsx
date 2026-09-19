@@ -128,6 +128,56 @@ const MIN_GAP = 140;
  */
 const NODE_RADIUS = 36;
 
+/*
+ * 線の端を、丸の手前で止める幅。
+ *
+ * ★ 矢印が丸の下に潜っていた。
+ *
+ *   線を丸の中心から中心まで引いていたので、
+ *   矢の先が相手の丸に隠れて見えなかった。
+ *   向きを決めても、向きが分からない図になっていた。
+ *
+ *   丸の縁より、少し手前で止める。
+ */
+const HALO = NODE_RADIUS + 10;
+
+/*
+ * 同じ二人を結ぶ線が重なるとき、どれだけ外へ張り出すか。
+ *
+ * ★ 行きと帰りを、別々の弧にする。
+ *
+ *   「AはBを慕う」「BはAを疎む」のように、
+ *   両方向を入れる人がいる。
+ *   まっすぐ引くと二本が完全に重なり、
+ *   後から引いたほうしか見えなかった。
+ */
+const BOW = 46;
+
+/**
+ * 点を、行き先のほうへ少し引っ込める。
+ *
+ * ★ 短い線では、引っ込めすぎない。
+ *   丸どうしが近いと、線が裏返ってしまう。
+ */
+function pullBack(
+    at: { x: number; y: number },
+    toward: { x: number; y: number },
+    by: number,
+) {
+    const dx = toward.x - at.x;
+    const dy = toward.y - at.y;
+    const length = Math.hypot(dx, dy);
+
+    if (length < 1) return at;
+
+    const step = Math.min(by, length * 0.42);
+
+    return {
+        x: at.x + (dx / length) * step,
+        y: at.y + (dy / length) * step,
+    };
+}
+
 /** 関係の名前から線の色を決める。同じ名前なら同じ色になる */
 const RELATION_COLORS = [
     "#2f6b3d", "#3a5a7d", "#7d4a3a", "#5a4a7d",
@@ -897,6 +947,56 @@ export default function RelationGraph({
         }
         return true;
     });
+
+    /*
+     * 同じ二人を結ぶ線が、二本以上あるとき。
+     *
+     * ★ 行きと帰りを、別の弧に分ける。
+     *
+     *   向きのある間柄は、両方向を入れる人がいる。
+     *   「AはBを慕う」「BはAを疎む」のように、
+     *   行きと帰りで言い分が違うことがある。
+     *
+     *   まっすぐ引くと二本がぴたりと重なり、
+     *   後から引いたほうしか見えない。
+     *   名前も矢印も、下に隠れてしまう。
+     *
+     * ★ 片方を外へ、片方を内へ膨らませる。
+     *   どちらも端は丸に着いたまま、途中だけ離れる。
+     *
+     * ★ 中間点を置いた線は、そのままにする。
+     *   自分で通り道を決めた線を、こちらで動かさない。
+     */
+    const bowOf = new Map<string, number>();
+
+    {
+        const bySides = new Map<string, string[]>();
+
+        for (const relation of shownRelations) {
+            const key = [relation.from_entry_id, relation.to_entry_id]
+                .slice()
+                .sort()
+                .join("|");
+
+            const found = bySides.get(key);
+
+            if (found) {
+                found.push(relation.id);
+            } else {
+                bySides.set(key, [relation.id]);
+            }
+        }
+
+        for (const list of bySides.values()) {
+            if (list.length < 2) continue;
+
+            /* 真ん中を空けて、外・内・外……と振り分ける */
+            list.forEach((id, at) => {
+                const step = Math.floor(at / 2) + 1;
+                bowOf.set(id, (at % 2 === 0 ? -1 : 1) * step);
+            });
+        }
+    }
 
     /*
      * 覚えている位置を、いまの紙に収める倍率。
@@ -1713,9 +1813,70 @@ export default function RelationGraph({
                      *   曲げたいときは、中間点を置いてもらう。
                      *   勝手に曲げるより、そのほうが分かりやすい。
                      */
+                    /*
+                     * 重なりを避ける膨らみ。
+                     *
+                     * ★ 中間点を置いた線には、掛けない。
+                     */
+                    const bow = bent ? 0 : (bowOf.get(relation.id) ?? 0);
+
+                    /*
+                     * 通り道の、真ん中の点。
+                     *
+                     * ★ 膨らませるときは、線と直角の向きへずらす。
+                     */
+                    const middle = (() => {
+                        if (bent) return bent;
+
+                        const center = {
+                            x: (from.x + to.x) / 2,
+                            y: (from.y + to.y) / 2,
+                        };
+
+                        if (bow === 0) return center;
+
+                        const dx = to.x - from.x;
+                        const dy = to.y - from.y;
+                        const length = Math.hypot(dx, dy) || 1;
+
+                        /*
+                         * ★ 膨らむ向きは、二人の並びで決める。
+                         *
+                         *   線の向きで決めると、
+                         *   行きと帰りで直角の向きも裏返り、
+                         *   二本とも同じ側へ膨らんで重なる。
+                         *
+                         *   どちらから引いた線でも同じ物差しを使う。
+                         */
+                        const lean =
+                            bow *
+                            (relation.from_entry_id < relation.to_entry_id
+                                ? 1
+                                : -1);
+
+                        return {
+                            x: center.x + (-dy / length) * BOW * lean,
+                            y: center.y + (dx / length) * BOW * lean,
+                        };
+                    })();
+
+                    /*
+                     * 線の端。
+                     *
+                     * ★ 丸の手前で止める。
+                     *   中心まで引くと、矢印が丸に隠れる。
+                     *
+                     * ★ 止める向きは、真ん中の点のほう。
+                     *   膨らんだ線でも、端の向きが線に沿う。
+                     */
+                    const head = pullBack(from, middle, HALO);
+                    const tail = pullBack(to, middle, HALO);
+
                     const path = bent
-                        ? `M${from.x} ${from.y} L${bent.x} ${bent.y} L${to.x} ${to.y}`
-                        : `M${from.x} ${from.y} L${to.x} ${to.y}`;
+                        ? `M${head.x} ${head.y} L${bent.x} ${bent.y} L${tail.x} ${tail.y}`
+                        : bow === 0
+                          ? `M${head.x} ${head.y} L${tail.x} ${tail.y}`
+                          : `M${head.x} ${head.y} Q${middle.x} ${middle.y} ${tail.x} ${tail.y}`;
 
                     /*
                      * 関係の名前を置くところ。
@@ -1725,9 +1886,21 @@ export default function RelationGraph({
                      *   曲線のときは、真ん中の点を出す。
                      *   制御点に置くと、線から浮いて見える。
                      */
+                    /*
+                     * ★ 膨らませた線では、線そのものの真ん中に置く。
+                     *
+                     *   弧の真ん中は、曲げるのに使う点より
+                     *   半分だけ内側にある。
+                     *   曲げる点に置くと、名前が線から浮く。
+                     */
                     const labelAt = bent
                         ? bent
-                        : { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+                        : bow === 0
+                          ? { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
+                          : {
+                                x: (head.x + middle.x * 2 + tail.x) / 4,
+                                y: (head.y + middle.y * 2 + tail.y) / 4,
+                            };
 
                     const controlX = labelAt.x;
                     const controlY = labelAt.y;
