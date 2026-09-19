@@ -29,6 +29,21 @@ import type {
 } from "@/types";
 import { AGE_RATING_LABEL, SERIAL_STATUS_LABEL, tileOf } from "@/types";
 
+/** 予約中か。日時が入っていて、まだ出していない */
+function isScheduled(episode: Episode): boolean {
+    return Boolean(episode.publish_at) && !episode.is_published;
+}
+
+/** 「9月20日 20:00 に出ます」 */
+function whenLabel(at: string | null | undefined): string {
+    if (!at) return "";
+
+    const d = new Date(at);
+    if (Number.isNaN(d.getTime())) return "";
+
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} に出ます`;
+}
+
 export default function PreviewClient({ workId }: { workId: string }) {
     const [work, setWork] = useState<Work | null>(null);
     const [episodes, setEpisodes] = useState<Episode[]>([]);
@@ -41,6 +56,26 @@ export default function PreviewClient({ workId }: { workId: string }) {
 
     /* 投稿していない話も見るか */
     const [showAll, setShowAll] = useState(false);
+
+    /*
+     * ★ 話を名指しで開けるようにする。
+     *
+     *   投稿の画面から「見る」を押したとき、
+     *   その話がすぐ開くようにしたい。
+     *   ?ep=... で受け取る。
+     *
+     * ★ 住所から直に読む。
+     *   useSearchParams を使うと、頁の側にも
+     *   受け止める囲いが要る。ここだけで済ませる。
+     */
+    useEffect(() => {
+        const want = new URLSearchParams(window.location.search).get("ep");
+        if (!want) return;
+
+        setOpenId(want);
+        /* 名指しで来たなら、まだ出していない話でも見せる */
+        setShowAll(true);
+    }, []);
     const [isLoading, setIsLoading] = useState(true);
 
     const reload = useCallback(async () => {
@@ -57,6 +92,15 @@ export default function PreviewClient({ workId }: { workId: string }) {
 
         setWork(workData);
         setEpisodes(episodeData);
+
+        /*
+         * ★ 予約している話があるなら、はじめから見せる。
+         *
+         *   下見に来る理由のほとんどが
+         *   「予約した話がどう出るか」なので、
+         *   わざわざ札を押させない。
+         */
+        if (episodeData.some(isScheduled)) setShowAll(true);
         setPublish(publishData);
         setDisplay(displayData);
         setProfile(profileData);
@@ -102,7 +146,7 @@ export default function PreviewClient({ workId }: { workId: string }) {
              */}
             <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-amber)] bg-[var(--color-amber-tint)] px-6 py-2.5">
                 <p className="min-w-0 flex-1 text-xs text-ink">
-                    読者から見た姿です。実際の投稿サイトはまだありません。
+                    読者から見た姿です。まだ出していない話も、ここで確かめられます。
                 </p>
 
                 <label className="flex shrink-0 items-center gap-1.5">
@@ -260,10 +304,16 @@ function WorkView({
                                     {episode.title || "（題名なし）"}
                                 </span>
 
-                                {!episode.is_published && (
-                                    <span className="shrink-0 rounded bg-canvas px-2 py-0.5 text-[10px] text-faint">
-                                        未投稿
+                                {isScheduled(episode) ? (
+                                    <span className="shrink-0 rounded bg-[var(--color-amber-tint)] px-2 py-0.5 text-[10px] text-[var(--color-amber)]">
+                                        {whenLabel(episode.publish_at)}
                                     </span>
+                                ) : (
+                                    !episode.is_published && (
+                                        <span className="shrink-0 rounded bg-canvas px-2 py-0.5 text-[10px] text-faint">
+                                            未投稿
+                                        </span>
+                                    )
                                 )}
 
                                 <span className="shrink-0 text-[11px] text-faint">
@@ -327,6 +377,21 @@ function EpisodeView({
                     <span className="ml-2">{formatDateTime(episode.publish_at)}</span>
                 )}
             </p>
+
+            {/*
+              * ★ 予約している話は、いつ出るかをここに。
+              *
+              *   下見しているのが「もう出ている話」なのか
+              *   「これから出る話」なのかが、
+              *   本文を読み始める前に分かるようにする。
+              */}
+            {isScheduled(episode) && (
+                <p className="mt-3 rounded-md bg-[var(--color-amber-tint)] px-3 py-2 text-[11px] text-ink">
+                    この話はまだ出していません。
+                    <b className="ml-1">{whenLabel(episode.publish_at)}</b>
+                    。ここに見えている形で出ます。
+                </p>
+            )}
 
             {/* 前書き */}
             {episode.preface && (

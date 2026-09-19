@@ -14,6 +14,8 @@
 
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { formatNumber } from "@/lib/utils/text";
@@ -34,6 +36,17 @@ export default function EpisodePostList({
     isWorkPublic,
     onChange,
 }: Props) {
+    /*
+     * この作品の id。
+     *
+     * ★ 住所から取る。
+     *   この画面は /workspace/〇〇/post にある。
+     *   親から受け取る形にすると、呼んでいる側も
+     *   直さなければならない。
+     */
+    const pathname = usePathname();
+    const workId = pathname?.split("/")[2] ?? "";
+
     /** いま投稿の仕方を選んでいる話 */
     const [openFor, setOpenFor] = useState<string | null>(null);
     const [at, setAt] = useState("");
@@ -83,28 +96,6 @@ export default function EpisodePostList({
                         </span>
                     )}
                 </p>
-
-                {/*
-                  * ★ 出していない話を、数えて言う。
-                  *
-                  *   「1 / 4話が投稿済み」だけでは静かすぎる。
-                  *   引き算をして、はじめて足りないと気づく。
-                  *
-                  *   出していない数を、そのまま言う。
-                  *   読者に見えていないことも、続けて言う。
-                  *
-                  *   「全4話なのに目次で1話しか出ない」という
-                  *   問い合わせが続いたので、ここで止める。
-                  */}
-                {episodes.length - posted > 0 && (
-                    <p className="mt-3 rounded-md bg-[var(--color-amber-tint)] px-3.5 py-2.5 text-xs leading-relaxed text-ink">
-                        <strong>
-                            まだ出していない話が{episodes.length - posted}話あります。
-                        </strong>
-                        <br />
-                        出すまで、読者の目次には出ません。
-                    </p>
-                )}
 
                 {!isWorkPublic && episodes.length > 0 && (
                     <p className="mt-3 rounded-md bg-[var(--color-amber-tint)] px-3.5 py-2.5 text-xs leading-relaxed text-ink">
@@ -160,6 +151,22 @@ export default function EpisodePostList({
                                               ? "予約中"
                                               : "未投稿"}
                                     </span>
+
+                                    {/*
+                                      * ★ 出す前に、読者から見た姿を確かめる。
+                                      *
+                                      *   予約しただけの話は、どこからも
+                                      *   下見できなかった。
+                                      *   ここから、その話を開いた状態で開く。
+                                      */}
+                                    {workId && (
+                                        <Link
+                                            href={`/workspace/${workId}/preview?ep=${episode.id}`}
+                                            className="shrink-0 rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:border-forest-line hover:text-forest"
+                                        >
+                                            見る
+                                        </Link>
+                                    )}
 
                                     {/* 操作 */}
                                     {episode.is_published || isScheduled ? (
