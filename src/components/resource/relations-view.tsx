@@ -133,13 +133,13 @@ export default function RelationsView({
      *   変化の記録があれば実線、無ければ破線。
      */
     const [newStyle, setNewStyle] = useState<
-        "dashed" | "solid" | "arrow" | null
+        "dashed" | "solid" | "arrow" | "two-way" | null
     >(null);
 
     /*
      * 帰りの名前。
      *
-     * ★ 下の段の「関係を追加 ←」に書く。
+     * ★ 下の段に書く。
      *
      *   向きのある間柄は、行きと帰りで言い分が違う。
      *   「AはBを慕う」「BはAを疎む」のように、
@@ -155,20 +155,26 @@ export default function RelationsView({
     const [backLabel, setBackLabel] = useState("");
 
     /*
-     * 往復にするか。
+     * 下の段を出すか。
      *
-     * ★ 矢印を選んだだけでは、段を増やさない。
+     * ★ 「⇄ 往復」を選んだときだけ。
      *
-     *   向きのある関係でも、片側だけのほうが多い。
-     *   選ぶたびに段が増えると、
-     *   使わない欄のために行が伸びる。
+     *   はじめは、押し具やチェックを別に置いていた。
+     *   どちらも「結ぶ」や線の形と横に並ぶので、
+     *   その仲間に見えて、押すと何が起きるのか分からない。
      *
-     *   「往復」を押した人にだけ、下の段を出す。
+     *   向きは、もともと線の形で選んでいる。
+     *   片道が「→」なら、往復は「⇄」。
+     *   同じ並びの中にあれば、選び方を覚えなくていい。
+     *
+     * ★ 覚えておく形は増やさない。
+     *   「⇄」は行きと帰りの二本になるだけで、
+     *   一本ずつは、ただの矢印。
      */
-    const [twoWay, setTwoWay] = useState(false);
+    const showBack = newStyle === "two-way";
 
-    /* 下の段を出すか */
-    const showBack = newStyle === "arrow" && twoWay;
+    /* 覚えておくときの線の形 */
+    const styleToSave = newStyle === "two-way" ? "arrow" : newStyle;
 
     const entryById = new Map(entries.map((entry) => [entry.id, entry]));
     const pageById = new Map(pages.map((page) => [page.id, page]));
@@ -267,8 +273,14 @@ export default function RelationsView({
                                         { key: "dashed", label: "破線", mark: "╌" },
                                         { key: "solid", label: "実線", mark: "─" },
                                         { key: "arrow", label: "矢印", mark: "→" },
+                                        { key: "two-way", label: "往復", mark: "⇄" },
                                     ] as {
-                                        key: "dashed" | "solid" | "arrow" | null;
+                                        key:
+                                            | "dashed"
+                                            | "solid"
+                                            | "arrow"
+                                            | "two-way"
+                                            | null;
                                         label: string;
                                         mark: string;
                                     }[]
@@ -292,42 +304,6 @@ export default function RelationsView({
                                 ))}
                             </div>
 
-                            {/*
-                              * 往復。
-                              *
-                              * ★ 矢印を選んだときだけ出す。
-                              *   向きの無い線に、行きと帰りは無い。
-                              *
-                              * ★ 押している間だけ、下の段が出る。
-                              *   もう一度押すと、書いた字ごと畳む。
-                              *
-                              * ★ 印は「⇄」。
-                              *   線の形の押し具と同じ見た目にすると、
-                              *   五つ目の線の形に見えてしまう。
-                              *   こちらは枠のある押し具にして、区別する。
-                              */}
-                            {newStyle === "arrow" && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setTwoWay((now) => {
-                                            if (now) setBackLabel("");
-                                            return !now;
-                                        });
-                                    }}
-                                    aria-pressed={twoWay}
-                                    title="行きと帰り、両方の関係を入れる"
-                                    className={[
-                                        "rounded-md border px-2.5 py-1.5 text-xs",
-                                        twoWay
-                                            ? "border-forest bg-forest-tint text-forest"
-                                            : "border-line text-muted hover:border-forest-line hover:text-forest",
-                                    ].join(" ")}
-                                >
-                                    ⇄ 往復
-                                </button>
-                            )}
-
                             <button
                                 type="button"
                                 disabled={!canCreate}
@@ -336,7 +312,7 @@ export default function RelationsView({
                                         fromId,
                                         toId,
                                         label.trim(),
-                                        newStyle,
+                                        styleToSave,
                                     );
 
                                     /*
@@ -349,7 +325,12 @@ export default function RelationsView({
                                     const back = showBack ? backLabel.trim() : "";
 
                                     if (back) {
-                                        await onCreate(toId, fromId, back, newStyle);
+                                        await onCreate(
+                                            toId,
+                                            fromId,
+                                            back,
+                                            styleToSave,
+                                        );
                                     }
 
                                     setLabel("");
@@ -383,9 +364,9 @@ export default function RelationsView({
                         {/*
                           * 下の段。帰りの関係。
                           *
-                          * ★ 「往復」を押したときだけ出す。
+                          * ★ 線の形で「⇄ 往復」を選んだときだけ出す。
                           *
-                          *   矢印を選んだだけでは出さない。
+                          *   「→」のままなら、行きだけ。
                           *   片側だけの関係のほうが多いので、
                           *   使わない欄で行を伸ばさない。
                           *
@@ -401,7 +382,7 @@ export default function RelationsView({
                           *   上の「結ぶ」で、二本まとめて入る。
                           */}
                         {showBack && (
-                            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2">
+                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
                                 <span className="text-xs text-muted">関係を追加</span>
 
                                 <span className="rounded-md border border-line bg-canvas px-3 py-1.5 text-sm text-muted">
@@ -424,6 +405,7 @@ export default function RelationsView({
                                 />
                             </div>
                         )}
+
 
                         <ul className="mt-2 flex flex-wrap gap-1.5">
                             {PRESETS.map((preset) => (
