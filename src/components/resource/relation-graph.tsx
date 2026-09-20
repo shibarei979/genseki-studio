@@ -14,6 +14,16 @@
 import { useEffect, useRef, useState } from "react";
 
 import { getImage } from "@/lib/storage/image-store";
+import {
+    boxesFor,
+    findGroups,
+    middleOf,
+    packByGroup,
+    roundedPath,
+    routeAround,
+    trimEnds,
+    type GroupBox,
+} from "@/lib/resource/graph-groups";
 
 import type { ResourceEntry, ResourceRelation } from "@/types";
 
@@ -36,7 +46,36 @@ interface Props {
      * null を渡すと、これまでどおりの曲げ方に戻る。
      */
     onBend?: (relationId: string, bend: { x: number; y: number } | null) => void;
+    /**
+     * 囲みと、折れ曲がる線を使えるか。
+     *
+     * ★ 会員の特典。
+     *
+     *   無料のままでも図は描ける。
+     *   直線で、囲みは出ない。これまでと同じ。
+     *
+     *   会員のときだけ、所属でひとりでに囲んで、
+     *   線が丸と囲みをよけて回るようになる。
+     */
+    canGroup?: boolean;
 }
+
+/**
+ * 囲みの色。
+ *
+ * ★ 決め打ちの色を塗らない。
+ *
+ *   夜の画面では、薄い色の塗りが白く浮く。
+ *   線の色を薄めて使えば、どちらの画面でも馴染む。
+ */
+const GROUP_INKS = [
+    "#3a6ea8",
+    "#c4453a",
+    "#3f9a7a",
+    "#b5852f",
+    "#7a5aa8",
+    "#2f7183",
+];
 
 /** 図の広さ。もとの大きさ。広げるときは、これに倍率を掛ける */
 const BASE_SIZE = 400;
@@ -317,8 +356,50 @@ export default function RelationGraph({
     onMove,
     onReset,
     onBend,
+    canGroup = false,
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+    /*
+     * 囲みを出すか。
+     *
+     * ★ 会員でも、切れるようにしておく。
+     *   見比べたいときや、囲みが邪魔なときがある。
+     */
+    const [boxOn, setBoxOn] = useState(true);
+
+    /*
+     * 会員かどうか。
+     *
+     * ★ ここで聞く。
+     *
+     *   上から渡してもらうと、図を置いている画面すべてに
+     *   同じ受け渡しを足すことになる。
+     *   一度きりの問い合わせなので、ここで済ませる。
+     *
+     * ★ 答えが返るまでは、無料の見た目。
+     *   先に囲みを出しておいて、あとから消えるほうが驚く。
+     */
+    const [paidGroup, setPaidGroup] = useState(false);
+
+    useEffect(() => {
+        let alive = true;
+
+        fetch("/api/member/features")
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (alive && data?.graphGroup) setPaidGroup(true);
+            })
+            .catch(() => {
+                /* 聞けなくても、図は描ける */
+            });
+
+        return () => {
+            alive = false;
+        };
+    }, []);
+
+    const mayGroup = canGroup || paidGroup;
 
     /*
      * いま、どの線の中間点をつまんでいるか。
@@ -1386,6 +1467,67 @@ export default function RelationGraph({
     /* 名前を引く。札を名前から逃がすときに要る */
     const nameOf = new Map(shownNodes.map((node) => [node.id, node.name]));
 
+    /*
+     * ============================================================
+     * まとまり（会員）
+     *
+     * ★ 「所属」「配下」といった関係から、ひとりでに作る。
+     *   作者に、同じことをもう一度入れてもらわない。
+     *
+     * ★ どこにも入らない人は囲まない。
+     * ★ 二つ以上に入る人は、両方の囲みに入る。囲みは重なる。
+     *
+     * ★ 誰かを選んで見ているときは、出さない。
+     *   あちらは一人のまわりだけを見る場所なので、
+     *   囲みを出すと、居ない人のぶんまで枠が伸びる。
+     * ============================================================
+     */
+    const grouping = mayGroup && boxOn && !focusId;
+
+    const foundGroups = grouping ? findGroups(entries, relations) : [];
+
+    const groupBoxes: GroupBox[] = grouping
+        ? boxesFor(
+              foundGroups.map((group) => ({
+                  ...group,
+                  ids: group.ids.filter((id) => shownIds.has(id)),
+              })),
+              positions,
+              {
+                  radius: NODE_RADIUS,
+                  halfOf: (id) => halfOf(nameOf.get(id) ?? ""),
+                  drop: NAME_DROP + NAME_SIZE * 0.4,
+                  pad: Math.round(NODE_RADIUS * 0.9),
+                  head: Math.round(NODE_RADIUS * 0.9),
+              },
+          )
+        : [];
+
+    /*
+     * 線がよけるもの。
+     *
+     * ★ 丸そのものと、名前の帯。
+     *   名前の上を線が横切ると、名前が読めない。
+     */
+    const nodeBlocks = grouping
+        ? shownNodes.flatMap((node) => {
+              const at = positions.get(node.id);
+              if (!at) return [];
+
+              const half = halfOf(node.name);
+
+              return [
+                  {
+                      id: node.id,
+                      x1: at.x - half,
+                      y1: at.y - NODE_RADIUS,
+                      x2: at.x + half,
+                      y2: at.y + NAME_DROP + NAME_SIZE * 0.4,
+                  },
+              ];
+          })
+        : [];
+
     let minX = Number.POSITIVE_INFINITY;
     let maxX = Number.NEGATIVE_INFINITY;
     let minY = Number.POSITIVE_INFINITY;
@@ -1401,6 +1543,14 @@ export default function RelationGraph({
         maxX = Math.max(maxX, at.x + half);
         minY = Math.min(minY, at.y - NODE_RADIUS);
         maxY = Math.max(maxY, at.y + NAME_DROP + NAME_SIZE * 0.4);
+    }
+
+    /* 囲みのぶんも数える。はみ出したまま切ると、枠が欠ける */
+    for (const box of groupBoxes) {
+        minX = Math.min(minX, box.x1);
+        maxX = Math.max(maxX, box.x2);
+        minY = Math.min(minY, box.y1);
+        maxY = Math.max(maxY, box.y2);
     }
 
     const seen = Number.isFinite(minX)
@@ -1625,7 +1775,31 @@ export default function RelationGraph({
     function tidy() {
         if (!onMove) return;
 
-        const place = packed(nodes, false);
+        /*
+         * ★ 囲みが出ているときは、まとまりごとに寄せる。
+         *
+         *   ばらばらのまま囲むと、囲みが紙いっぱいに広がって、
+         *   どの囲みも重なってしまう。
+         *   先に寄せてから囲めば、囲みは小さく収まる。
+         *
+         *   まとまりが見つからなければ、これまでどおり詰める。
+         */
+        const byGroup =
+            mayGroup && boxOn
+                ? findGroups(entries, relations)
+                : [];
+
+        const place =
+            byGroup.length > 0
+                ? packByGroup({
+                      ids: nodes.map((node) => node.id),
+                      groups: byGroup,
+                      width: WIDTH,
+                      height: HEIGHT,
+                      gap: gapWanted,
+                      aspect: liveAspect,
+                  })
+                : packed(nodes, false);
 
         untangle(place, new Set());
 
@@ -2083,6 +2257,47 @@ export default function RelationGraph({
                     </filter>
                 </defs>
 
+                {/*
+                  * まとまりの囲み。
+                  *
+                  * ★ いちばん下に描く。
+                  *   線と丸の上に乗ると、図が読めなくなる。
+                  *
+                  * ★ 塗りはごく薄く。
+                  *   囲みは、そこに何があるかを示すだけのもの。
+                  *   主役は丸と線なので、色で争わない。
+                  */}
+                {groupBoxes.map((box) => {
+                    const ink = GROUP_INKS[box.tone % GROUP_INKS.length];
+
+                    return (
+                        <g key={`box-${box.key}`} pointerEvents="none">
+                            <rect
+                                x={box.x1}
+                                y={box.y1}
+                                width={box.x2 - box.x1}
+                                height={box.y2 - box.y1}
+                                rx={NODE_RADIUS * 0.8}
+                                fill={ink}
+                                fillOpacity={0.07}
+                                stroke={ink}
+                                strokeOpacity={0.45}
+                                strokeWidth={1.8}
+                            />
+                            <text
+                                x={box.x1 + NODE_RADIUS * 0.7}
+                                y={box.y1 + NAME_SIZE * 1.3}
+                                fontSize={NAME_SIZE * 1.15}
+                                fontWeight="700"
+                                fill={ink}
+                                fillOpacity={0.9}
+                            >
+                                {box.name}
+                            </text>
+                        </g>
+                    );
+                })}
+
                 {shownRelations.map((relation) => {
                     const from = positions.get(relation.from_entry_id);
                     const to = positions.get(relation.to_entry_id);
@@ -2206,11 +2421,60 @@ export default function RelationGraph({
                     const head = pullBack(from, middle, HALO);
                     const tail = pullBack(to, middle, HALO);
 
+                    /*
+                     * ============================================================
+                     * よけて回る道（会員）
+                     *
+                     * ★ まっすぐ引けるところは、まっすぐのまま。
+                     *
+                     *   何も邪魔していないのに折れると、
+                     *   かえって、どこへ繋がっているのか分からない。
+                     *
+                     * ★ 丸や囲みを跨ぐときだけ、直角に折れてよける。
+                     *
+                     *   自分の居る囲みは、よけない。
+                     *   中から出られなくなる。
+                     *
+                     * ★ 中間点を置いた線と、行き帰りの二本は、そのまま。
+                     *   作者が決めた通り道を、こちらで書き換えない。
+                     */
+                    const routed =
+                        grouping && !bent && bow === 0
+                            ? trimEnds(
+                                  routeAround(
+                                      from,
+                                      to,
+                                      [
+                                          ...groupBoxes.filter(
+                                              (box) =>
+                                                  !box.ids.includes(
+                                                      relation.from_entry_id,
+                                                  ) &&
+                                                  !box.ids.includes(
+                                                      relation.to_entry_id,
+                                                  ),
+                                          ),
+                                          ...nodeBlocks.filter(
+                                              (one) =>
+                                                  one.id !==
+                                                      relation.from_entry_id &&
+                                                  one.id !==
+                                                      relation.to_entry_id,
+                                          ),
+                                      ],
+                                      Math.round(NODE_RADIUS * 0.7),
+                                  ),
+                                  HALO,
+                              )
+                            : null;
+
                     const path = bent
                         ? `M${head.x} ${head.y} L${bent.x} ${bent.y} L${tail.x} ${tail.y}`
-                        : bow === 0
-                          ? `M${head.x} ${head.y} L${tail.x} ${tail.y}`
-                          : `M${head.x} ${head.y} Q${middle.x} ${middle.y} ${tail.x} ${tail.y}`;
+                        : routed && routed.length > 2
+                          ? roundedPath(routed, NODE_RADIUS * 0.55)
+                          : bow === 0
+                            ? `M${head.x} ${head.y} L${tail.x} ${tail.y}`
+                            : `M${head.x} ${head.y} Q${middle.x} ${middle.y} ${tail.x} ${tail.y}`;
 
                     /*
                      * 関係の名前を置くところ。
@@ -2229,7 +2493,9 @@ export default function RelationGraph({
                      */
                     const onLine = bent
                         ? bent
-                        : bow === 0
+                        : routed && routed.length > 2
+                          ? middleOf(routed)
+                          : bow === 0
                           ? { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
                           : {
                                 x: (head.x + middle.x * 2 + tail.x) / 4,
@@ -2578,6 +2844,28 @@ export default function RelationGraph({
                         >
                             整理する
                         </button>
+
+                        {/*
+                          * 囲む・囲まない。
+                          *
+                          * ★ 会員のときだけ出す。
+                          *   使えない印を並べても、邪魔になるだけ。
+                          */}
+                        {mayGroup && (
+                            <button
+                                type="button"
+                                onClick={() => setBoxOn((on) => !on)}
+                                aria-pressed={boxOn}
+                                title="所属でひとりでに囲みます"
+                                className={
+                                    boxOn
+                                        ? "rounded-md border border-forest bg-forest-tint/60 px-3 py-1 text-[11px] text-forest"
+                                        : "rounded-md border border-line bg-surface px-3 py-1 text-[11px] text-muted hover:border-forest-line hover:text-forest"
+                                }
+                            >
+                                囲む
+                            </button>
+                        )}
 
                         {/*
                           * 画面いっぱい。
