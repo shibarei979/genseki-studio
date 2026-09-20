@@ -584,15 +584,23 @@ export const supabaseRepository: Repository = {
          */
         const { data: episodeRows } = await db()
             .from("episodes")
-            .select("novel_id, char_count, draft_status")
+            .select("novel_id, char_count, draft_status, is_published")
             .in(
                 "novel_id",
                 works.map((row) => row.id as string),
             )
             .is("deleted_at", null);
 
-        const byWork = new Map<string, { char_count: number }[]>();
-        for (const row of rows<{ novel_id: string; char_count: number }>(episodeRows)) {
+        const byWork = new Map<
+            string,
+            { char_count: number; is_published?: boolean }[]
+        >();
+
+        for (const row of rows<{
+            novel_id: string;
+            char_count: number;
+            is_published?: boolean;
+        }>(episodeRows)) {
             byWork.set(row.novel_id, [...(byWork.get(row.novel_id) ?? []), row]);
         }
 
@@ -604,6 +612,19 @@ export const supabaseRepository: Repository = {
                 episode_count: episodes.length,
                 total_char_count: episodes.reduce(
                     (sum, ep) => sum + (ep.char_count ?? 0),
+                    0,
+                ),
+                /*
+                 * ★ 公開している話だけの数も持つ。
+                 *
+                 *   コンテストの決まりのように、
+                 *   「読める量」で判断する所で使う。
+                 */
+                posted_char_count: episodes.reduce(
+                    (sum, ep) =>
+                        ep.is_published === true
+                            ? sum + (ep.char_count ?? 0)
+                            : sum,
                     0,
                 ),
                 visibility: (row.visibility as WorkWithStats["visibility"]) ?? "draft",
@@ -812,6 +833,16 @@ export const supabaseRepository: Repository = {
             next.posted_at = patch.is_published
                 ? new Date().toISOString()
                 : null;
+
+            /*
+             * ★ 誰が出したかを残す。
+             *
+             *   時間で回る見回りが出したものと、
+             *   作者が押したものが見分けられないと、
+             *   「勝手に出た」という声が来たときに
+             *   確かめようがなかった。
+             */
+            next.published_by = patch.is_published ? "author" : null;
         }
 
         /*

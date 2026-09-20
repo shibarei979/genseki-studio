@@ -56,11 +56,25 @@ export interface ExtractionResult {
     fallbackReason?: string;
 }
 
+/**
+ * 読ませ方。
+ *
+ * ★ 回数の数え方が違うので、どちらかを伝える。
+ *
+ *   full    全文。本文をまるごと送る。重い
+ *   latest  最新。書き足したぶんだけ。軽い
+ *
+ *   伝えないと、サーバーは重いほう（full）として数える。
+ *   甘いほうへ倒すと、数えない道ができてしまう。
+ */
+export type ScanKind = "full" | "latest";
+
 export interface Extractor {
     extract(
         text: string,
         knownNames: string[],
         targets: CandidateKind[],
+        kind?: ScanKind,
     ): Promise<ExtractionCandidate[]>;
 
     /** 何が起きたかも知りたいとき */
@@ -68,6 +82,7 @@ export interface Extractor {
         text: string,
         knownNames: string[],
         targets: CandidateKind[],
+        kind?: ScanKind,
     ): Promise<ExtractionResult>;
 }
 
@@ -208,8 +223,8 @@ const TARGET_LABEL: Record<CandidateKind, string> = {
 };
 
 export const apiExtractor: Extractor = {
-    async extract(text, knownNames, targets) {
-        const result = await apiExtractWithMeta(text, knownNames, targets);
+    async extract(text, knownNames, targets, kind) {
+        const result = await apiExtractWithMeta(text, knownNames, targets, kind);
         return result.candidates;
     },
 
@@ -220,6 +235,7 @@ async function apiExtractWithMeta(
     text: string,
     knownNames: string[],
     targets: CandidateKind[],
+    kind: ScanKind = "full",
 ): Promise<ExtractionResult> {
     let response: Response;
     try {
@@ -230,6 +246,8 @@ async function apiExtractWithMeta(
                 text,
                 knownNames,
                 targets: targets.map((target) => TARGET_LABEL[target]),
+                /* どちらの読ませ方か。回数はこれで数える */
+                kind,
             }),
         });
     } catch {

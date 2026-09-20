@@ -114,17 +114,55 @@ export default function ContestEntryClient({
      * すでに出したものは選べない。
      * 字数が足りないものも選べないが、一覧には出す。
      * 「なぜ出せないか」が分からないと直しようがない。
+     *
+     * ★ 公開していない作品は出せない。
+     *
+     *   下書きや限定公開のまま出せてしまうと、
+     *   選ぶ人が読めない作品が並ぶ。
+     *   「先に出しておいて、締切までに公開すればいい」
+     *   という抜け道にもなる。
+     *
+     *   すでに出してあるものは、そのままにする。
+     *   後から決まりを変えて取り消すのは、筋が通らない。
      */
     const candidates = works.map((work) => {
         const isEntered = entered.has(work.id);
+
+        /*
+         * ★ 数えるのは、公開している話だけ。
+         *
+         *   読める量で決まりを見る。
+         *   下書きを積んで文字数だけ満たす、を防ぐ。
+         *   表の側でも同じ数え方をしているので、
+         *   画面で通って表で弾かれる、が起きない。
+         *
+         * ★ 古い読み取り口では入っていないので、
+         *   無ければこれまでどおり全体の数で見る。
+         */
+        const readable = work.posted_char_count ?? work.total_char_count;
+
         const isShort =
-            contest.min_chars > 0 && work.total_char_count < contest.min_chars;
+            contest.min_chars > 0 && readable < contest.min_chars;
+
+        /*
+         * ★ 最多のほうも見る。
+         *
+         *   これまで見ていなかったので、
+         *   上限を決めても効かなかった。
+         */
+        const isLong =
+            contest.max_chars > 0 && readable > contest.max_chars;
+
+        const isHidden = work.visibility !== "public";
 
         return {
             work,
+            readable,
             isEntered,
             isShort,
-            canPick: !isEntered && !isShort,
+            isLong,
+            isHidden,
+            canPick: !isEntered && !isShort && !isLong && !isHidden,
         };
     });
 
@@ -171,7 +209,12 @@ export default function ContestEntryClient({
                 work_title: selected.work.title,
                 author_id: "",
                 author_name: "",
-                char_count: selected.work.total_char_count,
+                /*
+                 * ★ 読める量を送る。
+                 *   表の側でも数え直すので、ここは控えに近い。
+                 */
+                char_count:
+                    selected.readable ?? selected.work.total_char_count,
                 is_shortlisted: false,
                 is_awarded: false,
                 award_label: "",
@@ -311,7 +354,15 @@ export default function ContestEntryClient({
                     ) : (
                         <ul className="mt-3 space-y-2">
                             {candidates.map(
-                                ({ work, isEntered, isShort, canPick }) => {
+                                ({
+                                    work,
+                                    readable,
+                                    isEntered,
+                                    isShort,
+                                    isLong,
+                                    isHidden,
+                                    canPick,
+                                }) => {
                                     const tile = tileOf(work);
                                     const isPicked = selectedId === work.id;
 
@@ -369,14 +420,16 @@ export default function ContestEntryClient({
                                                         className="mt-0.5 block text-[11px]"
                                                         style={{ color: C.dim }}
                                                     >
-                                                        {formatNumber(
-                                                            work.total_char_count,
-                                                        )}
+                                                        {formatNumber(readable)}
                                                         字
                                                         {isEntered &&
                                                             " ・ 応募済み"}
                                                         {isShort &&
                                                             ` ・ ${formatNumber(contest.min_chars)}字以上が必要`}
+                                                        {isLong &&
+                                                            ` ・ ${formatNumber(contest.max_chars)}字以下が必要`}
+                                                        {isHidden &&
+                                                            " ・ 公開してから応募できます"}
                                                     </span>
                                                 </span>
 

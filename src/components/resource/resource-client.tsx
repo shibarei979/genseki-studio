@@ -42,12 +42,6 @@ import {
     isRoleName,
     nextRoleName,
 } from "@/lib/resource/reject";
-import {
-    FULL_SCAN_LIMIT,
-    nextResetLabel,
-    remainingFullScans,
-    recordFullScan,
-} from "@/lib/resource/full-scan-quota";
 import { mergeInto } from "@/lib/resource/dedupe";
 import { isSamePerson } from "@/lib/resource/honorific";
 import { deleteImage, putImage } from "@/lib/storage/image-store";
@@ -171,12 +165,43 @@ export default function ResourceClient({ workId }: Props) {
     /** 読ませる範囲。全話を毎回送ると、長編ほど負担が増える */
     const [scanScope, setScanScope] = useState<"all" | "recent">("recent");
 
-    /* 全文の残り回数。月が変われば戻る */
-    const [fullLeft, setFullLeft] = useState(FULL_SCAN_LIMIT);
+    /*
+     * あと何回使えるか。
+     *
+     * ★ サーバーの数を出す。
+     *
+     *   前はブラウザの中に持っていたので、
+     *   消せば「3回」に戻って見えた。
+     *   数えているところと、出すところを揃える。
+     *
+     * ★ null は無制限（会員）。
+     */
+    const [scanLeft, setScanLeft] = useState<{
+        full: number | null;
+        latest: number | null;
+    }>({ full: null, latest: null });
+
+    const readScanLeft = useCallback(async () => {
+        try {
+            const response = await fetch("/api/scan/left");
+            const data = (await response.json()) as {
+                full?: { left: number | null };
+                latest?: { left: number | null };
+            };
+
+            setScanLeft({
+                full: data.full?.left ?? null,
+                latest: data.latest?.left ?? null,
+            });
+        } catch {
+            /* 読めなくても、押したときにサーバーが断る */
+        }
+    }, []);
 
     useEffect(() => {
-        setFullLeft(remainingFullScans());
-    }, []);
+        void readScanLeft();
+    }, [readScanLeft]);
+
     const aiStatus = useAiStatus();
 
     /*
@@ -411,14 +436,22 @@ export default function ResourceClient({ workId }: Props) {
         const isFull = scanScope === "all";
 
         /*
-         * 全文は 1 か月に 3 回まで。
+         * ★ 回数を決めるのは、サーバー。
          *
-         * 本文をまるごと送るので、長編ほど重い。
-         * 最新は書き足したぶんだけなので、何度でも使える。
+         *   ここでの数は、押す前に知らせるためだけのもの。
+         *   ブラウザの中で数えていたころは、
+         *   消せば戻ってしまい、境目の役をしていなかった。
+         *
+         *   0 と分かっているときだけ、送る前に断る。
+         *   本文を送ってから断られるのは、待たせるだけなので。
          */
-        if (isFull && remainingFullScans() === 0) {
+        const knownLeft = isFull ? scanLeft.full : scanLeft.latest;
+
+        if (knownLeft !== null && knownLeft <= 0) {
             setScanNotice(
-                `全文の読み直しは今月ぶんを使い切りました。${nextResetLabel()}から、また3回使えます。`,
+                isFull
+                    ? "全文の読み直しは今月ぶんを使い切りました。会員になると、回数の決まりが外れます。"
+                    : "最新の読み取りは今月ぶんを使い切りました。会員になると、回数の決まりが外れます。",
             );
             return;
         }
@@ -468,10 +501,17 @@ export default function ResourceClient({ workId }: Props) {
             .filter(Boolean);
 
         const extractor = getExtractor(aiStatus.connected);
+        const scanKind = isFull ? ("full" as const) : ("latest" as const);
+
         const result = extractor.extractWithMeta
-            ? await extractor.extractWithMeta(text, excluded, targets)
+            ? await extractor.extractWithMeta(text, excluded, targets, scanKind)
             : {
-                  candidates: await extractor.extract(text, excluded, targets),
+                  candidates: await extractor.extract(
+                      text,
+                      excluded,
+                      targets,
+                      scanKind,
+                  ),
                   usedModel: false,
                   fallbackReason: undefined as string | undefined,
               };
@@ -681,11 +721,11 @@ export default function ResourceClient({ workId }: Props) {
             }
         }
 
-        /* 全文を通したので、1 回ぶん使う */
-        if (isFull) {
-            recordFullScan();
-            setFullLeft(remainingFullScans());
-        }
+        /*
+         * ★ 数えるのはサーバー。
+         *   こちらは、減った数をもらい直すだけ。
+         */
+        await readScanLeft();
 
         // どこまで読んだかを覚える。次はここから先だけを送る
         for (const piece of pieces) {
@@ -845,23 +885,38 @@ export default function ResourceClient({ workId }: Props) {
                                     </div>
 
                                     {/*
-                                     * 全文の残り回数。
-                                     * 押してから断られるより、先に見えていたほうがよい。
+                                     * 残り回数。
+                                     *
+                                     * ★ 押してから断られるより、先に見えていたほうがよい。
+                                     * ★ 会員は決まりが外れるので、何も出さない。
                                      */}
-                                    {scanScope === "all" && (
-                                        <p
-                                            className={[
-                                                "mb-2 text-[10px]",
-                                                fullLeft === 0
-                                                    ? "text-[var(--color-danger)]"
-                                                    : "text-faint",
-                                            ].join(" ")}
-                                        >
-                                            {fullLeft > 0
-                                                ? `全文は今月あと${fullLeft}回`
-                                                : `今月ぶんを使い切りました（${nextResetLabel()}に戻ります）`}
-                                        </p>
-                                    )}
+                                    {(() => {
+                                        const left =
+                                            scanScope === "all"
+                                                ? scanLeft.full
+                                                : scanLeft.latest;
+
+                                        /* 無制限のときは出さない */
+                                        if (left === null) return null;
+
+                                        const what =
+                                            scanScope === "all" ? "全文" : "最新";
+
+                                        return (
+                                            <p
+                                                className={[
+                                                    "mb-2 text-[10px]",
+                                                    left === 0
+                                                        ? "text-[var(--color-danger)]"
+                                                        : "text-faint",
+                                                ].join(" ")}
+                                            >
+                                                {left > 0
+                                                    ? `${what}は今月あと${left}回`
+                                                    : `${what}は今月ぶんを使い切りました`}
+                                            </p>
+                                        );
+                                    })()}
 
                                     <button
                                         type="button"
@@ -869,7 +924,9 @@ export default function ResourceClient({ workId }: Props) {
                                         disabled={
                                             isScanning ||
                                             episodes.length === 0 ||
-                                            (scanScope === "all" && fullLeft === 0)
+                                            (scanScope === "all"
+                                                ? scanLeft.full === 0
+                                                : scanLeft.latest === 0)
                                         }
                                         className="w-full rounded-md bg-forest px-3 py-2 text-sm text-white hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-40"
                                     >

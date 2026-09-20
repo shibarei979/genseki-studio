@@ -235,6 +235,18 @@ export type WorkUpdateInput = Partial<Omit<Work, "id" | "created_at" | "updated_
 export interface WorkWithStats extends Work {
     episode_count: number;
     total_char_count: number;
+    /**
+     * 公開している話だけの文字数。
+     *
+     * ★ 読む人に見えているぶん。
+     *
+     *   total_char_count は下書きも含めて数えている。
+     *   コンテストの決まりのように「読める量」で判断する所では、
+     *   そちらを使うと、下書きを積んで満たせてしまう。
+     *
+     * ★ 古い読み取り口では入らないので、無いこともある。
+     */
+    posted_char_count?: number;
     /** 公開設定から持ってきた表示用の状態。「下書き・連載中」など */
     state_label: string;
     /** 絞り込みに使うので、組み合わせる前の値も渡す */
