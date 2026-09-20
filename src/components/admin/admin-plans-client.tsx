@@ -51,6 +51,17 @@ interface Plan {
     perks: Perk[];
 }
 
+interface Member {
+    user_id: string;
+    display_name: string;
+    points: number;
+    subscription_id: string | null;
+    plan_name: string;
+    status: string | null;
+    current_end: string | null;
+    cancel_at_period_end: boolean;
+}
+
 interface Live {
     id: string;
     user_id: string;
@@ -106,15 +117,28 @@ export default function AdminPlansClient() {
     } | null>(null);
     const [pickPlan, setPickPlan] = useState("");
 
+    /* 人ごとの状況 */
+    const [members, setMembers] = useState<Member[]>([]);
+    const [summary, setSummary] = useState({
+        holders: 0,
+        members: 0,
+        points: 0,
+    });
+    const [look, setLook] = useState("");
+
     const reload = useCallback(async () => {
         try {
-            const [a, b] = await Promise.all([
+            const [a, b, c] = await Promise.all([
                 fetch("/api/admin/plans").then((r) => r.json()),
                 fetch("/api/admin/subscriptions").then((r) => r.json()),
+                fetch("/api/admin/members").then((r) => r.json()),
             ]);
 
             setPlans((a.plans ?? []) as Plan[]);
             setLive((b.subscriptions ?? []) as Live[]);
+            setMembers((c.members ?? []) as Member[]);
+
+            if (c.summary) setSummary(c.summary);
         } catch {
             setMessage("読めませんでした。");
         }
@@ -179,6 +203,23 @@ export default function AdminPlansClient() {
             setPeople(data.people ?? []);
         } catch {
             setPeople([]);
+        }
+    }
+
+    /* 名前で探す。空にすると、持っている人と会員だけに戻る */
+    async function lookFor(text: string) {
+        setLook(text);
+
+        try {
+            const response = await fetch(
+                `/api/admin/members?find=${encodeURIComponent(text.trim())}`,
+            );
+
+            const data = (await response.json()) as { members?: Member[] };
+
+            setMembers(data.members ?? []);
+        } catch {
+            /* 読めなくても、ほかは動く */
         }
     }
 
@@ -678,6 +719,96 @@ export default function AdminPlansClient() {
                                                     </button>
                                                 </span>
                                             )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </section>
+
+            {/* ------------------------------------------- 人ごとの状況 */}
+            <section className="mt-4 rounded-lg border border-line bg-surface p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="text-[13px] font-medium text-ink">
+                        人ごとの状況
+                    </h2>
+
+                    <p className="text-[11px] text-faint">
+                        会員 {summary.members} 人 ／ ポイントを持っている人{" "}
+                        {summary.holders} 人 ／ 出回っている量{" "}
+                        {summary.points.toLocaleString()} pt
+                    </p>
+                </div>
+
+                <p className="mt-1 text-[11px] leading-relaxed text-faint">
+                    ふだんは、ポイントを持っているか会員に入っている人だけを出します。
+                    名前で探すと、それ以外の人も出ます。
+                </p>
+
+                <input
+                    type="text"
+                    value={look}
+                    onChange={(e) => void lookFor(e.target.value)}
+                    placeholder="名前で探す"
+                    aria-label="人を名前で探す"
+                    style={{ ...field, width: 200, marginTop: 10 }}
+                />
+
+                {members.length === 0 ? (
+                    <p className="mt-3 text-[12px] text-muted">
+                        当てはまる人がいません。
+                    </p>
+                ) : (
+                    <div className="mt-3 overflow-x-auto">
+                        <table className="w-full border-collapse text-[12px]">
+                            <thead>
+                                <tr className="text-left text-[10.5px] text-faint">
+                                    <th className="px-2 py-1">名前</th>
+                                    <th className="px-2 py-1">無料ポイント</th>
+                                    <th className="px-2 py-1">会員</th>
+                                    <th className="px-2 py-1">次の切り替え</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {members.map((one) => (
+                                    <tr
+                                        key={one.user_id}
+                                        className="border-t border-line"
+                                    >
+                                        <td className="px-2 py-1.5 text-ink">
+                                            {one.display_name ||
+                                                "名前のない書き手"}
+                                        </td>
+
+                                        <td className="px-2 py-1.5 text-muted">
+                                            {one.points.toLocaleString()} pt
+                                        </td>
+
+                                        <td className="px-2 py-1.5">
+                                            {one.status ? (
+                                                <span className="text-forest">
+                                                    {one.plan_name}
+                                                    <span className="ml-1 text-[10.5px] text-faint">
+                                                        （
+                                                        {STATUS[one.status] ??
+                                                            one.status}
+                                                        {one.cancel_at_period_end &&
+                                                            "・終わりで止める"}
+                                                        ）
+                                                    </span>
+                                                </span>
+                                            ) : (
+                                                <span className="text-faint">
+                                                    入っていない
+                                                </span>
+                                            )}
+                                        </td>
+
+                                        <td className="px-2 py-1.5 text-muted">
+                                            {day(one.current_end)}
                                         </td>
                                     </tr>
                                 ))}
