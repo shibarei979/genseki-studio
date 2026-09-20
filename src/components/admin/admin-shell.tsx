@@ -59,6 +59,8 @@ const NAV: { group: string; items: NavItem[] }[] = [
             { href: "/admin/features", label: "機能の入切", note: "出す・隠す" },
             /* まだ読む人には出していない。数字を確かめるための画面 */
             { href: "/admin/points", label: "無料ポイント", note: "出回っている量と、配った先" },
+            /* まだ読む人には出していない。売り物と特典を決めている途中 */
+            { href: "/admin/plans", label: "会員", note: "売り物と、付く特典" },
             { href: "/admin/ng-words", label: "使わない言葉", note: "推敲で知らせる" },
         ],
     },
