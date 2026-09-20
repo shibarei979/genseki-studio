@@ -192,6 +192,21 @@ export function boxesFor(
         head: number;
     },
 ): GroupBox[] {
+    /*
+     * ★ 囲みの形を、長方形か正方形に寄せる。
+     *
+     *   中身の外ぎりぎりで切ると、
+     *   二人を横に並べただけの囲みが、
+     *   細長い帯のようになる。
+     *   帯が何本も並ぶと、図というより表に見える。
+     *
+     *   横に長すぎるときは縦を、
+     *   縦に長すぎるときは横を、外へ伸ばす。
+     *   中身は動かさないので、並びは変わらない。
+     */
+    const WIDEST = 2.2;
+    const TALLEST = 0.85;
+
     const out: GroupBox[] = [];
 
     groups.forEach((group, index) => {
@@ -217,15 +232,34 @@ export function boxesFor(
         /* 図に出ている人が二人に満たなければ、囲まない */
         if (count < 2) return;
 
+        let left = x1 - size.pad;
+        let top = y1 - size.pad - size.head;
+        let right = x2 + size.pad;
+        let bottom = y2 + size.pad;
+
+        const shape = (right - left) / Math.max(1, bottom - top);
+
+        if (shape > WIDEST) {
+            const want = (right - left) / WIDEST;
+            const more = (want - (bottom - top)) / 2;
+            top -= more;
+            bottom += more;
+        } else if (shape < TALLEST) {
+            const want = (bottom - top) * TALLEST;
+            const more = (want - (right - left)) / 2;
+            left -= more;
+            right += more;
+        }
+
         out.push({
             key: group.key,
             name: group.name,
             ids: group.ids,
             tone: index,
-            x1: x1 - size.pad,
-            y1: y1 - size.pad - size.head,
-            x2: x2 + size.pad,
-            y2: y2 + size.pad,
+            x1: left,
+            y1: top,
+            x2: right,
+            y2: bottom,
         });
     });
 
@@ -603,8 +637,14 @@ export function packByGroup(options: {
             (id) => shown.has(id) && (belongs.get(id) ?? []).length === 1,
         );
 
+        /*
+         * ★ 中の並びを、四角く組む。
+         *
+         *   横一列に並べると、囲みが細長い帯になる。
+         *   縦と横の数を揃えれば、囲みは正方形に近づく。
+         */
         const count = Math.max(1, only.length);
-        const wide = Math.max(1, Math.ceil(Math.sqrt(count * 1.4)));
+        const wide = Math.max(1, Math.ceil(Math.sqrt(count)));
         const tall = Math.ceil(count / wide);
 
         return {

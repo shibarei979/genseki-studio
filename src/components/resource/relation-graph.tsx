@@ -46,18 +46,6 @@ interface Props {
      * null を渡すと、これまでどおりの曲げ方に戻る。
      */
     onBend?: (relationId: string, bend: { x: number; y: number } | null) => void;
-    /**
-     * 囲みと、折れ曲がる線を使えるか。
-     *
-     * ★ 会員の特典。
-     *
-     *   無料のままでも図は描ける。
-     *   直線で、囲みは出ない。これまでと同じ。
-     *
-     *   会員のときだけ、所属でひとりでに囲んで、
-     *   線が丸と囲みをよけて回るようになる。
-     */
-    canGroup?: boolean;
 }
 
 /**
@@ -356,7 +344,6 @@ export default function RelationGraph({
     onMove,
     onReset,
     onBend,
-    canGroup = false,
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -371,16 +358,19 @@ export default function RelationGraph({
     /*
      * 会員かどうか。
      *
-     * ★ ここで聞く。
+     * ★ 決めるのは、ここだけ。
      *
-     *   上から渡してもらうと、図を置いている画面すべてに
-     *   同じ受け渡しを足すことになる。
-     *   一度きりの問い合わせなので、ここで済ませる。
+     *   上から「使ってよい」と渡せる口は作らない。
+     *   渡せるようにすると、図を置くどの画面からでも
+     *   入れてしまえる。サーバーの答えだけを見る。
      *
      * ★ 答えが返るまでは、無料の見た目。
      *   先に囲みを出しておいて、あとから消えるほうが驚く。
+     *
+     * ★ 聞けなかったときも、無料の見た目。
+     *   困るのは、入っていない人に出てしまうほう。
      */
-    const [paidGroup, setPaidGroup] = useState(false);
+    const [mayGroup, setMayGroup] = useState(false);
 
     useEffect(() => {
         let alive = true;
@@ -388,18 +378,16 @@ export default function RelationGraph({
         fetch("/api/member/features")
             .then((res) => (res.ok ? res.json() : null))
             .then((data) => {
-                if (alive && data?.graphGroup) setPaidGroup(true);
+                if (alive && data?.graphGroup === true) setMayGroup(true);
             })
             .catch(() => {
-                /* 聞けなくても、図は描ける */
+                /* 聞けなくても、図はこれまでどおり描ける */
             });
 
         return () => {
             alive = false;
         };
     }, []);
-
-    const mayGroup = canGroup || paidGroup;
 
     /*
      * いま、どの線の中間点をつまんでいるか。
@@ -1557,8 +1545,15 @@ export default function RelationGraph({
         ? { minX, maxX, minY, maxY }
         : { minX: 0, maxX: WIDTH, minY: 0, maxY: HEIGHT };
 
-    /* 外側に、少しだけ余白 */
-    const ROOM = Math.round(NODE_RADIUS * 0.6);
+    /*
+     * 外側に、少しだけ余白。
+     *
+     * ★ よけて回る線のぶんは、多めに取る。
+     *
+     *   線は囲みの外側を回るので、丸と囲みだけで切ると、
+     *   回り道の部分が枠の外に出て、消えてしまう。
+     */
+    const ROOM = Math.round(NODE_RADIUS * (grouping ? 1.7 : 0.6));
 
     /*
      * 狭すぎる範囲は、広げておく。

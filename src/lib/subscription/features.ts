@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { liveSubscriptionOf } from "@/lib/subscription/plans";
+import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
 
 /**
  * ============================================================
@@ -16,16 +16,30 @@ import { liveSubscriptionOf } from "@/lib/subscription/plans";
  *   売り物の中身は、運営がその場で足せる。
  *
  *   graph_group  関係図を、所属で囲む・線を折れ曲がらせる
+ *
+ * ★ 運営は、はじめから全部が使える。
+ *
+ *   払わずに、会員と同じものが見える状態にしておく。
+ *   売り物を直すたびに自分で買い直すことにすると、
+ *   帳簿にも乗るし、期間が切れれば確かめる手も止まる。
  * ============================================================
  */
 
 export interface MemberFeatures {
     /** 関係図の囲みと、よけて回る線 */
     graphGroup: boolean;
+    /** 運営として通っているか。画面に出すためのもの */
+    operator: boolean;
 }
 
 const NONE: MemberFeatures = {
     graphGroup: false,
+    operator: false,
+};
+
+const ALL: MemberFeatures = {
+    graphGroup: true,
+    operator: true,
 };
 
 export async function memberFeatures(): Promise<MemberFeatures> {
@@ -37,6 +51,8 @@ export async function memberFeatures(): Promise<MemberFeatures> {
 
     if (!user) return NONE;
 
+    if (await isOperator(user.id)) return ALL;
+
     const live = await liveSubscriptionOf(user.id);
 
     if (!live) return NONE;
@@ -46,5 +62,6 @@ export async function memberFeatures(): Promise<MemberFeatures> {
 
     return {
         graphGroup: has("graph_group"),
+        operator: false,
     };
 }

@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { liveSubscriptionOf } from "@/lib/subscription/plans";
+import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
 
 /**
  * ============================================================
@@ -76,6 +76,15 @@ export async function limitFor(
     userId: string,
     kind: ScanKind,
 ): Promise<number> {
+    /*
+     * ★ 運営は、はじめから無制限。
+     *
+     *   直したところを確かめるのに何度も押すので、
+     *   月 3 回では足りない。
+     *   自分で買って確かめるのも、帳簿に乗るので避ける。
+     */
+    if (await isOperator(userId)) return 0;
+
     const live = await liveSubscriptionOf(userId);
 
     if (!live) return BASE_LIMIT[kind];
