@@ -163,14 +163,51 @@ export async function liveSubscriptionOf(
 }
 
 /**
+ * 運営かどうか。
+ *
+ * ★ 運営は、はじめから会員として扱う。
+ *
+ *   自分の売り物を自分で買って確かめるのは、
+ *   帳簿にも売上として乗ってしまうし、
+ *   期間が切れれば、確かめる手も止まる。
+ *
+ *   払わずに、いつでも会員と同じものが見える状態にしておく。
+ *
+ * ★ 見るのは profiles.is_admin。
+ *   運営の画面を通すときと、同じ物差しを使う。
+ *
+ * ★ 聞けなかったときは false。
+ *   分からないときに通すと、誰でも通ってしまう。
+ */
+export async function isOperator(userId: string): Promise<boolean> {
+    try {
+        const admin = createAdminClient();
+
+        const { data } = await admin
+            .from("profiles")
+            .select("is_admin")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        return data?.is_admin === true;
+    } catch {
+        return false;
+    }
+}
+
+/**
  * その人が、その特典を持っているか。
  *
  * ★ 広告を出すかどうかなど、見た目の分岐に使う。
+ *
+ * ★ 運営は、いつでも持っている。
  */
 export async function hasPerk(
     userId: string,
     kind: PerkKind,
 ): Promise<boolean> {
+    if (await isOperator(userId)) return true;
+
     const live = await liveSubscriptionOf(userId);
     if (!live) return false;
 

@@ -103,6 +103,24 @@ export async function GET(request: Request) {
         (subs ?? []).map((row) => [row.user_id as string, row]),
     );
 
+    /*
+     * 運営。
+     *
+     * ★ 契約の行は無いが、会員と同じものが使える。
+     *
+     *   払わずに使える状態にしてあるので、
+     *   この一覧でも「入っていない」とは出さない。
+     *   売上には数えないので、会員の数にも足さない。
+     */
+    const { data: staff } = await gate.admin
+        .from("profiles")
+        .select("user_id")
+        .eq("is_admin", true);
+
+    const operators = new Set(
+        (staff ?? []).map((row) => row.user_id as string),
+    );
+
     const { data: plans } = await gate.admin.from("plans").select("id, name");
 
     const planOf = new Map(
@@ -131,7 +149,7 @@ export async function GET(request: Request) {
         people = (data ?? []) as typeof people;
     } else {
         const ids = Array.from(
-            new Set([...points.keys(), ...subOf.keys()]),
+            new Set([...points.keys(), ...subOf.keys(), ...operators]),
         );
 
         for (let at = 0; at < ids.length; at += 200) {
@@ -156,12 +174,16 @@ export async function GET(request: Request) {
             status: (sub?.status as string) ?? null,
             current_end: (sub?.current_end as string) ?? null,
             cancel_at_period_end: Boolean(sub?.cancel_at_period_end),
+            operator: operators.has(one.user_id),
         };
     });
 
-    /* 会員が上、次にポイントの多い順 */
+    /* 会員と運営が上、次にポイントの多い順 */
     rows.sort((a, b) => {
-        if (!!a.status !== !!b.status) return a.status ? -1 : 1;
+        const aLive = !!a.status || a.operator;
+        const bLive = !!b.status || b.operator;
+
+        if (aLive !== bLive) return aLive ? -1 : 1;
         return b.points - a.points;
     });
 

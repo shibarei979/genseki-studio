@@ -60,6 +60,13 @@ interface Member {
     status: string | null;
     current_end: string | null;
     cancel_at_period_end: boolean;
+    /**
+     * 運営かどうか。
+     *
+     * ★ 運営は、払わずに会員と同じものが使える。
+     *   契約の行は無いので、ここを見て出し分ける。
+     */
+    operator?: boolean;
 }
 
 interface Live {
@@ -798,6 +805,17 @@ export default function AdminPlansClient() {
                                                         {one.cancel_at_period_end &&
                                                             "・終わりで止める"}
                                                         ）
+                                                    </span>
+                                                </span>
+                                            ) : one.operator ? (
+                                                /*
+                                                 * ★ 運営は「無償」と出す。
+                                                 *   売上に数えないための印でもある。
+                                                 */
+                                                <span className="text-forest">
+                                                    運営
+                                                    <span className="ml-1 text-[10.5px] text-faint">
+                                                        （無償・ずっと）
                                                     </span>
                                                 </span>
                                             ) : (
