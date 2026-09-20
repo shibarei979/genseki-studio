@@ -98,7 +98,7 @@ const BASE_RADIUS = 142;
  * ★ 丸の直径に、名前のぶんを足す。
  *   名前は丸の下に出るので、縦に重なりやすい。
  */
-const MIN_GAP = 44;
+const MIN_GAP = 54;
 /*
  * 丸の大きさ。
  * 頭文字が読める大きさにする。小さいと点にしか見えない。
@@ -1075,7 +1075,7 @@ export default function RelationGraph({
      *   多くの相手と結ばれているものを真ん中に置くと、
      *   線が短く済む。
      */
-    function packed(list: { id: string }[]) {
+    function packed(list: { id: string }[], fill = true) {
         const degree = new Map<string, number>();
 
         for (const relation of relations) {
@@ -1175,7 +1175,18 @@ export default function RelationGraph({
                 : Number.POSITIVE_INFINITY,
         );
 
-        if (Number.isFinite(grow) && grow > 1) {
+        /*
+         * ★ 「整理する」では、広げない。
+         *
+         *   押した人が求めているのは、散らばったものを
+         *   まとめることであって、並べ直して
+         *   また枠いっぱいに散らすことではない。
+         *
+         *   はじめの並びのときだけ広げる。
+         *   あちらは、まだ誰も触っていない図なので、
+         *   枠に対して小さすぎると読めない。
+         */
+        if (fill && Number.isFinite(grow) && grow > 1) {
             for (const [id, point] of place) {
                 place.set(id, {
                     x: CENTER_X + (point.x - CENTER_X) * grow,
@@ -1596,7 +1607,7 @@ export default function RelationGraph({
     function tidy() {
         if (!onMove) return;
 
-        const place = packed(nodes);
+        const place = packed(nodes, false);
 
         untangle(place, new Set());
 
