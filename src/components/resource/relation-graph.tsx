@@ -2209,7 +2209,7 @@ export default function RelationGraph({
                      *   半分だけ内側にある。
                      *   曲げる点に置くと、名前が線から浮く。
                      */
-                    const labelAt = bent
+                    const onLine = bent
                         ? bent
                         : bow === 0
                           ? { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
@@ -2217,6 +2217,72 @@ export default function RelationGraph({
                                 x: (head.x + middle.x * 2 + tail.x) / 4,
                                 y: (head.y + middle.y * 2 + tail.y) / 4,
                             };
+
+                    /*
+                     * 関係の名前を、線の横へずらす。
+                     *
+                     * ★ 縦向きの線では、名前と札が同じ柱に並ぶ。
+                     *
+                     *   丸の名前は丸の真下に出る。
+                     *   縦の線の真ん中に札を置くと、
+                     *   上の丸の名前と、下の丸の名前の間に
+                     *   ちょうど割って入る形になり、触れる。
+                     *
+                     *   縦に近い線ほど、横へ逃がす。
+                     *   横向きの線は、もともとぶつからないので動かさない。
+                     *
+                     * ★ 中間点を置いた線は、動かさない。
+                     *   自分で決めた場所に出す。
+                     */
+                    const labelAt = (() => {
+                        if (bent) return onLine;
+
+                        const dx = to.x - from.x;
+                        const dy = to.y - from.y;
+                        const length = Math.hypot(dx, dy);
+
+                        if (length < 1) return onLine;
+
+                        /* 線と直角の向き */
+                        const px = -dy / length;
+                        const py = dx / length;
+
+                        /* 札の幅の半分ぶん */
+                        const wide =
+                            ((relation.label?.length ?? 0) * EDGE_SIZE) / 2 +
+                            EDGE_SIZE * 0.8;
+
+                        /*
+                         * ★ 行きと帰りの二本は、それぞれ外側へ。
+                         *
+                         *   膨らませた向きと同じほうへ逃がす。
+                         *   同じ側へ寄せると、二つの札が重なる。
+                         */
+                        if (bow !== 0) {
+                            const lean =
+                                bow *
+                                (relation.from_entry_id < relation.to_entry_id
+                                    ? 1
+                                    : -1);
+
+                            const side = lean < 0 ? -1 : 1;
+
+                            return {
+                                x: onLine.x + px * wide * side,
+                                y: onLine.y + py * wide * side,
+                            };
+                        }
+
+                        /* 1 に近いほど縦。0 に近いほど横 */
+                        const steep = Math.abs(dy) / length;
+
+                        if (steep < 0.35) return onLine;
+
+                        return {
+                            x: onLine.x + px * wide * steep,
+                            y: onLine.y + py * wide * steep,
+                        };
+                    })();
 
                     const controlX = labelAt.x;
                     const controlY = labelAt.y;
