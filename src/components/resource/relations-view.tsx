@@ -154,6 +154,22 @@ export default function RelationsView({
      */
     const [backLabel, setBackLabel] = useState("");
 
+    /*
+     * 往復にするか。
+     *
+     * ★ 矢印を選んだだけでは、段を増やさない。
+     *
+     *   向きのある関係でも、片側だけのほうが多い。
+     *   選ぶたびに段が増えると、
+     *   使わない欄のために行が伸びる。
+     *
+     *   「往復」を押した人にだけ、下の段を出す。
+     */
+    const [twoWay, setTwoWay] = useState(false);
+
+    /* 下の段を出すか */
+    const showBack = newStyle === "arrow" && twoWay;
+
     const entryById = new Map(entries.map((entry) => [entry.id, entry]));
     const pageById = new Map(pages.map((page) => [page.id, page]));
     const canCreate = fromId && toId && fromId !== toId && label.trim();
@@ -276,6 +292,42 @@ export default function RelationsView({
                                 ))}
                             </div>
 
+                            {/*
+                              * 往復。
+                              *
+                              * ★ 矢印を選んだときだけ出す。
+                              *   向きの無い線に、行きと帰りは無い。
+                              *
+                              * ★ 押している間だけ、下の段が出る。
+                              *   もう一度押すと、書いた字ごと畳む。
+                              *
+                              * ★ 印は「⇄」。
+                              *   線の形の押し具と同じ見た目にすると、
+                              *   五つ目の線の形に見えてしまう。
+                              *   こちらは枠のある押し具にして、区別する。
+                              */}
+                            {newStyle === "arrow" && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setTwoWay((now) => {
+                                            if (now) setBackLabel("");
+                                            return !now;
+                                        });
+                                    }}
+                                    aria-pressed={twoWay}
+                                    title="行きと帰り、両方の関係を入れる"
+                                    className={[
+                                        "rounded-md border px-2.5 py-1.5 text-xs",
+                                        twoWay
+                                            ? "border-forest bg-forest-tint text-forest"
+                                            : "border-line text-muted hover:border-forest-line hover:text-forest",
+                                    ].join(" ")}
+                                >
+                                    ⇄ 往復
+                                </button>
+                            )}
+
                             <button
                                 type="button"
                                 disabled={!canCreate}
@@ -294,8 +346,7 @@ export default function RelationsView({
                                      *   線の形は、行きと同じものを使う。
                                      *   図では、行きと帰りが別々の弧になる。
                                      */
-                                    const back =
-                                        newStyle === "arrow" ? backLabel.trim() : "";
+                                    const back = showBack ? backLabel.trim() : "";
 
                                     if (back) {
                                         await onCreate(toId, fromId, back, newStyle);
@@ -332,11 +383,11 @@ export default function RelationsView({
                         {/*
                           * 下の段。帰りの関係。
                           *
-                          * ★ 矢印のときだけ出す。
+                          * ★ 「往復」を押したときだけ出す。
                           *
-                          *   向きの無い線に、帰りの一本を足しても
-                          *   同じ線が二本重なるだけで意味がない。
-                          *   線の形を選び直すと、段が消える。
+                          *   矢印を選んだだけでは出さない。
+                          *   片側だけの関係のほうが多いので、
+                          *   使わない欄で行を伸ばさない。
                           *
                           * ★ 矢の向きは、上と同じ。人だけ入れ替える。
                           *
@@ -349,7 +400,7 @@ export default function RelationsView({
                           * ★ 押し具は増やさない。
                           *   上の「結ぶ」で、二本まとめて入る。
                           */}
-                        {newStyle === "arrow" && (
+                        {showBack && (
                             <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2">
                                 <span className="text-xs text-muted">関係を追加</span>
 
