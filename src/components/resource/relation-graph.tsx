@@ -749,6 +749,21 @@ export default function RelationGraph({
      */
     const NODE_WANT_PX = 22;
 
+    /*
+     * 丸どうしの、いちばん近い間。
+     *
+     * ★ 関係の名前が入るだけの幅を取る。
+     *
+     *   縦に並んだ二つを線で結ぶと、
+     *   上の丸の名前と下の丸の名前の間に札が入る。
+     *   名前の帯と札が触れない距離は、
+     *   丸の半径のおよそ 5 倍。
+     *
+     *   足りないと、どれだけ札を動かしても重なる。
+     *   動かすのではなく、初めから空けておく。
+     */
+    const gapWanted = Math.max(MIN_GAP * spread, NODE_RADIUS * 6);
+
     /* その大きさになるための、中身の高さ（紙の目盛り） */
     const wantSpan = box.h
         ? NODE_RADIUS * (box.h / NODE_WANT_PX)
@@ -1094,7 +1109,7 @@ export default function RelationGraph({
         );
 
         const place = new Map<string, { x: number; y: number }>();
-        const want = MIN_GAP * spread;
+        const want = gapWanted;
 
         let at = 0;
         let ring = 0;
@@ -1485,7 +1500,7 @@ export default function RelationGraph({
                     const dy = two.y - one.y;
                     const gap = Math.hypot(dx, dy);
 
-                    const want = MIN_GAP * spread;
+                    const want = gapWanted;
                     if (gap >= want) continue;
 
                     moved = true;
@@ -2222,86 +2237,16 @@ export default function RelationGraph({
                             };
 
                     /*
-                     * 関係の名前を、線の横へずらす。
+                     * ★ 札は、線の真ん中に置く。
                      *
-                     * ★ 縦向きの線では、名前と札が同じ柱に並ぶ。
+                     *   一度は横へ逃がしてみたが、
+                     *   線から離れた札は、どの線のものか分からない。
                      *
-                     *   丸の名前は丸の真下に出る。
-                     *   縦の線の真ん中に札を置くと、
-                     *   上の丸の名前と、下の丸の名前の間に
-                     *   ちょうど割って入る形になり、触れる。
-                     *
-                     *   縦に近い線ほど、横へ逃がす。
-                     *   横向きの線は、もともとぶつからないので動かさない。
-                     *
-                     * ★ 中間点を置いた線は、動かさない。
-                     *   自分で決めた場所に出す。
+                     *   重なるのは、丸どうしが近すぎるから。
+                     *   逃がすのではなく、丸の間を空けて直す。
+                     *   間は、札が入るだけの幅を最初から取ってある。
                      */
-                    const labelAt = (() => {
-                        if (bent) return onLine;
-
-                        const dx = to.x - from.x;
-                        const dy = to.y - from.y;
-                        const length = Math.hypot(dx, dy);
-
-                        if (length < 1) return onLine;
-
-                        /* 線と直角の向き */
-                        const px = -dy / length;
-                        const py = dx / length;
-
-                        /*
-                         * 逃がす幅。
-                         *
-                         * ★ 札の半分だけでは足りない。
-                         *
-                         *   丸の名前は丸の真下に、真ん中揃えで出る。
-                         *   札を線の横へ半分だけずらしても、
-                         *   名前の半分がまだそこにある。
-                         *
-                         *   札の半分と、名前の半分の、両方ぶん逃がす。
-                         */
-                        const halfLabel =
-                            ((relation.label?.length ?? 0) * EDGE_SIZE) / 2;
-
-                        const halfName = Math.max(
-                            halfOf(nameOf.get(relation.from_entry_id) ?? ""),
-                            halfOf(nameOf.get(relation.to_entry_id) ?? ""),
-                        );
-
-                        const wide = halfLabel + halfName + EDGE_SIZE * 0.5;
-
-                        /*
-                         * ★ 行きと帰りの二本は、それぞれ外側へ。
-                         *
-                         *   膨らませた向きと同じほうへ逃がす。
-                         *   同じ側へ寄せると、二つの札が重なる。
-                         */
-                        if (bow !== 0) {
-                            const lean =
-                                bow *
-                                (relation.from_entry_id < relation.to_entry_id
-                                    ? 1
-                                    : -1);
-
-                            const side = lean < 0 ? -1 : 1;
-
-                            return {
-                                x: onLine.x + px * wide * side,
-                                y: onLine.y + py * wide * side,
-                            };
-                        }
-
-                        /* 1 に近いほど縦。0 に近いほど横 */
-                        const steep = Math.abs(dy) / length;
-
-                        if (steep < 0.35) return onLine;
-
-                        return {
-                            x: onLine.x + px * wide * steep,
-                            y: onLine.y + py * wide * steep,
-                        };
-                    })();
+                    const labelAt = onLine;
 
                     const controlX = labelAt.x;
                     const controlY = labelAt.y;
