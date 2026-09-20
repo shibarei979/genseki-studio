@@ -777,7 +777,29 @@ export const supabaseRepository: Repository = {
 
         const { data, error } = await db()
             .from("episodes")
-            .insert({ novel_id: workId, title: "", body: "", ep_number: next })
+            /*
+             * ★ 下書きとして作る。はっきり書く。
+             *
+             *   前は公開の印を送っていなかった。
+             *   送らないと表の既定（published が true）が入り、
+             *   120 で足した「どちらかが true なら両方 true」に
+             *   引きずられて、is_published まで true になっていた。
+             *
+             *   作った瞬間に公開されていたので、
+             *   予約しても「普通に投稿された」し、
+             *   下書きのつもりの話が読者から見えていた。
+             *
+             *   既定値のほうも 127 で false にしたが、
+             *   送る側でも、はっきり書いておく。
+             */
+            .insert({
+                novel_id: workId,
+                title: "",
+                body: "",
+                ep_number: next,
+                is_published: false,
+                published: false,
+            })
             .select()
             .single();
 
@@ -1120,12 +1142,23 @@ export const supabaseRepository: Repository = {
             const { data, error } = await db()
                 .from("episodes")
                 .insert(
+                    /*
+                     * ★ 取り込んだぶんも、下書きとして入れる。
+                     *
+                     *   ここも公開の印を送っていなかったので、
+                     *   取り込んだ瞬間に全話が読者の前に出ていた。
+                     *   2,200 話を入れれば、2,200 話が一度に出る。
+                     *
+                     *   どれを出すかは、入れたあとに作者が決める。
+                     */
                     part.map((row) => ({
                         novel_id: workId,
                         title: row.title,
                         body: row.body,
                         char_count: countChars(row.body),
                         ep_number: next++,
+                        is_published: false,
+                        published: false,
                     })),
                 )
                 .select();
