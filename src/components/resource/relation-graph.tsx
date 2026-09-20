@@ -56,19 +56,6 @@ const BASE_SIZE = 400;
  */
 const ASPECT = 1.6;
 
-/*
- * 紙の外側の余白。
- *
- * ★ 0 にする。
- *
- *   余白を足すと、描く範囲の比が紙の比とずれる。
- *   いちばん小さくしたときに、上下か左右が必ず余る。
- *   「紙が枠にぴったり」にならない。
- *
- *   端に置いた丸が切れないようにするのは、
- *   丸を置ける範囲（EDGE）のほうで受け持つ。
- */
-const PAD = 0;
 
 /*
  * 紐の長さ。丸どうしの離れ具合。
@@ -111,7 +98,7 @@ const BASE_RADIUS = 142;
  * ★ 丸の直径に、名前のぶんを足す。
  *   名前は丸の下に出るので、縦に重なりやすい。
  */
-const MIN_GAP = 140;
+const MIN_GAP = 44;
 /*
  * 丸の大きさ。
  * 頭文字が読める大きさにする。小さいと点にしか見えない。
@@ -126,7 +113,24 @@ const MIN_GAP = 140;
  *   1.7 倍にしておけば、全体を見たときに
  *   丸 22px、字 15px ほどになる。
  */
-const NODE_RADIUS = 36;
+/*
+ * 丸の大きさ。紙の高さに対する割合で決める。
+ *
+ * ★ これまでは、紙の広さに関わらず 36 で固定だった。
+ *
+ *   紙は人数に合わせて広げるので、
+ *   広げるほど丸だけが取り残されて小さくなる。
+ *   全体を出すと、丸が 20px、名前が 8px しかなく、
+ *   何が書いてあるのか読めなかった。
+ *
+ *   割合で持てば、どの広さでも同じ大きさに見える。
+ *
+ * ★ 0.03 は、紙の高さの 3 パーセント。
+ *   30 人を輪に並べたときの間（紙の高さの 15% ほど）に対して、
+ *   丸の直径がその 4 割ほどになる。
+ *   名前が読めて、隣とぶつからない大きさ。
+ */
+const NODE_SHARE = 0.03;
 
 /*
  * 線の端を、丸の手前で止める幅。
@@ -139,7 +143,7 @@ const NODE_RADIUS = 36;
  *
  *   丸の縁より、少し手前で止める。
  */
-const HALO = NODE_RADIUS + 10;
+const HALO_SHARE = 0.28;
 
 /*
  * 同じ二人を結ぶ線が重なるとき、どれだけ外へ張り出すか。
@@ -151,7 +155,7 @@ const HALO = NODE_RADIUS + 10;
  *   まっすぐ引くと二本が完全に重なり、
  *   後から引いたほうしか見えなかった。
  */
-const BOW = 46;
+const BOW_SHARE = 1.3;
 
 /**
  * 点を、行き先のほうへ少し引っ込める。
@@ -550,7 +554,6 @@ export default function RelationGraph({
      */
     const liveAspect = box.w && box.h ? box.w / box.h : DRAWN_ASPECT;
 
-    const fitHeight = box.h || 0;
 
     /*
      * つまみから、倍率を出す。
@@ -604,17 +607,6 @@ export default function RelationGraph({
      *   広さは 3 ÷ √倍率 になる。
      */
     const wide = 3 / Math.sqrt(zoom);
-
-    /*
-     * 枠に対する、描く大きさ。
-     *
-     * ★ いちばん広い紙のときに、ちょうど枠に収まる。
-     *   狭めると、そのぶん丸が大きく見え、枠からはみ出す。
-     *
-     *   紙が狭い ＝ 同じ丸が詰まっている ＝ 拡大して見ている
-     *   ということ。別のつまみは要らない。
-     */
-    const scale = 3 / wide;
 
     useEffect(() => {
         const el = panRef.current;
@@ -715,6 +707,33 @@ export default function RelationGraph({
      * ★ 広さのつまみで決まる。
      *   輪が収まるだけの広さがあればよい。
      */
+    /*
+     * 丸と字の大きさ。
+     *
+     * ★ 紙の広さから出す。
+     *   紙を広げても狭めても、見かけの大きさは変わらない。
+     *   つまみは、ただの拡大・縮小になる。
+     */
+    const NODE_RADIUS = Math.round(BASE_SIZE * spread * NODE_SHARE);
+
+    /* 線の端を止める位置。丸の縁より、少し外 */
+    const HALO = Math.round(NODE_RADIUS * (1 + HALO_SHARE));
+
+    /* 行きと帰りの弧を離す幅 */
+    const BOW = Math.round(NODE_RADIUS * BOW_SHARE);
+
+    /* 丸の下に出す名前 */
+    const NAME_SIZE = Math.round(NODE_RADIUS * 0.66);
+
+    /* 絵の無い丸に出す、名前の一文字目 */
+    const INITIAL_SIZE = Math.round(NODE_RADIUS * 0.84);
+
+    /* 丸の中心から、名前の行までの下がり */
+    const NAME_DROP = NODE_RADIUS + Math.round(NAME_SIZE * 1.15);
+
+    /* 線に出す関係の名前 */
+    const EDGE_SIZE = Math.round(NODE_RADIUS * 0.56);
+
     const HEIGHT = Math.round(BASE_SIZE * spread);
     /* 紙の横幅。枠と同じ形にする */
     const WIDTH = Math.round(HEIGHT * liveAspect);
@@ -732,6 +751,14 @@ export default function RelationGraph({
      *
      *   丸と名前が切れない幅だけ残して、あとは使う。
      */
+
+    /* 掴んでいる間、動かさずに使う範囲 */
+    const heldView = useRef<{
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+    } | null>(null);
 
     const [dragging, setDragging] = useState<Dragging | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
@@ -782,7 +809,7 @@ export default function RelationGraph({
      *
      * ★ 紙からはみ出さないよう、上限だけ紙で決める。
      */
-    const EDGE = NODE_RADIUS + 34;
+    const EDGE = NODE_RADIUS + Math.round(NAME_SIZE * 1.6);
 
     const MAX_X = WIDTH / 2 - EDGE;
     const MAX_Y = HEIGHT / 2 - EDGE;
@@ -1012,6 +1039,109 @@ export default function RelationGraph({
      */
 
 
+    /*
+     * 詰めて並べる。
+     *
+     * ★ 真ん中から、輪を重ねて外へ。
+     *
+     *   一本の大きな輪に全員を並べると、
+     *   内側がまるごと空いたまま、
+     *   丸だけが縁に押し付けられて小さくなる。
+     *
+     *   内側から詰めれば、同じ枠に同じ人数を
+     *   ずっと大きく置ける。
+     *
+     * ★ 繋がりの多いものから内側へ。
+     *   多くの相手と結ばれているものを真ん中に置くと、
+     *   線が短く済む。
+     */
+    function packed(list: { id: string }[]) {
+        const degree = new Map<string, number>();
+
+        for (const relation of relations) {
+            degree.set(
+                relation.from_entry_id,
+                (degree.get(relation.from_entry_id) ?? 0) + 1,
+            );
+            degree.set(
+                relation.to_entry_id,
+                (degree.get(relation.to_entry_id) ?? 0) + 1,
+            );
+        }
+
+        const sorted = [...list].sort(
+            (a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0),
+        );
+
+        const place = new Map<string, { x: number; y: number }>();
+        const want = MIN_GAP * spread;
+
+        let at = 0;
+        let ring = 0;
+
+        while (at < sorted.length) {
+            /* いちばん内側は、真ん中に 1 つ */
+            if (ring === 0) {
+                place.set(sorted[at].id, { x: CENTER_X, y: CENTER_Y });
+                at += 1;
+                ring += 1;
+                continue;
+            }
+
+            const ry = Math.min(
+                CENTER_Y - NODE_RADIUS - 8,
+                (want * ring) / 1.6,
+            );
+
+            /*
+             * ★ 輪の形は、枠の形に合わせる。
+             *   決め打ちの比で広げると、
+             *   横に長い画面で左右が大きく余る。
+             */
+            const rx = Math.min(CENTER_X - NODE_RADIUS - 8, ry * liveAspect);
+
+            /* この輪に入る数。詰めすぎない */
+            const room = Math.max(1, Math.floor((Math.PI * (rx + ry)) / want));
+            const count = Math.min(room, sorted.length - at);
+
+            for (let i = 0; i < count; i += 1) {
+                const angle = (Math.PI * 2 * i) / count - Math.PI / 2;
+
+                place.set(sorted[at + i].id, {
+                    x: CENTER_X + Math.cos(angle) * rx,
+                    y: CENTER_Y + Math.sin(angle) * ry,
+                });
+            }
+
+            at += count;
+            ring += 1;
+
+            /* 輪を増やしても入らないときは、そこで止める */
+            if (ry >= CENTER_Y - NODE_RADIUS - 8 && count === 0) break;
+        }
+
+        return place;
+    }
+
+    /*
+     * まだ誰も動かしていないか。
+     *
+     * ★ 何も置かれていないときは、詰めて並べる。
+     *
+     *   はじめの並びが一本の大きな輪だと、
+     *   人数が増えるほど丸が縁に押し付けられ、
+     *   全体を出したときに名前が読めない。
+     *
+     * ★ 一人でも自分で置いていたら、これまでどおり。
+     *   並べ直すのは「整理する」を押したときだけにする。
+     */
+    const untouched = shownNodes.every((node) => !layout[node.id]);
+
+    const firstLook =
+        !focusId && untouched && shownNodes.length > 0
+            ? packed(shownNodes)
+            : null;
+
     const positions = new Map<string, { x: number; y: number }>();
 
     if (focusId && focusIds) {
@@ -1088,6 +1218,14 @@ export default function RelationGraph({
             );
             return;
         }
+        /* まだ誰も動かしていないときは、詰めた並び */
+        const first = firstLook?.get(node.id);
+
+        if (first) {
+            positions.set(node.id, first);
+            return;
+        }
+
         // 上から時計回りに並べる
         const angle = (Math.PI * 2 * index) / nodes.length - Math.PI / 2;
         positions.set(node.id, {
@@ -1108,6 +1246,92 @@ export default function RelationGraph({
             .map((node) => node.id),
     );
     untangle(positions, fixedIds);
+
+    /*
+     * 描いたものが、実際に占めている範囲。
+     *
+     * ★ 紙ではなく、中身に合わせて枠に収める。
+     *
+     *   これまでは紙の全体を枠に収めていた。
+     *   紙は人数に合わせて広げてあるので、
+     *   並べ直して中身が小さくまとまっても、
+     *   まわりの余白ごと縮めて出していた。
+     *   そのぶん、丸も名前も小さくなる。
+     *
+     *   中身の外ぎりぎりで切れば、余白のぶんだけ大きく出せる。
+     *
+     * ★ 掴んでいる間は、動かさない。
+     *   丸を端へ運ぶたびに全体が縮むと、
+     *   手元の丸が指から逃げていく。
+     */
+    /*
+     * ★ 名前のぶんまで数える。
+     *
+     *   丸の幅だけで測ると、端の人の長い名前が切れる。
+     *   名前は丸より横に広いので、そちらで測る。
+     */
+    const halfOf = (name: string) =>
+        Math.max(NODE_RADIUS, ((name || "?").length * NAME_SIZE) / 2);
+
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (const node of shownNodes) {
+        const at = positions.get(node.id);
+        if (!at) continue;
+
+        const half = halfOf(node.name);
+
+        minX = Math.min(minX, at.x - half);
+        maxX = Math.max(maxX, at.x + half);
+        minY = Math.min(minY, at.y - NODE_RADIUS);
+        maxY = Math.max(maxY, at.y + NAME_DROP + NAME_SIZE * 0.4);
+    }
+
+    const seen = Number.isFinite(minX)
+        ? { minX, maxX, minY, maxY }
+        : { minX: 0, maxX: WIDTH, minY: 0, maxY: HEIGHT };
+
+    /* 外側に、少しだけ余白 */
+    const ROOM = Math.round(NODE_RADIUS * 0.6);
+
+    /*
+     * 狭すぎる範囲は、広げておく。
+     * 一人二人しかいないときに、丸だけ巨大になるのを防ぐ。
+     */
+    const LEAST = NODE_RADIUS * 12;
+
+    const rawW = seen.maxX - seen.minX + ROOM * 2;
+    const rawH = seen.maxY - seen.minY + ROOM * 2;
+
+    const liveView = {
+        w: Math.max(LEAST * liveAspect, rawW),
+        h: Math.max(LEAST, rawH),
+    };
+
+    const viewNow = {
+        x: (seen.minX + seen.maxX) / 2 - liveView.w / 2,
+        y: (seen.minY + seen.maxY) / 2 - liveView.h / 2,
+        w: liveView.w,
+        h: liveView.h,
+    };
+
+    /* 掴んでいる間は、掴む前の範囲を使い続ける */
+    if (!dragging && !bending) heldView.current = viewNow;
+
+    const view =
+        (dragging || bending) && heldView.current ? heldView.current : viewNow;
+
+    /*
+     * 枠に収めるときの、一目盛りあたりの点の数。
+     *
+     * ★ 横と縦のうち、きつい方に合わせる。
+     *   片方だけに合わせると、もう片方がはみ出す。
+     */
+    const fitRatio =
+        box.w && box.h ? Math.min(box.w / view.w, box.h / view.h) : 0;
 
     /*
      * 重なりをほどく。
@@ -1206,7 +1430,7 @@ export default function RelationGraph({
          *   上と左右には要らないので、そのぶん端まで行けない。
          */
         const side = NODE_RADIUS;
-        const bottom = NODE_RADIUS + 34;
+        const bottom = NODE_RADIUS + Math.round(NAME_SIZE * 1.6);
 
         return {
             x: Math.min(WIDTH - side, Math.max(side, point.x)),
@@ -1240,13 +1464,13 @@ export default function RelationGraph({
          *   描く範囲は紙より一回り大きい。
          *   紙の幅だけで割ると、そのぶん掴む位置がずれる。
          */
-        /* 名前が紙の広さのつまみとぶつからないようにする */
-        const spanX = WIDTH + PAD * 2;
-        const spanY = HEIGHT + PAD * 2;
-
+        /*
+         * ★ 出している範囲（view）で割る。
+         *   紙の全体ではなく、中身に合わせて切っているので。
+         */
         return {
-            x: ((event.clientX - rect.left) / rect.width) * spanX - PAD,
-            y: ((event.clientY - rect.top) / rect.height) * spanY - PAD,
+            x: view.x + ((event.clientX - rect.left) / rect.width) * view.w,
+            y: view.y + ((event.clientY - rect.top) / rect.height) * view.h,
         };
     }
 
@@ -1269,68 +1493,29 @@ export default function RelationGraph({
     function tidy() {
         if (!onMove) return;
 
-        const degree = new Map<string, number>();
-        for (const relation of relations) {
-            degree.set(relation.from_entry_id, (degree.get(relation.from_entry_id) ?? 0) + 1);
-            degree.set(relation.to_entry_id, (degree.get(relation.to_entry_id) ?? 0) + 1);
-        }
-
-        const sorted = [...nodes].sort(
-            (a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0),
-        );
-
-        const place = new Map<string, { x: number; y: number }>();
-        const want = MIN_GAP * spread;
-
-        let at = 0;
-        let ring = 0;
-
-        while (at < sorted.length) {
-            /*
-             * 内側から数えて ring 番目の輪。
-             * いちばん内側（0）は、真ん中に 1 つだけ置く。
-             */
-            if (ring === 0) {
-                place.set(sorted[at].id, { x: CENTER_X, y: CENTER_Y });
-                at += 1;
-                ring += 1;
-                continue;
-            }
-
-            /*
-             * 輪の大きさ。板が横長なので、横と縦で別に持つ。
-             * 同じにすると、縦だけ先に端へ着いて詰まる。
-             */
-            const ry = Math.min(
-                CENTER_Y - NODE_RADIUS - 8,
-                (want * ring) / 1.6,
-            );
-            const rx = Math.min(CENTER_X - NODE_RADIUS - 8, ry * ASPECT);
-
-            /* この輪に入る数。詰めすぎない */
-            const room = Math.max(1, Math.floor((Math.PI * (rx + ry)) / want));
-            const count = Math.min(room, sorted.length - at);
-
-            for (let i = 0; i < count; i += 1) {
-                const angle = (Math.PI * 2 * i) / count - Math.PI / 2;
-                place.set(sorted[at + i].id, {
-                    x: CENTER_X + Math.cos(angle) * rx,
-                    y: CENTER_Y + Math.sin(angle) * ry,
-                });
-            }
-
-            at += count;
-            ring += 1;
-
-            /* 輪を増やしても入らないときは、そこで止める */
-            if (ry >= CENTER_Y - NODE_RADIUS - 8 && count === 0) break;
-        }
+        const place = packed(nodes);
 
         untangle(place, new Set());
 
+        /*
+         * ★ 覚えてもらうのは、紙に対する割合。
+         *
+         *   ここだけ、紙の座標のまま渡していた。
+         *   受け取る側は 1 を超える値を「昔の覚え方」とみなして
+         *   1600×1000 の紙での割合に直すので、
+         *   整理するたびに、全員が右下の隅へ寄って重なっていた。
+         *
+         *   つまんで動かしたときと同じ形で渡す。
+         */
         for (const node of nodes) {
             const point = place.get(node.id);
-            if (point) onMove(node.id, point);
+
+            if (point) {
+                onMove(node.id, {
+                    x: point.x / WIDTH,
+                    y: point.y / HEIGHT,
+                });
+            }
         }
     }
 
@@ -1366,20 +1551,29 @@ export default function RelationGraph({
               * ★ 人が少ないうちは出さない。
               *   4 人の図に探す欄があっても、邪魔なだけ。
               */}
-            {entries.length >= 8 && (
-                <input
-                    type="text"
-                    value={findText}
-                    onChange={(e) => setFindText(e.target.value)}
-                    placeholder="名前で探す"
-                    aria-label="名前で探す"
-                    className="mb-1.5 w-40 rounded-md border border-line bg-surface px-2.5 py-1 text-[12px] outline-none focus:border-forest"
-                />
-            )}
+            {/*
+              * ★ 探す欄と数は、同じ行に置く。
+              *
+              *   二段に積むと、それだけで 50px ほど取る。
+              *   そのぶん図が低くなり、名前が小さくなる。
+              *   縦に使える所は、図に回す。
+              */}
+            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                {entries.length >= 8 && (
+                    <input
+                        type="text"
+                        value={findText}
+                        onChange={(e) => setFindText(e.target.value)}
+                        placeholder="名前で探す"
+                        aria-label="名前で探す"
+                        className="w-40 rounded-md border border-line bg-surface px-2.5 py-1 text-[12px] outline-none focus:border-forest"
+                    />
+                )}
 
-            <p className="mb-1.5 text-[11px] text-muted">
-                {nodes.length}人を{relations.length}本の関係で結んでいます。
-            </p>
+                <p className="text-[11px] text-muted">
+                    {nodes.length}人を{relations.length}本の関係で結んでいます。
+                </p>
+            </div>
 
             {/*
               * 章で絞る。
@@ -1480,7 +1674,7 @@ export default function RelationGraph({
                 <div
                     className={[
                         "flex min-h-full min-w-full",
-                        scale > 1
+                        zoom > 1
                             ? "items-start justify-start"
                             : "items-center justify-center",
                     ].join(" ")}
@@ -1496,7 +1690,9 @@ export default function RelationGraph({
                  *   描く範囲だけ外へ広げる。
                  *   置ける場所は紙の中のまま。
                  */
-                viewBox={`${-PAD} ${-PAD} ${WIDTH + PAD * 2} ${HEIGHT + PAD * 2}`}
+                viewBox={`${Math.round(view.x)} ${Math.round(view.y)} ${Math.round(
+                    view.w,
+                )} ${Math.round(view.h)}`}
                 className={[
                     "mx-auto block",
                     dragging ? "cursor-grabbing" : "",
@@ -1574,11 +1770,17 @@ export default function RelationGraph({
                      *   幅が減って、さらにはみ出す。
                      */
                     display: "block",
-                    width: fitHeight
-                        ? `${Math.floor(fitHeight * scale * liveAspect)}px`
+                    /*
+                     * ★ 中身の範囲を、枠に収めてから倍率を掛ける。
+                     *
+                     *   倍率 1 で、中身がちょうど枠いっぱい。
+                     *   そこから寄って読む。
+                     */
+                    width: fitRatio
+                        ? `${Math.floor(view.w * fitRatio * zoom)}px`
                         : "100%",
-                    height: fitHeight
-                        ? `${Math.floor(fitHeight * scale)}px`
+                    height: fitRatio
+                        ? `${Math.floor(view.h * fitRatio * zoom)}px`
                         : "100%",
                     flexShrink: 0,
                     flexGrow: 0,
@@ -2038,11 +2240,18 @@ export default function RelationGraph({
                             {relation.label && touchesActive && (
                                 <>
                                     <rect
-                                        x={controlX - relation.label.length * 4.5 - 5}
-                                        y={controlY - 9}
-                                        width={relation.label.length * 9 + 10}
-                                        height={18}
-                                        rx={5}
+                                        x={
+                                            controlX -
+                                            (relation.label.length * EDGE_SIZE) / 2 -
+                                            EDGE_SIZE * 0.3
+                                        }
+                                        y={controlY - EDGE_SIZE * 0.72}
+                                        width={
+                                            relation.label.length * EDGE_SIZE +
+                                            EDGE_SIZE * 0.6
+                                        }
+                                        height={EDGE_SIZE * 1.44}
+                                        rx={EDGE_SIZE * 0.35}
                                         fill="var(--color-surface)"
                                         stroke="var(--color-line)"
                                         strokeWidth="1"
@@ -2051,7 +2260,7 @@ export default function RelationGraph({
                                         x={controlX}
                                         y={controlY + 3.5}
                                         textAnchor="middle"
-                                        fontSize="20"
+                                        fontSize={EDGE_SIZE}
                                         fill={colorOf(relation.label)}
                                     >
                                         {relation.label}
@@ -2150,9 +2359,9 @@ export default function RelationGraph({
                             {!pictures[node.id] && (
                                 <text
                                     x={position.x}
-                                    y={position.y + 5}
+                                    y={position.y + Math.round(INITIAL_SIZE * 0.35)}
                                     textAnchor="middle"
-                                    fontSize="30"
+                                    fontSize={INITIAL_SIZE}
                                     fontWeight="600"
                                     fill="var(--color-forest)"
                                 >
@@ -2162,7 +2371,7 @@ export default function RelationGraph({
 
                             <text
                                 x={position.x}
-                                y={position.y + NODE_RADIUS + 28}
+                                y={position.y + NAME_DROP}
                                 textAnchor="middle"
                                 /*
                                  * ★ 枠に収めるほど、文字は縮む。
@@ -2174,7 +2383,7 @@ export default function RelationGraph({
                                  *   丸に対して字を大きくする。
                                  *   重なりは、丸どうしの間（MIN_GAP）で防ぐ。
                                  */
-                                fontSize="24"
+                                fontSize={NAME_SIZE}
                                 fontWeight="500"
                                 fill="var(--color-ink)"
                             >
@@ -2248,9 +2457,9 @@ export default function RelationGraph({
                         </button>
                     </div>
 
-                    <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                         <p className="text-[11px] text-faint">
-                            丸をつまむと動かせます。線を二度押すと、通り道を変える点が出ます。
+                            丸をつまむと動かせます。線を二度押すと、通り道が変わります。
                         </p>
                         {Object.keys(layout).length > 0 && (
                             <button
@@ -2280,7 +2489,7 @@ export default function RelationGraph({
               * ★ 使われている大枠だけ出す。
               *   その作品に無い色を並べても意味がない。
               */}
-            <ul className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1.5">
+            <ul className="mt-1.5 flex flex-wrap justify-center gap-x-5 gap-y-1">
                 {usedGroups.map((group) => (
                     <li
                         key={group.key}
@@ -2302,7 +2511,7 @@ export default function RelationGraph({
                 ))}
             </ul>
 
-            <p className="mt-3 text-center text-xs text-faint">
+            <p className="mt-1 text-center text-[11px] text-faint">
                 {chapter !== null
                     ? `${chapter}章に出る人だけを出しています。章を決めていない人は、どの章でも出ます。`
                     : focusId
