@@ -1368,6 +1368,9 @@ export default function RelationGraph({
     const halfOf = (name: string) =>
         Math.max(NODE_RADIUS, ((name || "?").length * NAME_SIZE) / 2);
 
+    /* 名前を引く。札を名前から逃がすときに要る */
+    const nameOf = new Map(shownNodes.map((node) => [node.id, node.name]));
+
     let minX = Number.POSITIVE_INFINITY;
     let maxX = Number.NEGATIVE_INFINITY;
     let minY = Number.POSITIVE_INFINITY;
@@ -2247,10 +2250,26 @@ export default function RelationGraph({
                         const px = -dy / length;
                         const py = dx / length;
 
-                        /* 札の幅の半分ぶん */
-                        const wide =
-                            ((relation.label?.length ?? 0) * EDGE_SIZE) / 2 +
-                            EDGE_SIZE * 0.8;
+                        /*
+                         * 逃がす幅。
+                         *
+                         * ★ 札の半分だけでは足りない。
+                         *
+                         *   丸の名前は丸の真下に、真ん中揃えで出る。
+                         *   札を線の横へ半分だけずらしても、
+                         *   名前の半分がまだそこにある。
+                         *
+                         *   札の半分と、名前の半分の、両方ぶん逃がす。
+                         */
+                        const halfLabel =
+                            ((relation.label?.length ?? 0) * EDGE_SIZE) / 2;
+
+                        const halfName = Math.max(
+                            halfOf(nameOf.get(relation.from_entry_id) ?? ""),
+                            halfOf(nameOf.get(relation.to_entry_id) ?? ""),
+                        );
+
+                        const wide = halfLabel + halfName + EDGE_SIZE * 0.5;
 
                         /*
                          * ★ 行きと帰りの二本は、それぞれ外側へ。
