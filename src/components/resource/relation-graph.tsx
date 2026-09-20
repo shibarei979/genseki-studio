@@ -734,6 +734,26 @@ export default function RelationGraph({
     /* 線に出す関係の名前 */
     const EDGE_SIZE = Math.round(NODE_RADIUS * 0.56);
 
+    /*
+     * 丸を、画面でどのくらいの大きさに見せたいか。
+     *
+     * ★ 人数で大きさが変わらないようにする。
+     *
+     *   枠に収める作りなので、人が少ないほど丸が膨らむ。
+     *   4、5 人だと丸だけが画面の一割を占め、
+     *   図というより絵札が並んでいるように見えた。
+     *
+     *   丸の大きさを決めてから、それに合う広さに並べる。
+     *   人が少ないときは、丸を大きくするのではなく
+     *   間を広げる。
+     */
+    const NODE_WANT_PX = 22;
+
+    /* その大きさになるための、中身の高さ（紙の目盛り） */
+    const wantSpan = box.h
+        ? NODE_RADIUS * (box.h / NODE_WANT_PX)
+        : 0;
+
     const HEIGHT = Math.round(BASE_SIZE * spread);
     /* 紙の横幅。枠と同じ形にする */
     const WIDTH = Math.round(HEIGHT * liveAspect);
@@ -1120,6 +1140,50 @@ export default function RelationGraph({
             if (ry >= CENTER_Y - NODE_RADIUS - 8 && count === 0) break;
         }
 
+        /*
+         * ★ 最後に、紙いっぱいまで広げる。
+         *
+         *   人が少ないと、輪が二つで終わって
+         *   真ん中に小さくまとまる。
+         *   丸の大きさには上限を置いてあるので、
+         *   そのままだと枠の大半が空いたままになる。
+         *
+         *   丸を大きくするのではなく、間を広げる。
+         *   図の形は変えずに、隙間だけが伸びる。
+         */
+        const roomY = CENTER_Y - NODE_RADIUS * 2;
+        const roomX = CENTER_X - NODE_RADIUS * 2;
+
+        let spanX = 0;
+        let spanY = 0;
+
+        for (const point of place.values()) {
+            spanX = Math.max(spanX, Math.abs(point.x - CENTER_X));
+            spanY = Math.max(spanY, Math.abs(point.y - CENTER_Y));
+        }
+
+        /* 目指す広さ。丸が思う大きさに見えるところ */
+        const aimY = wantSpan / 2;
+        const aimX = (wantSpan * liveAspect) / 2;
+
+        const grow = Math.min(
+            spanX > 1
+                ? Math.min(roomX, aimX) / spanX
+                : Number.POSITIVE_INFINITY,
+            spanY > 1
+                ? Math.min(roomY, aimY) / spanY
+                : Number.POSITIVE_INFINITY,
+        );
+
+        if (Number.isFinite(grow) && grow > 1) {
+            for (const [id, point] of place) {
+                place.set(id, {
+                    x: CENTER_X + (point.x - CENTER_X) * grow,
+                    y: CENTER_Y + (point.y - CENTER_Y) * grow,
+                });
+            }
+        }
+
         return place;
     }
 
@@ -1158,11 +1222,31 @@ export default function RelationGraph({
          */
         const tight = Math.min(1, Math.max(0.45, around.length / 10));
 
+        /*
+         * ★ 輪は、丸の大きさから決める。
+         *
+         *   これまでは紙の大きさに割合を掛けていた。
+         *   人が少ないと輪が丸 3 個ぶんまで縮み、
+         *   関係の名前の札が、丸の下の名前に重なっていた。
+         *
+         *   間に札が入るだけの幅を、必ず取る。
+         *   名前の帯（丸の下）と札が、触れない距離。
+         */
+        const ringY = Math.min(
+            MAX_Y,
+            Math.max(
+                NODE_RADIUS * 6.5,
+                Math.min(MAX_Y, (wantSpan / 2) * tight),
+            ),
+        );
+
+        const ringX = Math.min(MAX_X, ringY * liveAspect);
+
         around.forEach((node, index) => {
             const angle = (Math.PI * 2 * index) / around.length - Math.PI / 2;
             positions.set(node.id, {
-                x: CENTER_X + Math.cos(angle) * RADIUS_X * tight,
-                y: CENTER_Y + Math.sin(angle) * RADIUS_Y * tight,
+                x: CENTER_X + Math.cos(angle) * ringX,
+                y: CENTER_Y + Math.sin(angle) * ringY,
             });
         });
     } else {
@@ -1330,8 +1414,27 @@ export default function RelationGraph({
      * ★ 横と縦のうち、きつい方に合わせる。
      *   片方だけに合わせると、もう片方がはみ出す。
      */
+    /*
+     * ★ 丸が大きくなりすぎないようにする。
+     *
+     *   中身に合わせて枠いっぱいに広げるので、
+     *   人が 4、5 人しかいないと、丸だけが
+     *   画面の 1 割を占めるほど膨らんでいた。
+     *   図というより、絵札が並んでいるように見える。
+     *
+     *   画面の点で、丸の半径に上限を置く。
+     *   上限に当たったら、そこで止めて真ん中に寄せる。
+     */
+    const NODE_CAP_PX = 24;
+
     const fitRatio =
-        box.w && box.h ? Math.min(box.w / view.w, box.h / view.h) : 0;
+        box.w && box.h
+            ? Math.min(
+                  box.w / view.w,
+                  box.h / view.h,
+                  NODE_CAP_PX / NODE_RADIUS,
+              )
+            : 0;
 
     /*
      * 重なりをほどく。
