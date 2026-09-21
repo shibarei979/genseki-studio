@@ -1456,6 +1456,45 @@ function PostForm({
 
     const [notice, setNotice] = useState("");
 
+    /*
+     * いますぐ公開してよいか、確かめている最中か。
+     *
+     * ★ 押したらすぐ出す、をやめた。
+     *
+     *   前は、予約のあと自動で進んできた話だけ聞いていた。
+     *   自分で選んだ話では聞かなかった。
+     *   毎回聞くと、ふつうに出したい人の邪魔になると考えていた。
+     *
+     *   ところが「変更を保存する」は、変えたところが無いと消える。
+     *   消えると、その場所に「この話を投稿する」だけが残る。
+     *   保存のつもりで押して、出すつもりのない話が出た人がいた。
+     *
+     *   公開は取り消せても、届いた知らせは取り消せない。
+     *   フォローしている人が増えるほど、間違いの重さが増す。
+     *   ひと手間を足す。
+     *
+     * ★ 予約では聞かない。
+     *   時刻が来るまでは取り消せるし、その場では誰にも届かない。
+     */
+    const [confirming, setConfirming] = useState(false);
+
+    /* 話を切り替えたら、確かめ直す */
+    useEffect(() => {
+        setConfirming(false);
+    }, [episode.id]);
+
+    /*
+     * 出したときに、誰に知らせが届くか。
+     *
+     * ★ 設定のとおりに書く。
+     *   届かない設定の人に「届きます」と出すと、
+     *   次から確かめの文を読まなくなる。
+     */
+    const notifyWho = [
+        publish?.notify_followers !== false ? "フォローしている人" : null,
+        publish?.notify_on_publish !== false ? "この作品を読んでいる人" : null,
+    ].filter(Boolean) as string[];
+
     function save(patch: Partial<Episode>) {
         onChange(patch);
         setNotice("保存しました");
@@ -1538,28 +1577,29 @@ function PostForm({
         }
 
         /*
-         * ★ 自動で進んできた話だけ、一度聞く。
+         * ★ いますぐ出すときは、必ず一度聞く。
          *
-         *   予約したあと画面が次の話へ移る。
-         *   移った先は日時の欄が空なので、
-         *   押すとその話は即座に公開される。
-         *   流れで押して、出すつもりのなかった話が出た人がいる。
-         *
-         *   自分で選んだ話では聞かない。
-         *   毎回聞かれると、普通に出したい人の邪魔になる。
+         *   聞き方は、画面の中に出す。
+         *   浮いた窓はこの画面の作りと合わないうえ、
+         *   手元の指でそのまま「OK」を押してしまいやすい。
          */
-        if (askBeforePublish) {
-            if (
-                !window.confirm(
-                    `「${title.trim()}」を、いますぐ公開します。\n\n` +
-                        "予約したいときは、この下の「予約公開」に日時を入れてから押してください。",
-                )
-            ) {
-                return;
-            }
-        }
-
         setError("");
+        setConfirming(true);
+    }
+
+    /** 確かめたあと、いますぐ出す */
+    function publishNow() {
+        setConfirming(false);
+
+        const patch: Partial<Episode> = {
+            title: title.trim(),
+            preface: preface.trim() || null,
+            episode_summary: summary.trim() || null,
+            afterword: afterword.trim() || null,
+            chapter_id: chapterId || null,
+            illust_url: illustUrl || null,
+            illust_is_ai: illustIsAi,
+        };
 
         void (async () => {
             await onChange({
@@ -2338,10 +2378,22 @@ function PostForm({
                 {/*
                  * まだ投稿していない話でも、書き換えたなら残せる。
                  * 投稿せずに下書きだけ整えることがある。
+                 *
+                 * ★ 変えたところが無くても、消さない。薄くして置く。
+                 *
+                 *   前は、変えたところが無いと消していた。
+                 *   消えると並びが詰まり、
+                 *   いつも「保存」を押している場所に
+                 *   「この話を投稿する」が来ることがあった。
+                 *   保存のつもりで押して、出てしまった人がいる。
+                 *
+                 *   押せないときも同じ場所に置いておけば、
+                 *   ボタンの位置が動かない。
                  */}
-                {!episode.is_published && isDirty && (
+                {!episode.is_published && (
                     <button
                         type="button"
+                        disabled={!isDirty}
                         onClick={() =>
                             save({
                                 title: title.trim(),
@@ -2354,9 +2406,9 @@ function PostForm({
                                 illust_is_ai: illustIsAi,
                             })
                         }
-                        className="rounded-md border border-line px-5 py-2.5 text-sm text-ink hover:border-forest-line hover:text-forest"
+                        className="rounded-md border border-line px-5 py-2.5 text-sm text-ink hover:border-forest-line hover:text-forest disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line disabled:hover:text-ink"
                     >
-                        変更を保存する
+                        {isDirty ? "変更を保存する" : "変更はありません"}
                     </button>
                 )}
 
@@ -2422,6 +2474,67 @@ function PostForm({
                     </button>
                 )}
             </div>
+
+            {/*
+              * いますぐ出す前の、ひと確かめ。
+              *
+              * ★ 画面の中に出す。浮いた窓は使わない。
+              *   まとめて投稿するときの確かめと同じ作り。
+              *
+              * ★ 「公開する」は、押したボタンと違う場所に置く。
+              *   同じ場所だと、二度押しでそのまま出てしまう。
+              */}
+            {confirming && (
+                <div
+                    role="alertdialog"
+                    aria-label="いますぐ公開してよいか"
+                    className="mt-3 rounded-lg border border-forest-line bg-forest-tint px-4 py-3"
+                >
+                    <p className="text-sm font-medium text-ink">
+                        「{title.trim()}」を、いますぐ公開します。
+                    </p>
+
+                    <ul className="mt-1.5 space-y-0.5 text-[12px] leading-relaxed text-muted">
+                        {/*
+                          * ★ 予約のあと自動で進んできた話なら、そう書く。
+                          *   流れで押しやすいのは、この場面。
+                          */}
+                        {askBeforePublish && (
+                            <li className="text-[var(--color-danger)]">
+                                予約のあと、次の話へ進んできています。この話は日時が空です。
+                            </li>
+                        )}
+                        <li>読者から読めるようになります。</li>
+                        {notifyWho.length > 0 && (
+                            <li>
+                                {notifyWho.join("と")}に、知らせが届きます。
+                                届いた知らせは取り消せません。
+                            </li>
+                        )}
+                        <li>
+                            予約したいときは「やめる」を押して、予約公開に日時を入れてください。
+                        </li>
+                    </ul>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={publishNow}
+                            className="rounded-md bg-forest-dark px-6 py-2 text-sm font-medium text-white hover:opacity-90"
+                        >
+                            公開する
+                        </button>
+                        <button
+                            type="button"
+                            autoFocus
+                            onClick={() => setConfirming(false)}
+                            className="rounded-md border border-line bg-surface px-5 py-2 text-sm text-muted hover:text-ink"
+                        >
+                            やめる
+                        </button>
+                    </div>
+                </div>
+            )}
 
         </div>
     );
