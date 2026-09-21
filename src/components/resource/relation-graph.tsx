@@ -25,7 +25,7 @@ import {
     type GroupBox,
 } from "@/lib/resource/graph-groups";
 
-import type { ResourceEntry, ResourceRelation } from "@/types";
+import type { ResourceEntry, ResourcePage, ResourceRelation } from "@/types";
 
 interface Props {
     entries: ResourceEntry[];
@@ -46,6 +46,14 @@ interface Props {
      * null を渡すと、これまでどおりの曲げ方に戻る。
      */
     onBend?: (relationId: string, bend: { x: number; y: number } | null) => void;
+    /**
+     * 資料のページ。
+     *
+     * ★ 組分けのときに、欄の見出しを読むために使う。
+     *   「所属する人」「所属」といった欄がどこにあるかは、
+     *   ページの作りを見ないと分からない。
+     */
+    pages?: ResourcePage[];
 }
 
 /**
@@ -344,6 +352,7 @@ export default function RelationGraph({
     onMove,
     onReset,
     onBend,
+    pages = [],
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -353,7 +362,53 @@ export default function RelationGraph({
      * ★ 会員でも、切れるようにしておく。
      *   見比べたいときや、囲みが邪魔なときがある。
      */
-    const [boxOn, setBoxOn] = useState(true);
+    /*
+     * 組分けしているか。
+     *
+     * ★ 押したときに組を作る。ずっと出しっぱなしにはしない。
+     *
+     *   前は「囲む」を切り替えるだけで、
+     *   組が一つも見つからないときは何も起きなかった。
+     *   押しても変わらないので、壊れているように見えた。
+     *
+     *   押したら、その時点の図と資料から組を作り、
+     *   組ごとに並べ直す。見つからなければ、そう伝える。
+     *
+     * ★ 覚えておく。開き直すたびに解けると、また押し直すことになる。
+     */
+    const [grouped, setGrouped] = useState(false);
+
+    /* 組分けの結果を、一行で伝える */
+    const [groupNote, setGroupNote] = useState("");
+
+    /* どの作品の図か。組分けを覚えておく鍵に使う */
+    const workKey = entries[0]?.work_id ?? "";
+
+    useEffect(() => {
+        if (!workKey) return;
+
+        try {
+            setGrouped(
+                window.localStorage.getItem(`graph-grouped:${workKey}`) === "1",
+            );
+        } catch {
+            /* 覚えられなくても、図は描ける */
+        }
+    }, [workKey]);
+
+    function rememberGrouped(on: boolean) {
+        setGrouped(on);
+
+        try {
+            if (on) {
+                window.localStorage.setItem(`graph-grouped:${workKey}`, "1");
+            } else {
+                window.localStorage.removeItem(`graph-grouped:${workKey}`);
+            }
+        } catch {
+            /* 覚えられなくても、図は描ける */
+        }
+    }
 
     /*
      * 会員かどうか。
@@ -1470,9 +1525,9 @@ export default function RelationGraph({
      *   囲みを出すと、居ない人のぶんまで枠が伸びる。
      * ============================================================
      */
-    const grouping = mayGroup && boxOn && !focusId;
+    const grouping = mayGroup && grouped && !focusId;
 
-    const foundGroups = grouping ? findGroups(entries, relations) : [];
+    const foundGroups = grouping ? findGroupsHere() : [];
 
     const groupBoxes: GroupBox[] = grouping
         ? boxesFor(
@@ -1767,22 +1822,89 @@ export default function RelationGraph({
      * ★ 最後にほどく。
      *   輪に並べただけでは、輪と輪の間で重なる。
      */
-    function tidy() {
-        if (!onMove) return;
+    /*
+     * いま図に出ている人から、組を作る。
+     *
+     * ★ 資料は全部渡す。
+     *   組織の項目は、関係を結んでいなければ図に出てこない。
+     *   それでも「所属する人」は書いてあるので、そこから組が作れる。
+     *
+     * ★ 返すのは、図に二人以上いる組だけ。
+     */
+    function findGroupsHere() {
+        const onGraph = new Set(nodes.map((node) => node.id));
 
+        return findGroups(entries, relations, {
+            pages,
+            /*
+             * 家族かどうかは、線の色分けと同じ物差しで見る。
+             * 「師弟」「親友」は家族に入らない（長い言葉から先に当てている）。
+             */
+            isFamily: (label) => groupOf(label).key === "family",
+        })
+            .map((group) => ({
+                ...group,
+                ids: group.ids.filter((id) => onGraph.has(id)),
+            }))
+            .filter((group) => group.ids.length >= 2);
+    }
+
+    /*
+     * 組分けする。
+     *
+     * ★ 押したときに作って、組ごとに並べ直す。
+     *   囲みだけ出して並びがばらばらのままだと、
+     *   囲みが紙いっぱいに広がって重なり合う。
+     *
+     * ★ 見つからなければ、何を書けば組になるかを伝える。
+     *   黙っていると、押しても壊れているように見える。
+     */
+    function runGrouping() {
+        const found = findGroupsHere();
+
+        if (found.length === 0) {
+            rememberGrouped(false);
+            setGroupNote(
+                "組にできる手がかりが見つかりませんでした。" +
+                    "組織・グループの資料に「所属する人」を入れる、" +
+                    "人物の資料に「所属：〇〇」と書く、" +
+                    "関係に「所属」「親子」「兄弟」などを使う、のどれかで組になります。",
+            );
+            return;
+        }
+
+        rememberGrouped(true);
+
+        const names = found.map((group) => group.name).filter(Boolean);
+        setGroupNote(
+            `${found.length}つの組に分けました：${names.slice(0, 6).join("・")}` +
+                (names.length > 6 ? ` ほか${names.length - 6}` : ""),
+        );
+
+        arrange(found);
+    }
+
+    /* 組分けを解く。並びはそのまま残す */
+    function stopGrouping() {
+        rememberGrouped(false);
+        setGroupNote("");
+    }
+
+    function tidy() {
         /*
-         * ★ 囲みが出ているときは、まとまりごとに寄せる。
+         * ★ 組分けしているときは、組ごとに寄せる。
          *
          *   ばらばらのまま囲むと、囲みが紙いっぱいに広がって、
          *   どの囲みも重なってしまう。
          *   先に寄せてから囲めば、囲みは小さく収まる。
          *
-         *   まとまりが見つからなければ、これまでどおり詰める。
+         *   組が見つからなければ、これまでどおり詰める。
          */
-        const byGroup =
-            mayGroup && boxOn
-                ? findGroups(entries, relations)
-                : [];
+        arrange(mayGroup && grouped ? findGroupsHere() : []);
+    }
+
+    function arrange(byGroup: ReturnType<typeof findGroupsHere>) {
+        if (!onMove) return;
 
         const place =
             byGroup.length > 0
@@ -2841,24 +2963,38 @@ export default function RelationGraph({
                         </button>
 
                         {/*
-                          * 囲む・囲まない。
+                          * 組分け。
                           *
                           * ★ 会員のときだけ出す。
                           *   使えない印を並べても、邪魔になるだけ。
+                          *
+                          * ★ 押すたびに作り直す。
+                          *   資料や関係を書き足したあとに押せば、
+                          *   その時点の中身で組み直す。
                           */}
                         {mayGroup && (
                             <button
                                 type="button"
-                                onClick={() => setBoxOn((on) => !on)}
-                                aria-pressed={boxOn}
-                                title="所属でひとりでに囲みます"
+                                onClick={runGrouping}
+                                aria-pressed={grouped}
+                                title="図に出ている人を、所属・家族ごとの組に分けて並べ直します"
                                 className={
-                                    boxOn
+                                    grouped
                                         ? "rounded-md border border-forest bg-forest-tint/60 px-3 py-1 text-[11px] text-forest"
-                                        : "rounded-md border border-line bg-surface px-3 py-1 text-[11px] text-muted hover:border-forest-line hover:text-forest"
+                                        : "rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
                                 }
                             >
-                                囲む
+                                {grouped ? "組み直す" : "組分け"}
+                            </button>
+                        )}
+
+                        {mayGroup && grouped && (
+                            <button
+                                type="button"
+                                onClick={stopGrouping}
+                                className="text-[11px] text-muted hover:text-forest hover:underline"
+                            >
+                                解く
                             </button>
                         )}
 
@@ -2883,6 +3019,25 @@ export default function RelationGraph({
                             <ExpandIcon isFull={isFull} />
                         </button>
                     </div>
+
+                    {/*
+                      * 組分けの結果。
+                      *
+                      * ★ 何組できたか、見つからなければ何を書けばよいか。
+                      *   押しても変化が小さいとき、ここを見れば分かる。
+                      */}
+                    {mayGroup && groupNote && (
+                        <p
+                            role="status"
+                            className={
+                                grouped
+                                    ? "mt-1.5 text-[11px] text-forest"
+                                    : "mt-1.5 text-[11px] leading-relaxed text-muted"
+                            }
+                        >
+                            {groupNote}
+                        </p>
+                    )}
 
                     <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                         <p className="text-[11px] text-faint">

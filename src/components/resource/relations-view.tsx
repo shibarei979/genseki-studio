@@ -505,6 +505,12 @@ export default function RelationsView({
                                      */
                                     entries={pickable}
                                     relations={relations}
+                                    /*
+                                     * ★ 組分けで、欄の見出しを読むのに使う。
+                                     *   「所属する人」がどのページのどの欄かは、
+                                     *   ページの作りを見ないと分からない。
+                                     */
+                                    pages={pages}
                                     selectedId={focusId}
                                     /*
                                      * 覚えている置き場所を渡す。

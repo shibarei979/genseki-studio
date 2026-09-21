@@ -1,20 +1,34 @@
 /**
  * ============================================================
  * 原石航路 Studio
- * 関係図の「まとまり」と「線の通り道」
+ * 関係図の「組分け」と「線の通り道」
  *
  * ★ ここには絵を描く部分を入れない。
  *
- *   まとまりの見つけ方、囲みの四角、線の折れ方だけを置く。
+ *   組の見つけ方、囲みの四角、線の折れ方だけを置く。
  *   描くのは relation-graph に任せる。
  *   分けておけば、ここだけを見て直せる。
  *
- * ★ まとまりは、関係から見つける。
+ * ★ 組は、すでに書いてあるものから作る。
  *
  *   作者に「この人とこの人は同じ組」と
  *   もう一度入れてもらうのは、二度手間になる。
- *   「所属」「配下」といった関係は、すでに書いてある。
- *   それを読めば、ひとりでに囲める。
+ *   手がかりは、資料のあちこちにもう書いてある。
+ *
+ *   拾う順（先のものほど確か）
+ *
+ *     1. 組織の資料の「所属する人」
+ *        組織の名前が、そのまま組の名前になる
+ *
+ *     2. 人物の資料の「所属：〜」「組織：〜」
+ *        本文から資料を集めると、所属はここに入る
+ *
+ *     3. 関係の言葉
+ *        「所属」「部下」「上司」など。向きで中心を決める
+ *
+ *     4. 家族の関係
+ *        親子・兄弟・妹・祖母などで繋がる人たち
+ *        名字が揃っていれば「〇〇家」と名付ける
  *
  * ★ どこにも入らない人は、囲まない。
  *   一人だけの囲みも作らない。囲む意味がない。
@@ -38,14 +52,14 @@ export interface Rect {
 }
 
 /* ============================================================
- * 1. まとまりを見つける
+ * 1. 組を見つける
  * ============================================================ */
 
 /**
- * 「向こう側」が囲みになる言葉。
+ * 「向こう側」が組の中心になる言葉。
  *
  *   A から B への関係が「所属」なら、
- *   A は B の中にいる。囲みの名前は B。
+ *   A は B の中にいる。組の名前は B。
  */
 const OWNER_IS_TO = [
     "所属",
@@ -66,10 +80,10 @@ const OWNER_IS_TO = [
 ];
 
 /**
- * 「こちら側」が囲みになる言葉。
+ * 「こちら側」が組の中心になる言葉。
  *
  *   A から B への関係が「上司」なら、
- *   B は A の中にいる。囲みの名前は A。
+ *   B は A の中にいる。組の名前は A。
  */
 const OWNER_IS_FROM = [
     "上司",
@@ -83,18 +97,56 @@ const OWNER_IS_FROM = [
     "率い",
 ];
 
+/**
+ * 組織の資料で、「中にいる人」を並べる欄の見出し。
+ *
+ * ★ 「関わる人」は入れない。
+ *   出来事の資料にもある欄で、そちらは組ではない。
+ */
+/*
+ * ★ 「所属」だけの欄は入れない。
+ *   人物の資料の「所属」は、その人が属している先を指す。
+ *   「所属する人」「構成員」のように、中にいる人を並べる欄だけ。
+ */
+const MEMBER_FIELD = /所属する|所属者|所属メンバー|メンバー|構成員|一員|members/i;
+
+/**
+ * 人物の資料で、「どこに属しているか」を書く欄の見出し。
+ */
+const BELONG_FIELD = /所属|組織|陣営|勢力|派閥|チーム|団体|勤務先|学校|一族|家柄/;
+
+/**
+ * 文章の中の「所属：〜」。
+ *
+ * ★ 本文から資料を集めると、所属は人物の説明の末尾に
+ *   「所属：〇〇」の形で入る（入れる欄が無いので）。
+ */
+const BELONG_LINE =
+    /(?:所属先?|組織|陣営|勢力|派閥|チーム|団体|勤務先|学校)\s*[：:]\s*([^\n]+)/g;
+
+/** 恋の関係は、家族の組には入れない */
+const NOT_FAMILY = /恋|片想|片思|想い人|元カ|浮気/;
+
+export type GroupSource = "members" | "text" | "relation" | "family";
+
 export interface FoundGroup {
-    /** 囲みの id。中心になった項目の id をそのまま使う */
+    /** 組の id。中心になった項目の id か、名前から作ったもの */
     key: string;
     /** 囲みに出す名前 */
     name: string;
-    /** 中に入る項目の id。中心になった項目も入る */
+    /** 中に入る項目の id */
     ids: string[];
+    /** どこから見つけたか。知らせるときに使う */
+    from?: GroupSource;
 }
 
 interface MiniEntry {
     id: string;
     name: string;
+    aliases?: string[];
+    page_id?: string;
+    summary?: string;
+    values?: Record<string, unknown>;
 }
 
 interface MiniRelation {
@@ -103,54 +155,337 @@ interface MiniRelation {
     label: string;
 }
 
+interface MiniPage {
+    id: string;
+    builtin_key?: string | null;
+    fields: { key: string; label: string; type: string }[];
+}
+
+/** 「」『』やまわりの空白を落とす */
+function cleanName(text: string): string {
+    return text
+        .trim()
+        .replace(/^[「『（(【\[]+/, "")
+        .replace(/[」』）)】\]。．.]+$/, "")
+        .trim();
+}
+
+/** 「A、B／C」を分ける */
+function splitNames(text: string): string[] {
+    return text
+        .split(/[、,，/／・;；]|\s{2,}/)
+        .map(cleanName)
+        /* 長すぎるのは名前ではなく説明 */
+        .filter((one) => one.length > 0 && one.length <= 20);
+}
+
+/** いくつかの名前の、頭の揃っているところ */
+function commonHead(names: string[]): string {
+    if (names.length === 0) return "";
+
+    let head = names[0];
+
+    for (const one of names.slice(1)) {
+        let at = 0;
+        while (at < head.length && at < one.length && head[at] === one[at]) {
+            at += 1;
+        }
+        head = head.slice(0, at);
+        if (!head) break;
+    }
+
+    return head.trim();
+}
+
 /**
- * 関係を読んで、まとまりを作る。
+ * 組を見つける。
  *
- * ★ 二人以上入らない囲みは捨てる。
- *   一人を囲んでも、何も分からない。
+ * @param entries   資料の項目。図に出ていない組織の項目も渡してよい
+ * @param relations 関係
+ * @param extra     資料のページ（欄の見出しを読むため）と、家族かどうかの見分け方
  */
 export function findGroups(
     entries: MiniEntry[],
     relations: MiniRelation[],
+    extra: {
+        pages?: MiniPage[];
+        isFamily?: (label: string) => boolean;
+    } = {},
 ): FoundGroup[] {
-    const nameOf = new Map(entries.map((one) => [one.id, one.name]));
-    const holds = new Map<string, Set<string>>();
+    const byId = new Map(entries.map((one) => [one.id, one]));
 
-    const add = (ownerId: string, memberId: string) => {
-        if (!nameOf.has(ownerId) || !nameOf.has(memberId)) return;
-        if (ownerId === memberId) return;
+    /* 名前から項目を引く。別名でも引けるように */
+    const byName = new Map<string, MiniEntry>();
 
-        const set = holds.get(ownerId) ?? new Set<string>();
-        set.add(memberId);
-        /* 中心も中に入れる。囲みの名札と中身が離れないように */
-        set.add(ownerId);
-        holds.set(ownerId, set);
+    for (const one of entries) {
+        const name = cleanName(one.name ?? "");
+        if (name && !byName.has(name)) byName.set(name, one);
+
+        for (const alias of one.aliases ?? []) {
+            const clean = cleanName(alias);
+            if (clean && !byName.has(clean)) byName.set(clean, one);
+        }
+    }
+
+    const pageOf = new Map((extra.pages ?? []).map((page) => [page.id, page]));
+
+    const groups = new Map<
+        string,
+        { name: string; ids: Set<string>; from: GroupSource }
+    >();
+
+    const put = (
+        key: string,
+        name: string,
+        from: GroupSource,
+        ids: string[],
+    ) => {
+        const known = ids.filter((id) => byId.has(id));
+        if (known.length === 0) return;
+
+        const group = groups.get(key) ?? { name, ids: new Set<string>(), from };
+
+        for (const id of known) group.ids.add(id);
+        groups.set(key, group);
     };
 
+    /*
+     * 名前で書かれた組を、どの鍵にまとめるか。
+     *
+     * ★ 同じ名前の項目があれば、その項目の組に入れる。
+     *   組織の資料「黒鉄組」と、人物の「所属：黒鉄組」が
+     *   別々の囲みになると、同じ組が二つ並ぶ。
+     */
+    const keyForName = (name: string): { key: string; name: string; hub?: string } => {
+        const hit = byName.get(name);
+
+        if (hit) return { key: hit.id, name: hit.name, hub: hit.id };
+
+        return { key: `name:${name}`, name };
+    };
+
+    /* ---------------------------------------------------------
+     * 1. 組織の資料の「所属する人」
+     * --------------------------------------------------------- */
+    for (const entry of entries) {
+        const page = entry.page_id ? pageOf.get(entry.page_id) : undefined;
+        if (!page) continue;
+
+        for (const field of page.fields ?? []) {
+            if (field.type !== "relation_entry") continue;
+
+            const isMembers =
+                MEMBER_FIELD.test(field.label) ||
+                (page.builtin_key === "organization" && field.key === "members");
+
+            if (!isMembers) continue;
+
+            const raw = entry.values?.[field.key];
+            if (!Array.isArray(raw)) continue;
+
+            const ids = raw.filter((one): one is string => typeof one === "string");
+            if (ids.length === 0) continue;
+
+            /* 組織そのものも、図に出ていれば中に入れる */
+            put(entry.id, entry.name, "members", [entry.id, ...ids]);
+        }
+    }
+
+    /* ---------------------------------------------------------
+     * 2. 人物の資料に書かれた所属
+     * --------------------------------------------------------- */
+    for (const entry of entries) {
+        const found: string[] = [];
+
+        /* 欄の見出しが「所属」などのもの */
+        const page = entry.page_id ? pageOf.get(entry.page_id) : undefined;
+
+        for (const field of page?.fields ?? []) {
+            if (field.type === "relation_entry") {
+                /*
+                 * 「所属」欄が項目を指す作りなら、指した先が組。
+                 * 組織の資料側に書かれていなくても拾える。
+                 *
+                 * ★ 組織の「所属する人」は、ここでは読まない。
+                 *   あれは中にいる人の欄で、1 で読んである。
+                 *   ここで読むと「組織が人に所属している」ことになり、
+                 *   人の名前の囲みができてしまう。
+                 */
+                const isMembers =
+                    MEMBER_FIELD.test(field.label) ||
+                    (page?.builtin_key === "organization" && field.key === "members");
+
+                if (isMembers) continue;
+                if (!BELONG_FIELD.test(field.label)) continue;
+
+                const raw = entry.values?.[field.key];
+                if (!Array.isArray(raw)) continue;
+
+                for (const id of raw) {
+                    const target = typeof id === "string" ? byId.get(id) : undefined;
+                    if (target) put(target.id, target.name, "text", [target.id, entry.id]);
+                }
+                continue;
+            }
+
+            if (!BELONG_FIELD.test(field.label)) continue;
+
+            const raw = entry.values?.[field.key];
+
+            if (typeof raw === "string") found.push(...splitNames(raw));
+            if (Array.isArray(raw)) {
+                for (const one of raw) {
+                    if (typeof one === "string") found.push(...splitNames(one));
+                }
+            }
+        }
+
+        /* 文章の中の「所属：〜」 */
+        const texts: string[] = [entry.summary ?? ""];
+
+        for (const value of Object.values(entry.values ?? {})) {
+            if (typeof value === "string") texts.push(value);
+        }
+
+        for (const text of texts) {
+            for (const match of text.matchAll(BELONG_LINE)) {
+                found.push(...splitNames(match[1] ?? ""));
+            }
+        }
+
+        for (const name of new Set(found)) {
+            /* 自分の名前を所属に書いている、は数えない */
+            if (name === cleanName(entry.name)) continue;
+
+            const where = keyForName(name);
+
+            put(
+                where.key,
+                where.name,
+                "text",
+                where.hub ? [where.hub, entry.id] : [entry.id],
+            );
+        }
+    }
+
+    /* ---------------------------------------------------------
+     * 3. 関係の言葉
+     * --------------------------------------------------------- */
     for (const relation of relations) {
         const label = (relation.label ?? "").trim();
         if (!label) continue;
 
+        let owner: string | null = null;
+        let member: string | null = null;
+
         if (OWNER_IS_TO.some((word) => label.includes(word))) {
-            add(relation.to_entry_id, relation.from_entry_id);
-            continue;
+            owner = relation.to_entry_id;
+            member = relation.from_entry_id;
+        } else if (OWNER_IS_FROM.some((word) => label.includes(word))) {
+            owner = relation.from_entry_id;
+            member = relation.to_entry_id;
         }
 
-        if (OWNER_IS_FROM.some((word) => label.includes(word))) {
-            add(relation.from_entry_id, relation.to_entry_id);
+        if (!owner || !member || owner === member) continue;
+
+        const hub = byId.get(owner);
+        if (!hub) continue;
+
+        put(owner, hub.name, "relation", [owner, member]);
+    }
+
+    /* ---------------------------------------------------------
+     * 4. 家族
+     *
+     * ★ 家族の関係で繋がっている人を、ひとかたまりにする。
+     *   A―親子―B、B―兄弟―C なら、A・B・C で一つの家。
+     *
+     * ★ 恋の関係は入れない。
+     *   恋人どうしを「〇〇家」で囲むのは早すぎる。
+     * --------------------------------------------------------- */
+    if (extra.isFamily) {
+        const next = new Map<string, Set<string>>();
+
+        for (const relation of relations) {
+            const label = (relation.label ?? "").trim();
+            if (!label || NOT_FAMILY.test(label)) continue;
+            if (!extra.isFamily(label)) continue;
+
+            const a = relation.from_entry_id;
+            const b = relation.to_entry_id;
+            if (!byId.has(a) || !byId.has(b) || a === b) continue;
+
+            next.set(a, (next.get(a) ?? new Set()).add(b));
+            next.set(b, (next.get(b) ?? new Set()).add(a));
+        }
+
+        const seen = new Set<string>();
+
+        for (const start of next.keys()) {
+            if (seen.has(start)) continue;
+
+            const family: string[] = [];
+            const queue = [start];
+            seen.add(start);
+
+            while (queue.length > 0) {
+                const here = queue.shift()!;
+                family.push(here);
+
+                for (const other of next.get(here) ?? []) {
+                    if (seen.has(other)) continue;
+                    seen.add(other);
+                    queue.push(other);
+                }
+            }
+
+            if (family.length < 2) continue;
+
+            /*
+             * 名前。
+             *
+             * ★ 名字が揃っていれば「〇〇家」。
+             *   二文字以上そろっていて、誰の名前もそこで終わっていないとき。
+             *
+             * ★ 揃っていなければ、いちばん繋がりの多い人の家族。
+             */
+            const names = family.map((id) => cleanName(byId.get(id)?.name ?? ""));
+            const head = commonHead(names);
+            const hub = family
+                .slice()
+                .sort((a, b) => (next.get(b)?.size ?? 0) - (next.get(a)?.size ?? 0))[0];
+
+            const name =
+                head.length >= 2 && names.every((one) => one.length > head.length)
+                    ? `${head}家`
+                    : `${byId.get(hub)?.name ?? ""}の家族`;
+
+            put(`family:${hub}`, name, "family", family);
         }
     }
 
+    /* ---------------------------------------------------------
+     * まとめ
+     *
+     * ★ 二人に満たない組は捨てる。
+     * ★ 中身がまったく同じ組は、先に見つけたほうだけ残す。
+     *   組織の資料と関係の言葉から同じ組が出ることがある。
+     * --------------------------------------------------------- */
     const found: FoundGroup[] = [];
+    const sameAs = new Set<string>();
 
-    for (const [ownerId, set] of holds) {
-        /* 中心のほかに、少なくとも二人 */
-        if (set.size < 3) continue;
+    for (const [key, group] of groups) {
+        if (group.ids.size < 2) continue;
+
+        const sign = [...group.ids].sort().join("|");
+        if (sameAs.has(sign)) continue;
+        sameAs.add(sign);
 
         found.push({
-            key: ownerId,
-            name: nameOf.get(ownerId) ?? "",
-            ids: [...set],
+            key,
+            name: group.name,
+            ids: [...group.ids],
+            from: group.from,
         });
     }
 
