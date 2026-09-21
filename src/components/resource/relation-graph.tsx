@@ -15,15 +15,18 @@ import { useEffect, useRef, useState } from "react";
 
 import { getImage } from "@/lib/storage/image-store";
 import {
+    AUTHORED,
     boxesFor,
     findGroups,
+    inkOf,
     middleOf,
     packByGroup,
+    pathAround,
     roundedPath,
-    routeAround,
     trimEnds,
     type GroupBox,
 } from "@/lib/resource/graph-groups";
+import { useMemberFeatures } from "@/lib/subscription/use-member-features";
 
 import type { ResourceEntry, ResourcePage, ResourceRelation } from "@/types";
 
@@ -54,24 +57,18 @@ interface Props {
      *   ページの作りを見ないと分からない。
      */
     pages?: ResourcePage[];
+    /**
+     * 右の欄で組を作ったり直したりしたときに、数が増える。
+     *
+     * ★ 増えたら、囲みを出す。並びは変えない。
+     *   人を一人足すたびに全員が動くと、
+     *   どこに誰がいたか分からなくなる。
+     *   並べ直したいときは「組み直す」を押してもらう。
+     */
+    groupsTouched?: number;
 }
 
-/**
- * 囲みの色。
- *
- * ★ 決め打ちの色を塗らない。
- *
- *   夜の画面では、薄い色の塗りが白く浮く。
- *   線の色を薄めて使えば、どちらの画面でも馴染む。
- */
-const GROUP_INKS = [
-    "#3a6ea8",
-    "#c4453a",
-    "#3f9a7a",
-    "#b5852f",
-    "#7a5aa8",
-    "#2f7183",
-];
+
 
 /** 図の広さ。もとの大きさ。広げるときは、これに倍率を掛ける */
 const BASE_SIZE = 400;
@@ -353,6 +350,7 @@ export default function RelationGraph({
     onReset,
     onBend,
     pages = [],
+    groupsTouched = 0,
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -425,24 +423,23 @@ export default function RelationGraph({
      * ★ 聞けなかったときも、無料の見た目。
      *   困るのは、入っていない人に出てしまうほう。
      */
-    const [mayGroup, setMayGroup] = useState(false);
+    const { graphGroup: mayGroup } = useMemberFeatures();
 
+    /*
+     * 右の欄で組をいじったら、囲みを出す。
+     *
+     * ★ 最初の一回（0）では何もしない。
+     *   開いただけで組分けに切り替わると驚く。
+     */
     useEffect(() => {
-        let alive = true;
+        if (groupsTouched <= 0) return;
 
-        fetch("/api/member/features")
-            .then((res) => (res.ok ? res.json() : null))
-            .then((data) => {
-                if (alive && data?.graphGroup === true) setMayGroup(true);
-            })
-            .catch(() => {
-                /* 聞けなくても、図はこれまでどおり描ける */
-            });
-
-        return () => {
-            alive = false;
-        };
-    }, []);
+        rememberGrouped(true);
+        setGroupNote(
+            "右で作った組を図に出しました。組ごとに並べ直すときは「組み直す」を押してください。",
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [groupsTouched]);
 
     /*
      * いま、どの線の中間点をつまんでいるか。
@@ -1552,7 +1549,15 @@ export default function RelationGraph({
      * ★ 丸そのものと、名前の帯。
      *   名前の上を線が横切ると、名前が読めない。
      */
-    const nodeBlocks = grouping
+    /*
+     * 線が丸と名前をよけるか。
+     *
+     * ★ 会員なら、組分けしていなくても。
+     *   名前の上を線が横切るのは、組があってもなくても読みにくい。
+     */
+    const avoiding = mayGroup && !focusId;
+
+    const nodeBlocks = avoiding
         ? shownNodes.flatMap((node) => {
               const at = positions.get(node.id);
               if (!at) return [];
@@ -1570,6 +1575,52 @@ export default function RelationGraph({
               ];
           })
         : [];
+
+    /*
+     * 線ごとの、よけ方。
+     *
+     * ★ 描く前に決めておく。
+     *
+     *   弧や回り道は、丸と囲みの外へ出ることがある。
+     *   描くところで決めると、出す範囲を決めた後なので、
+     *   はみ出した部分が枠で切れて消える。
+     *
+     * ★ 手で中間点を置いた線と、行き帰りの二本は、よけない。
+     *   作者が決めた通り道を、こちらで書き換えない。
+     */
+    const aroundOf = new Map<string, ReturnType<typeof pathAround>>();
+
+    if (avoiding) {
+        for (const relation of shownRelations) {
+            if (relation.bend || bending?.id === relation.id) continue;
+            if ((bowOf.get(relation.id) ?? 0) !== 0) continue;
+
+            const from = positions.get(relation.from_entry_id);
+            const to = positions.get(relation.to_entry_id);
+            if (!from || !to) continue;
+
+            aroundOf.set(
+                relation.id,
+                pathAround(
+                    from,
+                    to,
+                    [
+                        ...groupBoxes.filter(
+                            (box) =>
+                                !box.ids.includes(relation.from_entry_id) &&
+                                !box.ids.includes(relation.to_entry_id),
+                        ),
+                        ...nodeBlocks.filter(
+                            (one) =>
+                                one.id !== relation.from_entry_id &&
+                                one.id !== relation.to_entry_id,
+                        ),
+                    ],
+                    Math.round(NODE_RADIUS * 0.7),
+                ),
+            );
+        }
+    }
 
     let minX = Number.POSITIVE_INFINITY;
     let maxX = Number.NEGATIVE_INFINITY;
@@ -1596,6 +1647,36 @@ export default function RelationGraph({
         maxY = Math.max(maxY, box.y2);
     }
 
+    /*
+     * よけた線のぶんも数える。
+     *
+     * ★ 弧は、引っ張り点までは行かない。
+     *   いちばん外れるのは、両端と引っ張り点の真ん中あたり。
+     */
+    for (const [id, around] of aroundOf) {
+        const points = [...around.points];
+
+        if (around.control) {
+            const relation = shownRelations.find((one) => one.id === id);
+            const from = relation ? positions.get(relation.from_entry_id) : undefined;
+            const to = relation ? positions.get(relation.to_entry_id) : undefined;
+
+            if (from && to) {
+                points.push({
+                    x: (from.x + around.control.x * 2 + to.x) / 4,
+                    y: (from.y + around.control.y * 2 + to.y) / 4,
+                });
+            }
+        }
+
+        for (const point of points) {
+            minX = Math.min(minX, point.x - NODE_RADIUS * 0.5);
+            maxX = Math.max(maxX, point.x + NODE_RADIUS * 0.5);
+            minY = Math.min(minY, point.y - NODE_RADIUS * 0.5);
+            maxY = Math.max(maxY, point.y + NODE_RADIUS * 0.5);
+        }
+    }
+
     const seen = Number.isFinite(minX)
         ? { minX, maxX, minY, maxY }
         : { minX: 0, maxX: WIDTH, minY: 0, maxY: HEIGHT };
@@ -1608,7 +1689,7 @@ export default function RelationGraph({
      *   線は囲みの外側を回るので、丸と囲みだけで切ると、
      *   回り道の部分が枠の外に出て、消えてしまう。
      */
-    const ROOM = Math.round(NODE_RADIUS * (grouping ? 1.7 : 0.6));
+    const ROOM = Math.round(NODE_RADIUS * (avoiding ? 0.9 : 0.6));
 
     /*
      * 狭すぎる範囲は、広げておく。
@@ -1834,13 +1915,16 @@ export default function RelationGraph({
     function findGroupsHere() {
         const onGraph = new Set(nodes.map((node) => node.id));
 
+        /*
+         * ★ 作者が決めた組だけ。
+         *
+         *   関係の言葉や家族から当てた組は、外れることがある。
+         *   そちらは右の欄に候補として出すだけにして、
+         *   図には描かない。
+         */
         return findGroups(entries, relations, {
             pages,
-            /*
-             * 家族かどうかは、線の色分けと同じ物差しで見る。
-             * 「師弟」「親友」は家族に入らない（長い言葉から先に当てている）。
-             */
-            isFamily: (label) => groupOf(label).key === "family",
+            use: AUTHORED,
         })
             .map((group) => ({
                 ...group,
@@ -1865,10 +1949,8 @@ export default function RelationGraph({
         if (found.length === 0) {
             rememberGrouped(false);
             setGroupNote(
-                "組にできる手がかりが見つかりませんでした。" +
-                    "組織・グループの資料に「所属する人」を入れる、" +
-                    "人物の資料に「所属：〇〇」と書く、" +
-                    "関係に「所属」「親子」「兄弟」などを使う、のどれかで組になります。",
+                "まだ組がありません。右の欄の「新しい組」で作るか、" +
+                    "人物の資料の「所属」で組織を選ぶと、組になります。",
             );
             return;
         }
@@ -2385,7 +2467,7 @@ export default function RelationGraph({
                   *   主役は丸と線なので、色で争わない。
                   */}
                 {groupBoxes.map((box) => {
-                    const ink = GROUP_INKS[box.tone % GROUP_INKS.length];
+                    const ink = inkOf(box.key);
 
                     return (
                         <g key={`box-${box.key}`} pointerEvents="none">
@@ -2555,40 +2637,34 @@ export default function RelationGraph({
                      * ★ 中間点を置いた線と、行き帰りの二本は、そのまま。
                      *   作者が決めた通り道を、こちらで書き換えない。
                      */
-                    const routed =
-                        grouping && !bent && bow === 0
-                            ? trimEnds(
-                                  routeAround(
-                                      from,
-                                      to,
-                                      [
-                                          ...groupBoxes.filter(
-                                              (box) =>
-                                                  !box.ids.includes(
-                                                      relation.from_entry_id,
-                                                  ) &&
-                                                  !box.ids.includes(
-                                                      relation.to_entry_id,
-                                                  ),
-                                          ),
-                                          ...nodeBlocks.filter(
-                                              (one) =>
-                                                  one.id !==
-                                                      relation.from_entry_id &&
-                                                  one.id !==
-                                                      relation.to_entry_id,
-                                          ),
-                                      ],
-                                      Math.round(NODE_RADIUS * 0.7),
-                                  ),
-                                  HALO,
-                              )
+                    /*
+                     * ★ 弧でよけるのを先に試す。直角に折るのは最後。
+                     *   直角の線は囲みの外を大きく回り込み、
+                     *   ほかの線や名札と重なっていた。
+                     */
+                    const around =
+                        !bent && bow === 0
+                            ? (aroundOf.get(relation.id) ?? null)
                             : null;
+
+                    /* 弧でよけるときの引っ張り点 */
+                    const arcAt = around?.control ?? null;
+
+                    /* 直角に折ってよけるときの道 */
+                    const routed =
+                        around && !arcAt && around.points.length > 2
+                            ? trimEnds(around.points, HALO)
+                            : null;
+
+                    const arcHead = arcAt ? pullBack(from, arcAt, HALO) : null;
+                    const arcTail = arcAt ? pullBack(to, arcAt, HALO) : null;
 
                     const path = bent
                         ? `M${head.x} ${head.y} L${bent.x} ${bent.y} L${tail.x} ${tail.y}`
-                        : routed && routed.length > 2
-                          ? roundedPath(routed, NODE_RADIUS * 0.55)
+                        : arcAt && arcHead && arcTail
+                          ? `M${arcHead.x} ${arcHead.y} Q${arcAt.x} ${arcAt.y} ${arcTail.x} ${arcTail.y}`
+                          : routed && routed.length > 2
+                          ? roundedPath(routed, NODE_RADIUS * 1.1)
                           : bow === 0
                             ? `M${head.x} ${head.y} L${tail.x} ${tail.y}`
                             : `M${head.x} ${head.y} Q${middle.x} ${middle.y} ${tail.x} ${tail.y}`;
@@ -2610,7 +2686,12 @@ export default function RelationGraph({
                      */
                     const onLine = bent
                         ? bent
-                        : routed && routed.length > 2
+                        : arcAt && arcHead && arcTail
+                          ? {
+                                x: (arcHead.x + arcAt.x * 2 + arcTail.x) / 4,
+                                y: (arcHead.y + arcAt.y * 2 + arcTail.y) / 4,
+                            }
+                          : routed && routed.length > 2
                           ? middleOf(routed)
                           : bow === 0
                           ? { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }

@@ -36,6 +36,7 @@ import {
 import type { CandidateKind } from "@/lib/ai/extractor";
 import { getImageGenerator } from "@/lib/ai/image-generator";
 import { appendLeftover, mapAttributes } from "@/lib/resource/attribute-map";
+import { isBelongField, isMemberField } from "@/lib/resource/graph-groups";
 import {
     hasSubstance,
     isPersonName,
@@ -381,6 +382,195 @@ export default function ResourceClient({ workId }: Props) {
 
     const repository = getRepository();
     const currentPage = pages.find((page) => page.id === view) ?? null;
+
+    /*
+     * ============================================================
+     * 組（関係図の囲み）
+     *
+     * ★ 組は、組織・グループの資料に置く。
+     *
+     *   組のために別の置き場所を作ると、
+     *   資料の「所属する人」と図の組が別々に変わって食い違う。
+     *   同じものを直すようにしておけば、どちらから直しても揃う。
+     *
+     * ★ 人を外すときは、両側から外す。
+     *
+     *   人が組に入る道は二つある。
+     *     組織の資料の「所属する人」に入っている
+     *     人物の資料の「所属」でその組織を選んでいる
+     *   片方だけ外すと、もう片方の道で入ったままになり、
+     *   「外したのに消えない」ことになる。
+     * ============================================================
+     */
+
+    /** 項目の、中にいる人の欄の鍵 */
+    function memberKeyOf(entry: ResourceEntry): string | null {
+        const page = pages.find((one) => one.id === entry.page_id);
+        const field = page?.fields.find((one) => isMemberField(page, one));
+        return field?.key ?? null;
+    }
+
+    /** 組織・グループのページ。無ければ作る。「所属する人」の欄が無ければ足す */
+    async function groupPage(): Promise<{ page: ResourcePage; key: string }> {
+        const existing = pages.find((one) => one.builtin_key === "organization");
+        const page: ResourcePage =
+            existing ?? (await repository.addBuiltinPage(workId, "organization"));
+
+        const field = page.fields.find((one) => isMemberField(page, one));
+        if (field) return { page, key: field.key };
+
+        const fields: ResourceField[] = [
+            ...page.fields,
+            { key: "members", label: "所属する人", type: "relation_entry" },
+        ];
+        await repository.updatePage(page.id, { fields });
+
+        return { page: { ...page, fields }, key: "members" };
+    }
+
+    function idsIn(entry: ResourceEntry, key: string): string[] {
+        const raw = entry.values?.[key];
+        return Array.isArray(raw)
+            ? raw.filter((one): one is string => typeof one === "string")
+            : [];
+    }
+
+    async function createGroup(name: string, memberIds: string[]) {
+        const { page, key } = await groupPage();
+
+        await repository.createEntry(workId, page.id, {
+            name,
+            values: { [key]: memberIds },
+        });
+        await reload();
+    }
+
+    async function renameGroup(groupId: string, name: string) {
+        await repository.updateEntry(groupId, { name });
+        await reload();
+    }
+
+    async function setGroupMember(groupId: string, entryId: string, on: boolean) {
+        const group = entries.find((one) => one.id === groupId);
+        if (!group) return;
+
+        const key = memberKeyOf(group);
+
+        if (on) {
+            if (key) {
+                const list = idsIn(group, key);
+                if (!list.includes(entryId)) {
+                    await repository.updateEntry(groupId, {
+                        values: { ...group.values, [key]: [...list, entryId] },
+                    });
+                }
+            } else {
+                /*
+                 * 組織の資料ではない項目が組になっているとき
+                 * （人物の「所属」で、別の人物を選んでいる）。
+                 * 入れる人の「所属」に書く。
+                 */
+                const person = entries.find((one) => one.id === entryId);
+                const personPage = pages.find((one) => one.id === person?.page_id);
+                const belong = personPage?.fields.find((one) =>
+                    isBelongField(personPage, one),
+                );
+
+                if (!person || !belong) {
+                    throw new Error(
+                        "この人の資料には「所属」の欄がないので、ここからは入れられません。",
+                    );
+                }
+
+                const list = idsIn(person, belong.key);
+                if (!list.includes(groupId)) {
+                    await repository.updateEntry(entryId, {
+                        values: { ...person.values, [belong.key]: [...list, groupId] },
+                    });
+                }
+            }
+
+            await reload();
+            return;
+        }
+
+        /* 外す。組の側から */
+        if (key) {
+            const list = idsIn(group, key);
+            if (list.includes(entryId)) {
+                await repository.updateEntry(groupId, {
+                    values: {
+                        ...group.values,
+                        [key]: list.filter((id) => id !== entryId),
+                    },
+                });
+            }
+        }
+
+        /* 人の側からも */
+        const person = entries.find((one) => one.id === entryId);
+        const personPage = pages.find((one) => one.id === person?.page_id);
+
+        if (person && personPage) {
+            const next = { ...person.values };
+            let changed = false;
+
+            for (const field of personPage.fields) {
+                if (!isBelongField(personPage, field)) continue;
+
+                const list = idsIn(person, field.key);
+                if (!list.includes(groupId)) continue;
+
+                next[field.key] = list.filter((id) => id !== groupId);
+                changed = true;
+            }
+
+            if (changed) await repository.updateEntry(entryId, { values: next });
+        }
+
+        await reload();
+    }
+
+    /*
+     * 組を解く。
+     *
+     * ★ 資料の項目は消さない。中にいる人を空にするだけ。
+     *   組織の資料に書いた説明まで消えると、取り返せない。
+     */
+    async function dissolveGroup(groupId: string) {
+        const group = entries.find((one) => one.id === groupId);
+        if (!group) return;
+
+        const key = memberKeyOf(group);
+
+        if (key && idsIn(group, key).length > 0) {
+            await repository.updateEntry(groupId, {
+                values: { ...group.values, [key]: [] },
+            });
+        }
+
+        for (const person of entries) {
+            const personPage = pages.find((one) => one.id === person.page_id);
+            if (!personPage) continue;
+
+            const next = { ...person.values };
+            let changed = false;
+
+            for (const field of personPage.fields) {
+                if (!isBelongField(personPage, field)) continue;
+
+                const list = idsIn(person, field.key);
+                if (!list.includes(groupId)) continue;
+
+                next[field.key] = list.filter((id) => id !== groupId);
+                changed = true;
+            }
+
+            if (changed) await repository.updateEntry(person.id, { values: next });
+        }
+
+        await reload();
+    }
     const countByPage = (pageId: string) =>
         entries.filter((entry) => entry.page_id === pageId && entry.candidate_status === "none")
             .length;
@@ -1159,6 +1349,10 @@ export default function ResourceClient({ workId }: Props) {
                                         await repository.updatePage(currentPage.id, patch);
                                         await reload();
                                     }}
+                                    onCreateGroup={createGroup}
+                                    onRenameGroup={renameGroup}
+                                    onSetGroupMember={setGroupMember}
+                                    onDissolveGroup={dissolveGroup}
                                 />
                             ) : currentPage.kind === "timeline" ? (
                                 <TimelineView

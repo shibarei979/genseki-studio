@@ -127,7 +127,65 @@ const BELONG_LINE =
 /** 恋の関係は、家族の組には入れない */
 const NOT_FAMILY = /恋|片想|片思|想い人|元カ|浮気/;
 
-export type GroupSource = "members" | "text" | "relation" | "family";
+/*
+ * どこから見つけた組か。
+ *
+ *   members   組織・グループの資料の「所属する人」       … 作者が決めたもの
+ *   field     人物の資料の「所属」欄で選んだ項目          … 作者が決めたもの
+ *   text      人物の資料の文章にある「所属：〜」          … 候補
+ *   relation  関係の言葉（所属・部下・上司など）           … 候補
+ *   family    家族の関係で繋がっている人たち              … 候補
+ *
+ * ★ 図に囲みを描くのは、作者が決めたものだけ。
+ *
+ *   関係の言葉や家族から当てた組は、外れる。
+ *   「クマさん→エバ」「エバ—アル」から
+ *   「エバ」「エバの家族」と囲んだが、
+ *   作者が思っていたのは「律とアルのタッグ」だった。
+ *
+ *   当てたものは右の欄に候補として出し、
+ *   作者が名前を直してから組にできるようにする。
+ */
+export type GroupSource = "members" | "field" | "text" | "relation" | "family";
+
+/** 作者が決めた組の出どころ */
+export const AUTHORED: GroupSource[] = ["members", "field"];
+
+/** 候補として出す組の出どころ */
+export const SUGGESTED: GroupSource[] = ["text", "relation", "family"];
+
+/**
+ * 囲みの色。
+ *
+ * ★ 決め打ちの色を塗らない。
+ *
+ *   夜の画面では、薄い色の塗りが白く浮く。
+ *   線の色を薄めて使えば、どちらの画面でも馴染む。
+ *
+ * ★ 図と右の欄で、同じ色を使う。
+ *   欄の組と図の囲みが、色で結びつくように。
+ */
+export const GROUP_INKS = [
+    "#3a6ea8",
+    "#c4453a",
+    "#3f9a7a",
+    "#b5852f",
+    "#7a5aa8",
+    "#2f7183",
+    "#a8577a",
+    "#5f7a2f",
+];
+
+/** 組の色。組の id から決めるので、並びが変わっても色は変わらない */
+export function inkOf(key: string): string {
+    let hash = 0;
+
+    for (let i = 0; i < key.length; i += 1) {
+        hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+    }
+
+    return GROUP_INKS[hash % GROUP_INKS.length];
+}
 
 export interface FoundGroup {
     /** 組の id。中心になった項目の id か、名前から作ったもの */
@@ -138,6 +196,11 @@ export interface FoundGroup {
     ids: string[];
     /** どこから見つけたか。知らせるときに使う */
     from?: GroupSource;
+    /**
+     * 組織の資料で、中にいる人を並べている欄の鍵。
+     * 右の欄から人を足し引きするとき、どの欄を書き換えるかに使う。
+     */
+    field?: string;
 }
 
 interface MiniEntry {
@@ -159,6 +222,40 @@ interface MiniPage {
     id: string;
     builtin_key?: string | null;
     fields: { key: string; label: string; type: string }[];
+}
+
+/**
+ * その欄が「中にいる人」の欄か。
+ *
+ * ★ 組織・グループの資料の「所属する人」。
+ *   右の欄から人を足すとき、ここに書く。
+ */
+export function isMemberField(
+    page: { builtin_key?: string | null } | undefined,
+    field: { key: string; label: string; type: string },
+): boolean {
+    if (field.type !== "relation_entry") return false;
+
+    return (
+        MEMBER_FIELD.test(field.label) ||
+        (page?.builtin_key === "organization" && field.key === "members")
+    );
+}
+
+/**
+ * その欄が「どこに属しているか」の欄か。
+ *
+ * ★ 人物の資料の「所属」。項目を選ぶ作りのもの。
+ *   組から人を外すとき、こちらに書いてあれば、こちらも外す。
+ */
+export function isBelongField(
+    page: { builtin_key?: string | null } | undefined,
+    field: { key: string; label: string; type: string },
+): boolean {
+    if (field.type !== "relation_entry") return false;
+    if (isMemberField(page, field)) return false;
+
+    return BELONG_FIELD.test(field.label);
 }
 
 /** 「」『』やまわりの空白を落とす */
@@ -210,8 +307,21 @@ export function findGroups(
     extra: {
         pages?: MiniPage[];
         isFamily?: (label: string) => boolean;
+        /** どこから拾うか。渡さなければ全部 */
+        use?: GroupSource[];
+        /**
+         * 一人以下の組も返すか。
+         *
+         * ★ 右の欄の一覧では残す。
+         *   作ったばかりで、まだ誰も入れていない組が
+         *   一覧から消えると、作れなかったように見える。
+         */
+        keepSmall?: boolean;
     } = {},
 ): FoundGroup[] {
+    const use = new Set<GroupSource>(
+        extra.use ?? ["members", "field", "text", "relation", "family"],
+    );
     const byId = new Map(entries.map((one) => [one.id, one]));
 
     /* 名前から項目を引く。別名でも引けるように */
@@ -231,7 +341,7 @@ export function findGroups(
 
     const groups = new Map<
         string,
-        { name: string; ids: Set<string>; from: GroupSource }
+        { name: string; ids: Set<string>; from: GroupSource; field?: string }
     >();
 
     const put = (
@@ -239,13 +349,17 @@ export function findGroups(
         name: string,
         from: GroupSource,
         ids: string[],
+        field?: string,
     ) => {
+        if (!use.has(from)) return;
+
         const known = ids.filter((id) => byId.has(id));
         if (known.length === 0) return;
 
         const group = groups.get(key) ?? { name, ids: new Set<string>(), from };
 
         for (const id of known) group.ids.add(id);
+        if (field && !group.field) group.field = field;
         groups.set(key, group);
     };
 
@@ -281,13 +395,14 @@ export function findGroups(
             if (!isMembers) continue;
 
             const raw = entry.values?.[field.key];
-            if (!Array.isArray(raw)) continue;
+            const ids = Array.isArray(raw)
+                ? raw.filter((one): one is string => typeof one === "string")
+                : [];
 
-            const ids = raw.filter((one): one is string => typeof one === "string");
-            if (ids.length === 0) continue;
+            if (ids.length === 0 && !extra.keepSmall) continue;
 
             /* 組織そのものも、図に出ていれば中に入れる */
-            put(entry.id, entry.name, "members", [entry.id, ...ids]);
+            put(entry.id, entry.name, "members", [entry.id, ...ids], field.key);
         }
     }
 
@@ -323,7 +438,7 @@ export function findGroups(
 
                 for (const id of raw) {
                     const target = typeof id === "string" ? byId.get(id) : undefined;
-                    if (target) put(target.id, target.name, "text", [target.id, entry.id]);
+                    if (target) put(target.id, target.name, "field", [target.id, entry.id]);
                 }
                 continue;
             }
@@ -475,7 +590,7 @@ export function findGroups(
     const sameAs = new Set<string>();
 
     for (const [key, group] of groups) {
-        if (group.ids.size < 2) continue;
+        if (group.ids.size < 2 && !extra.keepSmall) continue;
 
         const sign = [...group.ids].sort().join("|");
         if (sameAs.has(sign)) continue;
@@ -486,6 +601,7 @@ export function findGroups(
             name: group.name,
             ids: [...group.ids],
             from: group.from,
+            field: group.field,
         });
     }
 
@@ -816,6 +932,107 @@ export function routeAround(
     return best;
 }
 
+/**
+ * 邪魔をよける線を、まず弧で探す。
+ *
+ * ★ 直角に折れる線より、弧のほうが目で追いやすい。
+ *
+ *   直角の線は、囲みの外を大きく回り込む。
+ *   同じ高さに並んだ人どうしを結ぶと、
+ *   囲みの上を横切る長い「コ」の字になり、
+ *   ほかの線や名札と重なった。
+ *
+ *   少しふくらませれば済むところは、ふくらませるだけにする。
+ *
+ * ★ ふくらみは小さいほうから試す。
+ *   大きく曲げると、どこから来た線か分からなくなる。
+ *
+ * ★ 弧でよけきれないときだけ、直角に折る。
+ *
+ * @returns control があれば弧（二次の曲線の引っ張り点）。
+ *          points があれば折れ線（両端を含む）。
+ */
+export function pathAround(
+    from: Point,
+    to: Point,
+    blocks: Rect[],
+    pad: number,
+): { control?: Point; points: Point[] } {
+    const straight = [from, to];
+
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy);
+
+    if (length < 1) return { points: straight };
+
+    /* 近くの邪魔だけ見る */
+    const reach = length * 0.6 + pad;
+    const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+
+    const near = blocks.filter(
+        (block) =>
+            block.x2 > Math.min(from.x, to.x) - reach &&
+            block.x1 < Math.max(from.x, to.x) + reach &&
+            block.y2 > Math.min(from.y, to.y) - reach &&
+            block.y1 < Math.max(from.y, to.y) + reach,
+    );
+
+    if (near.length === 0) return { points: straight };
+
+    const hits = (points: Point[]) => {
+        let count = 0;
+
+        for (let i = 1; i < points.length; i += 1) {
+            for (const block of near) {
+                if (crosses(points[i - 1], points[i], block)) count += 1;
+            }
+        }
+
+        return count;
+    };
+
+    if (hits(straight) === 0) return { points: straight };
+
+    /* 線と直角の向き */
+    const nx = -dy / length;
+    const ny = dx / length;
+
+    /* 弧を細かく刻んで、折れ線として当たりを見る */
+    const sample = (control: Point) => {
+        const out: Point[] = [];
+
+        for (let i = 0; i <= 16; i += 1) {
+            const t = i / 16;
+            const u = 1 - t;
+
+            out.push({
+                x: u * u * from.x + 2 * u * t * control.x + t * t * to.x,
+                y: u * u * from.y + 2 * u * t * control.y + t * t * to.y,
+            });
+        }
+
+        return out;
+    };
+
+    for (const bend of [0.22, 0.34, 0.48, 0.64, 0.82]) {
+        for (const side of [1, -1]) {
+            /* 引っ張り点は、弧の頂点の二倍外に置く */
+            const control = {
+                x: mid.x + nx * length * bend * side,
+                y: mid.y + ny * length * bend * side,
+            };
+
+            /* 端は丸の中なので、両端の少しを除いて見る */
+            const points = sample(control).slice(2, -2);
+
+            if (hits(points) === 0) return { control, points: [from, to] };
+        }
+    }
+
+    return { points: routeAround(from, to, blocks, pad) };
+}
+
 /** 点を、行き先のほうへ寄せる */
 function toward(at: Point, aim: Point, by: number): Point {
     const dx = aim.x - at.x;
@@ -908,6 +1125,55 @@ export function middleOf(path: Point[]): Point {
  * ============================================================ */
 
 /**
+ * 人数に合う輪の大きさ。
+ *
+ * ★ 隣どうしが gap だけ離れる半径。
+ *   二人なら横に並べるだけなので、半分の幅。
+ */
+function ringRadius(count: number, gap: number): number {
+    if (count <= 1) return 0;
+    if (count === 2) return gap / 2;
+
+    return gap / (2 * Math.sin(Math.PI / count));
+}
+
+/**
+ * 輪の上の置き場所。中心からのずれで返す。
+ *
+ * ★ 三人は、上に一人・下に二人の三角。
+ *   名前は丸の下に出るので、上に一人のほうが名前がぶつからない。
+ *
+ * ★ 四人以上は、真上から時計回り。
+ *   偶数のときは半歩ずらして、真上と真下に置かない。
+ *   縦に並ぶと、上の人の名前と下の人の丸が近づく。
+ */
+function onRing(count: number, radius: number): Point[] {
+    if (count <= 0) return [];
+    if (count === 1) return [{ x: 0, y: 0 }];
+    if (count === 2) {
+        return [
+            { x: -radius, y: 0 },
+            { x: radius, y: 0 },
+        ];
+    }
+
+    const start = -Math.PI / 2 + (count % 2 === 0 ? Math.PI / count : 0);
+    const out: Point[] = [];
+
+    for (let i = 0; i < count; i += 1) {
+        const angle = start + (Math.PI * 2 * i) / count;
+
+        out.push({
+            /* 横は少し広く。名前は横に長い */
+            x: Math.cos(angle) * radius * 1.15,
+            y: Math.sin(angle) * radius,
+        });
+    }
+
+    return out;
+}
+
+/**
  * 「整理する」を、まとまりごとにやる。
  *
  * ★ 同じ囲みの人を、近くへ寄せる。
@@ -973,22 +1239,27 @@ export function packByGroup(options: {
         );
 
         /*
-         * ★ 中の並びを、四角く組む。
+         * ★ 中の並びは、輪にする。
          *
-         *   横一列に並べると、囲みが細長い帯になる。
-         *   縦と横の数を揃えれば、囲みは正方形に近づく。
+         *   格子に並べると、三人が一直線に並ぶことがある。
+         *   端の二人を結ぶ線が、真ん中の人の上を通ってしまい、
+         *   よけて回るしかなくなる（クマさん・エバ・アルちゃん）。
+         *
+         *   輪の上に置けば、どの二人を結んでも
+         *   間に別の人が挟まらない。
+         *
+         * ★ 輪の大きさは、隣どうしが gap だけ離れるところ。
+         *   囲みは輪を包むので、正方形に近くなる。
          */
         const count = Math.max(1, only.length);
-        const wide = Math.max(1, Math.ceil(Math.sqrt(count)));
-        const tall = Math.ceil(count / wide);
+        const ring = ringRadius(count, gap);
 
         return {
             group,
             only,
-            wide,
-            tall,
-            w: wide * gap + gap * 0.7,
-            h: tall * gap * 0.85 + gap * 0.9,
+            ring,
+            w: ring * 2.3 + gap * 1.2,
+            h: ring * 2 + gap * 1.35,
         };
     });
 
@@ -1072,21 +1343,10 @@ export function packByGroup(options: {
 
         const at = center.get(tile.group.key)!;
 
-        /*
-         * ★ 端数の段は、真ん中に寄せる。
-         *   左詰めにすると、囲みの右下だけが大きく空く。
-         */
-        tile.only.forEach((id, index) => {
-            const row = Math.floor(index / tile.wide);
-            const col = index % tile.wide;
-            const inRow = Math.min(
-                tile.wide,
-                tile.only.length - row * tile.wide,
-            );
-
-            place.set(id, {
-                x: at.x + (col - (inRow - 1) / 2) * gap,
-                y: at.y + (row - (tile.tall - 1) / 2) * gap * 0.85,
+        onRing(tile.only.length, tile.ring).forEach((point, index) => {
+            place.set(tile.only[index], {
+                x: at.x + point.x,
+                y: at.y + point.y,
             });
         });
     }

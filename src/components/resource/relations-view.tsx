@@ -18,6 +18,8 @@ import { useMemo, useState } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
 import { pairKey, suggestRelations } from "@/lib/resource/relation-suggest";
+import { useMemberFeatures } from "@/lib/subscription/use-member-features";
+import GroupPanel from "@/components/resource/group-panel";
 import RelationGraph from "@/components/resource/relation-graph";
 import ResourceIcon from "@/components/resource/resource-icons";
 import type { Episode, ResourceEntry, ResourcePage, ResourceRelation } from "@/types";
@@ -51,6 +53,17 @@ interface Props {
      * 主人公を左、敵を右、という並べ方は作者にしか決められない。
      */
     onMoveNode?: (entryId: string, position: { x: number; y: number }) => void;
+    /*
+     * 組を作る・直す（会員）。
+     *
+     * ★ 組は、組織・グループの資料に置く。
+     *   ここでは、何をしたいかだけを伝える。
+     *   どの資料のどの欄を書き換えるかは、上で決める。
+     */
+    onCreateGroup?: (name: string, memberIds: string[]) => Promise<void>;
+    onRenameGroup?: (groupId: string, name: string) => Promise<void>;
+    onSetGroupMember?: (groupId: string, entryId: string, on: boolean) => Promise<void>;
+    onDissolveGroup?: (groupId: string) => Promise<void>;
 }
 
 export default function RelationsView({
@@ -63,8 +76,38 @@ export default function RelationsView({
     onDelete,
     onUpdatePage,
     onMoveNode,
+    onCreateGroup,
+    onRenameGroup,
+    onSetGroupMember,
+    onDissolveGroup,
 }: Props) {
     const [mode, setMode] = useState<"graph" | "list">("graph");
+
+    /* 組の欄を出すか。会員で、書き換える道が渡されているとき */
+    const { graphGroup } = useMemberFeatures();
+    const canEditGroups = Boolean(
+        graphGroup &&
+            onCreateGroup &&
+            onRenameGroup &&
+            onSetGroupMember &&
+            onDissolveGroup,
+    );
+
+    /*
+     * 組をいじった回数。
+     *
+     * ★ 図に伝えて、囲みを出してもらう。
+     */
+    const [groupsTouched, setGroupsTouched] = useState(0);
+
+    const touch = <A extends unknown[]>(
+        task: ((...args: A) => Promise<void>) | undefined,
+    ) =>
+        async (...args: A) => {
+            if (!task) return;
+            await task(...args);
+            setGroupsTouched((count) => count + 1);
+        };
 
     /* 覚えている置き場所を、図が読める形に組み直す */
     const graphLayout = useMemo(() => {
@@ -511,6 +554,7 @@ export default function RelationsView({
                                      *   ページの作りを見ないと分からない。
                                      */
                                     pages={pages}
+                                    groupsTouched={groupsTouched}
                                     selectedId={focusId}
                                     /*
                                      * 覚えている置き場所を渡す。
@@ -675,6 +719,27 @@ export default function RelationsView({
                                         entryById={entryById}
                                         onPick={setSelectedRelationId}
                                     />
+                                ) : canEditGroups ? (
+                                    /*
+                                     * ★ 何も選んでいないときは、組の欄。
+                                     *
+                                     *   前は一文だけ出して、ずっと空いていた。
+                                     *   関係を選べば、これまでどおり関係の詳しいところに替わる。
+                                     */
+                                    <>
+                                        <GroupPanel
+                                            entries={pickable}
+                                            relations={relations}
+                                            pages={pages}
+                                            onCreate={touch(onCreateGroup)}
+                                            onRename={touch(onRenameGroup)}
+                                            onSetMember={touch(onSetGroupMember)}
+                                            onDissolve={touch(onDissolveGroup)}
+                                        />
+                                        <p className="mt-4 border-t border-line pt-3 text-center text-[10.5px] text-faint">
+                                            図や一覧から関係を選ぶと、ここに関係の詳しいところが出ます。
+                                        </p>
+                                    </>
                                 ) : (
                                     <p className="py-8 text-center text-xs text-faint">
                                         図や一覧から関係を選ぶと、ここに詳しく出ます。
