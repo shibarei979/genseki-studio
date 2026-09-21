@@ -169,14 +169,21 @@ export const SUGGESTED: GroupSource[] = ["text", "relation", "family"];
  * ★ 見分けやすい八色。隣り合っても混ざらない並び。
  */
 export const GROUP_COLORS: { value: string; label: string }[] = [
-    { value: "#3d63c9", label: "青" },
-    { value: "#c2413b", label: "赤" },
-    { value: "#2f8f5b", label: "緑" },
-    { value: "#d08a1e", label: "橙" },
-    { value: "#7b4fb3", label: "紫" },
-    { value: "#1f8fa6", label: "水色" },
-    { value: "#b84d8a", label: "桃" },
-    { value: "#6b5a3e", label: "茶" },
+    /*
+     * ★ くすんだ色にする。
+     *
+     *   原色に近い青・赤・緑を並べたら、
+     *   図がけばけばしくなり、中の丸と名前より囲みが目立った。
+     *   日本の伝統色くらいの、灰みを含んだ色にする。
+     */
+    { value: "#5566a8", label: "藍" },
+    { value: "#6c8a5b", label: "苔" },
+    { value: "#9c5b55", label: "蘇芳" },
+    { value: "#b08a3e", label: "山吹" },
+    { value: "#44849a", label: "浅葱" },
+    { value: "#80669c", label: "藤" },
+    { value: "#8a7152", label: "朽葉" },
+    { value: "#66737a", label: "鼠" },
 ];
 
 const COLOR_VALUES = GROUP_COLORS.map((one) => one.value);
@@ -1375,19 +1382,22 @@ function onRing(count: number, radius: number): Point[] {
 /**
  * 「組み直す」を、組ごとにやる。
  *
- * ★ 同じ組の人を、近くへ寄せる。
- *   ばらばらのまま囲むと、囲みが紙いっぱいに広がって重なり合う。
+ * 人物相関図の形にする。
+ *
+ *   ・物語の真ん中の人（どこの組にも入らない人）を真ん中に
+ *   ・組はそのまわりの四辺に
+ *   ・全体は四角に近く
  *
  * ★ 入れ子の組は、外の組の場所の中に、ひとかたまりで置く。
- *   公安の中の NOTE なら、公安の場所の片側に NOTE の二人を寄せ、
- *   残りの公安の人を反対側に置く。
- *   前は両方の組に入る人を「掛け持ち」として真ん中へ置いていたので、
- *   NOTE の囲みが公安からはみ出していた。
+ *   警視庁の中の捜査一課、公安の中の NOTE。
  *
- * ★ 入れ子でない二つの組に入る人は、その組たちの真ん中へ。
- *   そこに置くと、囲みどうしが自然に重なる。
+ * ★ 二つの組を掛け持ちする人がいれば、その二つの組を隣り合わせにし、
+ *   掛け持ちの人を境目に置く。
+ *   家族と FBI を掛け持ちする赤井秀一のように、
+ *   二つの囲みが境目で重なる形になる。
  *
- * ★ どこにも入らない人は、下にまとめて並べる。
+ *   前は掛け持ちの人を図の真ん中へ置いていたので、
+ *   二つの組の囲みが真ん中まで伸びて、ほかの組の上に被さっていた。
  */
 export function packByGroup(options: {
     ids: string[];
@@ -1395,306 +1405,784 @@ export function packByGroup(options: {
     width: number;
     height: number;
     gap: number;
-    /** 枠の横と縦の比。並べ終わりの形を、これに近づける */
+    /** 枠の横と縦の比（使わない。形は四角に寄せ、収まらないときだけ紙に合わせる） */
     aspect: number;
+    /** 詰めてよい、いちばん狭い間。丸どうしがぶつからない幅 */
+    minGap?: number;
 }): Map<string, Point> {
-    const { ids, groups, width, height, gap, aspect } = options;
-
-    const place = new Map<string, Point>();
-    const shown = new Set(ids);
-
-    const live = groups
-        .map((group) => ({
-            ...group,
-            ids: group.ids.filter((id) => shown.has(id)),
-        }))
-        .filter((group) => group.ids.length > 0);
-
-    if (live.length === 0) return place;
-
-    const byKey = new Map(live.map((group) => [group.key, group]));
-    const nest = nestingOf(live);
-
-    /* すぐ外の組。外の組が二つ以上あれば、いちばん小さいもの */
-    const parentOf = new Map<string, string | null>();
-
-    for (const group of live) {
-        const parents = (nest.get(group.key)?.parents ?? [])
-            .map((key) => byKey.get(key)!)
-            .sort((a, b) => a.ids.length - b.ids.length);
-
-        parentOf.set(group.key, parents[0]?.key ?? null);
-    }
-
-    const childrenOf = new Map<string, typeof live>();
-
-    for (const group of live) {
-        const parent = parentOf.get(group.key);
-        if (!parent) continue;
-        childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), group]);
-    }
-
-    const tops = live.filter((group) => !parentOf.get(group.key));
-
-    /* いちばん外の組のうち、どれに入っているか */
-    const topsOf = new Map<string, string[]>();
-
-    for (const top of tops) {
-        for (const id of top.ids) {
-            topsOf.set(id, [...(topsOf.get(id) ?? []), top.key]);
-        }
-    }
-
-    const loners = ids.filter((id) => !topsOf.has(id));
-
-    interface Block {
-        points: Map<string, Point>;
-        w: number;
-        h: number;
-    }
-
-    /* 人を輪に並べたかたまり */
-    const ringBlock = (list: string[]): Block => {
-        const radius = ringRadius(list.length, gap);
-        const points = new Map<string, Point>();
-
-        onRing(list.length, radius).forEach((point, index) => {
-            points.set(list[index], point);
-        });
-
-        return {
-            points,
-            w: radius * 2.3 + gap,
-            h: radius * 2 + gap * 1.1,
-        };
-    };
+    const { ids, groups, width, height } = options;
+    const minGap = options.minGap ?? options.gap * 0.6;
 
     /*
-     * かたまりをいくつか、四角く並べる。
+     * ★ 紙に収まる間で並べる。
      *
-     * ★ 二つまでは横に。三つ以上は、縦横の数を揃えて。
-     *   横一列に長く並ぶと、囲みが帯になる。
+     *   紙の外に出た丸は、紙の縁へ押し戻される。
+     *   組が多いと並べた全体が紙より大きくなり、
+     *   外に出た人がみな縁の一点に重なっていた。
+     *
+     *   まず決まった間で並べ、はみ出すなら間を詰めて並べ直す。
+     *   それでもはみ出すぶんだけ、最後に全体を縮める。
      */
-    const arrange = (parts: Block[], sep: number): Block => {
-        if (parts.length === 1) return parts[0];
+    /*
+     * ★ まず四角に近い形で試す。
+     *   それで紙に収まらないほど人が多いときだけ、紙の横長に合わせる。
+     *   四角にこだわって全体を縮めると、名前どうしが重なって読めなくなる。
+     */
+    const square = 1.25;
+    const paper = Math.max(1, Math.min(width / Math.max(1, height), 1.8));
 
-        const cols = parts.length <= 2 ? parts.length : Math.ceil(Math.sqrt(parts.length));
-        const rows: Block[][] = [];
+    let bestPlace = new Map<string, Point>();
+    let bestGap = 0;
+    let bestRoom = -1;
 
-        for (let i = 0; i < parts.length; i += cols) {
-            rows.push(parts.slice(i, i + cols));
+    for (const target of paper > square + 0.05 ? [square, paper] : [square]) {
+        let gap = options.gap;
+        let place = layoutWith(gap, target);
+
+        for (let tries = 0; tries < 3; tries += 1) {
+            const scale = fitScale(place, gap);
+            if (scale >= 0.98) break;
+
+            const next = Math.max(minGap, gap * scale);
+            if (next >= gap - 0.5) break;
+
+            gap = next;
+            place = layoutWith(gap, target);
         }
 
-        const rowW = rows.map(
-            (row) => row.reduce((sum, part) => sum + part.w, 0) + sep * (row.length - 1),
+        /* 縮めたあとに残る間。広いほど読みやすい */
+        const room = gap * fitScale(place, gap);
+
+        if (room > bestRoom * 1.08 || bestRoom < 0) {
+            bestRoom = room;
+            bestPlace = place;
+            bestGap = gap;
+        }
+
+        /* 四角のままで縮めずに収まったなら、それでよい */
+        if (fitScale(place, gap) >= 0.98) break;
+    }
+
+    return fitPaper(bestPlace, bestGap);
+
+    /* 紙に収めるのに、どれだけ縮める必要があるか */
+    function fitScale(map: Map<string, Point>, room: number): number {
+        if (map.size === 0) return 1;
+
+        let x1 = Number.POSITIVE_INFINITY;
+        let y1 = Number.POSITIVE_INFINITY;
+        let x2 = Number.NEGATIVE_INFINITY;
+        let y2 = Number.NEGATIVE_INFINITY;
+
+        for (const point of map.values()) {
+            x1 = Math.min(x1, point.x);
+            x2 = Math.max(x2, point.x);
+            y1 = Math.min(y1, point.y);
+            y2 = Math.max(y2, point.y);
+        }
+
+        /*
+         * ★ 余白は、丸と名前がはみ出さないぶんだけ。
+         *   囲みは紙の外に出ても描ける（出す範囲は中身に合わせて決める）。
+         *   紙が押し戻すのは、丸の中心だけ。
+         */
+        const margin = room * 0.55;
+
+        return Math.min(
+            1,
+            (width - margin * 2) / Math.max(1, x2 - x1),
+            (height - margin * 2) / Math.max(1, y2 - y1),
         );
-        const rowH = rows.map((row) => Math.max(...row.map((part) => part.h)));
+    }
 
-        const w = Math.max(...rowW);
-        const h = rowH.reduce((sum, one) => sum + one, 0) + sep * (rows.length - 1);
+    /* 紙の真ん中に寄せ、はみ出すぶんだけ縮める */
+    function fitPaper(map: Map<string, Point>, room: number): Map<string, Point> {
+        if (map.size === 0) return map;
 
-        const points = new Map<string, Point>();
-        let y = -h / 2;
+        const scale = fitScale(map, room);
 
-        rows.forEach((row, r) => {
-            let x = -rowW[r] / 2;
+        let x1 = Number.POSITIVE_INFINITY;
+        let y1 = Number.POSITIVE_INFINITY;
+        let x2 = Number.NEGATIVE_INFINITY;
+        let y2 = Number.NEGATIVE_INFINITY;
 
-            for (const part of row) {
-                const cx = x + part.w / 2;
-                const cy = y + rowH[r] / 2;
+        for (const point of map.values()) {
+            x1 = Math.min(x1, point.x);
+            x2 = Math.max(x2, point.x);
+            y1 = Math.min(y1, point.y);
+            y2 = Math.max(y2, point.y);
+        }
 
-                for (const [id, point] of part.points) {
-                    points.set(id, { x: cx + point.x, y: cy + point.y });
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2;
+        const out = new Map<string, Point>();
+
+        for (const [id, point] of map) {
+            out.set(id, {
+                x: width / 2 + (point.x - cx) * scale,
+                y: height / 2 + (point.y - cy) * scale,
+            });
+        }
+
+        return out;
+    }
+
+    function layoutWith(gap: number, TARGET: number): Map<string, Point> {
+        const place = new Map<string, Point>();
+        const shown = new Set(ids);
+
+        const live = groups
+            .map((group) => ({
+                ...group,
+                ids: group.ids.filter((id) => shown.has(id)),
+            }))
+            .filter((group) => group.ids.length > 0);
+
+        const byKey = new Map(live.map((group) => [group.key, group]));
+        const nest = nestingOf(live);
+
+        /* すぐ外の組。外の組が二つ以上あれば、いちばん小さいもの */
+        const parentOf = new Map<string, string | null>();
+
+        for (const group of live) {
+            const parents = (nest.get(group.key)?.parents ?? [])
+                .map((key) => byKey.get(key)!)
+                .sort((a, b) => a.ids.length - b.ids.length);
+
+            parentOf.set(group.key, parents[0]?.key ?? null);
+        }
+
+        const childrenOf = new Map<string, typeof live>();
+
+        for (const group of live) {
+            const parent = parentOf.get(group.key);
+            if (!parent) continue;
+            childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), group]);
+        }
+
+        const tops = live.filter((group) => !parentOf.get(group.key));
+
+        /* いちばん外の組のうち、どれに入っているか */
+        const topsOf = new Map<string, string[]>();
+
+        for (const top of tops) {
+            for (const id of top.ids) {
+                topsOf.set(id, [...(topsOf.get(id) ?? []), top.key]);
+            }
+        }
+
+        interface Block {
+            points: Map<string, Point>;
+            w: number;
+            h: number;
+        }
+
+        /* 人を輪に並べたかたまり */
+        const ringBlock = (list: string[]): Block => {
+            const radius = ringRadius(list.length, gap);
+            const points = new Map<string, Point>();
+            const spots = onRing(list.length, radius);
+
+            spots.forEach((point, index) => {
+                points.set(list[index], point);
+            });
+
+            /*
+             * ★ 広さは、実際に置いた場所から測る。
+             *   二人の輪は横に並ぶだけなので、縦はほとんど要らない。
+             *   輪の半径から測ると縦にも同じだけ取り、
+             *   組が縦に間延びして、四角く並べる判断も狂っていた。
+             */
+            const xs = spots.map((one) => one.x);
+            const ys = spots.map((one) => one.y);
+
+            return {
+                points,
+                w: Math.max(...xs) - Math.min(...xs) + gap,
+                h: Math.max(...ys) - Math.min(...ys) + gap * 1.05,
+            };
+        };
+
+        /*
+         * 人を並べたかたまり。
+         *
+         * ★ 三人までは輪（三人なら三角）。四人からは格子。
+         *
+         *   輪は場所を取る。五人の輪は、同じ五人の格子の三倍近い広さになり、
+         *   組が多い図では紙に収まらず、全体を縮めて名前が重なっていた。
+         *
+         * ★ 格子は、一つおきの列を少し下げる。
+         *   三人がぴたりと一直線に並ぶと、端どうしの線が真ん中の人を貫く。
+         */
+        const peopleBlock = (list: string[], wantCols?: number): Block => {
+            if (list.length <= 3) return ringBlock(list);
+
+            const cols = Math.min(
+                list.length,
+                Math.max(1, wantCols ?? Math.ceil(Math.sqrt(list.length * 1.15))),
+            );
+            const rowsN = Math.ceil(list.length / cols);
+            const points = new Map<string, Point>();
+
+            list.forEach((id, index) => {
+                const row = Math.floor(index / cols);
+                const inRow = Math.min(cols, list.length - row * cols);
+                const col = index % cols;
+
+                points.set(id, {
+                    x: (col - (inRow - 1) / 2) * gap * 1.1,
+                    y: (row - (rowsN - 1) / 2) * gap * 0.95 + (col % 2) * gap * 0.22,
+                });
+            });
+
+            return {
+                points,
+                w: (cols - 1) * gap * 1.1 + gap * 1.2,
+                h: (rowsN - 1) * gap * 0.95 + gap * 1.25,
+            };
+        };
+
+        /*
+         * かたまりをいくつか、四角く並べる。
+         *
+         * ★ 何列にするかは、いちばん正方形に近くなるもの。
+         *
+         * ★ 横一列に決めたいとき（掛け持ちで繋がる組の並び）は cols を渡す。
+         */
+        const arrange = (parts: Block[], sep: number, fixedCols?: number): Block => {
+            if (parts.length === 1) return parts[0];
+
+            const layout = (cols: number) => {
+                const rows: Block[][] = [];
+
+                for (let i = 0; i < parts.length; i += cols) {
+                    rows.push(parts.slice(i, i + cols));
                 }
 
-                x += part.w + sep;
-            }
+                const rowW = rows.map(
+                    (row) =>
+                        row.reduce((sum, part) => sum + part.w, 0) +
+                        sep * (row.length - 1),
+                );
+                const rowH = rows.map((row) => Math.max(...row.map((part) => part.h)));
 
-            y += rowH[r] + sep;
-        });
-
-        return { points, w, h };
-    };
-
-    /*
-     * 組のかたまりを作る。
-     *
-     * ★ 内の組を先に、ひとかたまりずつ。残りの人を最後に輪で。
-     * ★ 内の組には囲みと名札が付くので、そのぶん広く場所を取る。
-     */
-    const blockOf = (key: string, free: Set<string>): Block => {
-        const group = byKey.get(key)!;
-        const parts: Block[] = [];
-
-        const children = [...(childrenOf.get(key) ?? [])].sort(
-            (a, b) => b.ids.length - a.ids.length,
-        );
-
-        for (const child of children) {
-            const mine = new Set(child.ids.filter((id) => free.has(id)));
-            if (mine.size === 0) continue;
-
-            const inner = blockOf(child.key, mine);
-
-            for (const id of inner.points.keys()) free.delete(id);
-
-            parts.push({
-                points: inner.points,
-                w: inner.w + gap * 0.6,
-                h: inner.h + gap * 0.9,
-            });
-        }
-
-        const rest = group.ids.filter((id) => free.has(id));
-
-        if (rest.length > 0) {
-            for (const id of rest) free.delete(id);
-            parts.push(ringBlock(rest));
-        }
-
-        if (parts.length === 0) return { points: new Map(), w: gap, h: gap };
-
-        return arrange(parts, gap * 0.35);
-    };
-
-    /* いちばん外の組ごとの場所取り */
-    const tiles = tops.map((top) => {
-        /* ほかの外の組にも入っている人は、ここでは並べない（真ん中へ置く） */
-        const free = new Set(
-            top.ids.filter((id) => (topsOf.get(id) ?? []).length === 1),
-        );
-
-        const block = blockOf(top.key, free);
-
-        return {
-            group: top,
-            block,
-            w: block.w + gap * 0.9,
-            h: block.h + gap * 1.2,
-        };
-    });
-
-    const loneH = loners.length > 0 ? gap * 1.6 : 0;
-
-    /*
-     * 何列にするか。
-     *
-     * ★ 枠の形に合わせる。
-     *   並べ終わりの形が枠に近くなる列数を選ぶ。
-     */
-    const shapeOf = (cols: number) => {
-        const rows: (typeof tiles)[] = [];
-
-        for (let i = 0; i < tiles.length; i += cols) {
-            rows.push(tiles.slice(i, i + cols));
-        }
-
-        const rowW = rows.map((row) =>
-            row.reduce((sum, tile) => sum + tile.w, 0),
-        );
-        const rowH = rows.map((row) =>
-            row.reduce((most, tile) => Math.max(most, tile.h), 0),
-        );
-
-        const w = Math.max(...rowW, 1);
-        const h = rowH.reduce((sum, one) => sum + one, 0) + loneH;
-
-        return { rows, rowW, rowH, w, h };
-    };
-
-    let cols = 1;
-    let bestOff = Number.POSITIVE_INFINITY;
-
-    for (let n = 1; n <= tiles.length; n += 1) {
-        const shape = shapeOf(n);
-        const off = Math.abs(
-            Math.log(shape.w / shape.h) - Math.log(Math.max(0.2, aspect)),
-        );
-
-        if (off < bestOff) {
-            bestOff = off;
-            cols = n;
-        }
-    }
-
-    const { rows, rowW, rowH } = shapeOf(cols);
-
-    const totalH = rowH.reduce((sum, one) => sum + one, 0) + loneH;
-    const widest = Math.max(...rowW, loners.length * gap);
-
-    /* 紙の真ん中に置く */
-    let top = height / 2 - totalH / 2;
-    const left = width / 2;
-
-    const center = new Map<string, Point>();
-
-    rows.forEach((row, index) => {
-        let x = left - rowW[index] / 2;
-
-        for (const tile of row) {
-            const at = {
-                x: x + tile.w / 2,
-                /* 名札のぶん、少し下げる */
-                y: top + rowH[index] / 2 + gap * 0.15,
+                return {
+                    rows,
+                    rowW,
+                    rowH,
+                    w: Math.max(...rowW),
+                    h: rowH.reduce((sum, one) => sum + one, 0) + sep * (rows.length - 1),
+                };
             };
 
-            center.set(tile.group.key, at);
+            const off = (shape: { w: number; h: number }) =>
+                Math.abs(Math.log(shape.w / shape.h) - Math.log(1.15));
 
-            for (const [id, point] of tile.block.points) {
-                place.set(id, { x: at.x + point.x, y: at.y + point.y });
+            let best = layout(fixedCols ?? 1);
+
+            if (!fixedCols) {
+                for (let cols = 2; cols <= parts.length; cols += 1) {
+                    const one = layout(cols);
+                    if (off(one) < off(best)) best = one;
+                }
             }
 
-            x += tile.w;
-        }
+            const { rows, rowW, rowH, w, h } = best;
+            const points = new Map<string, Point>();
+            let y = -h / 2;
 
-        top += rowH[index];
-    });
+            rows.forEach((row, r) => {
+                let x = -rowW[r] / 2;
 
-    /* 外の組を二つ以上掛け持ちしている人は、その組たちの真ん中へ */
-    const shared = ids.filter((id) => (topsOf.get(id) ?? []).length > 1);
+                for (const part of row) {
+                    const cx = x + part.w / 2;
+                    const cy = y + rowH[r] / 2;
 
-    shared.forEach((id, index) => {
-        const keys = topsOf.get(id)!;
-        let sx = 0;
-        let sy = 0;
-        let count = 0;
+                    for (const [id, point] of part.points) {
+                        points.set(id, { x: cx + point.x, y: cy + point.y });
+                    }
 
-        for (const key of keys) {
-            const at = center.get(key);
-            if (!at) continue;
-            sx += at.x;
-            sy += at.y;
-            count += 1;
-        }
+                    x += part.w + sep;
+                }
 
-        if (count === 0) return;
-
-        /* 同じところに重ならないよう、少しずらす */
-        const turn = (Math.PI * 2 * index) / Math.max(1, shared.length);
-
-        place.set(id, {
-            x: sx / count + Math.cos(turn) * gap * 0.35,
-            y: sy / count + Math.sin(turn) * gap * 0.35,
-        });
-    });
-
-    /* どこにも入らない人は、下にひと並び。囲みは付けない */
-    if (loners.length > 0) {
-        const wide = Math.max(
-            1,
-            Math.min(loners.length, Math.floor(widest / gap) || 1),
-        );
-
-        loners.forEach((id, index) => {
-            const col = index % wide;
-            const row = Math.floor(index / wide);
-
-            place.set(id, {
-                x: left + (col - (wide - 1) / 2) * gap,
-                y: top + gap * 0.9 + row * gap * 0.85,
+                y += rowH[r] + sep;
             });
-        });
-    }
 
-    return place;
+            return { points, w, h };
+        };
+
+        /*
+         * 組のかたまりを作る。
+         *
+         * ★ 内の組を先に、ひとかたまりずつ。残りの人を最後に。
+         * ★ 内の組には囲みと名札が付くので、そのぶん広く場所を取る。
+         */
+        const blockOf = (key: string, free: Set<string>): Block => {
+            const group = byKey.get(key)!;
+            const parts: Block[] = [];
+
+            const children = [...(childrenOf.get(key) ?? [])].sort(
+                (a, b) => b.ids.length - a.ids.length,
+            );
+
+            for (const child of children) {
+                const mine = new Set(child.ids.filter((id) => free.has(id)));
+                if (mine.size === 0) continue;
+
+                const inner = blockOf(child.key, mine);
+
+                for (const id of inner.points.keys()) free.delete(id);
+
+                parts.push({
+                    points: inner.points,
+                    w: inner.w + gap * 0.6,
+                    h: inner.h + gap * 0.9,
+                });
+            }
+
+            const rest = group.ids.filter((id) => free.has(id));
+
+            if (rest.length > 0) {
+                for (const id of rest) free.delete(id);
+                parts.push(peopleBlock(rest));
+            }
+
+            if (parts.length === 0) return { points: new Map(), w: gap, h: gap };
+
+            return arrange(parts, gap * 0.35);
+        };
+
+        /*
+         * 掛け持ちで繋がる組を、ひとまとまりにする。
+         *
+         * ★ 家族と FBI を赤井秀一が掛け持ちしていれば、二つで一まとまり。
+         *   [家族だけの人][赤井][FBI だけの人] と横に並べる。
+         *   囲みは、赤井のところで重なる。
+         */
+        const clusterOf = new Map<string, string>();
+        const root = (key: string): string => {
+            const up = clusterOf.get(key) ?? key;
+            if (up === key) return key;
+            const top = root(up);
+            clusterOf.set(key, top);
+            return top;
+        };
+
+        for (const keys of topsOf.values()) {
+            for (let i = 1; i < keys.length; i += 1) {
+                const a = root(keys[0]);
+                const b = root(keys[i]);
+                if (a !== b) clusterOf.set(b, a);
+            }
+        }
+
+        const clusters = new Map<string, typeof tops>();
+
+        for (const top of tops) {
+            const key = root(top.key);
+            clusters.set(key, [...(clusters.get(key) ?? []), top]);
+        }
+
+        interface Tile {
+            key: string;
+            block: Block;
+            w: number;
+            h: number;
+        }
+
+        const tiles: Tile[] = [];
+
+        for (const members of clusters.values()) {
+            if (members.length === 1) {
+                const top = members[0];
+                const block = blockOf(top.key, new Set(top.ids));
+
+                tiles.push({
+                    key: top.key,
+                    block,
+                    w: block.w + gap * 0.7,
+                    h: block.h + gap * 1.0,
+                });
+                continue;
+            }
+
+            /*
+             * 並べる順。繋がっている組が隣に来るよう、掛け持ちを辿る。
+             */
+            const order: typeof tops = [];
+            const left = [...members].sort((a, b) => b.ids.length - a.ids.length);
+
+            order.push(left.shift()!);
+
+            while (left.length > 0) {
+                const last = new Set(order[order.length - 1].ids);
+                const at = left.findIndex((group) => group.ids.some((id) => last.has(id)));
+                order.push(left.splice(at >= 0 ? at : 0, 1)[0]);
+            }
+
+            const taken = new Set<string>();
+            const parts: Block[] = [];
+
+            order.forEach((group, index) => {
+                /* この組だけの人 */
+                const own = new Set(
+                    group.ids.filter(
+                        (id) => !taken.has(id) && (topsOf.get(id) ?? []).length === 1,
+                    ),
+                );
+
+                if (own.size > 0) {
+                    const block = blockOf(group.key, own);
+                    for (const id of block.points.keys()) taken.add(id);
+                    parts.push({ ...block, w: block.w + gap * 0.3, h: block.h + gap * 0.6 });
+                }
+
+                /* 次の組との境目に立つ人 */
+                const next = order[index + 1];
+
+                if (next) {
+                    const nextIds = new Set(next.ids);
+                    const shared = group.ids.filter(
+                        (id) => !taken.has(id) && nextIds.has(id),
+                    );
+
+                    if (shared.length > 0) {
+                        for (const id of shared) taken.add(id);
+                        parts.push(peopleBlock(shared));
+                    }
+                }
+            });
+
+            /* 隣り合わない組どうしの掛け持ちは、いちばん端の境目に足す */
+            const stray = members
+                .flatMap((group) => group.ids)
+                .filter((id, index, all) => all.indexOf(id) === index && !taken.has(id));
+
+            if (stray.length > 0) parts.push(peopleBlock(stray));
+
+            const block = arrange(parts, gap * 0.3, parts.length);
+
+            tiles.push({
+                key: order[0].key,
+                block,
+                w: block.w + gap * 0.7,
+                h: block.h + gap * 1.0,
+            });
+        }
+
+        /*
+         * 真ん中に置く人。どこの組にも入らない人。
+         *
+         * ★ 人物相関図は、物語の中心の人を真ん中に置き、
+         *   まわりを組織が取り巻く形が読みやすい。
+         *   どこにも属さない人は、たいてい主人公とその身近な人。
+         */
+        const middle = ids.filter((id) => !topsOf.has(id));
+        let core: Block =
+            middle.length === 0 ? { points: new Map(), w: 0, h: 0 } : peopleBlock(middle);
+
+        /*
+         * 組を、真ん中のまわりの四辺に振り分ける。
+         *
+         * ★ 全体が四角に近くなるように。
+         *   大きい組から順に、置いたときに全体がいちばん
+         *   正方形に近くなる辺へ入れる。
+         */
+        const SEP = gap * 0.45;
+
+        type Side = "top" | "right" | "bottom" | "left";
+        const sides: Record<Side, Tile[]> = { top: [], right: [], bottom: [], left: [] };
+
+        const measure = (with_: Record<Side, Tile[]>) => {
+            const run = (list: Tile[], along: "w" | "h") =>
+                list.reduce((sum, tile) => sum + tile[along], 0) +
+                SEP * Math.max(0, list.length - 1);
+            const thick = (list: Tile[], across: "w" | "h") =>
+                list.reduce((most, tile) => Math.max(most, tile[across]), 0);
+
+            const coreW = Math.max(core.w, run(with_.top, "w"), run(with_.bottom, "w"));
+            const coreH = Math.max(core.h, run(with_.left, "h"), run(with_.right, "h"));
+
+            const leftW = thick(with_.left, "w");
+            const rightW = thick(with_.right, "w");
+            const topH = thick(with_.top, "h");
+            const bottomH = thick(with_.bottom, "h");
+
+            return {
+                coreW,
+                coreH,
+                leftW,
+                rightW,
+                topH,
+                bottomH,
+                w: coreW + leftW + rightW + (leftW ? SEP : 0) + (rightW ? SEP : 0),
+                h: coreH + topH + bottomH + (topH ? SEP : 0) + (bottomH ? SEP : 0),
+            };
+        };
+
+        const sorted = [...tiles].sort((a, b) => b.w * b.h - a.w * a.h);
+
+        /*
+         * ★ 真ん中に誰もいないときは、四辺ではなく格子に並べる。
+         *   真ん中が空だと、組が空洞を囲むだけになる。
+         */
+        if (middle.length > 0 && tiles.length >= 2) {
+            const sideOrder: Side[] = ["top", "right", "bottom", "left"];
+
+            const scoreOf = (trial: Record<Side, Tile[]>) => {
+                const shape = measure(trial);
+
+                /*
+                 * ★ まず広さ、次に形。
+                 *   形だけを見ていたら、一つの辺に組を積み上げて
+                 *   真ん中の四角が縦に引き伸ばされ、全体が紙に収まらなかった。
+                 */
+                return (
+                    shape.w *
+                    shape.h *
+                    (1 +
+                        1.5 *
+                            Math.abs(
+                                Math.log(shape.w / Math.max(1, shape.h)) - Math.log(TARGET),
+                            ))
+                );
+            };
+
+            if (sorted.length <= 7) {
+                /*
+                 * ★ 組が少ないうちは、振り分け方を全部試す。
+                 *   一つずつ決めていくと、最初の組の置き場所に引きずられて、
+                 *   下の辺が空いたまま右の辺に積み上がることがあった。
+                 */
+                let best: Record<Side, Tile[]> | null = null;
+                let bestScore = Number.POSITIVE_INFINITY;
+                const total = 4 ** sorted.length;
+
+                for (let code = 0; code < total; code += 1) {
+                    const trial: Record<Side, Tile[]> = { top: [], right: [], bottom: [], left: [] };
+                    let rest = code;
+
+                    for (const tile of sorted) {
+                        trial[sideOrder[rest % 4]].push(tile);
+                        rest = Math.floor(rest / 4);
+                    }
+
+                    const score = scoreOf(trial);
+
+                    if (score < bestScore) {
+                        bestScore = score;
+                        best = trial;
+                    }
+                }
+
+                if (best) Object.assign(sides, best);
+            } else {
+                for (const tile of sorted) {
+                    let bestSide: Side = "top";
+                    let bestScore = Number.POSITIVE_INFINITY;
+
+                    for (const side of sideOrder) {
+                        const score = scoreOf({ ...sides, [side]: [...sides[side], tile] });
+
+                        if (score < bestScore) {
+                            bestScore = score;
+                            bestSide = side;
+                        }
+                    }
+
+                    sides[bestSide].push(tile);
+                }
+            }
+
+            /*
+             * ★ 真ん中の人の並びを、空いている四角の形に合わせる。
+             *
+             *   左右に組が積まれると、真ん中の四角は縦に長くなる。
+             *   そこへ横長の格子を置くと、上下は空いているのに
+             *   横どうしの名前が重なっていた。
+             *   列の数を変えて、全体がいちばん小さく、
+             *   人どうしがいちばん離れるものを選ぶ。
+             */
+            if (middle.length > 3) {
+                let bestArea = Number.POSITIVE_INFINITY;
+                let bestSpace = 0;
+                let bestCore = core;
+
+                /*
+                 * ★ 一列にはしない。
+                 *   一列に並ぶと、端どうしを結ぶ線がみな列の上を大きく回り込む。
+                 *   六人以上なら二段以上に。
+                 */
+                const most = middle.length >= 6 ? Math.ceil(middle.length / 2) : middle.length;
+                /* 縦一列も同じ。六人以上なら二列以上に */
+                const least = middle.length >= 6 ? 2 : 1;
+
+                for (let c = least; c <= most; c += 1) {
+                    const trial = peopleBlock(middle, c);
+                    const saved = core;
+                    core = trial;
+                    const one = measure(sides);
+                    core = saved;
+
+                    const area = one.w * one.h;
+                    const sx = Math.min(
+                        1.7,
+                        (one.coreW - gap * 0.6) / Math.max(1, trial.w - gap * 0.6),
+                    );
+                    const sy = Math.min(
+                        1.7,
+                        (one.coreH - gap * 0.6) / Math.max(1, trial.h - gap * 0.6),
+                    );
+                    const space = Math.min(
+                        1.1 * gap * Math.max(1, sx),
+                        0.95 * gap * Math.max(1, sy),
+                    );
+
+                    if (
+                        area < bestArea * 0.97 ||
+                        (area < bestArea * 1.03 && space > bestSpace)
+                    ) {
+                        bestArea = Math.min(bestArea, area);
+                        bestSpace = space;
+                        bestCore = trial;
+                    }
+                }
+
+                core = bestCore;
+            }
+
+            const shape = measure(sides);
+
+            const coreLeft = width / 2 - shape.w / 2 + shape.leftW + (shape.leftW ? SEP : 0);
+            const coreTop = height / 2 - shape.h / 2 + shape.topH + (shape.topH ? SEP : 0);
+            const coreMidX = coreLeft + shape.coreW / 2;
+            const coreMidY = coreTop + shape.coreH / 2;
+
+            /*
+             * ★ 真ん中の人は、空いている四角いっぱいに広げる。
+             *   人は詰めたままだと、まわりが空いているのに名前が重なる。
+             *   縦と横で別々に広げる。
+             */
+            const spreadX = Math.min(
+                1.7,
+                Math.max(1, (shape.coreW - gap * 0.6) / Math.max(1, core.w - gap * 0.6)),
+            );
+            const spreadY = Math.min(
+                1.7,
+                Math.max(1, (shape.coreH - gap * 0.6) / Math.max(1, core.h - gap * 0.6)),
+            );
+
+            for (const [id, point] of core.points) {
+                place.set(id, {
+                    x: coreMidX + point.x * spreadX,
+                    y: coreMidY + point.y * spreadY,
+                });
+            }
+
+            const put = (tile: Tile, x: number, y: number) => {
+                /* 名札のぶん、少し下げる */
+                for (const [id, point] of tile.block.points) {
+                    place.set(id, { x: x + point.x, y: y + point.y + gap * 0.15 });
+                }
+            };
+
+            const lay = (list: Tile[], side: Side) => {
+                const along = side === "top" || side === "bottom" ? "w" : "h";
+                const total =
+                    list.reduce((sum, tile) => sum + tile[along], 0) +
+                    SEP * Math.max(0, list.length - 1);
+
+                let at = along === "w" ? coreMidX - total / 2 : coreMidY - total / 2;
+
+                for (const tile of list) {
+                    const mid = at + tile[along] / 2;
+
+                    /* 上の辺は下の縁を、下の辺は上の縁を、真ん中の四角にそろえる */
+                    if (side === "top") put(tile, mid, coreTop - SEP - tile.h / 2);
+                    if (side === "bottom") put(tile, mid, coreTop + shape.coreH + SEP + tile.h / 2);
+                    if (side === "left") put(tile, coreLeft - SEP - tile.w / 2, mid);
+                    if (side === "right") put(tile, coreLeft + shape.coreW + SEP + tile.w / 2, mid);
+
+                    at += tile[along] + SEP;
+                }
+            };
+
+            lay(sides.top, "top");
+            lay(sides.right, "right");
+            lay(sides.bottom, "bottom");
+            lay(sides.left, "left");
+
+            return place;
+        }
+
+        /*
+         * 格子に並べる（真ん中に誰もいない、または組が一つだけ）。
+         * ★ 列の数は、全体が四角に近くなるもの。
+         */
+        const all: Tile[] = [...sorted];
+
+        if (core.points.size > 0) {
+            all.push({
+                key: "__middle__",
+                block: core,
+                w: core.w + gap * 0.4,
+                h: core.h + gap * 0.4,
+            });
+        }
+
+        const shapeOf = (cols: number) => {
+            const rows: Tile[][] = [];
+
+            for (let i = 0; i < all.length; i += cols) {
+                rows.push(all.slice(i, i + cols));
+            }
+
+            const rowW = rows.map((row) => row.reduce((sum, tile) => sum + tile.w, 0));
+            const rowH = rows.map((row) =>
+                row.reduce((most, tile) => Math.max(most, tile.h), 0),
+            );
+
+            return {
+                rows,
+                rowW,
+                rowH,
+                w: Math.max(...rowW, 1),
+                h: rowH.reduce((sum, one) => sum + one, 0),
+            };
+        };
+
+        let cols = 1;
+        let bestOff = Number.POSITIVE_INFINITY;
+
+        for (let n = 1; n <= all.length; n += 1) {
+            const shape = shapeOf(n);
+            const off = Math.abs(Math.log(shape.w / shape.h) - Math.log(TARGET));
+
+            if (off < bestOff) {
+                bestOff = off;
+                cols = n;
+            }
+        }
+
+        const { rows, rowW, rowH, h: totalH } = shapeOf(cols);
+        let top = height / 2 - totalH / 2;
+
+        rows.forEach((row, index) => {
+            let x = width / 2 - rowW[index] / 2;
+
+            for (const tile of row) {
+                const at = { x: x + tile.w / 2, y: top + rowH[index] / 2 + gap * 0.15 };
+
+                for (const [id, point] of tile.block.points) {
+                    place.set(id, { x: at.x + point.x, y: at.y + point.y });
+                }
+
+                x += tile.w;
+            }
+
+            top += rowH[index];
+        });
+
+        return place;
+    }
 }

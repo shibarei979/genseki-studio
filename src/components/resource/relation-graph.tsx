@@ -2044,11 +2044,18 @@ export default function RelationGraph({
                       width: WIDTH,
                       height: HEIGHT,
                       gap: gapWanted,
+                      /* 詰めても、丸と名前がぶつからない幅までにする */
+                      minGap: NODE_RADIUS * 3.8,
                       aspect: liveAspect,
                   })
                 : packed(nodes, false);
 
-        untangle(place, new Set());
+        /*
+         * ★ 組ごとに並べたときは、ほどかない。
+         *   間は並べる時点で空けてある。
+         *   ほどくと人が押し出され、隣の組の囲みに入り込む。
+         */
+        if (byGroup.length === 0) untangle(place, new Set());
 
         /*
          * ★ 覚えてもらうのは、紙に対する割合。
@@ -2568,9 +2575,9 @@ export default function RelationGraph({
                                     rx={NODE_RADIUS * 0.7}
                                     fill={ink}
                                     /* 外側ほど薄く。重なっても中が読める */
-                                    fillOpacity={box.levels > 0 ? 0.09 : 0.16}
+                                    fillOpacity={box.levels > 0 ? 0.12 : 0.2}
                                     stroke={ink}
-                                    strokeOpacity={0.95}
+                                    strokeOpacity={0.9}
                                     /*
                                      * ★ 枠の太さは、画面の点で決める。
                                      *   図は縮めて出すので、図の中の太さだと
