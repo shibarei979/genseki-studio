@@ -3148,8 +3148,14 @@ export function curveRoute(options: {
     halo: number;
     /** 折れ目の丸み */
     corner: number;
+    /**
+     * 行き帰りの二本のうちの一本。
+     * ふくらむ弧だけにする（二本が左右対称に分かれる）。
+     */
+    bowOnly?: boolean;
 }): CurveRoute {
     const { from, to, hard, soft, placed, lane, startRect, endRect, halo, corner } = options;
+    const bowOnly = options.bowOnly ?? false;
 
     const dx = to.x - from.x;
     const dy = to.y - from.y;
@@ -3215,7 +3221,11 @@ export function curveRoute(options: {
 
     /* まっすぐと、弧 */
     const N = 40;
-    for (const k of [0, 1, -1, 2, -2, 3, -3, 4, -4, 6, -6]) {
+    /*
+     * ★ 行き帰りの二本は、同じ向き（+）にだけふくらませる。
+     *   向きが逆の線なので、同じ + でも、見た目は左右に分かれる。
+     */
+    for (const k of bowOnly ? [1, 2, 3] : [0, 1, -1, 2, -2, 3, -3, 4, -4, 6, -6]) {
         const control = { x: mid.x + nx * step * k, y: mid.y + ny * step * k };
         const all = Array.from({ length: N + 1 }, (_, i) => onQuad(from, control, to, i / N));
         const { a, b } = clip(all);
@@ -3280,6 +3290,11 @@ export function curveRoute(options: {
         });
     };
 
+    if (bowOnly) {
+        candidates.sort((a, b) => a.cost - b.cost);
+        return candidates[0].route;
+    }
+
     /* L 字（横から縦・縦から横） */
     bent([{ x: to.x, y: from.y }], 1.5);
     bent([{ x: from.x, y: to.y }], 1.5);
@@ -3341,8 +3356,13 @@ function packGrid(options: {
     links: { a: string; b: string }[];
 }): Map<string, Point> {
     const { ids, groups, gap, width, height, aspect, links } = options;
+    /*
+     * ★ 行の間は、列の間より広く。
+     *   丸の下に名前と役割が付くので、縦の線は名前のぶん短くなる。
+     *   行が近いと、縦に結んだ線と関係名が押しつぶされた。
+     */
     const cellX = gap * 1.0;
-    const cellY = gap * 1.05;
+    const cellY = gap * 1.3;
 
     type Cell = { c: number; r: number };
     interface Block {

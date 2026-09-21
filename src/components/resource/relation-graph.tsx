@@ -1896,6 +1896,19 @@ export default function RelationGraph({
      */
     const placedLabels: { x1: number; y1: number; x2: number; y2: number }[] = [];
 
+    /*
+     * 組の名札のだいたいの場所。関係名の札が、ここに重ならないように。
+     * ★ 描くところ（囲みの見出し）と同じ決め方。
+     */
+    const titleTags = groupBoxes.map((box) => {
+        const titleFont = Math.round(NAME_SIZE * 1.15);
+        const titleH = Math.round(titleFont * 1.2);
+        const w = Array.from(box.name || "組").length * titleFont + titleFont * 2.45;
+        const x1 = box.x1 + Math.round(NODE_RADIUS * 0.35) * 2;
+        const tagH = Math.round(titleFont * 1.5);
+        return { x1, x2: x1 + w, y1: box.y1 - tagH / 2 - titleH * 0.1, y2: box.y1 + tagH / 2 };
+    });
+
     function labelSpot(
         points: { x: number; y: number }[],
         w: number,
@@ -1958,6 +1971,14 @@ export default function RelationGraph({
         h: number,
     ): { x: number; y: number } {
         const hit = (x: number, y: number) => {
+            if (
+                titleTags.some(
+                    (one) =>
+                        x - w / 2 < one.x2 && x + w / 2 > one.x1 && y - h / 2 < one.y2 && y + h / 2 > one.y1,
+                )
+            ) {
+                return true;
+            }
             /* 札どうし、少し間をあける */
             const m = NAME_SIZE * 0.25;
             const box = { x1: x - w / 2 - m, y1: y - h / 2 - m, x2: x + w / 2 + m, y2: y + h / 2 + m };
@@ -2121,6 +2142,21 @@ export default function RelationGraph({
             };
         };
 
+        /*
+         * ★ 線の端は、カードの縁から少し離す。
+         *   ぴたりと付けると、矢印の先が名前の字に刺さって見えた。
+         */
+        const gapAtEnd = Math.round(NODE_RADIUS * 0.25);
+        const grow = (rect: { x1: number; y1: number; x2: number; y2: number } | null | undefined) =>
+            rect
+                ? {
+                      x1: rect.x1 - gapAtEnd,
+                      y1: rect.y1 - gapAtEnd,
+                      x2: rect.x2 + gapAtEnd,
+                      y2: rect.y2 + gapAtEnd,
+                  }
+                : null;
+
         const lengthOfLine = (relation: ResourceRelation) => {
             const a = anchorOf(relation.from_entry_id);
             const b = anchorOf(relation.to_entry_id);
@@ -2157,6 +2193,17 @@ export default function RelationGraph({
                 (one) => one.id !== relation.from_entry_id && one.id !== relation.to_entry_id,
             );
 
+            /*
+             * ★ 行き帰りの二本（師匠と弟子）は、左右対称にふくらませる。
+             *   片方だけ曲がり、片方はまっすぐだと、二本の組だと分かりにくかった。
+             */
+            const paired = visibleRelations.some(
+                (other) =>
+                    other.id !== relation.id &&
+                    other.from_entry_id === relation.to_entry_id &&
+                    other.to_entry_id === relation.from_entry_id,
+            );
+
             const curve = curveRoute({
                 from,
                 to,
@@ -2164,10 +2211,11 @@ export default function RelationGraph({
                 soft,
                 placed,
                 lane,
-                startRect: fromBox ?? cardRect(relation.from_entry_id),
-                endRect: toBox ?? cardRect(relation.to_entry_id),
+                startRect: grow(fromBox ?? cardRect(relation.from_entry_id)),
+                endRect: grow(toBox ?? cardRect(relation.to_entry_id)),
                 halo: HALO,
                 corner: Math.round(NODE_RADIUS * 0.8),
+                bowOnly: paired,
             });
 
             placed.push(curve.samples);
@@ -2352,7 +2400,11 @@ export default function RelationGraph({
      *   画面の点で、丸の半径に上限を置く。
      *   上限に当たったら、そこで止めて真ん中に寄せる。
      */
-    const NODE_CAP_PX = 24;
+    /*
+     * ★ 組分けのときは、上限を少し上げる。
+     *   人が少ない作品で、図が枠の真ん中に小さくまとまり、まわりが大きく空いていた。
+     */
+    const NODE_CAP_PX = grouping ? 30 : 24;
 
     const fitRatio =
         box.w && box.h
@@ -2702,6 +2754,9 @@ export default function RelationGraph({
 
     const active = hoveredId ?? selectedId;
 
+    /* 主人公が決まっているか（選んだ人か、役割に「主人公」の人） */
+    const hasLead = nodes.some((node) => tierOf(node.id) === 0);
+
     /* 組分けを解いたあとの並べ直しに使う（上の useEffect から呼ぶ） */
     tidyRef.current = tidy;
 
@@ -2847,6 +2902,19 @@ export default function RelationGraph({
             <div
                 ref={panRef}
                 className="thin-scroll min-h-0 flex-1 overflow-auto"
+                /*
+                 * ★ 組分けの方眼は、枠いっぱいに敷く。
+                 *   図の中に敷くと、図の外側で方眼が途切れ、四角い継ぎ目が見えた。
+                 */
+                style={
+                    grouping
+                        ? {
+                              backgroundImage:
+                                  "linear-gradient(#f0eee8 1px, transparent 1px), linear-gradient(90deg, #f0eee8 1px, transparent 1px)",
+                              backgroundSize: "24px 24px",
+                          }
+                        : undefined
+                }
             >
                 {/*
                   * ★ 縦にも真ん中へ置くための、内側の一枚。
@@ -3214,16 +3282,7 @@ export default function RelationGraph({
                   *   外側の組から順に置き、先に置いた札とぶつかるなら右へずらす。
                   */}
                 {/* 相関図の地。薄い方眼の紙 */}
-                {grouping && (
-                    <rect
-                        x={view.x - view.w}
-                        y={view.y - view.h}
-                        width={view.w * 3}
-                        height={view.h * 3}
-                        fill="url(#paper-grid)"
-                        pointerEvents="none"
-                    />
-                )}
+{/* 方眼は枠の側に敷く（上の panRef の style） */}
 
                 {(() => {
                     /*
@@ -4249,9 +4308,19 @@ export default function RelationGraph({
                                             "主人公を変えました。並びにも反映するときは「組み直す」を押してください。",
                                         );
                                     }}
-                                    className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink"
+                                    title={
+                                        hasLead
+                                            ? "主人公を選びます"
+                                            : "主人公が決まっていません。選ぶと、その人が大きく真ん中に出ます"
+                                    }
+                                    className={[
+                                        "rounded-md border bg-surface px-1.5 py-0.5 text-[11px] text-ink",
+                                        hasLead ? "border-line" : "border-[#d9650b]",
+                                    ].join(" ")}
                                 >
-                                    <option value="">役割から</option>
+                                    <option value="">
+                                        {hasLead ? "役割から" : "未設定（選ぶ）"}
+                                    </option>
                                     {shownNodes
                                         .filter((node) => !boxOf.has(node.id) && !foundGroups.some((group) => group.key === node.id))
                                         .map((node) => (
