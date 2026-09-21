@@ -65,6 +65,8 @@ interface Props {
     onSetGroupMember?: (groupId: string, entryId: string, on: boolean) => Promise<void>;
     onDissolveGroup?: (groupId: string) => Promise<void>;
     onSetGroupColor?: (groupId: string, color: string | null) => Promise<void>;
+    /** 関係図の主人公を選ぶ（会員） */
+    onSetLead?: (entryId: string | null) => Promise<void>;
 }
 
 export default function RelationsView({
@@ -82,6 +84,7 @@ export default function RelationsView({
     onSetGroupMember,
     onDissolveGroup,
     onSetGroupColor,
+    onSetLead,
 }: Props) {
     const [mode, setMode] = useState<"graph" | "list">("graph");
 
@@ -102,6 +105,17 @@ export default function RelationsView({
      * ★ 図に伝えて、囲みを出してもらう。
      */
     const [groupsTouched, setGroupsTouched] = useState(0);
+
+    /*
+     * 組を直しているか。
+     *
+     * ★ 組の欄は、直すときだけ出す。
+     *
+     *   見る画面なのに、右に組のカードが並んでいると、
+     *   管理画面のように見えた。
+     *   ふだんは図を横いっぱいに出し、「組を編集」を押したときだけ右に出す。
+     */
+    const [editingGroups, setEditingGroups] = useState(false);
 
     const touch = <A extends unknown[]>(
         task: ((...args: A) => Promise<void>) | undefined,
@@ -249,7 +263,28 @@ export default function RelationsView({
                     関係図
                 </h1>
 
-
+                {/*
+                  * 組を編集（会員）。
+                  * ★ 押したときだけ右に組の欄を出す。ふだんは図を広く。
+                  */}
+                {canEditGroups && mode === "graph" && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setEditingGroups((on) => !on);
+                            setSelectedRelationId(null);
+                            setFocusId(null);
+                        }}
+                        aria-pressed={editingGroups}
+                        className={
+                            editingGroups
+                                ? "ml-auto rounded-md border border-forest bg-forest-tint px-3 py-1 text-[11px] text-forest"
+                                : "ml-auto rounded-md border border-line bg-surface px-3 py-1 text-[11px] text-muted hover:border-forest-line hover:text-forest"
+                        }
+                    >
+                        {editingGroups ? "組の編集を閉じる" : "組を編集"}
+                    </button>
+                )}
             </header>
 
             {entries.length < 2 ? (
@@ -469,7 +504,17 @@ export default function RelationsView({
 
                     </div>
 
-                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <div
+                        className={
+                            /*
+                             * ★ 右に出すものが無いときは、図を横いっぱいに。
+                             *   関係や人を選んだとき、組を直すときだけ右の欄を出す。
+                             */
+                            selected || focusId || editingGroups || mode !== "graph"
+                                ? "grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]"
+                                : "grid gap-3"
+                        }
+                    >
                         {/*
                           * 図の枠。
                           *
@@ -558,6 +603,7 @@ export default function RelationsView({
                                      */
                                     pages={pages}
                                     groupsTouched={groupsTouched}
+                                    onSetLead={onSetLead}
                                     selectedId={focusId}
                                     /*
                                      * 覚えている置き場所を渡す。
@@ -692,6 +738,10 @@ export default function RelationsView({
                                 "thin-scroll overflow-y-auto rounded-lg border border-line bg-surface p-4",
                                 /* 人も関係も選んでいないときだけ、狭い画面では隠す */
                                 !selected && !focusId ? "hidden lg:block" : "",
+                                /* 図を見ているだけのときは、右の欄を出さない */
+                                !selected && !focusId && !editingGroups && mode === "graph"
+                                    ? "!hidden"
+                                    : "",
                             ].join(" ")}
                             style={
                                 /*
@@ -722,7 +772,7 @@ export default function RelationsView({
                                         entryById={entryById}
                                         onPick={setSelectedRelationId}
                                     />
-                                ) : canEditGroups ? (
+                                ) : canEditGroups && editingGroups ? (
                                     /*
                                      * ★ 何も選んでいないときは、組の欄。
                                      *
@@ -730,6 +780,15 @@ export default function RelationsView({
                                      *   関係を選べば、これまでどおり関係の詳しいところに替わる。
                                      */
                                     <>
+                                        <div className="mb-2 flex justify-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditingGroups(false)}
+                                                className="text-[11px] text-muted hover:text-forest"
+                                            >
+                                                閉じる
+                                            </button>
+                                        </div>
                                         <GroupPanel
                                             entries={pickable}
                                             relations={relations}

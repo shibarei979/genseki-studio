@@ -36,7 +36,7 @@ import {
 import type { CandidateKind } from "@/lib/ai/extractor";
 import { getImageGenerator } from "@/lib/ai/image-generator";
 import { appendLeftover, mapAttributes } from "@/lib/resource/attribute-map";
-import { COLOR_KEY, isBelongField, isMemberField } from "@/lib/resource/graph-groups";
+import { COLOR_KEY, LEAD_KEY, isBelongField, isMemberField } from "@/lib/resource/graph-groups";
 import {
     hasSubstance,
     isPersonName,
@@ -550,6 +550,34 @@ export default function ResourceClient({ workId }: Props) {
         }
 
         await repository.updateEntry(groupId, { values: next });
+        await reload();
+    }
+
+    /*
+     * 関係図の主人公を選ぶ。
+     *
+     * ★ 選んだ人の values に印を置き、ほかの人の印は外す。主人公は一人。
+     * ★ null なら全員の印を外す（資料の役割から決める）。
+     */
+    async function setLead(entryId: string | null) {
+        const marked = entries.filter(
+            (one) => one.values?.[LEAD_KEY] === true && one.id !== entryId,
+        );
+
+        for (const one of marked) {
+            const next = { ...one.values };
+            delete next[LEAD_KEY];
+            await repository.updateEntry(one.id, { values: next });
+        }
+
+        const target = entryId ? entries.find((one) => one.id === entryId) : null;
+
+        if (target && target.values?.[LEAD_KEY] !== true) {
+            await repository.updateEntry(target.id, {
+                values: { ...target.values, [LEAD_KEY]: true },
+            });
+        }
+
         await reload();
     }
 
@@ -1376,6 +1404,7 @@ export default function ResourceClient({ workId }: Props) {
                                     onSetGroupMember={setGroupMember}
                                     onDissolveGroup={dissolveGroup}
                                     onSetGroupColor={setGroupColor}
+                                    onSetLead={setLead}
                                 />
                             ) : currentPage.kind === "timeline" ? (
                                 <TimelineView

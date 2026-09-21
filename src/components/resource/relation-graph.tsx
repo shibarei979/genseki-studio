@@ -18,12 +18,10 @@ import {
     AUTHORED,
     assignColors,
     boxesFor,
-    clipEnd,
-    clipStart,
+    curveRoute,
     findGroups,
-    orthoRoute,
-    trimOne,
-    type Segment,
+    LEAD_KEY,
+    type CurveRoute,
     middleOf,
     packByGroup,
     pathAround,
@@ -71,6 +69,11 @@ interface Props {
      *   並べ直したいときは「組み直す」を押してもらう。
      */
     groupsTouched?: number;
+    /**
+     * 主人公を選ぶ（null で選ばない＝役割から決める）。
+     * 渡されないときは、選ぶ欄を出さない。
+     */
+    onSetLead?: (entryId: string | null) => Promise<void> | void;
 }
 
 
@@ -338,6 +341,34 @@ function colorOf(label: string): string {
 }
 
 /**
+ * 相関図のときの、関係の線の色。
+ *
+ * ★ はっきりした色にする。
+ *   ふだんの図の線は、図の上に何十本も重なるので控えめにしてある。
+ *   相関図は線と名前で読むものなので、線そのものを見せる。
+ */
+/*
+ * ★ 見分けやすい六色。濃いめにして、白い地の上ではっきり見えるように。
+ *   前の色はくすんでいて、紙の上で沈んでいた。
+ *   橙・青・赤・緑・紫・灰と、色みそのものを離してある。
+ */
+const STRONG_COLORS: Record<string, string> = {
+    family: "#d9650b",
+    friend: "#1c5fd0",
+    enemy: "#d42a2a",
+    belong: "#17875a",
+    master: "#7a45c8",
+    other: "#50565e",
+};
+
+/* 名前・関係名の字。読みやすさを優先して黒 */
+const INK = "#1a1a1a";
+
+function strongColorOf(label: string): string {
+    return STRONG_COLORS[groupOf(label).key] ?? STRONG_COLORS.other;
+}
+
+/**
  * 色を暗くする。組の名前を、組の色の濃いめで書くのに使う。
  */
 function darken(hex: string, amount: number): string {
@@ -371,6 +402,7 @@ export default function RelationGraph({
     onBend,
     pages = [],
     groupsTouched = 0,
+    onSetLead,
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -399,6 +431,17 @@ export default function RelationGraph({
     /* 組分けの結果を、一行で伝える */
     const [groupNote, setGroupNote] = useState("");
 
+    /* 組分けを解いたあとに、並べ直すか */
+    const retidy = useRef(false);
+
+    /*
+     * 関係名を出しておくか（組分けのとき）。
+     *
+     * ★ 隠したときは、組分けしていないときと同じ。
+     *   人に触れる・選ぶと、その人の線にだけ名前が出る。
+     */
+    const [showNames, setShowNames] = useState(true);
+
     /* どの作品の図か。組分けを覚えておく鍵に使う */
     const workKey = entries[0]?.work_id ?? "";
 
@@ -413,6 +456,26 @@ export default function RelationGraph({
             /* 覚えられなくても、図は描ける */
         }
     }, [workKey]);
+
+    useEffect(() => {
+        if (!workKey) return;
+
+        try {
+            setShowNames(window.localStorage.getItem(`graph-names:${workKey}`) !== "0");
+        } catch {
+            /* 覚えられなくても、図は描ける */
+        }
+    }, [workKey]);
+
+    function rememberShowNames(on: boolean) {
+        setShowNames(on);
+
+        try {
+            window.localStorage.setItem(`graph-names:${workKey}`, on ? "1" : "0");
+        } catch {
+            /* 覚えられなくても、図は描ける */
+        }
+    }
 
     function rememberGrouped(on: boolean) {
         setGrouped(on);
@@ -910,7 +973,21 @@ export default function RelationGraph({
         ? NODE_RADIUS * (box.h / NODE_WANT_PX)
         : 0;
 
-    const HEIGHT = Math.round(BASE_SIZE * spread);
+    /*
+     * ★ 組分けのときは、紙を大きく取る。
+     *
+     *   組の囲みと格子の目のぶん、人が同じでも広さが要る。
+     *   紙が狭いと、並べた全体を縮めて押し込むことになり、
+     *   顔の丸はそのままの大きさなので、隣どうしがくっついた。
+     *   紙を広げて、縮めずに並べる。見る範囲は中身に合わせて決まる。
+     */
+    const PAPER = mayGroup && grouped && !isFocusMode ? 1.8 : 1;
+
+    const HEIGHT = Math.round(BASE_SIZE * spread * PAPER);
+
+    /* 組分けしたときの紙。押したその場で並べるときも、この広さで並べる */
+    const GROUP_HEIGHT = Math.round(BASE_SIZE * spread * 1.8);
+    const GROUP_WIDTH = Math.round(GROUP_HEIGHT * liveAspect);
     /* 紙の横幅。枠と同じ形にする */
     const WIDTH = Math.round(HEIGHT * liveAspect);
     const CENTER_X = WIDTH / 2;
@@ -1566,6 +1643,85 @@ export default function RelationGraph({
      */
     const groupColors = mayGroup ? assignColors(authoredAll()) : new Map<string, string>();
 
+    /*
+     * ============================================================
+     * 相関図の人物カード
+     *
+     * ★ 丸に一文字をやめて、写真の入る四角いカードにする。
+     *   丸に一文字は、表計算や組織図の道具に見える。
+     *   人物相関図は、顔と名前と役割で人を見せる。
+     *
+     * ★ 大事な人ほど大きく。
+     *   全員が同じ大きさだと、正しいけれど物語が見えない。
+     *
+     *     主人公    役割に「主人公」と書いてある人
+     *     主要人物  資料で「主要」にしてある人
+     *     通常      関係が三本以上ある人
+     *     補助      それ以外
+     * ============================================================
+     */
+    const degreeOf = new Map<string, number>();
+
+    for (const relation of shownRelations) {
+        degreeOf.set(relation.from_entry_id, (degreeOf.get(relation.from_entry_id) ?? 0) + 1);
+        degreeOf.set(relation.to_entry_id, (degreeOf.get(relation.to_entry_id) ?? 0) + 1);
+    }
+
+    /* 役割。人物ページの「役割」の欄 */
+    const roleOf = (entry: ResourceEntry): string => {
+        const page = pages.find((one) => one.id === entry.page_id);
+        const field = page?.fields.find((one) => one.label === "役割");
+        const raw = entry.values?.[field?.key ?? "role"];
+        return typeof raw === "string" ? raw.trim() : "";
+    };
+
+    const entryById = new Map(entries.map((entry) => [entry.id, entry]));
+
+    /*
+     * ★ 大事な数人は、はっきり大きく。
+     *   主人公と主要人物が、ほかと同じくらいだと、どこから読めばよいか分からない。
+     */
+    /*
+     * ★ 大きさは三つだけ。主人公・主要人物・ほかの全員。
+     *   関係の数でも大きさを変えていたので、丸の大きさがばらばらで落ち着かなかった。
+     *   ほかの人は、みな同じ大きさにそろえる。
+     */
+    const TIER_SCALE = [1.45, 1.2, 1, 1];
+
+    /* 図の上で選んだ主人公。選んでいれば、役割の「主人公」より優先 */
+    const leadId = entries.find((entry) => entry.values?.[LEAD_KEY] === true)?.id ?? null;
+
+    const tierOf = (id: string): number => {
+        const entry = entryById.get(id);
+        if (!entry) return 3;
+        if (leadId) {
+            if (id === leadId) return 0;
+            if (roleOf(entry).includes("主人公")) return 1;
+        } else if (roleOf(entry).includes("主人公")) return 0;
+        if (entry.is_major) return 1;
+        if ((degreeOf.get(id) ?? 0) >= 3) return 2;
+        return 3;
+    };
+
+    const CARD_IMAGE = NODE_RADIUS * 2.1;
+
+    const cardOf = (id: string) => {
+        const entry = entryById.get(id);
+        const scale = TIER_SCALE[tierOf(id)];
+        const image = CARD_IMAGE * scale;
+        const pad = Math.round(image * 0.07);
+        const nameSize = Math.round(NAME_SIZE * (0.92 + (scale - 1) * 0.6));
+        const role = entry ? roleOf(entry) : "";
+        const roleSize = Math.round(nameSize * 0.72);
+        /* 名前が顔より横に長いときは、名前の幅で取る */
+        const nameChars = Math.min(9, Array.from(entry?.name ?? "").length);
+        const w = Math.max(image + pad * 2, nameChars * nameSize * 0.98 + pad);
+        const h =
+            pad + image + pad * 0.8 + nameSize * 1.2 + (role ? roleSize * 1.35 : 0) + pad;
+
+        return { w, h, image, pad, nameSize, role, roleSize, scale };
+    };
+
     const groupBoxes: GroupBox[] = grouping
         ? boxesFor(
               foundGroups.map((group) => ({
@@ -1578,7 +1734,11 @@ export default function RelationGraph({
                   halfOf: (id) => halfOf(nameOf.get(id) ?? ""),
                   drop: NAME_DROP + NAME_SIZE * 0.4,
                   pad: Math.round(NODE_RADIUS * 0.8),
-                  head: Math.round(NAME_SIZE * 2.3),
+                  head: Math.round(NAME_SIZE * 2.6),
+                  extent: (id) => {
+                      const card = cardOf(id);
+                      return { w: card.w, h: card.h };
+                  },
               },
           )
         : [];
@@ -1668,6 +1828,50 @@ export default function RelationGraph({
     );
 
     /*
+     * ============================================================
+     * 組分けのときに、ふだん出す線
+     *
+     * ★ 線が多すぎると読めない。
+     *   ふだん出すのは、主要な人どうし・組と組・組と主要な人の線だけ。
+     *   脇役の線は、その人（か相手）に触れたとき・選んだときに出す。
+     *
+     * ★ 主要な人は、役割が「主人公」の人と、資料で「主要」にした人。
+     *   だれも決めていなければ、関係の多い順に上から四分の一（三人以上）。
+     *
+     * ★ 人が八人以下なら、全部出す。もともと線が少ない。
+     * ============================================================
+     */
+    const activeNow = hoveredId ?? selectedId;
+
+    const mainIds = new Set(
+        shownNodes.filter((node) => tierOf(node.id) <= 1).map((node) => node.id),
+    );
+
+    if (grouping && mainIds.size < 2) {
+        const want = Math.max(3, Math.ceil(shownNodes.length / 4));
+
+        for (const node of [...shownNodes]
+            .sort((a, b) => (degreeOf.get(b.id) ?? 0) - (degreeOf.get(a.id) ?? 0))
+            .slice(0, want)) {
+            mainIds.add(node.id);
+        }
+    }
+
+    const everyone = !grouping || shownNodes.length <= 8;
+    const isKey = (id: string) => boxOf.has(id) || mainIds.has(id);
+
+    /* ふだんは出さない線 */
+    const isQuiet = (relation: ResourceRelation) =>
+        !everyone && !(isKey(relation.from_entry_id) && isKey(relation.to_entry_id));
+
+    const touches = (relation: ResourceRelation, id: string | null) =>
+        !!id && (relation.from_entry_id === id || relation.to_entry_id === id);
+
+    const visibleRelations = drawnRelations.filter(
+        (relation) => !isQuiet(relation) || touches(relation, activeNow),
+    );
+
+    /*
      * 関係の名前の置き場所（組分けのとき）。
      *
      * ★ 名前どうし、名前と丸が重ならないところに置く。
@@ -1730,6 +1934,62 @@ export default function RelationGraph({
         return { x, y };
     }
 
+    /*
+     * 曲がる線の上の、関係名の置き場所。
+     *
+     * ★ 線の真ん中から探し、ほかの札や人に掛からないところ。
+     *   線から離さない。離れた札は、どの線のものか分からない。
+     */
+    function labelOnCurve(
+        samples: { x: number; y: number }[],
+        w: number,
+        h: number,
+    ): { x: number; y: number } {
+        const hit = (x: number, y: number) => {
+            /* 札どうし、少し間をあける */
+            const m = NAME_SIZE * 0.25;
+            const box = { x1: x - w / 2 - m, y1: y - h / 2 - m, x2: x + w / 2 + m, y2: y + h / 2 + m };
+            const over = (one: { x1: number; y1: number; x2: number; y2: number }) =>
+                box.x1 < one.x2 && box.x2 > one.x1 && box.y1 < one.y2 && box.y2 > one.y1;
+            return placedLabels.some(over) || nodeBlocks.some(over);
+        };
+
+        const last = samples.length - 1;
+
+        for (const t of [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.18, 0.82]) {
+            const at = samples[Math.round(last * t)];
+            if (at && !hit(at.x, at.y)) {
+                placedLabels.push({ x1: at.x - w / 2, y1: at.y - h / 2, x2: at.x + w / 2, y2: at.y + h / 2 });
+                return at;
+            }
+        }
+
+        /*
+         * ★ どこも空いていなければ、札どうしの重なりがいちばん少ないところ。
+         *   真ん中に決め打ちすると、行き帰りの二本（師弟と弟子）の札が重なった。
+         */
+        const overlap = (x: number, y: number) =>
+            placedLabels.reduce((sum, one) => {
+                const ox = Math.min(x + w / 2, one.x2) - Math.max(x - w / 2, one.x1);
+                const oy = Math.min(y + h / 2, one.y2) - Math.max(y - h / 2, one.y1);
+                return sum + (ox > 0 && oy > 0 ? ox * oy : 0);
+            }, 0);
+
+        let at = samples[Math.round(last / 2)] ?? samples[0];
+        let least = overlap(at.x, at.y);
+        for (let i = 1; i < last; i += 1) {
+            const one = samples[i];
+            const o = overlap(one.x, one.y);
+            if (o < least - 0.5) {
+                least = o;
+                at = one;
+            }
+        }
+
+        placedLabels.push({ x1: at.x - w / 2, y1: at.y - h / 2, x2: at.x + w / 2, y2: at.y + h / 2 });
+        return at;
+    }
+
     /* 丸ごとの縁の色。いちばん小さい（内側の）組の色 */
     const ringOf = new Map<string, string>();
 
@@ -1761,6 +2021,20 @@ export default function RelationGraph({
               const at = positions.get(node.id);
               if (!at) return [];
 
+              if (grouping) {
+                  const card = cardOf(node.id);
+
+                  return [
+                      {
+                          id: node.id,
+                          x1: at.x - card.w / 2,
+                          y1: at.y - card.h / 2,
+                          x2: at.x + card.w / 2,
+                          y2: at.y + card.h / 2,
+                      },
+                  ];
+              }
+
               const half = halfOf(node.name);
 
               return [
@@ -1789,27 +2063,33 @@ export default function RelationGraph({
      */
     const aroundOf = new Map<
         string,
-        { control?: { x: number; y: number }; points: { x: number; y: number }[]; ready?: boolean }
+        {
+            control?: { x: number; y: number };
+            points: { x: number; y: number }[];
+            ready?: boolean;
+            curve?: CurveRoute;
+            /** 触れた人のぶんだけ出す線。出す範囲の計算には入れない（触れるたびに図が動かないよう） */
+            extra?: boolean;
+        }
     >();
 
     if (grouping) {
         /*
          * ============================================================
-         * 組分けしているときは、直角に折れる線
+         * 組分けしているときは、ゆるく曲がる線
          *
-         * ★ 人物相関図の線は、縦と横でできている。
-         *   斜めの線や弧が何本もあると、互いに絡んで目で追えなかった。
+         * ★ 直角に折れる線は、硬くて、同じ通り道に何本も重なった。
+         *   まっすぐ引けるならまっすぐ、人に掛かるならふくらませてよける。
+         *   先に引いた線と重なるときも、ふくらませてずらす。
          *
-         * ★ 短い線から先に引く。
-         *   短い線は通り道の選びようが少ないので、先に良い道を取らせる。
-         *   長い線は、空いている通り道を回る。
+         * ★ ふだん出す線を先に、触れた人の線を後に引く。
+         *   触れるたびに、ふだんの線の形が変わらないように。
          *
-         * ★ 同じ通り道に重ねない。少しずつずらして並べる。
+         * ★ 短い線から先に引く。短い線はよけ方が少ないので、先に良い道を取らせる。
          * ============================================================
          */
-        const used: Segment[] = [];
-        const lane = Math.round(NODE_RADIUS * 0.5);
-        const pad = Math.round(NODE_RADIUS * 0.6);
+        const placed: { x: number; y: number }[][] = [];
+        const lane = Math.round(NODE_RADIUS * 0.9);
 
         const inside = (inner: GroupBox, outer: GroupBox) =>
             inner.x1 >= outer.x1 &&
@@ -1817,53 +2097,75 @@ export default function RelationGraph({
             inner.y1 >= outer.y1 &&
             inner.y2 <= outer.y2;
 
-        const list = drawnRelations
-            .filter((relation) => !relation.bend && bending?.id !== relation.id)
-            .map((relation) => ({
-                relation,
-                from: anchorOf(relation.from_entry_id),
-                to: anchorOf(relation.to_entry_id),
-            }))
-            .filter(
-                (one): one is typeof one & {
-                    from: { x: number; y: number };
-                    to: { x: number; y: number };
-                } => Boolean(one.from && one.to),
-            )
-            .sort(
-                (a, b) =>
-                    Math.abs(a.from.x - a.to.x) +
-                    Math.abs(a.from.y - a.to.y) -
-                    (Math.abs(b.from.x - b.to.x) + Math.abs(b.from.y - b.to.y)),
-            );
+        const cardRect = (id: string) => {
+            const p = positions.get(id);
+            if (!p) return null;
+            const card = cardOf(id);
+            return {
+                x1: p.x - card.w / 2 - 2,
+                y1: p.y - card.h / 2 - 2,
+                x2: p.x + card.w / 2 + 2,
+                y2: p.y + card.h / 2 + 2,
+            };
+        };
 
-        for (const { relation, from, to } of list) {
+        const lengthOfLine = (relation: ResourceRelation) => {
+            const a = anchorOf(relation.from_entry_id);
+            const b = anchorOf(relation.to_entry_id);
+            return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+        };
+
+        const byLength = (a: ResourceRelation, b: ResourceRelation) =>
+            lengthOfLine(a) - lengthOfLine(b);
+
+        const usual = visibleRelations.filter((relation) => !isQuiet(relation)).sort(byLength);
+        const extra = visibleRelations.filter((relation) => isQuiet(relation)).sort(byLength);
+
+        for (const relation of [...usual, ...extra]) {
+            if (relation.bend || bending?.id === relation.id) continue;
+
+            const from = anchorOf(relation.from_entry_id);
+            const to = anchorOf(relation.to_entry_id);
+            if (!from || !to) continue;
+
             const fromBox = boxOf.get(relation.from_entry_id);
             const toBox = boxOf.get(relation.to_entry_id);
 
-            const blocks = [
-                ...groupBoxes.filter(
-                    (box) =>
-                        !box.ids.includes(relation.from_entry_id) &&
-                        !box.ids.includes(relation.to_entry_id) &&
-                        box !== fromBox &&
-                        box !== toBox &&
-                        !(fromBox && inside(box, fromBox)) &&
-                        !(toBox && inside(box, toBox)),
-                ),
-                ...nodeBlocks.filter(
-                    (one) =>
-                        one.id !== relation.from_entry_id &&
-                        one.id !== relation.to_entry_id,
-                ),
-            ];
+            const soft = groupBoxes.filter(
+                (box) =>
+                    !box.ids.includes(relation.from_entry_id) &&
+                    !box.ids.includes(relation.to_entry_id) &&
+                    box !== fromBox &&
+                    box !== toBox &&
+                    !(fromBox && inside(box, fromBox)) &&
+                    !(toBox && inside(box, toBox)),
+            );
 
-            let points = orthoRoute(from, to, blocks, pad, used, lane);
+            const hard = nodeBlocks.filter(
+                (one) => one.id !== relation.from_entry_id && one.id !== relation.to_entry_id,
+            );
 
-            points = fromBox ? clipStart(points, fromBox) : trimOne(points, HALO, false);
-            points = toBox ? clipEnd(points, toBox) : trimOne(points, HALO, true);
+            const curve = curveRoute({
+                from,
+                to,
+                hard,
+                soft,
+                placed,
+                lane,
+                startRect: fromBox ?? cardRect(relation.from_entry_id),
+                endRect: toBox ?? cardRect(relation.to_entry_id),
+                halo: HALO,
+                corner: Math.round(NODE_RADIUS * 0.8),
+            });
 
-            aroundOf.set(relation.id, { points, ready: true });
+            placed.push(curve.samples);
+
+            aroundOf.set(relation.id, {
+                points: curve.samples,
+                curve,
+                ready: true,
+                extra: isQuiet(relation),
+            });
         }
     } else if (avoiding) {
         for (const relation of shownRelations) {
@@ -1923,6 +2225,15 @@ export default function RelationGraph({
         const at = positions.get(node.id);
         if (!at) continue;
 
+        if (grouping) {
+            const card = cardOf(node.id);
+            minX = Math.min(minX, at.x - card.w / 2);
+            maxX = Math.max(maxX, at.x + card.w / 2);
+            minY = Math.min(minY, at.y - card.h / 2);
+            maxY = Math.max(maxY, at.y + card.h / 2);
+            continue;
+        }
+
         const half = halfOf(node.name);
 
         minX = Math.min(minX, at.x - half);
@@ -1946,6 +2257,8 @@ export default function RelationGraph({
      *   いちばん外れるのは、両端と引っ張り点の真ん中あたり。
      */
     for (const [id, around] of aroundOf) {
+        if (around.extra) continue;
+
         const points = [...around.points];
 
         if (around.control) {
@@ -2269,8 +2582,16 @@ export default function RelationGraph({
         arrange(found);
     }
 
-    /* 組分けを解く。並びはそのまま残す */
+    /*
+     * 組分けを解く。
+     *
+     * ★ 解いたら、ふだんの図の並びに整え直す。
+     *   組分けの並びは広い紙で決めてあるので、そのまま戻すと
+     *   ふだんの紙の上で詰まって、丸どうしが重なる。
+     *   紙の大きさが戻ってから並べるので、描き終えたあとで行う。
+     */
     function stopGrouping() {
+        retidy.current = true;
         rememberGrouped(false);
         setGroupNote("");
     }
@@ -2291,7 +2612,7 @@ export default function RelationGraph({
     function arrange(byGroup: ReturnType<typeof findGroupsHere>) {
         if (!onMove) return;
 
-        const place =
+        const packedPlace =
             byGroup.length > 0
                 ? packByGroup({
                       /*
@@ -2309,14 +2630,31 @@ export default function RelationGraph({
                                   ),
                           ),
                       groups: byGroup,
-                      width: WIDTH,
-                      height: HEIGHT,
-                      gap: gapWanted,
-                      /* 詰めても、丸と名前がぶつからない幅までにする */
-                      minGap: NODE_RADIUS * 3.8,
+                      width: GROUP_WIDTH,
+                      height: GROUP_HEIGHT,
+                      /*
+                       * ★ 格子の一目は、いちばん大きい人（主人公）のカードが収まる広さ。
+                       *   目が狭いと、隣どうしのカードと名前がくっつく。
+                       */
+                      gap: Math.max(gapWanted, NODE_RADIUS * 6.6),
+                      minGap: NODE_RADIUS * 6.2,
+                      /* 席替えに使う。線が短く、交わらない順に座らせる */
+                      links: shownRelations.map((relation) => ({
+                          a: relation.from_entry_id,
+                          b: relation.to_entry_id,
+                      })),
+                      hub:
+                          nodes.find((node) => tierOf(node.id) === 0)?.id ?? null,
                       aspect: liveAspect,
                   })
                 : packed(nodes, false);
+
+        /*
+         * ★ 組ごとに並べたら、そのまま使う。
+         *   前は関係で引き合わせてほぐしていたが、丸が斜めに散らばって
+         *   かえって読みにくかった。丸は格子にそろえておく。
+         */
+        const place = packedPlace;
 
         /*
          * ★ 組ごとに並べたときは、ほどかない。
@@ -2335,19 +2673,41 @@ export default function RelationGraph({
          *
          *   つまんで動かしたときと同じ形で渡す。
          */
+        const paperW = byGroup.length > 0 ? GROUP_WIDTH : WIDTH;
+        const paperH = byGroup.length > 0 ? GROUP_HEIGHT : HEIGHT;
+
         for (const node of nodes) {
             const point = place.get(node.id);
 
             if (point) {
                 onMove(node.id, {
-                    x: point.x / WIDTH,
-                    y: point.y / HEIGHT,
+                    x: point.x / paperW,
+                    y: point.y / paperH,
                 });
             }
         }
     }
 
     const active = hoveredId ?? selectedId;
+
+    useEffect(() => {
+        if (grouped || !retidy.current) return;
+        retidy.current = false;
+        tidy();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [grouped]);
+
+    /* 線を描き終えてから重ねる、関係名の札 */
+    const laterLabels: {
+        id: string;
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+        text: string;
+        color: string;
+        dim: boolean;
+    }[] = [];
     /*
      * この作品で使われている、関係の大枠。
      *
@@ -2768,6 +3128,53 @@ export default function RelationGraph({
                         </marker>
                     ))}
 
+                    {/*
+                      * 相関図のときの矢印。
+                      *
+                      * ★ 図の大きさで決める。
+                      *   線の太さに合わせると、全体を縮めて見たときに
+                      *   矢印が点のように小さくなった。
+                      */}
+                    {Object.entries(STRONG_COLORS).map(([key, color]) => (
+                        <marker
+                            key={`strong-${key}`}
+                            id={`arrow-strong-${key}`}
+                            viewBox="0 0 10 10"
+                            refX="8.5"
+                            refY="5"
+                            markerUnits="userSpaceOnUse"
+                            markerWidth={Math.round(NODE_RADIUS * 0.5)}
+                            markerHeight={Math.round(NODE_RADIUS * 0.5)}
+                            orient="auto-start-reverse"
+                        >
+                            <path d="M0 0.5 L10 5 L0 9.5 z" fill={color} />
+                        </marker>
+                    ))}
+
+                    {/*
+                      * 相関図の地。薄い方眼。
+                      * ★ 真っ白の地は、事務の道具に見える。作家の資料らしくする。
+                      */}
+                    <pattern
+                        id="paper-grid"
+                        width={Math.round(NODE_RADIUS * 0.8)}
+                        height={Math.round(NODE_RADIUS * 0.8)}
+                        patternUnits="userSpaceOnUse"
+                    >
+                        <path
+                            d={`M ${Math.round(NODE_RADIUS * 0.8)} 0 L 0 0 0 ${Math.round(NODE_RADIUS * 0.8)}`}
+                            fill="none"
+                            stroke="var(--color-line)"
+                            strokeOpacity="0.45"
+                            strokeWidth="0.6"
+                            vectorEffect="non-scaling-stroke"
+                        />
+                    </pattern>
+
+                    <filter id="card-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="1.5" stdDeviation="2" floodColor="#3b2f1e" floodOpacity="0.16" />
+                    </filter>
+
                     <filter id="node-shadow" x="-40%" y="-40%" width="180%" height="180%">
                         <feDropShadow
                             dx="0"
@@ -2798,26 +3205,45 @@ export default function RelationGraph({
                   *
                   *   外側の組から順に置き、先に置いた札とぶつかるなら右へずらす。
                   */}
+                {/* 相関図の地。薄い方眼の紙 */}
+                {grouping && (
+                    <rect
+                        x={view.x - view.w}
+                        y={view.y - view.h}
+                        width={view.w * 3}
+                        height={view.h * 3}
+                        fill="url(#paper-grid)"
+                        pointerEvents="none"
+                    />
+                )}
+
                 {(() => {
                     /*
-                     * ★ 組の名前は、囲みの中に大きく書く。
+                     * ★ 組は、薄い色の範囲と見出しだけ。
                      *
-                     *   小さな色の札に白い字で書いていたが、
-                     *   角の丸い淡い箱に札が並ぶと、いかにも機械が作った図に見えた。
-                     *   人物相関図は、囲みの隅に組の名前を大きく太く書く。
+                     *   濃い色の箱に人を詰めると、人と関係より先に
+                     *   「この人はこの組」が目に入り、組の図になってしまう。
+                     *   相関図の主役は人と関係。組は背景に下げる。
                      *
-                     * ★ 二つの囲みの隅が近いときは、後の名前を右へずらす。
+                     * ★ 見出しの横に、組織の資料の一言説明を添える。
+                     *   「血よりも強い、つながりがある。」のような一言があると、
+                     *   組がただの分類ではなく、物語の中の場所になる。
+                     *
+                     * ★ 二つの範囲の隅が近いときは、後の見出しを右へずらす。
                      */
-                    const titleFont = Math.round(NAME_SIZE * 1.6);
+                    const titleFont = Math.round(NAME_SIZE * 1.15);
                     const titleH = Math.round(titleFont * 1.2);
-                    const inset = Math.round(NODE_RADIUS * 0.3);
+                    const inset = Math.round(NODE_RADIUS * 0.35);
                     const placed: { x1: number; y1: number; x2: number; y2: number }[] = [];
-                    const titles = new Map<string, { x: number; y: number }>();
+                    const titles = new Map<string, { x: number; y: number; w: number }>();
 
                     for (const box of groupBoxes) {
-                        const w = Math.round(Array.from(box.name || "組").length * titleFont);
-                        let x = box.x1 + inset;
-                        const y = box.y1 + inset;
+                        /* 札の幅。点と両端の余白のぶんも入れる */
+                        const w = Math.round(
+                            Array.from(box.name || "組").length * titleFont + titleFont * 2.45,
+                        );
+                        let x = box.x1 + inset * 2;
+                        const y = box.y1 - titleH / 2;
 
                         for (let tries = 0; tries < 12; tries += 1) {
                             const hit = placed.find(
@@ -2832,40 +3258,61 @@ export default function RelationGraph({
                         }
 
                         placed.push({ x1: x, y1: y, x2: x + w, y2: y + titleH });
-                        titles.set(box.key, { x, y });
+                        titles.set(box.key, { x, y, w });
                     }
 
                     return groupBoxes.map((box) => {
                         const ink = groupColors.get(box.key) ?? "#5566a8";
                         const title = titles.get(box.key)!;
+                        /*
+                         * ★ 名札は白い札に黒い字。組の色は、横の点と囲みの縁だけ。
+                         *   色の字は、薄い色だと読めなかった。
+                         */
+                        const tagH = Math.round(titleFont * 1.5);
+                        const dot = Math.round(titleFont * 0.3);
+                        const tagW = title.w;
+                        const tagX = title.x;
+                        const tagY = box.y1 - tagH / 2;
 
                         return (
                             <g key={`box-${box.key}`} pointerEvents="none">
-                                {/*
-                                  * ★ 角を立てた面にする。
-                                  *   枠線は細く、面の色で組を見せる。
-                                  */}
                                 <rect
                                     x={box.x1}
                                     y={box.y1}
                                     width={box.x2 - box.x1}
                                     height={box.y2 - box.y1}
-                                    rx={NODE_RADIUS * 0.08}
+                                    rx={NODE_RADIUS * 0.45}
                                     fill={ink}
-                                    /* 内の組は外の組の上に重なるので、少し薄く */
-                                    fillOpacity={box.levels > 0 ? 0.3 : 0.24}
+                                    fillOpacity={0.07}
                                     stroke={ink}
-                                    strokeOpacity={0.55}
+                                    strokeOpacity={0.6}
+                                    strokeWidth={1.5}
+                                    strokeDasharray={box.levels > 0 ? "5 4" : undefined}
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                                <rect
+                                    x={tagX}
+                                    y={tagY}
+                                    width={tagW}
+                                    height={tagH}
+                                    rx={tagH / 2}
+                                    fill="#ffffff"
+                                    stroke={ink}
                                     strokeWidth={1.5}
                                     vectorEffect="non-scaling-stroke"
                                 />
+                                <circle
+                                    cx={tagX + titleFont * 0.6 + dot}
+                                    cy={tagY + tagH / 2}
+                                    r={dot}
+                                    fill={ink}
+                                />
                                 <text
-                                    x={title.x}
-                                    y={title.y + titleFont * 0.95}
+                                    x={tagX + titleFont * 0.6 + dot * 2 + titleFont * 0.35}
+                                    y={tagY + tagH / 2 + titleFont * 0.36}
                                     fontSize={titleFont}
-                                    fontWeight="800"
-                                    fill={darken(ink, 0.45)}
-                                    style={{ letterSpacing: "0.02em" }}
+                                    fontWeight="700"
+                                    fill={INK}
                                 >
                                     {box.name}
                                 </text>
@@ -2874,7 +3321,10 @@ export default function RelationGraph({
                     });
                 })()}
 
-                {drawnRelations.map((relation) => {
+                {[
+                    ...visibleRelations.filter((relation) => !isQuiet(relation)),
+                    ...visibleRelations.filter((relation) => isQuiet(relation)),
+                ].map((relation) => {
                     const from = anchorOf(relation.from_entry_id);
                     const to = anchorOf(relation.to_entry_id);
                     if (!from || !to) return null;
@@ -3034,9 +3484,13 @@ export default function RelationGraph({
                     const arcHead = arcAt ? pullBack(from, arcAt, HALO) : null;
                     const arcTail = arcAt ? pullBack(to, arcAt, HALO) : null;
 
+                    const curve = around?.curve ?? null;
+
                     const path = bent
                         ? `M${head.x} ${head.y} L${bent.x} ${bent.y} L${tail.x} ${tail.y}`
-                        : arcAt && arcHead && arcTail
+                        : curve
+                          ? curve.d
+                          : arcAt && arcHead && arcTail
                           ? `M${arcHead.x} ${arcHead.y} Q${arcAt.x} ${arcAt.y} ${arcTail.x} ${arcTail.y}`
                           : routed && (around?.ready || routed.length > 2)
                           ? roundedPath(routed, NODE_RADIUS * (around?.ready ? 0.3 : 1.1))
@@ -3085,12 +3539,23 @@ export default function RelationGraph({
                      *   逃がすのではなく、丸の間を空けて直す。
                      *   間は、札が入るだけの幅を最初から取ってある。
                      */
+                    const labelW =
+                        Array.from(relation.label ?? "").length * Math.round(NAME_SIZE * 0.95) +
+                        NAME_SIZE * 1.2;
+                    const labelH = NAME_SIZE * 1.55;
+
+                    /* この線に名前を出すか */
+                    const nameShown =
+                        !!relation.label && (touchesActive || (grouping && showNames));
+
                     const labelAt =
-                        grouping && routed && relation.label
+                        grouping && curve && nameShown
+                            ? labelOnCurve(curve.samples, labelW, labelH)
+                            : grouping && routed && relation.label
                             ? labelSpot(
                                   routed,
                                   Array.from(relation.label).length *
-                                      Math.round(NAME_SIZE * 0.92) +
+                                      Math.round(NAME_SIZE * 1.02) +
                                       NAME_SIZE * 0.9,
                                   NAME_SIZE * 1.5,
                               )
@@ -3122,7 +3587,10 @@ export default function RelationGraph({
                           *   47 本もあると、薄くても地が埋まる。
                           *   見るべき線だけを残す。
                           */
-                        <g key={relation.id} opacity={isActive ? 1 : 0.06}>
+                        <g
+                            key={relation.id}
+                            opacity={isActive ? 1 : grouping ? 0.16 : 0.06}
+                        >
                             {/*
                               * ★ 線を二度押すと、中間点が出る。
                               *
@@ -3148,13 +3616,21 @@ export default function RelationGraph({
                             <path
                                 d={path}
                                 fill="none"
-                                stroke={colorOf(relation.label)}
+                                stroke={
+                                    grouping
+                                        ? strongColorOf(relation.label)
+                                        : colorOf(relation.label)
+                                }
                                 /*
                                  * ★ 線の太さは、画面の点で決める。
                                  *   図を縮めて全体を出すと、線が髪の毛のように細くなり、
                                  *   破線はほとんど見えなかった。
+                                 *
+                                 * ★ 相関図のときは、さらに太く。線が主役。
                                  */
-                                strokeWidth={relation.changes.length > 0 ? 2.6 : 1.9}
+                                strokeWidth={
+                                    grouping ? 3 : relation.changes.length > 0 ? 2.6 : 1.9
+                                }
                                 vectorEffect="non-scaling-stroke"
                                 /*
                                  * 線の形。
@@ -3168,7 +3644,9 @@ export default function RelationGraph({
                                 }
                                 markerEnd={
                                     lineStyle === "arrow"
-                                        ? `url(#arrow-${groupOf(relation.label).key})`
+                                        ? grouping
+                                            ? `url(#arrow-strong-${groupOf(relation.label).key})`
+                                            : `url(#arrow-${groupOf(relation.label).key})`
                                         : undefined
                                 }
                             />
@@ -3245,14 +3723,27 @@ export default function RelationGraph({
                               *   人物相関図は、線と名前で読むもの。
                               *   名前の無い線は、何の関係か分からない。
                               */}
-                            {relation.label && (touchesActive || grouping) && (() => {
+                            {grouping && nameShown && (() => {
+                                laterLabels.push({
+                                    id: relation.id,
+                                    x: controlX,
+                                    y: controlY,
+                                    w: labelW,
+                                    h: labelH,
+                                    text: relation.label,
+                                    color: strongColorOf(relation.label),
+                                    dim: !isActive,
+                                });
+                                return null;
+                            })()}
+                            {!grouping && relation.label && touchesActive && (() => {
                                 /*
                                  * ★ 組分けしているときは、名前を大きく太く。
                                  *   全体を見たときに読める大きさにする。
                                  *   札は角を立て、線と同じ色の字で書く。
                                  */
                                 const size = grouping
-                                    ? Math.round(NAME_SIZE * 0.92)
+                                    ? Math.round(NAME_SIZE * 1.02)
                                     : EDGE_SIZE;
                                 const chars = Array.from(relation.label).length;
                                 const plateW = chars * size + size * 0.7;
@@ -3266,9 +3757,13 @@ export default function RelationGraph({
                                             width={plateW}
                                             height={plateH}
                                             rx={grouping ? size * 0.12 : size * 0.35}
-                                            fill="var(--color-surface)"
-                                            stroke={grouping ? colorOf(relation.label) : "var(--color-line)"}
-                                            strokeOpacity={grouping ? 0.5 : 1}
+                                            /*
+                                             * ★ 相関図のときは、札の枠を描かない。
+                                             *   地の色で線を切り抜き、そこへ名前を書く。
+                                             *   「―― 恋人 ――>」のように、線の途中に名前が乗る。
+                                             */
+                                            fill="var(--color-canvas)"
+                                            stroke={grouping ? "none" : "var(--color-line)"}
                                             strokeWidth="1"
                                             vectorEffect="non-scaling-stroke"
                                         />
@@ -3277,8 +3772,12 @@ export default function RelationGraph({
                                             y={controlY + size * 0.36}
                                             textAnchor="middle"
                                             fontSize={size}
-                                            fontWeight={grouping ? 700 : 400}
-                                            fill={colorOf(relation.label)}
+                                            fontWeight={grouping ? 800 : 400}
+                                            fill={
+                                                grouping
+                                                    ? strongColorOf(relation.label)
+                                                    : colorOf(relation.label)
+                                            }
                                         >
                                             {relation.label}
                                         </text>
@@ -3289,10 +3788,57 @@ export default function RelationGraph({
                     );
                 })}
 
+                {/*
+                  * 関係名（組分けのとき）。
+                  *
+                  * ★ 線を全部描いてから、上に重ねる。
+                  *   線ごとに書くと、後から引いた線が前の札の上を通って字が切れた。
+                  *
+                  * ★ 白い札に、黒い字。縁だけ線の色。
+                  */}
+                {grouping &&
+                    laterLabels.map((one) => (
+                        <g key={`label-${one.id}`} opacity={one.dim ? 0.2 : 1} pointerEvents="none">
+                            <rect
+                                x={one.x - one.w / 2}
+                                y={one.y - one.h / 2}
+                                width={one.w}
+                                height={one.h}
+                                rx={one.h / 2}
+                                fill="#ffffff"
+                                stroke={one.color}
+                                strokeWidth={1.5}
+                                vectorEffect="non-scaling-stroke"
+                            />
+                            <text
+                                x={one.x}
+                                y={one.y + NAME_SIZE * 0.34}
+                                textAnchor="middle"
+                                fontSize={Math.round(NAME_SIZE * 0.95)}
+                                fontWeight={700}
+                                fill={INK}
+                            >
+                                {one.text}
+                            </text>
+                        </g>
+                    ))}
+
                 {shownNodes.map((node) => {
                     const position = positions.get(node.id);
                     if (!position) return null;
-                    const isActive = !active || node.id === active;
+                    /*
+                     * ★ 組分けのときは、触れた人の相手も濃く残す。
+                     *   線だけ出て相手が薄いと、誰との線か読めない。
+                     */
+                    const isActive =
+                        !active ||
+                        node.id === active ||
+                        (grouping &&
+                            visibleRelations.some(
+                                (relation) =>
+                                    touches(relation, active) &&
+                                    touches(relation, node.id),
+                            ));
 
                     return (
                         <g
@@ -3333,6 +3879,149 @@ export default function RelationGraph({
                             }}
                             className={onMove ? "cursor-grab" : "cursor-pointer"}
                         >
+                            {grouping ? (
+                                (() => {
+                                    /*
+                                     * 人物カード。
+                                     *
+                                     * ★ 白い台紙に、顔・名前・役割。
+                                     *   写真を貼った資料の一枚のように見せる。
+                                     *
+                                     * ★ 顔が無ければ、名前の一文字目を大きく。
+                                     *   丸に一文字ではなく、四角い枠の中に置く。
+                                     */
+                                    const card = cardOf(node.id);
+                                    const top = position.y - card.h / 2;
+                                    const imageY = top + card.pad;
+                                    const nameY = imageY + card.image + card.pad * 0.8 + card.nameSize;
+                                    const ink = ringOf.get(node.id);
+                                    const shortName =
+                                        Array.from(node.name).length > 9
+                                            ? `${Array.from(node.name).slice(0, 9).join("")}…`
+                                            : node.name;
+
+                                    /*
+                                     * ★ 顔は丸。
+                                     *   四角いカードは写真の資料らしくはなるが、
+                                     *   丸のほうが人の顔として目に入りやすい。
+                                     *   縁の色で、その人が入っている組を示す。
+                                     */
+                                    const r = card.image / 2;
+                                    const faceX = position.x;
+                                    const faceY = imageY + r;
+
+                                    return (
+                                        <>
+                                            {/* 選んでいる人は、外側にもう一重 */}
+                                            {node.id === selectedId && (
+                                                <circle
+                                                    cx={faceX}
+                                                    cy={faceY}
+                                                    r={r + card.pad * 0.9}
+                                                    fill="none"
+                                                    stroke="var(--color-forest)"
+                                                    strokeWidth={2.5}
+                                                    vectorEffect="non-scaling-stroke"
+                                                />
+                                            )}
+
+                                            {pictures[node.id] ? (
+                                                <>
+                                                    <clipPath id={`clip-${node.id}`}>
+                                                        <circle cx={faceX} cy={faceY} r={r} />
+                                                    </clipPath>
+                                                    <circle
+                                                        cx={faceX}
+                                                        cy={faceY}
+                                                        r={r}
+                                                        fill="var(--color-surface)"
+                                                        filter="url(#card-shadow)"
+                                                    />
+                                                    <image
+                                                        href={pictures[node.id]}
+                                                        x={faceX - r}
+                                                        y={faceY - r}
+                                                        width={r * 2}
+                                                        height={r * 2}
+                                                        preserveAspectRatio="xMidYMid slice"
+                                                        clipPath={`url(#clip-${node.id})`}
+                                                    />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <circle
+                                                        cx={faceX}
+                                                        cy={faceY}
+                                                        r={r}
+                                                        fill="var(--color-surface)"
+                                                        filter="url(#card-shadow)"
+                                                    />
+                                                    <circle
+                                                        cx={faceX}
+                                                        cy={faceY}
+                                                        r={r}
+                                                        fill={ink ?? "#8a8174"}
+                                                        fillOpacity={0.15}
+                                                    />
+                                                    <text
+                                                        x={faceX}
+                                                        y={faceY + card.image * 0.16}
+                                                        textAnchor="middle"
+                                                        fontSize={card.image * 0.44}
+                                                        fontWeight="700"
+                                                        fontFamily='"Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif'
+                                                        fill={ink ? darken(ink, 0.25) : "#5b5347"}
+                                                        fillOpacity={0.85}
+                                                    >
+                                                        {Array.from(node.name)[0] ?? "?"}
+                                                    </text>
+                                                </>
+                                            )}
+
+                                            {/* 縁。組の色、組が無ければ落ち着いた灰 */}
+                                            <circle
+                                                cx={faceX}
+                                                cy={faceY}
+                                                r={r}
+                                                fill="none"
+                                                stroke={ink ?? "#9a9184"}
+                                                strokeWidth={card.scale >= 1.2 ? 3.5 : 2.5}
+                                                vectorEffect="non-scaling-stroke"
+                                            />
+
+                                            <text
+                                                x={position.x}
+                                                y={nameY}
+                                                textAnchor="middle"
+                                                fontSize={card.nameSize}
+                                                fontWeight="700"
+                                                fill={INK}
+                                                paintOrder="stroke"
+                                                stroke="#ffffff"
+                                                strokeWidth={card.nameSize * 0.28}
+                                                strokeLinejoin="round"
+                                            >
+                                                {shortName}
+                                            </text>
+
+                                            {card.role && (
+                                                <text
+                                                    x={position.x}
+                                                    y={nameY + card.roleSize * 1.35}
+                                                    textAnchor="middle"
+                                                    fontSize={card.roleSize}
+                                                    fill="#3a3a3a"
+                                                >
+                                                    （{Array.from(card.role).length > 10
+                                                        ? `${Array.from(card.role).slice(0, 10).join("")}…`
+                                                        : card.role}）
+                                                </text>
+                                            )}
+                                        </>
+                                    );
+                                })()
+                            ) : (
+                            <>
                             {pictures[node.id] ? (
                                 <>
                                     <clipPath id={`clip-${node.id}`}>
@@ -3427,6 +4116,8 @@ export default function RelationGraph({
                                     ? `${node.name.slice(0, 8)}…`
                                     : node.name}
                             </text>
+                            </>
+                            )}
                         </g>
                     );
                 })}
@@ -3505,6 +4196,63 @@ export default function RelationGraph({
                             >
                                 解く
                             </button>
+                        )}
+
+                        {/*
+                          * 関係名を出すか。
+                          *
+                          * ★ 隠すと、人に触れた・選んだときだけ、その人の線に名前が出る。
+                          *   組分けしていないときと同じ見え方。
+                          */}
+                        {mayGroup && grouped && (
+                            <button
+                                type="button"
+                                onClick={() => rememberShowNames(!showNames)}
+                                aria-pressed={showNames}
+                                title={
+                                    showNames
+                                        ? "関係名を隠します。人に触れると、その人の関係名だけ出ます"
+                                        : "関係名を全部の線に出します"
+                                }
+                                className={
+                                    showNames
+                                        ? "rounded-md border border-forest bg-forest-tint/60 px-3 py-1 text-[11px] text-forest"
+                                        : "rounded-md border border-line bg-surface px-3 py-1 text-[11px] text-muted hover:border-forest-line"
+                                }
+                            >
+                                {showNames ? "関係名：表示" : "関係名：隠す"}
+                            </button>
+                        )}
+
+                        {/*
+                          * 主人公を選ぶ。
+                          *
+                          * ★ 選んだ人は、いちばん大きく、真ん中寄りに座る。
+                          * ★ 「役割から」に戻すと、資料の役割に「主人公」と書いた人。
+                          */}
+                        {mayGroup && grouped && onSetLead && (
+                            <label className="inline-flex items-center gap-1 text-[11px] text-muted">
+                                主人公
+                                <select
+                                    value={leadId ?? ""}
+                                    onChange={async (event) => {
+                                        await onSetLead(event.target.value || null);
+                                        setGroupNote(
+                                            "主人公を変えました。並びにも反映するときは「組み直す」を押してください。",
+                                        );
+                                    }}
+                                    className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink"
+                                >
+                                    <option value="">役割から</option>
+                                    {shownNodes
+                                        .filter((node) => !boxOf.has(node.id) && !foundGroups.some((group) => group.key === node.id))
+                                        .map((node) => (
+                                            <option key={node.id} value={node.id}>
+                                                {node.name}
+                                            </option>
+                                        ))}
+                                </select>
+                            </label>
                         )}
 
                         {/*
@@ -3592,7 +4340,7 @@ export default function RelationGraph({
                                 y1="3"
                                 x2="26"
                                 y2="3"
-                                stroke={group.color}
+                                stroke={grouping ? (STRONG_COLORS[group.key] ?? group.color) : group.color}
                                 strokeWidth="2.6"
                                 strokeLinecap="round"
                             />
