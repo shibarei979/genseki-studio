@@ -18,7 +18,12 @@ import {
     AUTHORED,
     assignColors,
     boxesFor,
+    clipEnd,
+    clipStart,
     findGroups,
+    orthoRoute,
+    trimOne,
+    type Segment,
     middleOf,
     packByGroup,
     pathAround,
@@ -330,6 +335,21 @@ export function groupOf(label: string) {
 
 function colorOf(label: string): string {
     return groupOf(label).color;
+}
+
+/**
+ * 色を暗くする。組の名前を、組の色の濃いめで書くのに使う。
+ */
+function darken(hex: string, amount: number): string {
+    const clean = hex.replace("#", "");
+    if (clean.length !== 6) return hex;
+
+    const part = (at: number) =>
+        Math.round(parseInt(clean.slice(at, at + 2), 16) * (1 - amount))
+            .toString(16)
+            .padStart(2, "0");
+
+    return `#${part(0)}${part(2)}${part(4)}`;
 }
 
 interface Dragging {
@@ -1527,6 +1547,18 @@ export default function RelationGraph({
     const foundGroups = grouping ? findGroupsHere() : [];
 
     /*
+     * 囲みで表す組織。
+     *
+     * ★ 組織の項目そのものは、丸で描かない。
+     *   囲みがその組織を表しているので、
+     *   中に「黒ずくめの組織」という丸がもう一つあると紛らわしい。
+     *   組織に結んだ関係は、囲みの縁から出す。
+     */
+    if (grouping) {
+        for (const group of foundGroups) positions.delete(group.key);
+    }
+
+    /*
      * 組の色。
      *
      * ★ 右の欄と同じ決め方にする。
@@ -1546,10 +1578,157 @@ export default function RelationGraph({
                   halfOf: (id) => halfOf(nameOf.get(id) ?? ""),
                   drop: NAME_DROP + NAME_SIZE * 0.4,
                   pad: Math.round(NODE_RADIUS * 0.8),
-                  head: Math.round(NAME_SIZE * 2.1),
+                  head: Math.round(NAME_SIZE * 2.3),
               },
           )
         : [];
+
+    const boxOf = new Map(groupBoxes.map((box) => [box.key, box]));
+
+    /* 線の端。人なら丸の真ん中、組織なら囲みの真ん中 */
+    const anchorOf = (id: string) => {
+        const at = positions.get(id);
+        if (at) return at;
+
+        const box = boxOf.get(id);
+        return box ? { x: (box.x1 + box.x2) / 2, y: (box.y1 + box.y2) / 2 } : undefined;
+    };
+
+    /*
+     * 省く線。
+     *
+     * ★ 組織どうしに関係を結んだら、中の人どうしの同じ関係は省く。
+     *
+     *   「黒ずくめの組織 —敵対— FBI」を結んだのに、
+     *   ジンと赤井、ウォッカとジョディ……と同じ「敵対」を
+     *   一本ずつ描くと、図が線で埋まる。
+     *   組織の線が一本あれば、中の人たちの関係はそれで分かる。
+     *
+     *   組織と人（少年探偵団 —同級生— コナン）でも同じ。
+     *
+     * ★ 名前が同じときだけ省く。
+     *   「敵対」の組織どうしでも、中に「内通」している人がいれば、
+     *   その線は残す。そういう線こそ読みたい。
+     *
+     * ★ 組織と、その中にいる人との線（所属など）も省く。
+     *   囲みの中にいることで、もう分かる。
+     */
+    const hiddenRelations = new Set<string>();
+
+    if (grouping && boxOf.size > 0) {
+        const groupsOfPerson = new Map<string, Set<string>>();
+
+        for (const box of groupBoxes) {
+            for (const id of box.ids) {
+                const set = groupsOfPerson.get(id) ?? new Set<string>();
+                set.add(box.key);
+                groupsOfPerson.set(id, set);
+            }
+        }
+
+        const covers = (side: string, person: string) =>
+            side === person ||
+            (boxOf.has(side) && (groupsOfPerson.get(person)?.has(side) ?? false));
+
+        const groupLevel = shownRelations.filter(
+            (one) => boxOf.has(one.from_entry_id) || boxOf.has(one.to_entry_id),
+        );
+
+        for (const relation of shownRelations) {
+            const a = relation.from_entry_id;
+            const b = relation.to_entry_id;
+
+            /* 組織と、その中にいる人 */
+            if (
+                (boxOf.has(a) && groupsOfPerson.get(b)?.has(a)) ||
+                (boxOf.has(b) && groupsOfPerson.get(a)?.has(b))
+            ) {
+                hiddenRelations.add(relation.id);
+                continue;
+            }
+
+            if (boxOf.has(a) || boxOf.has(b)) continue;
+
+            const label = (relation.label ?? "").trim();
+            if (!label) continue;
+
+            const same = groupLevel.some(
+                (one) =>
+                    (one.label ?? "").trim() === label &&
+                    ((covers(one.from_entry_id, a) && covers(one.to_entry_id, b)) ||
+                        (covers(one.from_entry_id, b) && covers(one.to_entry_id, a))),
+            );
+
+            if (same) hiddenRelations.add(relation.id);
+        }
+    }
+
+    const drawnRelations = shownRelations.filter(
+        (relation) => !hiddenRelations.has(relation.id),
+    );
+
+    /*
+     * 関係の名前の置き場所（組分けのとき）。
+     *
+     * ★ 名前どうし、名前と丸が重ならないところに置く。
+     *
+     *   並んで走る二本の線（師弟と弟子）の名前を、
+     *   どちらも線の真ん中に置くと、片方がもう片方の下に隠れた。
+     *   線の上を少しずつずらして、空いているところを探す。
+     *
+     * ★ 長い区間から先に探す。短い区間に置くと、角に近くて読みにくい。
+     */
+    const placedLabels: { x1: number; y1: number; x2: number; y2: number }[] = [];
+
+    function labelSpot(
+        points: { x: number; y: number }[],
+        w: number,
+        h: number,
+    ): { x: number; y: number } {
+        const segments = points
+            .slice(1)
+            .map((b, index) => ({ a: points[index], b }))
+            .sort(
+                (one, two) =>
+                    Math.hypot(two.b.x - two.a.x, two.b.y - two.a.y) -
+                    Math.hypot(one.b.x - one.a.x, one.b.y - one.a.y),
+            );
+
+        const blocked = (x: number, y: number) => {
+            const box = { x1: x - w / 2, y1: y - h / 2, x2: x + w / 2, y2: y + h / 2 };
+
+            const hitsLabel = placedLabels.some(
+                (one) =>
+                    box.x1 < one.x2 && box.x2 > one.x1 && box.y1 < one.y2 && box.y2 > one.y1,
+            );
+            if (hitsLabel) return true;
+
+            return nodeBlocks.some(
+                (one) =>
+                    box.x1 < one.x2 && box.x2 > one.x1 && box.y1 < one.y2 && box.y2 > one.y1,
+            );
+        };
+
+        for (const { a, b } of segments) {
+            for (const t of [0.5, 0.32, 0.68, 0.2, 0.8]) {
+                const x = a.x + (b.x - a.x) * t;
+                const y = a.y + (b.y - a.y) * t;
+
+                if (!blocked(x, y)) {
+                    placedLabels.push({ x1: x - w / 2, y1: y - h / 2, x2: x + w / 2, y2: y + h / 2 });
+                    return { x, y };
+                }
+            }
+        }
+
+        /* どこも空いていなければ、いちばん長い区間の真ん中 */
+        const first = segments[0] ?? { a: points[0], b: points[0] };
+        const x = (first.a.x + first.b.x) / 2;
+        const y = (first.a.y + first.b.y) / 2;
+        placedLabels.push({ x1: x - w / 2, y1: y - h / 2, x2: x + w / 2, y2: y + h / 2 });
+
+        return { x, y };
+    }
 
     /* 丸ごとの縁の色。いちばん小さい（内側の）組の色 */
     const ringOf = new Map<string, string>();
@@ -1608,9 +1787,85 @@ export default function RelationGraph({
      * ★ 手で中間点を置いた線と、行き帰りの二本は、よけない。
      *   作者が決めた通り道を、こちらで書き換えない。
      */
-    const aroundOf = new Map<string, ReturnType<typeof pathAround>>();
+    const aroundOf = new Map<
+        string,
+        { control?: { x: number; y: number }; points: { x: number; y: number }[]; ready?: boolean }
+    >();
 
-    if (avoiding) {
+    if (grouping) {
+        /*
+         * ============================================================
+         * 組分けしているときは、直角に折れる線
+         *
+         * ★ 人物相関図の線は、縦と横でできている。
+         *   斜めの線や弧が何本もあると、互いに絡んで目で追えなかった。
+         *
+         * ★ 短い線から先に引く。
+         *   短い線は通り道の選びようが少ないので、先に良い道を取らせる。
+         *   長い線は、空いている通り道を回る。
+         *
+         * ★ 同じ通り道に重ねない。少しずつずらして並べる。
+         * ============================================================
+         */
+        const used: Segment[] = [];
+        const lane = Math.round(NODE_RADIUS * 0.5);
+        const pad = Math.round(NODE_RADIUS * 0.6);
+
+        const inside = (inner: GroupBox, outer: GroupBox) =>
+            inner.x1 >= outer.x1 &&
+            inner.x2 <= outer.x2 &&
+            inner.y1 >= outer.y1 &&
+            inner.y2 <= outer.y2;
+
+        const list = drawnRelations
+            .filter((relation) => !relation.bend && bending?.id !== relation.id)
+            .map((relation) => ({
+                relation,
+                from: anchorOf(relation.from_entry_id),
+                to: anchorOf(relation.to_entry_id),
+            }))
+            .filter(
+                (one): one is typeof one & {
+                    from: { x: number; y: number };
+                    to: { x: number; y: number };
+                } => Boolean(one.from && one.to),
+            )
+            .sort(
+                (a, b) =>
+                    Math.abs(a.from.x - a.to.x) +
+                    Math.abs(a.from.y - a.to.y) -
+                    (Math.abs(b.from.x - b.to.x) + Math.abs(b.from.y - b.to.y)),
+            );
+
+        for (const { relation, from, to } of list) {
+            const fromBox = boxOf.get(relation.from_entry_id);
+            const toBox = boxOf.get(relation.to_entry_id);
+
+            const blocks = [
+                ...groupBoxes.filter(
+                    (box) =>
+                        !box.ids.includes(relation.from_entry_id) &&
+                        !box.ids.includes(relation.to_entry_id) &&
+                        box !== fromBox &&
+                        box !== toBox &&
+                        !(fromBox && inside(box, fromBox)) &&
+                        !(toBox && inside(box, toBox)),
+                ),
+                ...nodeBlocks.filter(
+                    (one) =>
+                        one.id !== relation.from_entry_id &&
+                        one.id !== relation.to_entry_id,
+                ),
+            ];
+
+            let points = orthoRoute(from, to, blocks, pad, used, lane);
+
+            points = fromBox ? clipStart(points, fromBox) : trimOne(points, HALO, false);
+            points = toBox ? clipEnd(points, toBox) : trimOne(points, HALO, true);
+
+            aroundOf.set(relation.id, { points, ready: true });
+        }
+    } else if (avoiding) {
         for (const relation of shownRelations) {
             if (relation.bend || bending?.id === relation.id) continue;
 
@@ -2039,7 +2294,20 @@ export default function RelationGraph({
         const place =
             byGroup.length > 0
                 ? packByGroup({
-                      ids: nodes.map((node) => node.id),
+                      /*
+                       * ★ 囲みで表す組織の項目は、並べない。
+                       *   丸を描かないので、場所も要らない。
+                       */
+                      ids: nodes
+                          .map((node) => node.id)
+                          .filter(
+                              (id) =>
+                                  !byGroup.some(
+                                      (group) =>
+                                          group.key === id &&
+                                          group.ids.some((one) => one !== id),
+                                  ),
+                          ),
                       groups: byGroup,
                       width: WIDTH,
                       height: HEIGHT,
@@ -2531,76 +2799,73 @@ export default function RelationGraph({
                   *   外側の組から順に置き、先に置いた札とぶつかるなら右へずらす。
                   */}
                 {(() => {
-                    const tabH = Math.round(NAME_SIZE * 1.55);
-                    const tabFont = Math.round(NAME_SIZE * 1.02);
-                    const inset = Math.round(NODE_RADIUS * 0.35);
+                    /*
+                     * ★ 組の名前は、囲みの中に大きく書く。
+                     *
+                     *   小さな色の札に白い字で書いていたが、
+                     *   角の丸い淡い箱に札が並ぶと、いかにも機械が作った図に見えた。
+                     *   人物相関図は、囲みの隅に組の名前を大きく太く書く。
+                     *
+                     * ★ 二つの囲みの隅が近いときは、後の名前を右へずらす。
+                     */
+                    const titleFont = Math.round(NAME_SIZE * 1.6);
+                    const titleH = Math.round(titleFont * 1.2);
+                    const inset = Math.round(NODE_RADIUS * 0.3);
                     const placed: { x1: number; y1: number; x2: number; y2: number }[] = [];
-
-                    const tabs = new Map<string, { x: number; y: number; w: number }>();
+                    const titles = new Map<string, { x: number; y: number }>();
 
                     for (const box of groupBoxes) {
-                        const w = Math.round(
-                            Array.from(box.name || "組").length * tabFont + tabFont * 1.2,
-                        );
+                        const w = Math.round(Array.from(box.name || "組").length * titleFont);
                         let x = box.x1 + inset;
                         const y = box.y1 + inset;
 
                         for (let tries = 0; tries < 12; tries += 1) {
                             const hit = placed.find(
                                 (one) =>
-                                    x < one.x2 + 4 &&
-                                    x + w > one.x1 - 4 &&
+                                    x < one.x2 + 6 &&
+                                    x + w > one.x1 - 6 &&
                                     y < one.y2 &&
-                                    y + tabH > one.y1,
+                                    y + titleH > one.y1,
                             );
                             if (!hit) break;
-                            x = hit.x2 + 8;
+                            x = hit.x2 + titleFont * 0.6;
                         }
 
-                        placed.push({ x1: x, y1: y, x2: x + w, y2: y + tabH });
-                        tabs.set(box.key, { x, y, w });
+                        placed.push({ x1: x, y1: y, x2: x + w, y2: y + titleH });
+                        titles.set(box.key, { x, y });
                     }
 
                     return groupBoxes.map((box) => {
-                        const ink = groupColors.get(box.key) ?? "#3d63c9";
-                        const tab = tabs.get(box.key)!;
+                        const ink = groupColors.get(box.key) ?? "#5566a8";
+                        const title = titles.get(box.key)!;
 
                         return (
                             <g key={`box-${box.key}`} pointerEvents="none">
+                                {/*
+                                  * ★ 角を立てた面にする。
+                                  *   枠線は細く、面の色で組を見せる。
+                                  */}
                                 <rect
                                     x={box.x1}
                                     y={box.y1}
                                     width={box.x2 - box.x1}
                                     height={box.y2 - box.y1}
-                                    rx={NODE_RADIUS * 0.7}
+                                    rx={NODE_RADIUS * 0.08}
                                     fill={ink}
-                                    /* 外側ほど薄く。重なっても中が読める */
-                                    fillOpacity={box.levels > 0 ? 0.12 : 0.2}
+                                    /* 内の組は外の組の上に重なるので、少し薄く */
+                                    fillOpacity={box.levels > 0 ? 0.3 : 0.24}
                                     stroke={ink}
-                                    strokeOpacity={0.9}
-                                    /*
-                                     * ★ 枠の太さは、画面の点で決める。
-                                     *   図は縮めて出すので、図の中の太さだと
-                                     *   全体を見たときに髪の毛のように細くなる。
-                                     */
-                                    strokeWidth={2.5}
+                                    strokeOpacity={0.55}
+                                    strokeWidth={1.5}
                                     vectorEffect="non-scaling-stroke"
                                 />
-                                <rect
-                                    x={tab.x}
-                                    y={tab.y}
-                                    width={tab.w}
-                                    height={tabH}
-                                    rx={tabH * 0.28}
-                                    fill={ink}
-                                />
                                 <text
-                                    x={tab.x + tab.w / 2}
-                                    y={tab.y + tabH / 2 + tabFont * 0.36}
-                                    textAnchor="middle"
-                                    fontSize={tabFont}
-                                    fontWeight="700"
-                                    fill="#ffffff"
+                                    x={title.x}
+                                    y={title.y + titleFont * 0.95}
+                                    fontSize={titleFont}
+                                    fontWeight="800"
+                                    fill={darken(ink, 0.45)}
+                                    style={{ letterSpacing: "0.02em" }}
                                 >
                                     {box.name}
                                 </text>
@@ -2609,9 +2874,9 @@ export default function RelationGraph({
                     });
                 })()}
 
-                {shownRelations.map((relation) => {
-                    const from = positions.get(relation.from_entry_id);
-                    const to = positions.get(relation.to_entry_id);
+                {drawnRelations.map((relation) => {
+                    const from = anchorOf(relation.from_entry_id);
+                    const to = anchorOf(relation.to_entry_id);
                     if (!from || !to) return null;
 
                     /* この線が、いま選んでいる人につながっているか */
@@ -2760,10 +3025,11 @@ export default function RelationGraph({
                     const arcAt = around?.control ?? null;
 
                     /* 直角に折ってよけるときの道 */
-                    const routed =
-                        around && !arcAt && around.points.length > 2
-                            ? trimEnds(around.points, HALO)
-                            : null;
+                    const routed = around?.ready
+                        ? around.points
+                        : around && !arcAt && around.points.length > 2
+                          ? trimEnds(around.points, HALO)
+                          : null;
 
                     const arcHead = arcAt ? pullBack(from, arcAt, HALO) : null;
                     const arcTail = arcAt ? pullBack(to, arcAt, HALO) : null;
@@ -2772,8 +3038,8 @@ export default function RelationGraph({
                         ? `M${head.x} ${head.y} L${bent.x} ${bent.y} L${tail.x} ${tail.y}`
                         : arcAt && arcHead && arcTail
                           ? `M${arcHead.x} ${arcHead.y} Q${arcAt.x} ${arcAt.y} ${arcTail.x} ${arcTail.y}`
-                          : routed && routed.length > 2
-                          ? roundedPath(routed, NODE_RADIUS * 1.1)
+                          : routed && (around?.ready || routed.length > 2)
+                          ? roundedPath(routed, NODE_RADIUS * (around?.ready ? 0.3 : 1.1))
                           : bow === 0
                             ? `M${head.x} ${head.y} L${tail.x} ${tail.y}`
                             : `M${head.x} ${head.y} Q${middle.x} ${middle.y} ${tail.x} ${tail.y}`;
@@ -2800,7 +3066,7 @@ export default function RelationGraph({
                                 x: (arcHead.x + arcAt.x * 2 + arcTail.x) / 4,
                                 y: (arcHead.y + arcAt.y * 2 + arcTail.y) / 4,
                             }
-                          : routed && routed.length > 2
+                          : routed && (around?.ready || routed.length > 2)
                           ? middleOf(routed)
                           : bow === 0
                           ? { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
@@ -2819,7 +3085,16 @@ export default function RelationGraph({
                      *   逃がすのではなく、丸の間を空けて直す。
                      *   間は、札が入るだけの幅を最初から取ってある。
                      */
-                    const labelAt = onLine;
+                    const labelAt =
+                        grouping && routed && relation.label
+                            ? labelSpot(
+                                  routed,
+                                  Array.from(relation.label).length *
+                                      Math.round(NAME_SIZE * 0.92) +
+                                      NAME_SIZE * 0.9,
+                                  NAME_SIZE * 1.5,
+                              )
+                            : onLine;
 
                     const controlX = labelAt.x;
                     const controlY = labelAt.y;
@@ -2830,9 +3105,14 @@ export default function RelationGraph({
                      * 決めていなければ、これまでどおり
                      * 変化の記録があれば実線、無ければ破線。
                      */
+                    /*
+                     * ★ 組分けしているときは、決めていない線を実線にする。
+                     *   点線だらけの図は、全体が薄くぼやけて見えた。
+                     *   作者が「破線」と決めた線だけ破線にする。
+                     */
                     const lineStyle =
                         relation.line_style ??
-                        (relation.changes.length > 0 ? "solid" : "dashed");
+                        (grouping || relation.changes.length > 0 ? "solid" : "dashed");
 
                     return (
                         /*
@@ -2960,36 +3240,51 @@ export default function RelationGraph({
                              * ★ 白い札で囲む。
                              *   線の上に直に置くと、線が字を横切って読めない。
                              */}
-                            {relation.label && touchesActive && (
-                                <>
-                                    <rect
-                                        x={
-                                            controlX -
-                                            (relation.label.length * EDGE_SIZE) / 2 -
-                                            EDGE_SIZE * 0.3
-                                        }
-                                        y={controlY - EDGE_SIZE * 0.72}
-                                        width={
-                                            relation.label.length * EDGE_SIZE +
-                                            EDGE_SIZE * 0.6
-                                        }
-                                        height={EDGE_SIZE * 1.44}
-                                        rx={EDGE_SIZE * 0.35}
-                                        fill="var(--color-surface)"
-                                        stroke="var(--color-line)"
-                                        strokeWidth="1"
-                                    />
-                                    <text
-                                        x={controlX}
-                                        y={controlY + 3.5}
-                                        textAnchor="middle"
-                                        fontSize={EDGE_SIZE}
-                                        fill={colorOf(relation.label)}
-                                    >
-                                        {relation.label}
-                                    </text>
-                                </>
-                            )}
+                            {/*
+                              * ★ 組分けしているときは、全部の線に名前を出す。
+                              *   人物相関図は、線と名前で読むもの。
+                              *   名前の無い線は、何の関係か分からない。
+                              */}
+                            {relation.label && (touchesActive || grouping) && (() => {
+                                /*
+                                 * ★ 組分けしているときは、名前を大きく太く。
+                                 *   全体を見たときに読める大きさにする。
+                                 *   札は角を立て、線と同じ色の字で書く。
+                                 */
+                                const size = grouping
+                                    ? Math.round(NAME_SIZE * 0.92)
+                                    : EDGE_SIZE;
+                                const chars = Array.from(relation.label).length;
+                                const plateW = chars * size + size * 0.7;
+                                const plateH = size * 1.45;
+
+                                return (
+                                    <>
+                                        <rect
+                                            x={controlX - plateW / 2}
+                                            y={controlY - plateH / 2}
+                                            width={plateW}
+                                            height={plateH}
+                                            rx={grouping ? size * 0.12 : size * 0.35}
+                                            fill="var(--color-surface)"
+                                            stroke={grouping ? colorOf(relation.label) : "var(--color-line)"}
+                                            strokeOpacity={grouping ? 0.5 : 1}
+                                            strokeWidth="1"
+                                            vectorEffect="non-scaling-stroke"
+                                        />
+                                        <text
+                                            x={controlX}
+                                            y={controlY + size * 0.36}
+                                            textAnchor="middle"
+                                            fontSize={size}
+                                            fontWeight={grouping ? 700 : 400}
+                                            fill={colorOf(relation.label)}
+                                        >
+                                            {relation.label}
+                                        </text>
+                                    </>
+                                );
+                            })()}
                         </g>
                     );
                 })}

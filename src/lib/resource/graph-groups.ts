@@ -1239,6 +1239,190 @@ export function pathAround(
     return { points: routeAround(from, to, blocks, pad) };
 }
 
+/* ============================================================
+ * 直角に折れる線（組分けのとき）
+ * ============================================================ */
+
+/** 置いた線の一区間。縦か横 */
+export interface Segment {
+    a: Point;
+    b: Point;
+}
+
+/** 区間どうしが、同じ通り道でどれだけ重なるか */
+function overlapOf(one: Segment, other: Segment, lane: number): number {
+    const oneFlat = Math.abs(one.a.y - one.b.y) < 0.5;
+    const otherFlat = Math.abs(other.a.y - other.b.y) < 0.5;
+
+    if (oneFlat !== otherFlat) return 0;
+
+    if (oneFlat) {
+        if (Math.abs(one.a.y - other.a.y) > lane) return 0;
+
+        const lo = Math.max(Math.min(one.a.x, one.b.x), Math.min(other.a.x, other.b.x));
+        const hi = Math.min(Math.max(one.a.x, one.b.x), Math.max(other.a.x, other.b.x));
+        return Math.max(0, hi - lo);
+    }
+
+    if (Math.abs(one.a.x - other.a.x) > lane) return 0;
+
+    const lo = Math.max(Math.min(one.a.y, one.b.y), Math.min(other.a.y, other.b.y));
+    const hi = Math.min(Math.max(one.a.y, one.b.y), Math.max(other.a.y, other.b.y));
+    return Math.max(0, hi - lo);
+}
+
+/**
+ * 直角に折れる線の道を出す。
+ *
+ * ★ 人物相関図の線は、縦と横でできている。
+ *
+ *   斜めの線や弧は、何本もあると互いに絡んで、
+ *   どこからどこへ行く線なのか目で追えなかった。
+ *   縦と横だけにすれば、線はきれいに揃い、
+ *   曲がり角で向きが変わるのも見て分かる。
+ *
+ * ★ ほとんど縦か横に並んでいるときは、まっすぐ。
+ *
+ * ★ ほかの線と同じ通り道に重ねない。
+ *   先に引いた線の区間を覚えておき、重なる道には点を付ける。
+ *   少しずらした道も候補に入れるので、線は並んで走る。
+ *
+ * @param used  先に引いた線の区間。引いた道の区間を、ここへ足していく
+ * @param lane  線どうしを離す幅
+ */
+export function orthoRoute(
+    from: Point,
+    to: Point,
+    blocks: Rect[],
+    pad: number,
+    used: Segment[],
+    lane: number,
+): Point[] {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+
+    const tries: Point[][] = [];
+
+    /* ほとんど縦か横なら、まっすぐも候補に */
+    if (Math.abs(dx) < lane * 0.8 || Math.abs(dy) < lane * 0.8) {
+        tries.push([from, to]);
+    }
+
+    /* 角が一つ（L 字） */
+    tries.push([from, { x: to.x, y: from.y }, to]);
+    tries.push([from, { x: from.x, y: to.y }, to]);
+
+    /* 角が二つ（コの字・Z 字）。折り返す場所をいくつか試す */
+    const near = blocks.filter(
+        (block) =>
+            block.x2 > Math.min(from.x, to.x) - pad * 4 &&
+            block.x1 < Math.max(from.x, to.x) + pad * 4 &&
+            block.y2 > Math.min(from.y, to.y) - pad * 4 &&
+            block.y1 < Math.max(from.y, to.y) + pad * 4,
+    );
+
+    const xs = new Set<number>();
+    const ys = new Set<number>();
+
+    for (const k of [0, 1, -1, 2, -2]) {
+        xs.add((from.x + to.x) / 2 + k * lane);
+        ys.add((from.y + to.y) / 2 + k * lane);
+    }
+
+    for (const block of near) {
+        for (const k of [0, 1, 2]) {
+            xs.add(block.x1 - pad - k * lane);
+            xs.add(block.x2 + pad + k * lane);
+            ys.add(block.y1 - pad - k * lane);
+            ys.add(block.y2 + pad + k * lane);
+        }
+    }
+
+    for (const mx of xs) {
+        tries.push([from, { x: mx, y: from.y }, { x: mx, y: to.y }, to]);
+    }
+
+    for (const my of ys) {
+        tries.push([from, { x: from.x, y: my }, { x: to.x, y: my }, to]);
+    }
+
+    let best: Point[] = tries[0];
+    let bestCost = Number.POSITIVE_INFINITY;
+
+    for (const raw of tries) {
+        const path = tidyPath(raw);
+        let hit = 0;
+        let overlap = 0;
+
+        for (let i = 1; i < path.length; i += 1) {
+            const seg = { a: path[i - 1], b: path[i] };
+
+            for (const block of near) {
+                if (crosses(seg.a, seg.b, block)) hit += 1;
+            }
+
+            for (const other of used) {
+                overlap += overlapOf(seg, other, lane * 0.6);
+            }
+        }
+
+        const cost =
+            hit * 100000 +
+            overlap * 4 +
+            (path.length - 2) * lane * 1.5 +
+            lengthOf(path);
+
+        if (cost < bestCost) {
+            bestCost = cost;
+            best = path;
+        }
+    }
+
+    for (let i = 1; i < best.length; i += 1) {
+        used.push({ a: best[i - 1], b: best[i] });
+    }
+
+    return best;
+}
+
+/**
+ * 道の始めを、四角の縁で切る。
+ *
+ * ★ 組織から出る線は、囲みの縁から出す。
+ *   囲みの真ん中から引くと、中の人の上を通ってしまう。
+ */
+export function clipStart(path: Point[], box: Rect): Point[] {
+    const inside = (p: Point) =>
+        p.x >= box.x1 && p.x <= box.x2 && p.y >= box.y1 && p.y <= box.y2;
+
+    for (let i = 1; i < path.length; i += 1) {
+        const a = path[i - 1];
+        const b = path[i];
+
+        if (inside(a) && !inside(b)) {
+            /* a から b へ進んで、縁を越えるところ */
+            let t = 1;
+
+            if (b.x > box.x2) t = Math.min(t, (box.x2 - a.x) / (b.x - a.x));
+            if (b.x < box.x1) t = Math.min(t, (box.x1 - a.x) / (b.x - a.x));
+            if (b.y > box.y2) t = Math.min(t, (box.y2 - a.y) / (b.y - a.y));
+            if (b.y < box.y1) t = Math.min(t, (box.y1 - a.y) / (b.y - a.y));
+
+            const cut = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+            return [cut, ...path.slice(i)];
+        }
+
+        if (!inside(a)) return path.slice(i - 1);
+    }
+
+    return path;
+}
+
+/** 道の終わりを、四角の縁で切る */
+export function clipEnd(path: Point[], box: Rect): Point[] {
+    return clipStart([...path].reverse(), box).reverse();
+}
+
 /** 点を、行き先のほうへ寄せる */
 function toward(at: Point, aim: Point, by: number): Point {
     const dx = aim.x - at.x;
@@ -1253,6 +1437,21 @@ function toward(at: Point, aim: Point, by: number): Point {
         x: at.x + (dx / length) * step,
         y: at.y + (dy / length) * step,
     };
+}
+
+/** 道の片方の端だけを、丸の手前で止める */
+export function trimOne(path: Point[], by: number, atEnd: boolean): Point[] {
+    if (path.length < 2) return path;
+
+    const out = [...path];
+
+    if (atEnd) {
+        out[out.length - 1] = toward(out[out.length - 1], out[out.length - 2], by);
+    } else {
+        out[0] = toward(out[0], out[1], by);
+    }
+
+    return out;
 }
 
 /** 道の両端を、丸の手前で止める */
