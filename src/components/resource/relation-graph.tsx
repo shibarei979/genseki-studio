@@ -435,6 +435,18 @@ export default function RelationGraph({
     const retidy = useRef(false);
 
     /*
+     * ★ フックは、途中で return するより前に置く。
+     *   並べ直す仕事そのもの（tidy）は下で作るので、入れ物を通して呼ぶ。
+     */
+    const tidyRef = useRef<(() => void) | null>(null);
+
+    useEffect(() => {
+        if (grouped || !retidy.current) return;
+        retidy.current = false;
+        tidyRef.current?.();
+    }, [grouped]);
+
+    /*
      * 関係名を出しておくか（組分けのとき）。
      *
      * ★ 隠したときは、組分けしていないときと同じ。
@@ -1682,11 +1694,11 @@ export default function RelationGraph({
      *   主人公と主要人物が、ほかと同じくらいだと、どこから読めばよいか分からない。
      */
     /*
-     * ★ 大きさは三つだけ。主人公・主要人物・ほかの全員。
-     *   関係の数でも大きさを変えていたので、丸の大きさがばらばらで落ち着かなかった。
-     *   ほかの人は、みな同じ大きさにそろえる。
+     * ★ 大きいのは主人公だけ。ほかは全員同じ大きさ。
+     *   主要人物や関係の多い人まで大きさを変えると、丸の大きさがばらついて落ち着かなかった。
+     *   主要人物は、大きさではなく「ふだんから線が出る」ことで目立たせる。
      */
-    const TIER_SCALE = [1.45, 1.2, 1, 1];
+    const TIER_SCALE = [1.4, 1, 1, 1];
 
     /* 図の上で選んだ主人公。選んでいれば、役割の「主人公」より優先 */
     const leadId = entries.find((entry) => entry.values?.[LEAD_KEY] === true)?.id ?? null;
@@ -2690,12 +2702,8 @@ export default function RelationGraph({
 
     const active = hoveredId ?? selectedId;
 
-    useEffect(() => {
-        if (grouped || !retidy.current) return;
-        retidy.current = false;
-        tidy();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [grouped]);
+    /* 組分けを解いたあとの並べ直しに使う（上の useEffect から呼ぶ） */
+    tidyRef.current = tidy;
 
     /* 線を描き終えてから重ねる、関係名の札 */
     const laterLabels: {
