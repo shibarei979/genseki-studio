@@ -64,6 +64,7 @@ interface Props {
     onRenameGroup?: (groupId: string, name: string) => Promise<void>;
     onSetGroupMember?: (groupId: string, entryId: string, on: boolean) => Promise<void>;
     onDissolveGroup?: (groupId: string) => Promise<void>;
+    onSetGroupColor?: (groupId: string, color: string | null) => Promise<void>;
 }
 
 export default function RelationsView({
@@ -80,6 +81,7 @@ export default function RelationsView({
     onRenameGroup,
     onSetGroupMember,
     onDissolveGroup,
+    onSetGroupColor,
 }: Props) {
     const [mode, setMode] = useState<"graph" | "list">("graph");
 
@@ -90,7 +92,8 @@ export default function RelationsView({
             onCreateGroup &&
             onRenameGroup &&
             onSetGroupMember &&
-            onDissolveGroup,
+            onDissolveGroup &&
+            onSetGroupColor,
     );
 
     /*
@@ -735,6 +738,7 @@ export default function RelationsView({
                                             onRename={touch(onRenameGroup)}
                                             onSetMember={touch(onSetGroupMember)}
                                             onDissolve={touch(onDissolveGroup)}
+                                            onSetColor={touch(onSetGroupColor)}
                                         />
                                         <p className="mt-4 border-t border-line pt-3 text-center text-[10.5px] text-faint">
                                             図や一覧から関係を選ぶと、ここに関係の詳しいところが出ます。

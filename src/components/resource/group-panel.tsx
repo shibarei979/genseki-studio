@@ -33,9 +33,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
     AUTHORED,
+    GROUP_COLORS,
     SUGGESTED,
+    assignColors,
     findGroups,
-    inkOf,
     type FoundGroup,
 } from "@/lib/resource/graph-groups";
 import { groupOf } from "@/components/resource/relation-graph";
@@ -50,6 +51,8 @@ interface Props {
     onRename: (groupId: string, name: string) => Promise<void>;
     onSetMember: (groupId: string, entryId: string, on: boolean) => Promise<void>;
     onDissolve: (groupId: string) => Promise<void>;
+    /** 組の色を選ぶ。null で「おまかせ」に戻す */
+    onSetColor: (groupId: string, color: string | null) => Promise<void>;
 }
 
 const FROM_LABEL: Record<string, string> = {
@@ -66,6 +69,7 @@ export default function GroupPanel({
     onRename,
     onSetMember,
     onDissolve,
+    onSetColor,
 }: Props) {
     const nameOf = useMemo(
         () => new Map(entries.map((entry) => [entry.id, entry.name])),
@@ -104,6 +108,12 @@ export default function GroupPanel({
             }).sort((a, b) => a.name.localeCompare(b.name, "ja")),
         [entries, relations, pages],
     );
+
+    /* 図と同じ決め方で色を出す */
+    const colors = useMemo(() => assignColors(authored), [authored]);
+
+    /* 色を選んでいる組 */
+    const [painting, setPainting] = useState<string | null>(null);
 
     /*
      * 候補。
@@ -200,7 +210,7 @@ export default function GroupPanel({
             ) : (
                 <ul className="space-y-2">
                     {authored.map((group) => {
-                        const ink = inkOf(group.key);
+                        const ink = colors.get(group.key) ?? GROUP_COLORS[0].value;
                         const members = group.ids.filter((id) => id !== group.key);
                         const addable = onGraph.filter(
                             (entry) =>
@@ -212,14 +222,26 @@ export default function GroupPanel({
                                 key={group.key}
                                 className="rounded-md border px-2.5 py-2"
                                 style={{
-                                    borderColor: `${ink}66`,
-                                    background: `${ink}0d`,
+                                    borderColor: ink,
+                                    borderLeftWidth: 4,
+                                    background: `${ink}14`,
                                 }}
                             >
                                 <div className="flex items-center gap-2">
-                                    <span
-                                        aria-hidden="true"
-                                        className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                                    {/*
+                                      * 色。押すと色を選べる。
+                                      *
+                                      * ★ 図の囲みと同じ色。
+                                      *   どの組がどの囲みか、色で結びつく。
+                                      */}
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setPainting(painting === group.key ? null : group.key)
+                                        }
+                                        aria-label={`${group.name}の色を選ぶ`}
+                                        title="色を選ぶ"
+                                        className="h-5 w-5 shrink-0 rounded border-2 border-white shadow"
                                         style={{ background: ink }}
                                     />
                                     <input
@@ -240,6 +262,42 @@ export default function GroupPanel({
                                         {members.length}人
                                     </span>
                                 </div>
+
+                                {painting === group.key && (
+                                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                                        {GROUP_COLORS.map((one) => (
+                                            <button
+                                                key={one.value}
+                                                type="button"
+                                                disabled={busy}
+                                                onClick={() => {
+                                                    setPainting(null);
+                                                    void run(() => onSetColor(group.key, one.value));
+                                                }}
+                                                aria-label={one.label}
+                                                aria-pressed={group.color === one.value}
+                                                title={one.label}
+                                                className={
+                                                    group.color === one.value
+                                                        ? "h-6 w-6 rounded border-2 border-ink"
+                                                        : "h-6 w-6 rounded border-2 border-white shadow hover:scale-110"
+                                                }
+                                                style={{ background: one.value }}
+                                            />
+                                        ))}
+                                        <button
+                                            type="button"
+                                            disabled={busy}
+                                            onClick={() => {
+                                                setPainting(null);
+                                                void run(() => onSetColor(group.key, null));
+                                            }}
+                                            className="ml-1 rounded border border-line px-1.5 py-0.5 text-[10.5px] text-muted hover:text-ink"
+                                        >
+                                            おまかせ
+                                        </button>
+                                    </div>
+                                )}
 
                                 {/* 中にいる人。× で外す */}
                                 <ul className="mt-1.5 flex flex-wrap gap-1">

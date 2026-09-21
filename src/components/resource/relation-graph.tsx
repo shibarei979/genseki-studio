@@ -16,9 +16,9 @@ import { useEffect, useRef, useState } from "react";
 import { getImage } from "@/lib/storage/image-store";
 import {
     AUTHORED,
+    assignColors,
     boxesFor,
     findGroups,
-    inkOf,
     middleOf,
     packByGroup,
     pathAround,
@@ -1526,6 +1526,14 @@ export default function RelationGraph({
 
     const foundGroups = grouping ? findGroupsHere() : [];
 
+    /*
+     * 組の色。
+     *
+     * ★ 右の欄と同じ決め方にする。
+     *   全部の組を渡して決めるので、図に出ていない組があっても色がずれない。
+     */
+    const groupColors = mayGroup ? assignColors(authoredAll()) : new Map<string, string>();
+
     const groupBoxes: GroupBox[] = grouping
         ? boxesFor(
               foundGroups.map((group) => ({
@@ -1537,11 +1545,23 @@ export default function RelationGraph({
                   radius: NODE_RADIUS,
                   halfOf: (id) => halfOf(nameOf.get(id) ?? ""),
                   drop: NAME_DROP + NAME_SIZE * 0.4,
-                  pad: Math.round(NODE_RADIUS * 0.9),
-                  head: Math.round(NODE_RADIUS * 0.9),
+                  pad: Math.round(NODE_RADIUS * 0.8),
+                  head: Math.round(NAME_SIZE * 2.1),
               },
           )
         : [];
+
+    /* 丸ごとの縁の色。いちばん小さい（内側の）組の色 */
+    const ringOf = new Map<string, string>();
+
+    for (const box of [...groupBoxes].sort((a, b) => a.ids.length - b.ids.length)) {
+        const ink = groupColors.get(box.key);
+        if (!ink) continue;
+
+        for (const id of box.ids) {
+            if (!ringOf.has(id)) ringOf.set(id, ink);
+        }
+    }
 
     /*
      * 線がよけるもの。
@@ -1593,11 +1613,27 @@ export default function RelationGraph({
     if (avoiding) {
         for (const relation of shownRelations) {
             if (relation.bend || bending?.id === relation.id) continue;
-            if ((bowOf.get(relation.id) ?? 0) !== 0) continue;
 
             const from = positions.get(relation.from_entry_id);
             const to = positions.get(relation.to_entry_id);
             if (!from || !to) continue;
+
+            /*
+             * ★ 行き帰りの二本も、よける。
+             *   前はよけずに決まった形でふくらませていたので、
+             *   間にいる人（律とクマの間のエバ）の上を通っていた。
+             *   ふくらむ向きは変えず、大きさだけ足す。
+             */
+            const bow = bowOf.get(relation.id) ?? 0;
+            const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+            const lean = bow * (relation.from_entry_id < relation.to_entry_id ? 1 : -1);
+            const fixed =
+                bow === 0
+                    ? undefined
+                    : {
+                          side: (lean > 0 ? 1 : -1) as 1 | -1,
+                          least: (BOW * Math.abs(lean)) / length,
+                      };
 
             aroundOf.set(
                 relation.id,
@@ -1617,6 +1653,7 @@ export default function RelationGraph({
                         ),
                     ],
                     Math.round(NODE_RADIUS * 0.7),
+                    fixed,
                 ),
             );
         }
@@ -1922,15 +1959,26 @@ export default function RelationGraph({
          *   そちらは右の欄に候補として出すだけにして、
          *   図には描かない。
          */
-        return findGroups(entries, relations, {
-            pages,
-            use: AUTHORED,
-        })
+        /*
+         * ★ 一人の組も残す。
+         *   作者が作った組なら、一人でも組。
+         *   ただし、組織の項目そのもの（組の名前の丸）だけ、は組にしない。
+         */
+        return authoredAll()
             .map((group) => ({
                 ...group,
                 ids: group.ids.filter((id) => onGraph.has(id)),
             }))
-            .filter((group) => group.ids.length >= 2);
+            .filter((group) => group.ids.some((id) => id !== group.key));
+    }
+
+    /* 作者が決めた組。まだ誰も入れていない組も含めて全部 */
+    function authoredAll() {
+        return findGroups(entries, relations, {
+            pages,
+            use: AUTHORED,
+            keepSmall: true,
+        });
     }
 
     /*
@@ -2466,36 +2514,93 @@ export default function RelationGraph({
                   *   囲みは、そこに何があるかを示すだけのもの。
                   *   主役は丸と線なので、色で争わない。
                   */}
-                {groupBoxes.map((box) => {
-                    const ink = inkOf(box.key);
+                {/*
+                  * ★ 名札は、囲みの左上に色の札で出す。
+                  *
+                  *   前は薄い色の字を、囲みの中に直に書いていた。
+                  *   二つの組の角が同じところにあると、
+                  *   名前が重なって「N公安」のように潰れた。
+                  *
+                  *   外側の組から順に置き、先に置いた札とぶつかるなら右へずらす。
+                  */}
+                {(() => {
+                    const tabH = Math.round(NAME_SIZE * 1.55);
+                    const tabFont = Math.round(NAME_SIZE * 1.02);
+                    const inset = Math.round(NODE_RADIUS * 0.35);
+                    const placed: { x1: number; y1: number; x2: number; y2: number }[] = [];
 
-                    return (
-                        <g key={`box-${box.key}`} pointerEvents="none">
-                            <rect
-                                x={box.x1}
-                                y={box.y1}
-                                width={box.x2 - box.x1}
-                                height={box.y2 - box.y1}
-                                rx={NODE_RADIUS * 0.8}
-                                fill={ink}
-                                fillOpacity={0.07}
-                                stroke={ink}
-                                strokeOpacity={0.45}
-                                strokeWidth={1.8}
-                            />
-                            <text
-                                x={box.x1 + NODE_RADIUS * 0.7}
-                                y={box.y1 + NAME_SIZE * 1.3}
-                                fontSize={NAME_SIZE * 1.15}
-                                fontWeight="700"
-                                fill={ink}
-                                fillOpacity={0.9}
-                            >
-                                {box.name}
-                            </text>
-                        </g>
-                    );
-                })}
+                    const tabs = new Map<string, { x: number; y: number; w: number }>();
+
+                    for (const box of groupBoxes) {
+                        const w = Math.round(
+                            Array.from(box.name || "組").length * tabFont + tabFont * 1.2,
+                        );
+                        let x = box.x1 + inset;
+                        const y = box.y1 + inset;
+
+                        for (let tries = 0; tries < 12; tries += 1) {
+                            const hit = placed.find(
+                                (one) =>
+                                    x < one.x2 + 4 &&
+                                    x + w > one.x1 - 4 &&
+                                    y < one.y2 &&
+                                    y + tabH > one.y1,
+                            );
+                            if (!hit) break;
+                            x = hit.x2 + 8;
+                        }
+
+                        placed.push({ x1: x, y1: y, x2: x + w, y2: y + tabH });
+                        tabs.set(box.key, { x, y, w });
+                    }
+
+                    return groupBoxes.map((box) => {
+                        const ink = groupColors.get(box.key) ?? "#3d63c9";
+                        const tab = tabs.get(box.key)!;
+
+                        return (
+                            <g key={`box-${box.key}`} pointerEvents="none">
+                                <rect
+                                    x={box.x1}
+                                    y={box.y1}
+                                    width={box.x2 - box.x1}
+                                    height={box.y2 - box.y1}
+                                    rx={NODE_RADIUS * 0.7}
+                                    fill={ink}
+                                    /* 外側ほど薄く。重なっても中が読める */
+                                    fillOpacity={box.levels > 0 ? 0.09 : 0.16}
+                                    stroke={ink}
+                                    strokeOpacity={0.95}
+                                    /*
+                                     * ★ 枠の太さは、画面の点で決める。
+                                     *   図は縮めて出すので、図の中の太さだと
+                                     *   全体を見たときに髪の毛のように細くなる。
+                                     */
+                                    strokeWidth={2.5}
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                                <rect
+                                    x={tab.x}
+                                    y={tab.y}
+                                    width={tab.w}
+                                    height={tabH}
+                                    rx={tabH * 0.28}
+                                    fill={ink}
+                                />
+                                <text
+                                    x={tab.x + tab.w / 2}
+                                    y={tab.y + tabH / 2 + tabFont * 0.36}
+                                    textAnchor="middle"
+                                    fontSize={tabFont}
+                                    fontWeight="700"
+                                    fill="#ffffff"
+                                >
+                                    {box.name}
+                                </text>
+                            </g>
+                        );
+                    });
+                })()}
 
                 {shownRelations.map((relation) => {
                     const from = positions.get(relation.from_entry_id);
@@ -2642,10 +2747,7 @@ export default function RelationGraph({
                      *   直角の線は囲みの外を大きく回り込み、
                      *   ほかの線や名札と重なっていた。
                      */
-                    const around =
-                        !bent && bow === 0
-                            ? (aroundOf.get(relation.id) ?? null)
-                            : null;
+                    const around = !bent ? (aroundOf.get(relation.id) ?? null) : null;
 
                     /* 弧でよけるときの引っ張り点 */
                     const arcAt = around?.control ?? null;
@@ -2760,7 +2862,13 @@ export default function RelationGraph({
                                 d={path}
                                 fill="none"
                                 stroke={colorOf(relation.label)}
-                                strokeWidth={relation.changes.length > 0 ? 2.4 : 1.6}
+                                /*
+                                 * ★ 線の太さは、画面の点で決める。
+                                 *   図を縮めて全体を出すと、線が髪の毛のように細くなり、
+                                 *   破線はほとんど見えなかった。
+                                 */
+                                strokeWidth={relation.changes.length > 0 ? 2.6 : 1.9}
+                                vectorEffect="non-scaling-stroke"
                                 /*
                                  * 線の形。
                                  *
@@ -2948,6 +3056,24 @@ export default function RelationGraph({
                                     r={NODE_RADIUS}
                                     fill="var(--color-forest-tint)"
                                     filter="url(#node-shadow)"
+                                />
+                            )}
+
+                            {/*
+                              * 組の色の縁。
+                              *
+                              * ★ いちばん内側の組の色で縁取る。
+                              *   囲みから離れたところでも、丸を見ればどの組か分かる。
+                              */}
+                            {ringOf.get(node.id) && (
+                                <circle
+                                    cx={position.x}
+                                    cy={position.y}
+                                    r={NODE_RADIUS}
+                                    fill="none"
+                                    stroke={ringOf.get(node.id)}
+                                    strokeWidth={3}
+                                    vectorEffect="non-scaling-stroke"
                                 />
                             )}
 

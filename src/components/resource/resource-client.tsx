@@ -36,7 +36,7 @@ import {
 import type { CandidateKind } from "@/lib/ai/extractor";
 import { getImageGenerator } from "@/lib/ai/image-generator";
 import { appendLeftover, mapAttributes } from "@/lib/resource/attribute-map";
-import { isBelongField, isMemberField } from "@/lib/resource/graph-groups";
+import { COLOR_KEY, isBelongField, isMemberField } from "@/lib/resource/graph-groups";
 import {
     hasSubstance,
     isPersonName,
@@ -528,6 +528,28 @@ export default function ResourceClient({ workId }: Props) {
             if (changed) await repository.updateEntry(entryId, { values: next });
         }
 
+        await reload();
+    }
+
+    /*
+     * 組の色を選ぶ。
+     *
+     * ★ 組織の項目の values に置く。ページの欄とは別の鍵なので、
+     *   資料の画面には出ない。null なら「おまかせ」に戻す。
+     */
+    async function setGroupColor(groupId: string, color: string | null) {
+        const group = entries.find((one) => one.id === groupId);
+        if (!group) return;
+
+        const next = { ...group.values };
+
+        if (color) {
+            next[COLOR_KEY] = color;
+        } else {
+            delete next[COLOR_KEY];
+        }
+
+        await repository.updateEntry(groupId, { values: next });
         await reload();
     }
 
@@ -1353,6 +1375,7 @@ export default function ResourceClient({ workId }: Props) {
                                     onRenameGroup={renameGroup}
                                     onSetGroupMember={setGroupMember}
                                     onDissolveGroup={dissolveGroup}
+                                    onSetGroupColor={setGroupColor}
                                 />
                             ) : currentPage.kind === "timeline" ? (
                                 <TimelineView
