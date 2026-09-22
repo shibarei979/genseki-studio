@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 
 import Link from 'next/link'
 
+import ReaderInvites from '@/components/reader-invites'
+
 /**
  * ============================================================
  * 原石航路 Studio
@@ -141,10 +143,16 @@ export default function EpisodeNav({
     }
 
     return (
-        /*
+        <>
+        {/*
+          * ★ ログインしていない人への誘い（話の終わり・右下）。
+          *   話の下に出る、大きいほうのナビにだけ付ける。上の小さいナビには付けない。
+          */}
+        <ReaderInvites novelId={novelId} next={next} />
+        {/*
          * ★ 並びの向きだけを変える。
          *   中身を書き分けると、片方だけ直し忘れる。
-         */
+         */}
         <div
             style={{
                 display: 'flex',
@@ -196,5 +204,6 @@ export default function EpisodeNav({
                 <div style={{ flex: 1 }}>{tail}</div>
             )}
         </div>
+        </>
     )
 }

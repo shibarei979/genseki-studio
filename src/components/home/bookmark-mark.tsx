@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
-import { useLoginRequired } from '@/hooks/use-login-required'
+import LoginPromptModal, { SAVED_MESSAGE } from '@/components/login-prompt-modal'
+import { hasGuestBookmark, moveGuestBookmarks, toggleGuestBookmark } from '@/lib/guest-bookmarks'
 
 /**
  * ============================================================
@@ -26,15 +27,24 @@ export default function BookmarkMark({ novelId }: { novelId: string }) {
     const [popping, setPopping] = useState(false)
     const [userId, setUserId] = useState<string | null>(null)
 
-    const { guard, prompt } = useLoginRequired(userId)
+    /* ログインしていない人に、しおりを挟んだあとで出す案内 */
+    const [invite, setInvite] = useState(false)
 
     useEffect(() => {
         void (async () => {
             const supabase = createClient()
             const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
+
+            /* ★ ログインしていなければ、この端末に挟んだしおりを見る */
+            if (!user) {
+                setSaved(hasGuestBookmark(novelId))
+                return
+            }
 
             setUserId(user.id)
+
+            /* ★ 登録前にこの端末で挟んだしおりを、アカウントへ移してから見る */
+            await moveGuestBookmarks(supabase, user.id)
 
             const { data } = await supabase
                 .from('bookmarks')
@@ -47,9 +57,26 @@ export default function BookmarkMark({ novelId }: { novelId: string }) {
         })()
     }, [novelId])
 
-    /** 保存する・やめる。ログインしていなければ窓が出る */
-    const toggle = guard('作品を保存する', () => {
-        if (!userId || busy) return
+    /**
+     * 保存する・やめる。
+     *
+     * ★ ログインしていなくても、まず本当に挟む（この端末に）。
+     *   挟めたら「しおりを保存しました／この端末だけ」と出し、登録へ誘う。
+     *   前は押した時点で止めていて、「押したのに何も起きない」だった。
+     */
+    const toggle = () => {
+        if (!userId) {
+            const now = toggleGuestBookmark(novelId)
+            setSaved(now)
+            if (now) {
+                setPopping(true)
+                window.setTimeout(() => setPopping(false), 450)
+                setInvite(true)
+            }
+            return
+        }
+
+        if (busy) return
 
         setBusy(true)
 
@@ -89,7 +116,7 @@ export default function BookmarkMark({ novelId }: { novelId: string }) {
 
             setBusy(false)
         })()
-    })
+    }
 
     return (
         <>
@@ -138,7 +165,7 @@ export default function BookmarkMark({ novelId }: { novelId: string }) {
                 </svg>
             </button>
 
-            {prompt}
+            <LoginPromptModal show={invite} onClose={() => setInvite(false)} message={SAVED_MESSAGE} />
         </>
     )
 }

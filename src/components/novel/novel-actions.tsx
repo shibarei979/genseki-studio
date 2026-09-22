@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import LoginPromptModal from '@/components/login-prompt-modal'
+import LoginPromptModal, { SAVED_MESSAGE } from '@/components/login-prompt-modal'
+import { hasGuestBookmark, moveGuestBookmarks, toggleGuestBookmark } from '@/lib/guest-bookmarks'
 
 interface Props {
   novelId: string
@@ -66,6 +67,26 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
       .then(({ count }) => setTodayShares(count || 0))
   }, [userId])
 
+  /*
+   * しおり（ブックマーク）の、この端末の分。
+   * ★ ログインしていなければ、この端末に挟んだかどうかを見る。
+   * ★ ログインしていれば、登録前に挟んだ分をアカウントへ移す。
+   *   この作品が含まれていれば、挟んだ見た目にして数も一つ足す。
+   */
+  useEffect(() => {
+    if (!userId) {
+      if (hasGuestBookmark(novelId)) setBookmarked(true)
+      return
+    }
+    void moveGuestBookmarks(supabase, userId).then((moved) => {
+      if (moved.includes(novelId)) {
+        setBookmarked(true)
+        setBookmarks(c => c + 1)
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, novelId])
+
   function requireLogin(msg: string) { setLoginMsg(msg); setShowLogin(true) }
 
   async function toggleLike() {
@@ -86,7 +107,17 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
   }
 
   async function toggleBookmark() {
-    if (!userId) return requireLogin('ブックマークするにはログインが必要です')
+    /*
+     * ★ ログインしていなくても、まず本当に挟む（この端末に）。
+     *   挟めたら「しおりを保存しました／この端末だけ」と出して、登録へ誘う。
+     *   数は増やさない。アカウントに移ったときに増える。
+     */
+    if (!userId) {
+      const now = toggleGuestBookmark(novelId)
+      setBookmarked(now)
+      if (now) requireLogin(SAVED_MESSAGE)
+      return
+    }
     if (loading) return
     setLoading(true)
     if (bookmarked) {
