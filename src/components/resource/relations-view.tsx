@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
 import { pairKey, suggestRelations } from "@/lib/resource/relation-suggest";
@@ -116,6 +116,19 @@ export default function RelationsView({
      *   ふだんは図を横いっぱいに出し、「組を編集」を押したときだけ右に出す。
      */
     const [editingGroups, setEditingGroups] = useState(false);
+
+    /*
+     * ★ 組の欄は、はじめから開いておく（会員のとき）。
+     *   押し具を探さなくても、組を作る場所が目に入るように。
+     *   会員かどうかは後から分かるので、分かった時点で一度だけ開く。
+     */
+    const openedOnce = useRef(false);
+    useEffect(() => {
+        if (canEditGroups && !openedOnce.current) {
+            openedOnce.current = true;
+            setEditingGroups(true);
+        }
+    }, [canEditGroups]);
 
     const touch = <A extends unknown[]>(
         task: ((...args: A) => Promise<void>) | undefined,

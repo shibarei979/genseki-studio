@@ -887,13 +887,14 @@ export default function RelationGraph({
      *   どこを掴んでも同じだけ変わる。
      */
     /*
-     * ★ 右端（小）は、枠にぴったりより一回り小さく（0.7 倍）。
+     * ★ 右端（小）は、枠にぴったりより小さく（0.5 倍）。
      *   ぴったりまでしか縮められず、端の人や組の名札が枠際に張り付いていた。
      *   80 で枠にぴったり、左端（大）で 2.5 倍。
      */
+    /* ★ 右に組の欄が出るぶん図が狭くなるので、右端は半分（0.5 倍）まで縮める */
     const zoom =
         wideValue >= 80
-            ? 1 - ((wideValue - 80) / 20) * 0.3
+            ? 1 - ((wideValue - 80) / 20) * 0.5
             : 1 + ((80 - wideValue) / 80) * 1.5;
 
     /*
@@ -3392,6 +3393,58 @@ export default function RelationGraph({
                 {/* 相関図の地。薄い方眼の紙 */}
 {/* 方眼は枠の側に敷く（上の panRef の style） */}
 
+                {/*
+                  * 丸型の目印。主人公を中心にした、薄い同心円。
+                  * ★ 内の円は主人公のまわりの人、外の円は組の並ぶ輪。
+                  *   人と組がこの円の上に並ぶので、全体が丸い図として読める。
+                  */}
+                {grouping && shape === "round" && (() => {
+                    const hubNode = shownNodes.find((node) => tierOf(node.id) === 0);
+                    const center = hubNode ? positions.get(hubNode.id) : undefined;
+                    if (!center) return null;
+
+                    const median = (list: number[]) => {
+                        if (list.length === 0) return 0;
+                        const sorted = [...list].sort((a, b) => a - b);
+                        return sorted[Math.floor(sorted.length / 2)];
+                    };
+
+                    const inGroup = new Set(groupBoxes.flatMap((box) => box.ids));
+                    const innerList = shownNodes
+                        .filter((node) => node.id !== hubNode?.id && !inGroup.has(node.id))
+                        .map((node) => positions.get(node.id))
+                        .filter((at): at is { x: number; y: number } => Boolean(at))
+                        .map((at) => Math.hypot(at.x - center.x, at.y - center.y));
+                    const outerList = groupBoxes
+                        .filter((box) => !box.ids.includes(hubNode!.id))
+                        .map((box) =>
+                            Math.hypot((box.x1 + box.x2) / 2 - center.x, (box.y1 + box.y2) / 2 - center.y),
+                        );
+                    /* ★ 輪の上に三つ以上並ぶときだけ描く。二つだと輪に見えず、線が浮く */
+                    const inner = innerList.length >= 3 ? median(innerList) : 0;
+                    const outer = outerList.length >= 3 ? median(outerList) : 0;
+
+                    return (
+                        <g pointerEvents="none">
+                            {[inner, outer]
+                                .filter((radius) => radius > NODE_RADIUS * 2)
+                                .map((radius, index) => (
+                                    <circle
+                                        key={index}
+                                        cx={center.x}
+                                        cy={center.y}
+                                        r={radius}
+                                        fill="none"
+                                        stroke="#d9d4c7"
+                                        strokeWidth={1.5}
+                                        strokeDasharray="6 6"
+                                        vectorEffect="non-scaling-stroke"
+                                    />
+                                ))}
+                        </g>
+                    );
+                })()}
+
                 {(() => {
                     /*
                      * ★ 組は、薄い色の範囲と見出しだけ。
@@ -4322,7 +4375,7 @@ export default function RelationGraph({
             {sidePanel && (
                 <aside
                     className="thin-scroll shrink-0 overflow-y-auto border-l border-line pl-3"
-                    style={{ width: "min(300px, 42%)" }}
+                    style={{ width: "min(380px, 45%)" }}
                 >
                     {sidePanel}
                 </aside>

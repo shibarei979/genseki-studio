@@ -1840,7 +1840,12 @@ export function packByGroup(options: {
         for (let pass = 0; pass < 4; pass += 1) {
             let better = false;
 
-            for (const list of buckets.values()) {
+            for (const all of buckets.values()) {
+                /*
+                 * ★ 主人公は席替えしない。
+                 *   真ん中に置いた主人公が、線を短くするために端の席へ動いてしまっていた。
+                 */
+                const list = all.filter((id) => id !== options.hub);
                 if (list.length < 2 || list.length > 16) continue;
 
                 for (let i = 0; i < list.length; i += 1) {
@@ -3808,12 +3813,11 @@ function packGrid(options: {
      */
     if (options.shape === "round") {
         /*
-         * 行と列の目の比。輪が縦長にならないよう、縦の目に直すときに掛ける。
-         * ★ 枠は横に広いので、輪は横長の楕円にする（横を 1.45 倍）。
-         *   まん丸だと縦に長い図になり、枠に収めると小さく写った。
+         * ★ 図全体を上から見ると丸になるように。
+         *   まん丸の輪（楕円にしない）。組は輪の上に等しい間で一周並べる。
+         *   片側に寄せないので、どこから見ても主人公が真ん中にいる。
          */
         const squash = cellX / cellY;
-        const stretch = 1.45;
 
         /* 真ん中の人。主人公、いなければ関係のいちばん多い人 */
         const degree = new Map<string, number>();
@@ -3836,32 +3840,36 @@ function packGrid(options: {
             for (const [id, cell] of centerTile.block.cells) {
                 ring.set(id, { c: cell.c - at.c, r: cell.r - at.r });
             }
-            innerR = Math.hypot(centerTile.block.w, centerTile.block.h * (1 / squash)) / 2 + 1;
+            innerR = Math.hypot(centerTile.block.w, centerTile.block.h / squash) / 2 + 1;
         } else if (center) {
             ring.set(center, { c: 0, r: 0 });
             innerR = 0.6;
         }
 
-        /* 内の輪：どこにも入らない人 */
+        /* 内の輪：どこにも入らない人。人と人の間は一目半 */
         const inner = middle.filter((id) => id !== center);
-        /* 輪の上の人と人は、名前と関係名が入るよう一目半あける */
         const r1 =
             inner.length === 0
                 ? innerR
-                : Math.max(innerR + 1.1, (inner.length * 1.25) / (2 * Math.PI), 1.5);
+                : Math.max(innerR + 1.3, (inner.length * 1.9) / (2 * Math.PI), 1.9);
 
-        /* 真ん中の人と結ばれている人を、上から順に */
-        inner.forEach((id, index) => {
-            const angle = -Math.PI / 2 + (index / Math.max(1, inner.length)) * Math.PI * 2;
-            ring.set(id, { c: Math.cos(angle) * r1 * stretch, r: Math.sin(angle) * r1 * squash });
-        });
+        /* 真ん中の人と結ばれている人から順に、上から時計回り */
+        const toCenter = (id: string) =>
+            links.some((one) => (one.a === id && one.b === center) || (one.b === id && one.a === center)) ? 0 : 1;
+        [...inner]
+            .sort((a, b) => toCenter(a) - toCenter(b))
+            .forEach((id, index, list) => {
+                const angle = -Math.PI / 2 + (index / Math.max(1, list.length)) * Math.PI * 2;
+                ring.set(id, { c: Math.cos(angle) * r1, r: Math.sin(angle) * r1 * squash });
+            });
 
         /* 外の輪：組 */
         const outerTiles = tiles.filter((tile) => tile !== centerTile);
+        const n = outerTiles.length;
 
-        /* 組ごとの向きの好み（結ばれている、もう置いた人の向き） */
-        const pref = new Map<string, number>();
-        outerTiles.forEach((tile, index) => {
+        /* 組ごとの向きの好み（結ばれている人の向き） */
+        const pref = new Map<string, number | null>();
+        for (const tile of outerTiles) {
             let sx = 0;
             let sy = 0;
             for (const id of [...tile.block.cells.keys(), tile.key]) {
@@ -3870,49 +3878,73 @@ function packGrid(options: {
                     if (!other || tile.block.cells.has(other)) continue;
                     const at = ring.get(other);
                     if (at) {
-                        sx += at.c / stretch;
+                        sx += at.c;
                         sy += at.r / squash;
                     }
                 }
             }
-            pref.set(
-                tile.key,
-                sx === 0 && sy === 0
-                    ? -Math.PI / 2 + (index / Math.max(1, outerTiles.length)) * Math.PI * 2
-                    : Math.atan2(sy, sx),
+            pref.set(tile.key, sx === 0 && sy === 0 ? null : Math.atan2(sy, sx));
+        }
+
+        /*
+         * 等しい間の席に、組を割り当てる。
+         * ★ 好みの向きに近い席から埋める（線が短く、交わりにくい）。
+         *   席の並び全体を少しずつ回して、いちばん合うものを選ぶ。
+         */
+        const seatsFor = (turn: number) =>
+            Array.from({ length: n }, (_, i) => -Math.PI / 2 + turn + (i / Math.max(1, n)) * Math.PI * 2);
+
+        const angleGap = (a: number, b: number) => {
+            const d = Math.abs(a - b) % (Math.PI * 2);
+            return d > Math.PI ? Math.PI * 2 - d : d;
+        };
+
+        let bestSeats: Map<string, number> = new Map();
+        let bestMiss = Number.POSITIVE_INFINITY;
+
+        for (let step = 0; step < 12; step += 1) {
+            const seats = seatsFor((step / 12) * ((Math.PI * 2) / Math.max(1, n)));
+            const free = [...seats];
+            const assign = new Map<string, number>();
+            let miss = 0;
+
+            /* 好みのある組から、大きい順に */
+            const order = [...outerTiles].sort(
+                (a, b) =>
+                    (pref.get(a.key) === null ? 1 : 0) - (pref.get(b.key) === null ? 1 : 0) ||
+                    b.block.cells.size - a.block.cells.size,
             );
-        });
+            for (const tile of order) {
+                const want = pref.get(tile.key);
+                let pick = 0;
+                if (want !== null && want !== undefined) {
+                    let least = Number.POSITIVE_INFINITY;
+                    free.forEach((seat, index) => {
+                        const d = angleGap(seat, want);
+                        if (d < least) {
+                            least = d;
+                            pick = index;
+                        }
+                    });
+                    miss += least;
+                }
+                assign.set(tile.key, free.splice(pick, 1)[0]);
+            }
 
-        const ordered = [...outerTiles].sort((a, b) => pref.get(a.key)! - pref.get(b.key)!);
-
-        /* 各組の、輪に沿って要る幅（囲みと名札のぶん一目足す） */
-        const span = (tile: (typeof tiles)[number]) =>
-            Math.hypot(tile.block.w, tile.block.h / squash) + 1.2;
-
-        /* 楕円の上で、向き θ のところの 1 ラジアンあたりの長さ（半径 1 のとき） */
-        const arcAt = (theta: number) =>
-            Math.sqrt(stretch * stretch * Math.sin(theta) ** 2 + Math.cos(theta) ** 2);
-
-        /* 小さい輪から試して、重ならない大きさまで広げる */
-        let r2 = r1 + 1.5;
+            if (miss < bestMiss) {
+                bestMiss = miss;
+                bestSeats = assign;
+            }
+        }
 
         const put = (radius: number) => {
             const out = new Map(ring);
             const boxes: { x1: number; y1: number; x2: number; y2: number }[] = [];
 
-            /* 好みの向きに近いところから、順に置く。重なるなら次の向きへずらす */
-            const needOf = (tile: (typeof tiles)[number]) =>
-                span(tile) / (radius * arcAt(pref.get(tile.key)!));
-            let angle = ordered.length > 0 ? pref.get(ordered[0].key)! - needOf(ordered[0]) / 2 : 0;
-            for (const tile of ordered) {
-                const need = needOf(tile);
-                const wantMid = pref.get(tile.key)!;
-                let mid = Math.max(angle + need / 2, wantMid);
-                if (mid - need / 2 < angle) mid = angle + need / 2;
-                angle = mid + need / 2;
-
-                const cx = Math.cos(mid) * radius * stretch;
-                const cy = Math.sin(mid) * radius * squash;
+            for (const tile of outerTiles) {
+                const angle = bestSeats.get(tile.key)!;
+                const cx = Math.cos(angle) * radius;
+                const cy = Math.sin(angle) * radius * squash;
                 const left = Math.round(cx - (tile.block.w - 1) / 2);
                 const top = Math.round(cy - (tile.block.h - 1) / 2);
                 boxes.push({ x1: left - 1, y1: top - 1, x2: left + tile.block.w, y2: top + tile.block.h });
@@ -3921,19 +3953,15 @@ function packGrid(options: {
                 }
             }
 
-            /* 一周を超えた、または重なったら、失敗 */
-            const first = ordered.length > 0 ? pref.get(ordered[0].key)! - needOf(ordered[0]) / 2 : 0;
-            if (angle - first > Math.PI * 2 + 0.01) return null;
             for (let i = 0; i < boxes.length; i += 1) {
                 for (let j = i + 1; j < boxes.length; j += 1) {
                     const a = boxes[i];
                     const b = boxes[j];
                     if (a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1) return null;
                 }
-                /* 内側の人に掛かっていないか */
                 for (const cell of ring.values()) {
                     const a = boxes[i];
-                    if (cell.c > a.x1 - 0.5 && cell.c < a.x2 + 0.5 && cell.r > a.y1 - 0.5 && cell.r < a.y2 + 0.5) {
+                    if (cell.c > a.x1 - 0.6 && cell.c < a.x2 + 0.6 && cell.r > a.y1 - 0.6 && cell.r < a.y2 + 0.6) {
                         return null;
                     }
                 }
@@ -3941,8 +3969,10 @@ function packGrid(options: {
             return out;
         };
 
+        /* 小さい輪から試して、重ならない大きさまで広げる */
+        let r2 = r1 + 1.5;
         let placed: Map<string, Cell> | null = null;
-        for (let tries = 0; tries < 120 && !placed; tries += 1) {
+        for (let tries = 0; tries < 160 && !placed; tries += 1) {
             placed = put(r2);
             if (!placed) r2 += 0.25;
         }
