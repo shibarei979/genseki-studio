@@ -510,7 +510,7 @@ export default function RelationsView({
                              * ★ 右に出すものが無いときは、図を横いっぱいに。
                              *   関係や人を選んだとき、組を直すときだけ右の欄を出す。
                              */
-                            selected || focusId || editingGroups || mode !== "graph"
+                            selected || focusId || mode !== "graph"
                                 ? "grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]"
                                 : "grid gap-3"
                         }
@@ -614,6 +614,32 @@ export default function RelationsView({
                                             : undefined
                                     }
                                     editingGroups={editingGroups}
+                                    sidePanel={
+                                        canEditGroups && editingGroups ? (
+                                            <>
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <p className="text-[12px] font-medium text-ink">組を作る・直す</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEditingGroups(false)}
+                                                        className="text-[11px] text-muted hover:text-forest"
+                                                    >
+                                                        閉じる
+                                                    </button>
+                                                </div>
+                                                <GroupPanel
+                                                    entries={pickable}
+                                                    relations={relations}
+                                                    pages={pages}
+                                                    onCreate={touch(onCreateGroup)}
+                                                    onRename={touch(onRenameGroup)}
+                                                    onSetMember={touch(onSetGroupMember)}
+                                                    onDissolve={touch(onDissolveGroup)}
+                                                    onSetColor={touch(onSetGroupColor)}
+                                                />
+                                            </>
+                                        ) : undefined
+                                    }
                                     selectedId={focusId}
                                     /*
                                      * 覚えている置き場所を渡す。
@@ -749,7 +775,7 @@ export default function RelationsView({
                                 /* 人も関係も選んでいないときだけ、狭い画面では隠す */
                                 !selected && !focusId ? "hidden lg:block" : "",
                                 /* 図を見ているだけのときは、右の欄を出さない */
-                                !selected && !focusId && !editingGroups && mode === "graph"
+                                !selected && !focusId && mode === "graph"
                                     ? "!hidden"
                                     : "",
                             ].join(" ")}

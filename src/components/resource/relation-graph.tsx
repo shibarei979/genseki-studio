@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { getImage } from "@/lib/storage/image-store";
 import {
@@ -81,6 +81,12 @@ interface Props {
     onEditGroups?: () => void;
     /** 組の欄が開いているか */
     editingGroups?: boolean;
+    /**
+     * 図の右に並べて出すもの（組の欄）。
+     * ★ 図の枠の中に出す。頁の右の列に出すと、幅の狭い画面や
+     *   画面いっぱいのときに出てこなかった。
+     */
+    sidePanel?: ReactNode;
 }
 
 
@@ -412,6 +418,7 @@ export default function RelationGraph({
     onSetLead,
     onEditGroups,
     editingGroups = false,
+    sidePanel,
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -484,6 +491,13 @@ export default function RelationGraph({
      */
     const [showNames, setShowNames] = useState(true);
 
+    /*
+     * 組分けの並べ方。
+     *   四角  組を四角く詰めて並べる（紙の人物相関図）
+     *   丸    主人公を真ん中に、まわりを輪で囲む
+     */
+    const [shape, setShape] = useState<"square" | "round">("square");
+
     /* どの作品の図か。組分けを覚えておく鍵に使う */
     const workKey = entries[0]?.work_id ?? "";
 
@@ -508,6 +522,36 @@ export default function RelationGraph({
             /* 覚えられなくても、図は描ける */
         }
     }, [workKey]);
+
+    useEffect(() => {
+        if (!workKey) return;
+        try {
+            setShape(window.localStorage.getItem(`graph-shape:${workKey}`) === "round" ? "round" : "square");
+        } catch {
+            /* 覚えられなくても、図は描ける */
+        }
+    }, [workKey]);
+
+    /* 並べ方を変えたら、その並べ方で並べ直す（描き終えてから） */
+    const reshaped = useRef(false);
+
+    function chooseShape(next: "square" | "round") {
+        setShape(next);
+        reshaped.current = true;
+        try {
+            window.localStorage.setItem(`graph-shape:${workKey}`, next);
+        } catch {
+            /* 覚えられなくても、図は描ける */
+        }
+    }
+
+    const regroupShapeRef = useRef<(() => void) | null>(null);
+
+    useEffect(() => {
+        if (!reshaped.current) return;
+        reshaped.current = false;
+        regroupShapeRef.current?.();
+    }, [shape]);
 
     function rememberShowNames(on: boolean) {
         setShowNames(on);
@@ -2264,6 +2308,14 @@ export default function RelationGraph({
                 halo: HALO,
                 corner: Math.round(NODE_RADIUS * 0.8),
                 bowOnly: paired,
+                /* 両端の人の組の囲み。この外を回る道も試す */
+                around: groupBoxes.filter(
+                    (box) =>
+                        box.ids.includes(relation.from_entry_id) ||
+                        box.ids.includes(relation.to_entry_id) ||
+                        box === fromBox ||
+                        box === toBox,
+                ),
             });
 
             placed.push(curve.samples);
@@ -2757,6 +2809,7 @@ export default function RelationGraph({
                       })),
                       hub:
                           nodes.find((node) => tierOf(node.id) === 0)?.id ?? null,
+                      shape,
                       aspect: liveAspect,
                   })
                 : packed(nodes, false);
@@ -2812,6 +2865,7 @@ export default function RelationGraph({
     regroupRef.current = () => {
         if (mayGroup && grouped) arrange(findGroupsHere());
     };
+    regroupShapeRef.current = regroupRef.current;
 
     /* 線を描き終えてから重ねる、関係名の札 */
     const laterLabels: {
@@ -2952,6 +3006,7 @@ export default function RelationGraph({
               *   左上から始まると、いちばん見たい真ん中が
               *   毎回外れている。
               */}
+            <div className="flex min-h-0 flex-1 gap-3">
             <div
                 ref={panRef}
                 className="thin-scroll min-h-0 flex-1 overflow-auto"
@@ -4264,6 +4319,16 @@ export default function RelationGraph({
                 </div>
             </div>
 
+            {sidePanel && (
+                <aside
+                    className="thin-scroll shrink-0 overflow-y-auto border-l border-line pl-3"
+                    style={{ width: "min(300px, 42%)" }}
+                >
+                    {sidePanel}
+                </aside>
+            )}
+            </div>
+
             {onMove && (
                 <>
                     <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
@@ -4329,11 +4394,7 @@ export default function RelationGraph({
                         {mayGroup && onEditGroups && (
                             <button
                                 type="button"
-                                onClick={() => {
-                                    /* 組の欄は図の右に出る。画面いっぱいのままだと隠れるので戻す */
-                                    setIsFull(false);
-                                    onEditGroups();
-                                }}
+                                onClick={onEditGroups}
                                 aria-pressed={editingGroups}
                                 title="組（組織・グループ）を作る、名前や中の人・色を直す"
                                 className={
@@ -4362,6 +4423,44 @@ export default function RelationGraph({
                           * ★ 隠すと、人に触れた・選んだときだけ、その人の線に名前が出る。
                           *   組分けしていないときと同じ見え方。
                           */}
+                        {/*
+                          * 並べ方。四角か丸か。
+                          * ★ 押したら、その場で並べ直す。
+                          */}
+                        {mayGroup && grouped && (
+                            <div
+                                role="group"
+                                aria-label="並べ方"
+                                className="inline-flex overflow-hidden rounded-md border border-line text-[11px]"
+                            >
+                                {(
+                                    [
+                                        ["square", "四角"],
+                                        ["round", "丸"],
+                                    ] as const
+                                ).map(([key, label]) => (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => chooseShape(key)}
+                                        aria-pressed={shape === key}
+                                        title={
+                                            key === "square"
+                                                ? "組を四角く詰めて並べます"
+                                                : "主人公を真ん中に、まわりを輪で囲んで並べます"
+                                        }
+                                        className={
+                                            shape === key
+                                                ? "bg-forest-tint/60 px-2.5 py-1 text-forest"
+                                                : "bg-surface px-2.5 py-1 text-muted hover:text-forest"
+                                        }
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
                         {mayGroup && grouped && (
                             <button
                                 type="button"

@@ -1635,6 +1635,8 @@ export function packByGroup(options: {
     links?: { a: string; b: string }[];
     /** 真ん中に置きたい人（主人公） */
     hub?: string | null;
+    /** 並べ方。四角（組を詰めて並べる）か、丸（主人公を真ん中に輪に並べる） */
+    shape?: "square" | "round";
 }): Map<string, Point> {
     const { ids, groups, width, height } = options;
     const minGap = options.minGap ?? options.gap * 0.6;
@@ -1710,6 +1712,7 @@ export function packByGroup(options: {
         aspect: Math.max(1.2, Math.min(paper, 1.8)),
         links: options.links ?? [],
         hub: options.hub ?? null,
+        shape: options.shape ?? "square",
     });
 
     return fitPaper(improveOrder(grid, options.gap), options.gap);
@@ -3155,6 +3158,11 @@ export function curveRoute(options: {
      * ふくらむ弧だけにする（二本が左右対称に分かれる）。
      */
     bowOnly?: boolean;
+    /**
+     * 両端の人が入っている組の囲み。
+     * この外側をぐるりと回る道（下へ出て、横へ行き、上がる）も候補にする。
+     */
+    around?: Rect[];
 }): CurveRoute {
     const { from, to, hard, soft, placed, lane, startRect, endRect, halo, corner } = options;
     const bowOnly = options.bowOnly ?? false;
@@ -3194,7 +3202,7 @@ export function curveRoute(options: {
                 if (inRect(p, r)) softHit.add(i);
             });
         }
-        cost += hardHit.size * 60 + softHit.size * 4;
+        cost += hardHit.size * 60 + softHit.size * 6;
 
         /* 先に引いた線に沿って走る長さ（交わるだけなら少し） */
         let close = 0;
@@ -3209,12 +3217,37 @@ export function curveRoute(options: {
         }
         cost += close * 3;
 
+        /*
+         * ★ ほかの線と交わる回数も数える。
+         *   交わりが多いと、どの線がどこへ行くのか追えない。
+         *   外を回る道は長いが、交わらずに済むならそちらを選ぶ。
+         */
+        let crossings = 0;
+        const seg = (a: Point, b: Point, c: Point, d: Point) => {
+            const o = (p: Point, q: Point, r: Point) =>
+                (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+            return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+        };
+        for (const line of placed) {
+            let hitLine = false;
+            for (let i = 1; i < samples.length && !hitLine; i += 1) {
+                for (let j = 1; j < line.length; j += 1) {
+                    if (seg(samples[i - 1], samples[i], line[j - 1], line[j])) {
+                        hitLine = true;
+                        break;
+                    }
+                }
+            }
+            if (hitLine) crossings += 1;
+        }
+        cost += crossings * 2.5;
+
         /* 長さ。回り道は少しだけ嫌う */
         let run = 0;
         for (let i = 1; i < samples.length; i += 1) {
             run += Math.hypot(samples[i].x - samples[i - 1].x, samples[i].y - samples[i - 1].y);
         }
-        cost += Math.max(0, run / length - 1) * 4;
+        cost += Math.max(0, run / length - 1) * 2.5;
 
         return cost;
     };
@@ -3250,8 +3283,17 @@ export function curveRoute(options: {
         const start = all[a];
         const end = all[b];
 
+        /*
+         * ★ 長い斜めの線は、少しだけ嫌う。
+         *   紙の相関図は、縦と横に折れる線で組の外を回っている。
+         *   斜めの線が組の中を横切ると、どこからどこへの線か追いにくい。
+         *   短い斜め（隣どうし）は気にしない。
+         */
+        const slanted =
+            Math.abs(dx) > lane * 2.5 && Math.abs(dy) > lane * 2.5 && length > lane * 6;
+
         candidates.push({
-            cost: costOf(samples) + Math.abs(k) * 1.0,
+            cost: costOf(samples) + Math.abs(k) * 1.0 + (slanted && !bowOnly ? 2 : 0),
             route: {
                 d:
                     k === 0
@@ -3298,8 +3340,8 @@ export function curveRoute(options: {
     }
 
     /* L 字（横から縦・縦から横） */
-    bent([{ x: to.x, y: from.y }], 1.5);
-    bent([{ x: from.x, y: to.y }], 1.5);
+    bent([{ x: to.x, y: from.y }], 0.8);
+    bent([{ x: from.x, y: to.y }], 0.8);
 
     /* コの字・Z 字。折れる位置をいくつか試す。外へ張り出す形（輪になる形）も */
     for (const f of [0.5, 0.3, 0.7, -0.25, 1.25]) {
@@ -3320,6 +3362,28 @@ export function curveRoute(options: {
         bent([{ x: from.x, y: bottom }, { x: to.x, y: bottom }], 4);
         bent([{ x: left, y: from.y }, { x: left, y: to.y }], 4);
         bent([{ x: right, y: from.y }, { x: right, y: to.y }], 4);
+    }
+
+    /*
+     * ★ 囲みの外をぐるりと回る道。
+     *   組の中の人から、組の外の人へ結ぶとき、囲みの中を斜めに横切らず、
+     *   囲みの下（上・左・右）の外側を通って、相手の真下（真上…）から入る。
+     */
+    if (options.around && options.around.length > 0) {
+        const edge = options.around.reduce(
+            (all, one) => ({
+                x1: Math.min(all.x1, one.x1),
+                y1: Math.min(all.y1, one.y1),
+                x2: Math.max(all.x2, one.x2),
+                y2: Math.max(all.y2, one.y2),
+            }),
+            { x1: Math.min(from.x, to.x), y1: Math.min(from.y, to.y), x2: Math.max(from.x, to.x), y2: Math.max(from.y, to.y) },
+        );
+        const out = lane * 0.9;
+        bent([{ x: from.x, y: edge.y2 + out }, { x: to.x, y: edge.y2 + out }], 1.2);
+        bent([{ x: from.x, y: edge.y1 - out }, { x: to.x, y: edge.y1 - out }], 1.2);
+        bent([{ x: edge.x1 - out, y: from.y }, { x: edge.x1 - out, y: to.y }], 1.2);
+        bent([{ x: edge.x2 + out, y: from.y }, { x: edge.x2 + out, y: to.y }], 1.2);
     }
 
     candidates.sort((a, b) => a.cost - b.cost);
@@ -3358,6 +3422,7 @@ function packGrid(options: {
     links: { a: string; b: string }[];
     /** 図の真ん中に置く人（主人公） */
     hub?: string | null;
+    shape?: "square" | "round";
 }): Map<string, Point> {
     const { ids, groups, gap, width, height, aspect, links } = options;
     /*
@@ -3730,6 +3795,160 @@ function packGrid(options: {
     let where = new Map<string, Cell>();
     let bestScore = Number.POSITIVE_INFINITY;
 
+    /*
+     * ============================================================
+     * 丸型
+     *
+     * ★ 真ん中に一人（主人公）。まわりに輪を二重。
+     *     内の輪  どこにも入らない人
+     *     外の輪  組（囲みごと）
+     * ★ 組は、結ばれている人のいる向きに置く。線が短く、交わりにくい。
+     * ★ 輪の大きさは、隣どうしがぶつからない大きさまで広げる。
+     * ============================================================
+     */
+    if (options.shape === "round") {
+        /*
+         * 行と列の目の比。輪が縦長にならないよう、縦の目に直すときに掛ける。
+         * ★ 枠は横に広いので、輪は横長の楕円にする（横を 1.45 倍）。
+         *   まん丸だと縦に長い図になり、枠に収めると小さく写った。
+         */
+        const squash = cellX / cellY;
+        const stretch = 1.45;
+
+        /* 真ん中の人。主人公、いなければ関係のいちばん多い人 */
+        const degree = new Map<string, number>();
+        for (const { a, b } of links) {
+            degree.set(a, (degree.get(a) ?? 0) + 1);
+            degree.set(b, (degree.get(b) ?? 0) + 1);
+        }
+        const center =
+            hub ??
+            [...ids].sort((a, b) => (degree.get(b) ?? 0) - (degree.get(a) ?? 0))[0] ??
+            null;
+
+        const ring = new Map<string, Cell>();
+        const centerTile = center ? tiles.find((tile) => tile.block.cells.has(center)) : undefined;
+
+        /* 真ん中 */
+        let innerR = 0;
+        if (centerTile && center) {
+            const at = centerTile.block.cells.get(center)!;
+            for (const [id, cell] of centerTile.block.cells) {
+                ring.set(id, { c: cell.c - at.c, r: cell.r - at.r });
+            }
+            innerR = Math.hypot(centerTile.block.w, centerTile.block.h * (1 / squash)) / 2 + 1;
+        } else if (center) {
+            ring.set(center, { c: 0, r: 0 });
+            innerR = 0.6;
+        }
+
+        /* 内の輪：どこにも入らない人 */
+        const inner = middle.filter((id) => id !== center);
+        /* 輪の上の人と人は、名前と関係名が入るよう一目半あける */
+        const r1 =
+            inner.length === 0
+                ? innerR
+                : Math.max(innerR + 1.1, (inner.length * 1.25) / (2 * Math.PI), 1.5);
+
+        /* 真ん中の人と結ばれている人を、上から順に */
+        inner.forEach((id, index) => {
+            const angle = -Math.PI / 2 + (index / Math.max(1, inner.length)) * Math.PI * 2;
+            ring.set(id, { c: Math.cos(angle) * r1 * stretch, r: Math.sin(angle) * r1 * squash });
+        });
+
+        /* 外の輪：組 */
+        const outerTiles = tiles.filter((tile) => tile !== centerTile);
+
+        /* 組ごとの向きの好み（結ばれている、もう置いた人の向き） */
+        const pref = new Map<string, number>();
+        outerTiles.forEach((tile, index) => {
+            let sx = 0;
+            let sy = 0;
+            for (const id of [...tile.block.cells.keys(), tile.key]) {
+                for (const { a, b } of links) {
+                    const other = a === id ? b : b === id ? a : null;
+                    if (!other || tile.block.cells.has(other)) continue;
+                    const at = ring.get(other);
+                    if (at) {
+                        sx += at.c / stretch;
+                        sy += at.r / squash;
+                    }
+                }
+            }
+            pref.set(
+                tile.key,
+                sx === 0 && sy === 0
+                    ? -Math.PI / 2 + (index / Math.max(1, outerTiles.length)) * Math.PI * 2
+                    : Math.atan2(sy, sx),
+            );
+        });
+
+        const ordered = [...outerTiles].sort((a, b) => pref.get(a.key)! - pref.get(b.key)!);
+
+        /* 各組の、輪に沿って要る幅（囲みと名札のぶん一目足す） */
+        const span = (tile: (typeof tiles)[number]) =>
+            Math.hypot(tile.block.w, tile.block.h / squash) + 1.2;
+
+        /* 楕円の上で、向き θ のところの 1 ラジアンあたりの長さ（半径 1 のとき） */
+        const arcAt = (theta: number) =>
+            Math.sqrt(stretch * stretch * Math.sin(theta) ** 2 + Math.cos(theta) ** 2);
+
+        /* 小さい輪から試して、重ならない大きさまで広げる */
+        let r2 = r1 + 1.5;
+
+        const put = (radius: number) => {
+            const out = new Map(ring);
+            const boxes: { x1: number; y1: number; x2: number; y2: number }[] = [];
+
+            /* 好みの向きに近いところから、順に置く。重なるなら次の向きへずらす */
+            const needOf = (tile: (typeof tiles)[number]) =>
+                span(tile) / (radius * arcAt(pref.get(tile.key)!));
+            let angle = ordered.length > 0 ? pref.get(ordered[0].key)! - needOf(ordered[0]) / 2 : 0;
+            for (const tile of ordered) {
+                const need = needOf(tile);
+                const wantMid = pref.get(tile.key)!;
+                let mid = Math.max(angle + need / 2, wantMid);
+                if (mid - need / 2 < angle) mid = angle + need / 2;
+                angle = mid + need / 2;
+
+                const cx = Math.cos(mid) * radius * stretch;
+                const cy = Math.sin(mid) * radius * squash;
+                const left = Math.round(cx - (tile.block.w - 1) / 2);
+                const top = Math.round(cy - (tile.block.h - 1) / 2);
+                boxes.push({ x1: left - 1, y1: top - 1, x2: left + tile.block.w, y2: top + tile.block.h });
+                for (const [id, cell] of tile.block.cells) {
+                    out.set(id, { c: cell.c + left, r: cell.r + top });
+                }
+            }
+
+            /* 一周を超えた、または重なったら、失敗 */
+            const first = ordered.length > 0 ? pref.get(ordered[0].key)! - needOf(ordered[0]) / 2 : 0;
+            if (angle - first > Math.PI * 2 + 0.01) return null;
+            for (let i = 0; i < boxes.length; i += 1) {
+                for (let j = i + 1; j < boxes.length; j += 1) {
+                    const a = boxes[i];
+                    const b = boxes[j];
+                    if (a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1) return null;
+                }
+                /* 内側の人に掛かっていないか */
+                for (const cell of ring.values()) {
+                    const a = boxes[i];
+                    if (cell.c > a.x1 - 0.5 && cell.c < a.x2 + 0.5 && cell.r > a.y1 - 0.5 && cell.r < a.y2 + 0.5) {
+                        return null;
+                    }
+                }
+            }
+            return out;
+        };
+
+        let placed: Map<string, Cell> | null = null;
+        for (let tries = 0; tries < 120 && !placed; tries += 1) {
+            placed = put(r2);
+            if (!placed) r2 += 0.25;
+        }
+
+        where = placed ?? put(r2 + 10) ?? ring;
+    } else
     for (const [growW, pullW, centerW] of [
         [0.6, 0.4, 0.3],
         [1.0, 0.2, 0.15],
