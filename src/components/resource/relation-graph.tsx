@@ -447,20 +447,32 @@ export default function RelationGraph({
     /* 組分けの結果を、一行で伝える */
     const [groupNote, setGroupNote] = useState("");
 
-    /* 組分けを解いたあとに、並べ直すか */
-    const retidy = useRef(false);
-
     /*
-     * ★ フックは、途中で return するより前に置く。
-     *   並べ直す仕事そのもの（tidy）は下で作るので、入れ物を通して呼ぶ。
+     * 組分けする前の並び。
+     *
+     * ★ 「組分け」を押す前の置き場所を覚えておき、「解く」で元に戻す。
+     *   前は解いたときに並べ直していたので、自分で置いた並びが消えていた。
+     * ★ 開き直しても戻せるよう、作品ごとにこの端末に覚えておく。
      */
-    const tidyRef = useRef<(() => void) | null>(null);
+    const beforeKeyOf = () => `graph-before-group:${workKey}`;
 
-    useEffect(() => {
-        if (grouped || !retidy.current) return;
-        retidy.current = false;
-        tidyRef.current?.();
-    }, [grouped]);
+    function saveBefore(place: Record<string, { x: number; y: number }>) {
+        try {
+            window.localStorage.setItem(beforeKeyOf(), JSON.stringify(place));
+        } catch {
+            /* 覚えられなくても、組分けはできる */
+        }
+    }
+
+    function takeBefore(): Record<string, { x: number; y: number }> | null {
+        try {
+            const raw = window.localStorage.getItem(beforeKeyOf());
+            window.localStorage.removeItem(beforeKeyOf());
+            return raw ? (JSON.parse(raw) as Record<string, { x: number; y: number }>) : null;
+        } catch {
+            return null;
+        }
+    }
 
     /*
      * 主人公が変わったら、組分けを並べ直す。
@@ -491,13 +503,6 @@ export default function RelationGraph({
      */
     const [showNames, setShowNames] = useState(true);
 
-    /*
-     * 組分けの並べ方。
-     *   四角  組を四角く詰めて並べる（紙の人物相関図）
-     *   丸    主人公を真ん中に、まわりを輪で囲む
-     */
-    const [shape, setShape] = useState<"square" | "round">("square");
-
     /* どの作品の図か。組分けを覚えておく鍵に使う */
     const workKey = entries[0]?.work_id ?? "";
 
@@ -522,36 +527,6 @@ export default function RelationGraph({
             /* 覚えられなくても、図は描ける */
         }
     }, [workKey]);
-
-    useEffect(() => {
-        if (!workKey) return;
-        try {
-            setShape(window.localStorage.getItem(`graph-shape:${workKey}`) === "round" ? "round" : "square");
-        } catch {
-            /* 覚えられなくても、図は描ける */
-        }
-    }, [workKey]);
-
-    /* 並べ方を変えたら、その並べ方で並べ直す（描き終えてから） */
-    const reshaped = useRef(false);
-
-    function chooseShape(next: "square" | "round") {
-        setShape(next);
-        reshaped.current = true;
-        try {
-            window.localStorage.setItem(`graph-shape:${workKey}`, next);
-        } catch {
-            /* 覚えられなくても、図は描ける */
-        }
-    }
-
-    const regroupShapeRef = useRef<(() => void) | null>(null);
-
-    useEffect(() => {
-        if (!reshaped.current) return;
-        reshaped.current = false;
-        regroupShapeRef.current?.();
-    }, [shape]);
 
     function rememberShowNames(on: boolean) {
         setShowNames(on);
@@ -2736,6 +2711,19 @@ export default function RelationGraph({
             return;
         }
 
+        /*
+         * ★ ふだんの図から組分けするときだけ、いまの並びを覚える。
+         *   「組み直す」のときに覚え直すと、組分けの並びで上書きしてしまう。
+         */
+        if (!grouped) {
+            const place: Record<string, { x: number; y: number }> = {};
+            for (const node of nodes) {
+                const at = positions.get(node.id);
+                if (at) place[node.id] = { x: at.x / WIDTH, y: at.y / HEIGHT };
+            }
+            saveBefore(place);
+        }
+
         rememberGrouped(true);
 
         const names = found.map((group) => group.name).filter(Boolean);
@@ -2750,15 +2738,25 @@ export default function RelationGraph({
     /*
      * 組分けを解く。
      *
-     * ★ 解いたら、ふだんの図の並びに整え直す。
-     *   組分けの並びは広い紙で決めてあるので、そのまま戻すと
-     *   ふだんの紙の上で詰まって、丸どうしが重なる。
-     *   紙の大きさが戻ってから並べるので、描き終えたあとで行う。
+     * ★ 組分けする前の並びに、そのまま戻す。
+     *   前は解いたときに並べ直していたので、組む前の形にならなかった。
      */
     function stopGrouping() {
-        retidy.current = true;
         rememberGrouped(false);
         setGroupNote("");
+
+        /*
+         * 組分けする前の並びに戻す。
+         * ★ 覚えていなければ（右の欄で組をいじって組分けに入ったときなど）、
+         *   並びは組分けで動かしていないので、そのままにする。
+         */
+        const before = takeBefore();
+        if (!before || !onMove) return;
+
+        for (const node of nodes) {
+            const at = before[node.id];
+            if (at) onMove(node.id, at);
+        }
     }
 
     function tidy() {
@@ -2810,7 +2808,7 @@ export default function RelationGraph({
                       })),
                       hub:
                           nodes.find((node) => tierOf(node.id) === 0)?.id ?? null,
-                      shape,
+                      shape: "square",
                       aspect: liveAspect,
                   })
                 : packed(nodes, false);
@@ -2859,14 +2857,11 @@ export default function RelationGraph({
     /* 主人公が決まっているか（選んだ人か、役割に「主人公」の人） */
     const hasLead = nodes.some((node) => tierOf(node.id) === 0);
 
-    /* 組分けを解いたあとの並べ直しに使う（上の useEffect から呼ぶ） */
-    tidyRef.current = tidy;
 
     /* 主人公が変わったときの並べ直し（上の useEffect から呼ぶ） */
     regroupRef.current = () => {
         if (mayGroup && grouped) arrange(findGroupsHere());
     };
-    regroupShapeRef.current = regroupRef.current;
 
     /* 線を描き終えてから重ねる、関係名の札 */
     const laterLabels: {
@@ -3392,58 +3387,6 @@ export default function RelationGraph({
                   */}
                 {/* 相関図の地。薄い方眼の紙 */}
 {/* 方眼は枠の側に敷く（上の panRef の style） */}
-
-                {/*
-                  * 丸型の目印。主人公を中心にした、薄い同心円。
-                  * ★ 内の円は主人公のまわりの人、外の円は組の並ぶ輪。
-                  *   人と組がこの円の上に並ぶので、全体が丸い図として読める。
-                  */}
-                {grouping && shape === "round" && (() => {
-                    const hubNode = shownNodes.find((node) => tierOf(node.id) === 0);
-                    const center = hubNode ? positions.get(hubNode.id) : undefined;
-                    if (!center) return null;
-
-                    const median = (list: number[]) => {
-                        if (list.length === 0) return 0;
-                        const sorted = [...list].sort((a, b) => a - b);
-                        return sorted[Math.floor(sorted.length / 2)];
-                    };
-
-                    const inGroup = new Set(groupBoxes.flatMap((box) => box.ids));
-                    const innerList = shownNodes
-                        .filter((node) => node.id !== hubNode?.id && !inGroup.has(node.id))
-                        .map((node) => positions.get(node.id))
-                        .filter((at): at is { x: number; y: number } => Boolean(at))
-                        .map((at) => Math.hypot(at.x - center.x, at.y - center.y));
-                    const outerList = groupBoxes
-                        .filter((box) => !box.ids.includes(hubNode!.id))
-                        .map((box) =>
-                            Math.hypot((box.x1 + box.x2) / 2 - center.x, (box.y1 + box.y2) / 2 - center.y),
-                        );
-                    /* ★ 輪の上に三つ以上並ぶときだけ描く。二つだと輪に見えず、線が浮く */
-                    const inner = innerList.length >= 3 ? median(innerList) : 0;
-                    const outer = outerList.length >= 3 ? median(outerList) : 0;
-
-                    return (
-                        <g pointerEvents="none">
-                            {[inner, outer]
-                                .filter((radius) => radius > NODE_RADIUS * 2)
-                                .map((radius, index) => (
-                                    <circle
-                                        key={index}
-                                        cx={center.x}
-                                        cy={center.y}
-                                        r={radius}
-                                        fill="none"
-                                        stroke="#d9d4c7"
-                                        strokeWidth={1.5}
-                                        strokeDasharray="6 6"
-                                        vectorEffect="non-scaling-stroke"
-                                    />
-                                ))}
-                        </g>
-                    );
-                })()}
 
                 {(() => {
                     /*
@@ -4476,44 +4419,6 @@ export default function RelationGraph({
                           * ★ 隠すと、人に触れた・選んだときだけ、その人の線に名前が出る。
                           *   組分けしていないときと同じ見え方。
                           */}
-                        {/*
-                          * 並べ方。四角か丸か。
-                          * ★ 押したら、その場で並べ直す。
-                          */}
-                        {mayGroup && grouped && (
-                            <div
-                                role="group"
-                                aria-label="並べ方"
-                                className="inline-flex overflow-hidden rounded-md border border-line text-[11px]"
-                            >
-                                {(
-                                    [
-                                        ["square", "四角"],
-                                        ["round", "丸"],
-                                    ] as const
-                                ).map(([key, label]) => (
-                                    <button
-                                        key={key}
-                                        type="button"
-                                        onClick={() => chooseShape(key)}
-                                        aria-pressed={shape === key}
-                                        title={
-                                            key === "square"
-                                                ? "組を四角く詰めて並べます"
-                                                : "主人公を真ん中に、まわりを輪で囲んで並べます"
-                                        }
-                                        className={
-                                            shape === key
-                                                ? "bg-forest-tint/60 px-2.5 py-1 text-forest"
-                                                : "bg-surface px-2.5 py-1 text-muted hover:text-forest"
-                                        }
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-
                         {mayGroup && grouped && (
                             <button
                                 type="button"
