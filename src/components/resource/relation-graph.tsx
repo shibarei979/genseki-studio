@@ -74,6 +74,13 @@ interface Props {
      * 渡されないときは、選ぶ欄を出さない。
      */
     onSetLead?: (entryId: string | null) => Promise<void> | void;
+    /**
+     * 組を作る・直す欄を開く（右の欄）。
+     * ★ 図の押し具からも開けるように。頁の右上の小さな押し具だけだと見つからなかった。
+     */
+    onEditGroups?: () => void;
+    /** 組の欄が開いているか */
+    editingGroups?: boolean;
 }
 
 
@@ -403,6 +410,8 @@ export default function RelationGraph({
     pages = [],
     groupsTouched = 0,
     onSetLead,
+    onEditGroups,
+    editingGroups = false,
 }: Props) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -445,6 +454,27 @@ export default function RelationGraph({
         retidy.current = false;
         tidyRef.current?.();
     }, [grouped]);
+
+    /*
+     * 主人公が変わったら、組分けを並べ直す。
+     *
+     * ★ 主人公は図の真ん中に座るので、選んだら並びも変わる。
+     *   「組み直す」を押してもらわなくてよいように。
+     * ★ 開いたときの一回目は並べ直さない（作者が動かした並びを崩さない）。
+     */
+    const leadNow = entries.find((entry) => entry.values?.[LEAD_KEY] === true)?.id ?? null;
+    const leadSeen = useRef<string | null | undefined>(undefined);
+    const regroupRef = useRef<(() => void) | null>(null);
+
+    useEffect(() => {
+        if (leadSeen.current === undefined) {
+            leadSeen.current = leadNow;
+            return;
+        }
+        if (leadSeen.current === leadNow) return;
+        leadSeen.current = leadNow;
+        regroupRef.current?.();
+    }, [leadNow]);
 
     /*
      * 関係名を出しておくか（組分けのとき）。
@@ -731,7 +761,8 @@ export default function RelationGraph({
      *   100 いちばん広い。全体が枠に収まり、小さく見える
      *   0   狭い紙。丸が詰まり、送って見る
      */
-    const [wideValue, setWideValue] = useState(100);
+    /* 80 が「枠にぴったり」。右端（小）はそれより引いて、まわりに余裕を持たせる */
+    const [wideValue, setWideValue] = useState(80);
 
     /*
      * 送る枠。
@@ -811,7 +842,15 @@ export default function RelationGraph({
      *   倍率をそのまま目盛りにすれば、
      *   どこを掴んでも同じだけ変わる。
      */
-    const zoom = 1 + ((100 - wideValue) / 100) * 1.5;
+    /*
+     * ★ 右端（小）は、枠にぴったりより一回り小さく（0.7 倍）。
+     *   ぴったりまでしか縮められず、端の人や組の名札が枠際に張り付いていた。
+     *   80 で枠にぴったり、左端（大）で 2.5 倍。
+     */
+    const zoom =
+        wideValue >= 80
+            ? 1 - ((wideValue - 80) / 20) * 0.3
+            : 1 + ((80 - wideValue) / 80) * 1.5;
 
     /*
      * 紙の広さ。
@@ -997,11 +1036,20 @@ export default function RelationGraph({
 
     const HEIGHT = Math.round(BASE_SIZE * spread * PAPER);
 
-    /* 組分けしたときの紙。押したその場で並べるときも、この広さで並べる */
+    /*
+     * 組分けしたときの紙。押したその場で並べるときも、この広さで並べる。
+     *
+     * ★ 形は決め打ち（横 2.2 : 縦 1）。枠の形に合わせない。
+     *   枠に合わせていたので、「大きさ」で拡げて図が枠からはみ出すと、
+     *   枠が横に伸びたと測り直し、置き場所（紙に対する割合）が横へ引き伸ばされ、
+     *   さらにはみ出す……を繰り返して、頁ごと崩れていた。
+     *   見る範囲は中身に合わせて決まるので、紙の形が決め打ちでも困らない。
+     */
+    const GROUP_ASPECT = 2.2;
     const GROUP_HEIGHT = Math.round(BASE_SIZE * spread * 1.8);
-    const GROUP_WIDTH = Math.round(GROUP_HEIGHT * liveAspect);
-    /* 紙の横幅。枠と同じ形にする */
-    const WIDTH = Math.round(HEIGHT * liveAspect);
+    const GROUP_WIDTH = Math.round(GROUP_HEIGHT * GROUP_ASPECT);
+    /* 紙の横幅。ふだんは枠と同じ形、組分けのときは決め打ち */
+    const WIDTH = Math.round(HEIGHT * (PAPER > 1 ? GROUP_ASPECT : liveAspect));
     const CENTER_X = WIDTH / 2;
     const CENTER_Y = HEIGHT / 2;
     /*
@@ -1698,7 +1746,7 @@ export default function RelationGraph({
      *   主要人物や関係の多い人まで大きさを変えると、丸の大きさがばらついて落ち着かなかった。
      *   主要人物は、大きさではなく「ふだんから線が出る」ことで目立たせる。
      */
-    const TIER_SCALE = [1.4, 1, 1, 1];
+    const TIER_SCALE = [1, 1, 1, 1];
 
     /* 図の上で選んだ主人公。選んでいれば、役割の「主人公」より優先 */
     const leadId = entries.find((entry) => entry.values?.[LEAD_KEY] === true)?.id ?? null;
@@ -2760,6 +2808,11 @@ export default function RelationGraph({
     /* 組分けを解いたあとの並べ直しに使う（上の useEffect から呼ぶ） */
     tidyRef.current = tidy;
 
+    /* 主人公が変わったときの並べ直し（上の useEffect から呼ぶ） */
+    regroupRef.current = () => {
+        if (mayGroup && grouped) arrange(findGroupsHere());
+    };
+
     /* 線を描き終えてから重ねる、関係名の札 */
     const laterLabels: {
         id: string;
@@ -2782,7 +2835,7 @@ export default function RelationGraph({
     );
 
     const body = (
-        <div className="flex h-full flex-col">
+        <div className="flex h-full min-w-0 flex-col">
             {/*
               * いまの姿を、一行で。
               *
@@ -4045,6 +4098,24 @@ export default function RelationGraph({
                                                 </>
                                             )}
 
+                                            {/*
+                                              * 主人公の印。
+                                              * ★ 丸は大きくしない。目立つ色の太い枠を外側に一重。
+                                              */}
+                                            {tierOf(node.id) === 0 && (
+                                                <circle
+                                                    cx={faceX}
+                                                    cy={faceY}
+                                                    r={r + card.pad * 0.55}
+                                                    fill="none"
+                                                    stroke="#f0a000"
+                                                    strokeWidth={4}
+                                                    vectorEffect="non-scaling-stroke"
+                                                >
+                                                    <title>主人公</title>
+                                                </circle>
+                                            )}
+
                                             {/* 縁。組の色、組が無ければ落ち着いた灰 */}
                                             <circle
                                                 cx={faceX}
@@ -4255,6 +4326,26 @@ export default function RelationGraph({
                             </button>
                         )}
 
+                        {mayGroup && onEditGroups && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    /* 組の欄は図の右に出る。画面いっぱいのままだと隠れるので戻す */
+                                    setIsFull(false);
+                                    onEditGroups();
+                                }}
+                                aria-pressed={editingGroups}
+                                title="組（組織・グループ）を作る、名前や中の人・色を直す"
+                                className={
+                                    editingGroups
+                                        ? "rounded-md border border-forest bg-forest-tint/60 px-3 py-1 text-[11px] text-forest"
+                                        : "rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
+                                }
+                            >
+                                {editingGroups ? "組の欄を閉じる" : "組を作る・直す"}
+                            </button>
+                        )}
+
                         {mayGroup && grouped && (
                             <button
                                 type="button"
@@ -4305,7 +4396,9 @@ export default function RelationGraph({
                                     onChange={async (event) => {
                                         await onSetLead(event.target.value || null);
                                         setGroupNote(
-                                            "主人公を変えました。並びにも反映するときは「組み直す」を押してください。",
+                                            event.target.value
+                                                ? "主人公を真ん中にして並べ直しました。"
+                                                : "主人公を役割から決めるようにしました。",
                                         );
                                     }}
                                     title={

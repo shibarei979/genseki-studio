@@ -604,6 +604,16 @@ export default function RelationsView({
                                     pages={pages}
                                     groupsTouched={groupsTouched}
                                     onSetLead={onSetLead}
+                                    onEditGroups={
+                                        canEditGroups
+                                            ? () => {
+                                                  setEditingGroups((on) => !on);
+                                                  setSelectedRelationId(null);
+                                                  setFocusId(null);
+                                              }
+                                            : undefined
+                                    }
+                                    editingGroups={editingGroups}
                                     selectedId={focusId}
                                     /*
                                      * 覚えている置き場所を渡す。

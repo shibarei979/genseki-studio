@@ -1654,7 +1654,8 @@ export function packByGroup(options: {
      *   それで紙に収まらないほど人が多いときだけ、紙の横長に合わせる。
      *   四角にこだわって全体を縮めると、名前どうしが重なって読めなくなる。
      */
-    const paper = Math.max(1, Math.min(width / Math.max(1, height), 1.8));
+    /* 並びの形は、渡された枠の形から決める（紙の形ではなく） */
+    const paper = Math.max(1, Math.min(options.aspect, 1.8));
     /*
      * ★ 枠が横に広いときは、並びも少し横に広げる。
      *   縦長に並べると、枠に合わせて全体が縮み、顔も字も小さくなった。
@@ -1708,6 +1709,7 @@ export function packByGroup(options: {
         height,
         aspect: Math.max(1.2, Math.min(paper, 1.8)),
         links: options.links ?? [],
+        hub: options.hub ?? null,
     });
 
     return fitPaper(improveOrder(grid, options.gap), options.gap);
@@ -3354,6 +3356,8 @@ function packGrid(options: {
     height: number;
     aspect: number;
     links: { a: string; b: string }[];
+    /** 図の真ん中に置く人（主人公） */
+    hub?: string | null;
 }): Map<string, Point> {
     const { ids, groups, gap, width, height, aspect, links } = options;
     /*
@@ -3567,8 +3571,45 @@ function packGrid(options: {
 
     const sorted = [...tiles].sort((a, b) => b.block.cells.size - a.block.cells.size);
 
-    const coreC = -Math.floor(core.w / 2);
-    const coreR = -Math.floor(core.h / 2);
+    /*
+     * ============================================================
+     * 主人公を、図の真ん中に
+     *
+     * ★ 主人公のいる場所を、置き始めの点（0, 0）にする。
+     *   ほかのものは、そこからの近さで置いていく。
+     *
+     *   どこにも入らない人なら、真ん中の人たちの、さらに真ん中の席へ。
+     *   組に入っている人なら、その組を真ん中に置き、
+     *   どこにも入らない人たちも一かたまりとして、そのまわりに置く。
+     * ============================================================
+     */
+    const hub = options.hub && shown.has(options.hub) ? options.hub : null;
+
+    if (hub && core.cells.has(hub)) {
+        const mid = { c: Math.floor((core.w - 1) / 2), r: Math.floor((core.h - 1) / 2) };
+        const sitting = [...core.cells].find(([, cell]) => cell.c === mid.c && cell.r === mid.r)?.[0];
+        const mine = core.cells.get(hub)!;
+        if (sitting && sitting !== hub) core.cells.set(sitting, mine);
+        core.cells.set(hub, mid);
+    }
+
+    const hubTile = hub ? tiles.find((tile) => tile.block.cells.has(hub)) : undefined;
+
+    /* 真ん中に置くかたまりと、その中での主人公の席 */
+    const first = hubTile ? { key: hubTile.key, block: hubTile.block } : { key: "__core__", block: core };
+    const firstAt = hub
+        ? (() => {
+              const cell = first.block.cells.get(hub)!;
+              return { c: -cell.c, r: -cell.r };
+          })()
+        : { c: -Math.floor(core.w / 2), r: -Math.floor(core.h / 2) };
+
+    const around = hubTile
+        ? [
+              ...sorted.filter((tile) => tile !== hubTile),
+              ...(core.cells.size > 0 ? [{ key: "__core__", block: core }] : []),
+          ].sort((a, b) => b.block.cells.size - a.block.cells.size)
+        : sorted;
 
     const placeAll = (growW: number, pullW: number, centerW: number) => {
     const where = new Map<string, Cell>();
@@ -3576,12 +3617,17 @@ function packGrid(options: {
     const filled = new Map<string, string>();
     const mark = (c: number, r: number, body: string) => filled.set(`${c},${r}`, body);
 
-    for (const [id, cell] of core.cells) {
-        where.set(id, { c: cell.c + coreC, r: cell.r + coreR });
-        mark(cell.c + coreC, cell.r + coreR, "__core__");
+    for (const [id, cell] of first.block.cells) {
+        where.set(id, { c: cell.c + firstAt.c, r: cell.r + firstAt.r });
+        if (first.key === "__core__") mark(cell.c + firstAt.c, cell.r + firstAt.r, "__core__");
+    }
+    if (first.key !== "__core__") {
+        for (let c = firstAt.c; c < firstAt.c + first.block.w; c += 1) {
+            for (let r = firstAt.r; r < firstAt.r + first.block.h; r += 1) mark(c, r, first.key);
+        }
     }
 
-    for (const { key, block } of sorted) {
+    for (const { key, block } of around) {
         let best: { c: number; r: number; score: number } | null = null;
 
         const fits = (dc: number, dr: number) => {
@@ -3641,6 +3687,14 @@ function packGrid(options: {
                     grow * growW +
                     Math.abs(Math.log(nw / nh / aspect)) * 1.5 +
                     Math.hypot(midC / aspect, midR) * centerW;
+
+                /*
+                 * ★ 主人公がいるときは、全体の真ん中が主人公から離れないように。
+                 *   片側にばかり積むと、主人公が図の端に寄った。
+                 */
+                if (hub) {
+                    score += Math.hypot((nx1 + nx2) / 2 / aspect, (ny1 + ny2) / 2) * 0.4;
+                }
 
                 if (pulls.length > 0) {
                     const pull =
@@ -3703,7 +3757,7 @@ function packGrid(options: {
 
         const midC = (Math.max(...cs.map((one) => one.c)) + Math.min(...cs.map((one) => one.c))) / 2;
         const midR = (Math.max(...cs.map((one) => one.r)) + Math.min(...cs.map((one) => one.r))) / 2;
-        const coreAt = middle.map((id) => trial.get(id)!).filter(Boolean);
+        const coreAt = (hub ? [hub] : middle).map((id) => trial.get(id)!).filter(Boolean);
         const hubOff =
             coreAt.length > 0
                 ? Math.hypot(
@@ -3712,7 +3766,9 @@ function packGrid(options: {
                   )
                 : 0;
 
-        const score = extent + (linkN ? (linkSum / linkN) * 0.4 : 0) + hubOff * 0.4;
+        /* 主人公がいるときは、真ん中にいることを重く見る */
+        const score =
+            extent + (linkN ? (linkSum / linkN) * 0.4 : 0) + hubOff * (hub ? 1.2 : 0.4);
         if (score < bestScore) {
             bestScore = score;
             where = trial;
