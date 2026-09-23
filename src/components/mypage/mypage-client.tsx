@@ -1147,31 +1147,10 @@ export default function MypageClient({
       <PendingComments />
 
       {/*
-        * 閲覧の数え方を変えたことの断り。
-        *
-        * ★ 数字が下がるので、黙って変えない。
-        *
-        *   見回りの機械が、作品によっては 9 割を占めていた。
-        *   除くと 1451 が 457 になる作品もある。
-        *   何も言わずに減らすと、壊れたと思われる。
-        *
-        * ★ 9 月 10 日に数え方を直し、9 月 24 日に数え落としを直した。
-        *   この頁と、作品ごとの詳細と、ダッシュボードとで
-        *   数が食い違っていたのを揃えた。
-        *
-        * ★ 10 月 24 日で自動的に消える。
-        *   そのころには新しい数が当たり前になっている。
-        *   消し忘れないよう、日付で切る。
+        * 閲覧の数え方を直したことの断りは、
+        * 作品ごとの詳細（/mypage/novel/[id]）に置いた。
+        * 一覧では出さない。
         */}
-      {Date.now() < new Date('2026-10-25T00:00:00+09:00').getTime() && (
-        <p style={{
-          fontSize:12,color:'var(--color-text-muted)',lineHeight:1.8,margin:'0 0 20px',
-          border:'1px solid var(--color-brand-border)',borderRadius:10,
-          background:'var(--color-bg-card)',padding:'11px 14px',
-        }}>
-          botの数値の介入があったため改修致しました
-        </p>
-      )}
 
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:28,flexWrap:'wrap',gap:12}}>
         <div>
