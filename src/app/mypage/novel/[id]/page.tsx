@@ -115,6 +115,18 @@ export default async function NovelManagePage({ params }: { params: { id: string
           <Link href="/mypage/analytics" style={{ border: '1px solid var(--color-brand-border)', color: 'var(--color-brand)', fontSize: 12.5, fontWeight: 600, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}>アクセス解析</Link>
         </div>
 
+        {/*
+          * 閲覧数を数え直したことの断り。
+          *
+          * ★ 数が下がるので、黙って変えない。
+          * ★ 10 月 24 日で自動的に消える。
+          */}
+        {Date.now() < new Date('2026-10-25T00:00:00+09:00').getTime() && (
+          <p style={{ fontSize: 12, lineHeight: 1.8, color: 'var(--color-text-muted)', background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-border)', borderRadius: 10, padding: '11px 14px', margin: '0 0 16px' }}>
+            botの数値の介入があったため改修致しました
+          </p>
+        )}
+
         {/* 作品情報：データ＋読者の反応 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
           <div style={{ ...secStyle, marginBottom: 0 }}>
