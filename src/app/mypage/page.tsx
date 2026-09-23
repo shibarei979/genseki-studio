@@ -126,14 +126,18 @@ export default async function MypagePage() {
     const [commentsData, viewsData, epsData, charData] = await Promise.all([
       supabase.from('comments').select('novel_id').in('novel_id', novelIds),
       /*
-       * ★ 閲覧は novel_stats から読む。
+       * ★ いいね（と保存）は novel_stats から読む。
        *
-       *   前はここで page_views を数えていたが、
-       *   見回りの機械を外していなかった。
-       *   作品によっては 9 割が機械だった。
+       *   likes の決まりは auth.uid() = user_id。
+       *   作者が自分の作品のいいねを数えても 0 しか返らない。
+       *   novel_stats は数だけを返す入れ物なので、そこから読む。
        *
-       *   数え方を 1 か所にまとめる。作品の頁・ランキング・
-       *   おすすめも、同じ入れ物を見る。
+       * ★ 閲覧はここでは読まない。下で数え直す。
+       *
+       *   novel_stats の閲覧数は、作者自身の閲覧や
+       *   見回りの機械まで入った数だった。
+       *   ダッシュボードは、それらを除いた「人が読んだ数」を
+       *   その場で数えている。同じ画面の中で二つの数が出ていた。
        */
       supabase.from('novel_stats').select('novel_id, view_count, like_count').in('novel_id', novelIds),
       supabase.from('episodes').select('novel_id').in('novel_id', novelIds).eq('published', true),
@@ -146,9 +150,53 @@ export default async function MypagePage() {
     ])
 
     commentsData.data?.forEach((c:any) => { novelCommentMap[c.novel_id] = (novelCommentMap[c.novel_id]||0)+1 })
-    viewsData.data?.forEach((v:any) => { novelViewMap[v.novel_id] = Number(v.view_count) || 0 })
     epsData.data?.forEach((e:any) => { novelEpCountMap[e.novel_id] = (novelEpCountMap[e.novel_id]||0)+1 })
     charData.data?.forEach((e:any) => { charCountMap[e.novel_id] = (charCountMap[e.novel_id]||0) + (e.char_count||0) })
+
+    /*
+     * ============================================================
+     * 閲覧数を、ダッシュボードと同じ数え方でそろえる
+     *
+     * ★ 除くもの
+     *     作者自身の閲覧（is_author = true）
+     *     見回りの機械（is_bot = true）
+     *   ダッシュボード（/mypage/analytics）と同じ条件にする。
+     *
+     * ★ 行を読まずに、数だけ受け取る。
+     *   head: true の数え上げなら、何万件あっても
+     *   1000 件で頭打ちにならず、通信も軽い。
+     *
+     * ★ 作品ごとに 1 回ずつ数える。
+     *   作品の数はたかが知れているので、まとめて投げる。
+     * ============================================================
+     */
+    const epIdsByNovel: Record<string, string[]> = {}
+    charData.data?.forEach((e:any) => {
+      if (!e.novel_id || !e.id) return
+      ;(epIdsByNovel[e.novel_id] ||= []).push(e.id)
+    })
+
+    const viewCounts = await Promise.all(
+      novelIds.map(async (novelId: string) => {
+        const epIds = epIdsByNovel[novelId] || []
+        if (epIds.length === 0) return { novelId, count: 0 }
+
+        const { count } = await supabase
+          .from('page_views')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_author', false)
+          /*
+           * ★ is_bot は、印を付ける前の記録では空になっている。
+           *   is_bot = false だけで絞ると、古い記録が丸ごと消える。
+           */
+          .or('is_bot.is.null,is_bot.eq.false')
+          .in('episode_id', epIds)
+
+        return { novelId, count: count || 0 }
+      }),
+    )
+
+    viewCounts.forEach(({ novelId, count }) => { novelViewMap[novelId] = count })
 
     /*
      * いいねと保存は、novel_stats から読む。

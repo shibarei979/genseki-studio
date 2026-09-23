@@ -1079,18 +1079,34 @@ export default function MypageClient({
       const commentMap: Record<string, number> = {}
 
       if (epIds.length > 0) {
-        const [{ data: pvs }, { data: els }, { data: cms }] = await Promise.all([
+        const [pvCounts, { data: els }, { data: cms }] = await Promise.all([
           /*
-           * ★ 見回りの機械を外す。
-           *   ここだけ外していなかった。作品によっては
-           *   9 割が機械で、話ごとの数だけ大きく出ていた。
+           * ★ 話ごとの閲覧数は、行を読まずに数だけ受け取る。
+           *
+           *   前は行をそのまま読んで数えていたので、
+           *   1000 件で頭打ちになり、よく読まれた話ほど
+           *   ダッシュボードより少なく出ていた。
+           *
+           * ★ 除くものは、ダッシュボードと同じ。
+           *     作者自身の閲覧（is_author = true）
+           *     見回りの機械（is_bot = true）
            *   印の無い古い記録は、人として残す。
            */
-          supabase.from('page_views').select('episode_id').eq('is_author', false).or('is_bot.is.null,is_bot.eq.false').in('episode_id', epIds),
+          Promise.all(
+            epIds.map(async (id: string) => {
+              const { count } = await supabase
+                .from('page_views')
+                .select('*', { count: 'exact', head: true })
+                .eq('is_author', false)
+                .or('is_bot.is.null,is_bot.eq.false')
+                .eq('episode_id', id)
+              return { id, count: count || 0 }
+            }),
+          ),
           supabase.from('episode_likes').select('episode_id').in('episode_id', epIds),
           supabase.from('comments').select('episode_id').in('episode_id', epIds),
         ])
-        pvs?.forEach((p: any) => { pvMap[p.episode_id] = (pvMap[p.episode_id] || 0) + 1 })
+        pvCounts.forEach((row: { id: string; count: number }) => { pvMap[row.id] = row.count })
         els?.forEach((l: any) => { likeMapNow[l.episode_id] = (likeMapNow[l.episode_id] || 0) + 1 })
         cms?.forEach((c: any) => { if (c.episode_id) commentMap[c.episode_id] = (commentMap[c.episode_id] || 0) + 1 })
       }

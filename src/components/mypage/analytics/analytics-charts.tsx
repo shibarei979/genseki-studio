@@ -399,20 +399,19 @@ export default function AnalyticsCharts({
           <div>
             {/* 見出し。数字だけ並ぶと、何の数か分からない */}
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 18px',borderBottom:'1px solid var(--color-brand-light)',fontSize:11,color:'var(--color-text-muted)'}}>
-              <span style={{minWidth:44,flexShrink:0}}>話数</span>
-              <span style={{flex:1,minWidth:120}}>エピソードタイトル</span>
-              <span style={{minWidth:44,textAlign:'right'}}>いいね</span>
-              <span style={{minWidth:44,textAlign:'right'}}>コメント</span>
-              <span style={{minWidth:60,textAlign:'right'}}>閲覧</span>
+              <span style={{flex:1,minWidth:120}}>エピソード</span>
+              {/* ★ 見出しと中身で、同じ幅を使う。別々に決めると数字がずれる */}
+              <span style={{width:56,flexShrink:0,textAlign:'right'}}>いいね</span>
+              <span style={{width:64,flexShrink:0,textAlign:'right'}}>コメント</span>
+              <span style={{width:72,flexShrink:0,textAlign:'right'}}>閲覧</span>
             </div>
 
             {selected.episodeRows.map((ep, i) => (
-              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'13px 18px',borderBottom:i<selected.episodeRows.length-1?'1px solid var(--color-brand-light)':'none',flexWrap:'wrap'}}>
-                <span style={{fontSize:11,color:'var(--color-text-muted)',minWidth:44,flexShrink:0}}>{ep.ep_number}話</span>
+              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'13px 18px',borderBottom:i<selected.episodeRows.length-1?'1px solid var(--color-brand-light)':'none'}}>
                 <span style={{fontSize:13,fontWeight:600,color:'var(--color-text)',flex:1,minWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.title}</span>
-                <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',minWidth:44,textAlign:'right'}}>{ep.likes}</span>
-                <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',minWidth:44,textAlign:'right'}}>{ep.comments}</span>
-                <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)',whiteSpace:'nowrap',minWidth:60,textAlign:'right'}}>{ep.views.toLocaleString()} PV</span>
+                <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',width:56,flexShrink:0,textAlign:'right'}}>{ep.likes}</span>
+                <span style={{fontSize:12,color:'var(--color-text-muted)',whiteSpace:'nowrap',width:64,flexShrink:0,textAlign:'right'}}>{ep.comments}</span>
+                <span style={{fontSize:13,fontWeight:700,color:'var(--color-text)',whiteSpace:'nowrap',width:72,flexShrink:0,textAlign:'right'}}>{ep.views.toLocaleString()}</span>
               </div>
             ))}
           </div>
