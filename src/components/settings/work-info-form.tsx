@@ -2,6 +2,10 @@
  * ============================================================
  * 原石航路 Studio
  * WorkInfoForm — 設定 / 作品情報
+ *
+ * ★ キャッチコピーの欄は外した。
+ *   書いても、読む人の画面には出ていなかった。
+ *   出ない物を書かせるのは、手間だけ取ることになる。
  * ============================================================
  */
 
@@ -25,7 +29,6 @@ import {
 import TagInput from "@/components/works/tag-input";
 import { COVERS } from "@/components/home/home-work-table";
 import {
-    CATCHPHRASE_MAX_LENGTH,
     SUMMARY_MAX_LENGTH,
     TITLE_MAX_LENGTH,
 } from "@/config";
@@ -57,7 +60,6 @@ export default function WorkInfoForm({
     onSave,
 }: Props) {
     const [title, setTitle] = useState(work.title);
-    const [catchphrase, setCatchphrase] = useState(work.catchphrase ?? "");
     const [genre, setGenre] = useState(work.genre);
     const [format, setFormat] = useState<WorkFormat | null>(work.format ?? null);
 
@@ -239,7 +241,6 @@ export default function WorkInfoForm({
         try {
         await onSave({
             title: title.trim(),
-            catchphrase: catchphrase.trim() || null,
             genre,
             format,
             ai_usage: aiUsage,
@@ -313,19 +314,6 @@ export default function WorkInfoForm({
                             ].join(" ")}
                         />
                         <Counter current={title.length} max={TITLE_MAX_LENGTH} />
-                    </Field>
-
-                    <Field label="キャッチコピー（任意）" htmlFor="info-catch">
-                        <input
-                            id="info-catch"
-                            type="text"
-                            value={catchphrase}
-                            maxLength={CATCHPHRASE_MAX_LENGTH}
-                            onChange={(e) => setCatchphrase(e.target.value)}
-                            placeholder="見えない粒が織りなす、もうひとつの魔法世界。"
-                            className="w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-forest"
-                        />
-                        <Counter current={catchphrase.length} max={CATCHPHRASE_MAX_LENGTH} />
                     </Field>
 
                     <Field label="ジャンル" htmlFor="info-genre">
