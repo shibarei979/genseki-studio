@@ -30,6 +30,7 @@ import type { SideNotice } from "@/components/home/home-side-cards";
 import HomeBannerCarousel from "@/components/home/home-banner-carousel";
 import HomeHero from "@/components/home/home-hero";
 import HomeWorkTable from "@/components/home/home-work-table";
+import WritingRecap from "@/components/home/writing-recap";
 import { getRepository } from "@/lib/repository";
 import { compareDate, NOTICES } from "@/types";
 import type { Contest, Episode, WorkWithStats } from "@/types";
@@ -171,6 +172,9 @@ export default function HomeClient() {
                         <main className="min-w-0 flex-1 space-y-3.5 px-5 py-4 sm:px-6">
                         {/* 生年月日が未設定なら促す */}
                         <BirthdateNotice />
+
+                        {/* 月が変わって最初に来たとき、先月どれだけ書いたかを出す */}
+                        <WritingRecap works={works} episodes={episodes} />
 
                             {error && (
                                 <LoadError message={error} onRetry={() => void reload()} />

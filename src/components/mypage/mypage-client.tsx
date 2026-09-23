@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { countChars } from '@/lib/utils/text'
 import PendingComments from '@/components/mypage/pending-comments'
+import WritingSummaryPanel from '@/components/mypage/writing-summary-panel'
 import ReadingSummary from '@/components/mypage/reading-summary'
 import ReadingSummaryBoundary from '@/components/mypage/reading-summary-boundary'
 import { READER_MISSIONS, WRITER_MISSIONS } from '@/components/mypage/mission-client'
@@ -1113,6 +1114,14 @@ export default function MypageClient({
 
   const WorksTab = () => (
     <div>
+      {/*
+        * 執筆の記録。
+        *
+        * ★ 月初に出る「先月の執筆」は、その月に一度きり。
+        *   いつでも確かめられる場所として、ここに簡素な形で置く。
+        */}
+      <WritingSummaryPanel />
+
       {/*
         * 承認待ちのコメント。
         *
