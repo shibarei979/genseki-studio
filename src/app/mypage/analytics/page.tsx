@@ -79,22 +79,31 @@ export default async function AnalyticsPage() {
                */
               .or('is_bot.is.null,is_bot.eq.false')
               .in('episode_id', epIds)
+              /*
+               * ★ 並び順を決める。
+               *
+               *   1000 件ずつに分けて読むとき、順番を決めずに読むと
+               *   同じ行が二度返ったり、抜け落ちたりする。
+               *   返す順は約束されていないため。
+               *   id で並べれば、境目がずれない。
+               */
+              .order('id', { ascending: true })
               .range(from, to),
           ).then((data) => ({ data }))
         : Promise.resolve({ data: [] }),
       readAll((from, to) =>
         supabase.from('likes').select('novel_id')
-          .in('novel_id', novelIds).range(from, to),
+          .in('novel_id', novelIds).order('novel_id', { ascending: true }).range(from, to),
       ).then((data) => ({ data })),
       readAll((from, to) =>
         supabase.from('bookmarks').select('novel_id')
-          .in('novel_id', novelIds).range(from, to),
+          .in('novel_id', novelIds).order('novel_id', { ascending: true }).range(from, to),
       ).then((data) => ({ data })),
       supabase.from('comments').select('novel_id, episode_id, body, user_id, created_at, rating').in('novel_id', novelIds).neq('user_id', user.id).order('created_at', { ascending: false }),
       epIds.length > 0
         ? readAll((from, to) =>
             supabase.from('episode_likes').select('episode_id')
-              .in('episode_id', epIds).range(from, to),
+              .in('episode_id', epIds).order('episode_id', { ascending: true }).range(from, to),
           ).then((data) => ({ data }))
         : Promise.resolve({ data: [] }),
       Promise.resolve({ data: [] }),
@@ -175,6 +184,42 @@ export default async function AnalyticsPage() {
       const month = (pv.viewed_at || '').slice(0, 7)
       if (month) { if (!st.monthly[month]) st.monthly[month] = { v: 0, m: 0, d: 0, a: 0 }; st.monthly[month].v++; st.monthly[month][seg]++ }
     })
+
+    /*
+     * ============================================================
+     * 作品ごとの合計は、行を読まずに数える
+     *
+     * ★ 行読みは 1000 件ずつに分けるので、境目でずれることがある。
+     *   合計だけは数え上げで取り直す。
+     *
+     * ★ 条件は作品管理（novel_stats）と同じにする。
+     *     作者自身の閲覧を除く／見回りの機械を除く
+     *     印の無い古い記録は、人として数える
+     *   同じ数え方にしないと、画面ごとに違う数が出る。
+     * ============================================================
+     */
+    const epIdsByNovel: Record<string, string[]> = {}
+    allEpisodes.forEach((e: any) => {
+      if (!e.novel_id || !e.id) return
+      ;(epIdsByNovel[e.novel_id] ||= []).push(e.id)
+    })
+
+    const viewTotals = await Promise.all(
+      novelIds.map(async (id: string) => {
+        const ids = epIdsByNovel[id] || []
+        if (ids.length === 0) return { id, count: 0 }
+
+        const { count } = await supabase
+          .from('page_views')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_author', false)
+          .or('is_bot.is.null,is_bot.eq.false')
+          .in('episode_id', ids)
+
+        return { id, count: count || 0 }
+      }),
+    )
+    viewTotals.forEach(({ id, count }) => { if (statsMap[id]) statsMap[id].views = count })
 
     ;(likes || []).forEach((l: any) => { if (statsMap[l.novel_id]) statsMap[l.novel_id].likes++ })
     ;(bookmarks || []).forEach((b: any) => { if (statsMap[b.novel_id]) statsMap[b.novel_id].bookmarks++ })
