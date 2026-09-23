@@ -1155,20 +1155,21 @@ export default function MypageClient({
         *   除くと 1451 が 457 になる作品もある。
         *   何も言わずに減らすと、壊れたと思われる。
         *
-        * ★ 9 月いっぱいで自動的に消える。
-        *   10 月には新しい数が当たり前になっている。
+        * ★ 9 月 10 日に数え方を直し、9 月 24 日に数え落としを直した。
+        *   この頁と、作品ごとの詳細と、ダッシュボードとで
+        *   数が食い違っていたのを揃えた。
+        *
+        * ★ 10 月 24 日で自動的に消える。
+        *   そのころには新しい数が当たり前になっている。
         *   消し忘れないよう、日付で切る。
         */}
-      {Date.now() < new Date('2026-10-01T00:00:00+09:00').getTime() && (
+      {Date.now() < new Date('2026-10-25T00:00:00+09:00').getTime() && (
         <p style={{
-          fontSize:12,color:'var(--color-text-muted)',lineHeight:1.9,
+          fontSize:12,color:'var(--color-text-muted)',lineHeight:1.8,margin:'0 0 20px',
           border:'1px solid var(--color-brand-border)',borderRadius:10,
-          background:'var(--color-bg-card)',padding:'10px 14px',marginBottom:20,
+          background:'var(--color-bg-card)',padding:'11px 14px',
         }}>
-          9月10日から、閲覧数の数え方を直しました。
-          検索の巡回などの機械と、ご自身が開いたぶんを数えなくなりました。
-          <br />
-          数字は下がりますが、読まれた量としては、こちらが正確です。
+          botの数値の介入があったため改修致しました
         </p>
       )}
 
