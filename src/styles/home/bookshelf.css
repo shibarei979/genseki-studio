@@ -185,6 +185,11 @@ content
 }
 
 .bookshelf-loop .b_title {
+    /* ★ 題名だけは英数字も立てる。2 桁までの数字は横に並べる */
+    -webkit-text-orientation: upright;
+    text-orientation: upright;
+    text-combine-upright: digits 2;
+
     position: absolute;
     font-size: calc(24px*0.9);
     height: calc(170px*0.9);

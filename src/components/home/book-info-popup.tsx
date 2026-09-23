@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -31,6 +31,109 @@ export default function BookInfoPopup() {
      */
     const [isChecked, setIsChecked] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
+
+    /*
+     * ============================================================
+     * 題名を、頁に入る大きさにする
+     *
+     * ★ 長い題名が入りきらず、下や左で切れていた。
+     *   縦書きなので、字の大きさを決めると
+     *   「一列に何字入るか」と「何列並ぶか」が決まる。
+     *   入る大きさまで、1 px ずつ小さくする。
+     *
+     * ★ 測らずに計算で決める。
+     *   何度も描き直して測ると、開いた瞬間に画面が揺れる。
+     *   日本語の字は正方形なので、字の大きさから見当がつく。
+     *
+     * ★ それでも入りきらないほど長いときは、
+     *   入る所までにして「…」で止める。
+     *   はみ出して切れるより、そのほうが読める。
+     *
+     * ★ 中身を流し込むのは home.js なので、
+     *   入った合図（文字が変わったこと）を見て走らせる。
+     * ============================================================
+     */
+    useEffect(() => {
+        const root = document.querySelector<HTMLElement>(".book_info");
+        if (!root) return;
+
+        const title = root.querySelector<HTMLElement>(".bi_title");
+        const box = root.querySelector<HTMLElement>(".bi_v");
+        if (!title || !box) return;
+
+        /* いちばん小さくする所。これ以上小さいと読めない */
+        const MIN = 13;
+
+        /* 自分が書き換えたぶんで、また呼ばれないようにする */
+        let mine = false;
+
+        function fit() {
+            if (!title || !box || mine) return;
+
+            /* home.js が入れた題名を、元のまま覚えておく */
+            const full = (title.dataset.full ?? title.textContent ?? "").trim();
+            if (!full) return;
+            title.dataset.full = full;
+
+            const chars = Array.from(full);
+
+            /* 決まりの大きさに戻してから測る */
+            title.style.fontSize = "";
+            const style = window.getComputedStyle(title);
+            const max = Math.round(parseFloat(style.fontSize) || 30);
+            const lineHeight = (parseFloat(style.lineHeight) || max * 1.4) / max;
+
+            const author = root?.querySelector<HTMLElement>(".bi_author");
+            const gap = parseFloat(window.getComputedStyle(box).columnGap || "0") || 0;
+
+            /* 使える幅（列の並ぶ向き）と、一列の長さ */
+            const width = box.clientWidth - (author ? author.offsetWidth + gap : 0) - 4;
+            const height = box.clientHeight - 4;
+            if (width <= 0 || height <= 0) return;
+
+            let size = MIN;
+            for (let one = max; one >= MIN; one -= 1) {
+                const columns = Math.ceil((chars.length * one) / height);
+                if (columns * one * lineHeight <= width) {
+                    size = one;
+                    break;
+                }
+            }
+            title.style.fontSize = `${size}px`;
+
+            /* いちばん小さくしても入らないときは、入る所まで */
+            const columns = Math.max(1, Math.floor(width / (size * lineHeight)));
+            const perColumn = Math.max(1, Math.floor(height / size));
+            const room = Math.max(6, columns * perColumn);
+
+            const next = chars.length > room ? `${chars.slice(0, room - 1).join("")}…` : full;
+            if (title.textContent !== next) {
+                mine = true;
+                title.textContent = next;
+                mine = false;
+            }
+        }
+
+        const watcher = new MutationObserver(() => {
+            /* 題名が入れ替わったら、覚えていた元の題名も捨てる */
+            if (!mine && title) delete title.dataset.full;
+            fit();
+        });
+        watcher.observe(title, { childList: true, characterData: true, subtree: true });
+
+        /* 開いたとき（class が変わる）にも合わせ直す */
+        const opening = new MutationObserver(() => fit());
+        opening.observe(root, { attributes: true, attributeFilter: ["class"] });
+
+        window.addEventListener("resize", fit);
+        fit();
+
+        return () => {
+            watcher.disconnect();
+            opening.disconnect();
+            window.removeEventListener("resize", fit);
+        };
+    }, []);
 
     function turnOff() {
         if (isChecked) return;

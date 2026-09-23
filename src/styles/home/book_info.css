@@ -110,6 +110,17 @@
 }
 
 .bi_title {
+    /*
+     * ★ 題名だけは、英数字も立てる。
+     *
+     *   縦組みの本文では英数字を倒すのが慣習だが、
+     *   表紙の題名で倒れていると、読めないうえに格好がつかない。
+     *   2 桁までの数字は横に並べる（縦中横）。
+     */
+    -webkit-text-orientation: upright;
+    text-orientation: upright;
+    text-combine-upright: digits 2;
+
     font-size: 30px;
     line-height: 1.4;
     max-width: 100%;

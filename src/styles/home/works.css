@@ -185,6 +185,11 @@ section.works .book .b_author {
 }
 
 section.works .book .b_title {
+    /* ★ 題名だけは英数字も立てる。2 桁までの数字は横に並べる */
+    -webkit-text-orientation: upright;
+    text-orientation: upright;
+    text-combine-upright: digits 2;
+
     font-size: 20px;
     line-height: 1.2;
     max-height: 65%;
