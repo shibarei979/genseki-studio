@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
 
@@ -17,13 +18,24 @@ import { createClient } from '@/lib/supabase/client'
  *   こちらは毎日見るところなので、数と升目だけにする。
  *   同じ見た目のものが二つあると、どちらも軽くなる。
  *
- * ★ 今月と先月を、その場で切り替えられる。
- *   「今月まだ書けていない」を確かめるのも、ここでできる。
+ * ★ 月で見るか、年で見るか。
+ *   読書のまとめと同じ並べ方にする。
+ *   月で見ると「今月は書けているか」、
+ *   年で見ると「一年でどれだけ書いたか」が分かる。
+ *
+ * ★ さかのぼれるのは、一昨年の 1 月まで。
+ *   それ以上読むと、長く書いている人ほど開くのが遅くなる。
  *
  * ★ 数えるのは「その日に増えた文字数」。
  *   設定で執筆の記録を切っている作品は入らない。
  * ============================================================
  */
+
+interface Log {
+    novel_id: string
+    log_date: string
+    delta: number
+}
 
 interface WorkRow {
     id: string
@@ -31,15 +43,18 @@ interface WorkRow {
     chars: number
 }
 
-interface Month {
-    key: string
-    label: string
+interface Period {
     chars: number
+    /** 書いた日数 */
     days: number
+    /** 月で見るとき＝その月の日数 */
     monthDays: number
+    /** 月で見るとき。1 日が何曜日か */
     firstWeekday: number
-    daily: number[]
-    bestDay: number
+    /** 月で見るとき＝日ごと、年で見るとき＝月ごと */
+    bars: number[]
+    /** いちばん書いた日（月のとき）／月（年のとき）。無ければ -1 */
+    bestIndex: number
     bestChars: number
     works: WorkRow[]
 }
@@ -49,49 +64,80 @@ function monthKeyOf(date: Date) {
     return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).slice(0, 7)
 }
 
-function build(key: string, logs: { novel_id: string; log_date: string; delta: number }[], titles: Map<string, string>): Month {
-    const [year, month] = key.split('-').map(Number)
-    const monthDays = new Date(year, month, 0).getDate()
-    const daily = Array.from({ length: monthDays }, () => 0)
+/** その期間ぶんを数える。key は "YYYY-MM" か "YYYY" */
+function build(key: string, logs: Log[], titles: Map<string, string>): Period {
+    const isYear = key.length === 4
+    const year = Number(key.slice(0, 4))
+    const month = isYear ? 0 : Number(key.slice(5))
+    const monthDays = isYear ? 0 : new Date(year, month, 0).getDate()
+
+    const bars = Array.from({ length: isYear ? 12 : monthDays }, () => 0)
     const perWork = new Map<string, number>()
+    const days = new Set<string>()
 
     for (const log of logs) {
-        if (log.delta <= 0 || log.log_date.slice(0, 7) !== key) continue
-        const day = Number(log.log_date.slice(8, 10))
-        if (!day) continue
-        daily[day - 1] += log.delta
+        if (log.delta <= 0) continue
+        if (!log.log_date.startsWith(key)) continue
+
+        const index = isYear
+            ? Number(log.log_date.slice(5, 7)) - 1
+            : Number(log.log_date.slice(8, 10)) - 1
+        if (index < 0 || index >= bars.length) continue
+
+        bars[index] += log.delta
+        days.add(log.log_date)
         perWork.set(log.novel_id, (perWork.get(log.novel_id) ?? 0) + log.delta)
     }
 
-    let bestDay = 0
+    let bestIndex = -1
     let bestChars = 0
-    daily.forEach((one, index) => {
+    bars.forEach((one, index) => {
         if (one > bestChars) {
             bestChars = one
-            bestDay = index + 1
+            bestIndex = index
         }
     })
 
     return {
-        key,
-        label: `${year}年${month}月`,
-        chars: daily.reduce((sum, one) => sum + one, 0),
-        days: daily.filter((one) => one > 0).length,
+        chars: bars.reduce((sum, one) => sum + one, 0),
+        days: days.size,
         monthDays,
-        firstWeekday: new Date(year, month - 1, 1).getDay(),
-        daily,
-        bestDay,
+        firstWeekday: isYear ? 0 : new Date(year, month - 1, 1).getDay(),
+        bars,
+        bestIndex,
         bestChars,
         works: Array.from(perWork.entries())
             .map(([id, chars]) => ({ id, title: titles.get(id) || '名前のない作品', chars }))
             .sort((a, b) => b.chars - a.chars)
-            .slice(0, 3),
+            .slice(0, 4),
     }
 }
 
+/** 前後の期間の鍵 */
+function stepKey(key: string, diff: number) {
+    if (key.length === 4) return String(Number(key) + diff)
+
+    const year = Number(key.slice(0, 4))
+    const month = Number(key.slice(5))
+    const moved = new Date(year, month - 1 + diff, 1)
+    return `${moved.getFullYear()}-${String(moved.getMonth() + 1).padStart(2, '0')}`
+}
+
+function labelOf(key: string) {
+    if (key.length === 4) return `${key}年`
+    return `${key.slice(0, 4)}年${Number(key.slice(5))}月`
+}
+
 export default function WritingSummaryPanel() {
-    const [months, setMonths] = useState<Month[] | null>(null)
-    const [which, setWhich] = useState(0)
+    const [logs, setLogs] = useState<Log[] | null>(null)
+    const [titles, setTitles] = useState<Map<string, string>>(new Map())
+
+    /* いま見ている所。"YYYY-MM" か "YYYY" */
+    const [at, setAt] = useState(() => monthKeyOf(new Date()))
+    const [span, setSpan] = useState<'month' | 'year'>('month')
+
+    /* さかのぼれる下限 */
+    const [oldest, setOldest] = useState('')
 
     useEffect(() => {
         let alive = true
@@ -111,31 +157,26 @@ export default function WritingSummaryPanel() {
 
             const rows = (novels ?? []) as { id: string; title: string }[]
             if (rows.length === 0) {
-                if (alive) setMonths([])
+                if (alive) setLogs([])
                 return
             }
 
-            const titles = new Map(rows.map((row) => [row.id, row.title]))
             const now = new Date()
-            const thisKey = monthKeyOf(now)
-            const lastKey = monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 1, 1))
+            const from = `${now.getFullYear() - 2}-01-01`
 
-            /*
-             * ★ 二か月ぶんだけ読む。
-             *   全部読むと、何年も書いている人ほど重くなる。
-             */
-            const { data: logs } = await supabase
+            const { data } = await supabase
                 .from('writing_logs')
                 .select('novel_id, log_date, delta')
                 .in(
                     'novel_id',
                     rows.map((row) => row.id),
                 )
-                .gte('log_date', `${lastKey}-01`)
+                .gte('log_date', from)
 
-            const list = (logs ?? []) as { novel_id: string; log_date: string; delta: number }[]
             if (!alive) return
-            setMonths([build(thisKey, list, titles), build(lastKey, list, titles)])
+            setTitles(new Map(rows.map((row) => [row.id, row.title])))
+            setLogs((data ?? []) as Log[])
+            setOldest(from.slice(0, 7))
         })()
 
         return () => {
@@ -143,11 +184,44 @@ export default function WritingSummaryPanel() {
         }
     }, [])
 
-    /* 読めていないうちは、場所だけ取らない */
-    if (!months || months.length === 0) return null
+    const now = useMemo(() => (logs ? build(at, logs, titles) : null), [logs, at, titles])
+    const before = useMemo(
+        () => (logs ? build(stepKey(at, -1), logs, titles) : null),
+        [logs, at, titles],
+    )
 
-    const month = months[which]
-    const sheets = Math.round(month.chars / 400)
+    if (!logs || !now) return null
+
+    const thisMonth = monthKeyOf(new Date())
+    const isNow = span === 'year' ? at === thisMonth.slice(0, 4) : at === thisMonth
+    const canBack = span === 'year' ? at > oldest.slice(0, 4) : at > oldest
+
+    /* 月と年を行き来する。いま見ている所の年を引き継ぐ */
+    function changeSpan(next: 'month' | 'year') {
+        if (next === span) return
+        if (next === 'year') {
+            setAt(at.slice(0, 4))
+        } else {
+            /* その年の今月。違う年なら 12 月から */
+            setAt(at === thisMonth.slice(0, 4) ? thisMonth : `${at}-12`)
+        }
+        setSpan(next)
+    }
+
+    const sheets = Math.round(now.chars / 400)
+    const diff = now.chars - (before?.chars ?? 0)
+
+    const arrow: CSSProperties = {
+        border: '1px solid var(--color-line, #e1e9ee)',
+        background: 'none',
+        borderRadius: 8,
+        width: 28,
+        height: 28,
+        lineHeight: 1,
+        fontSize: 15,
+        color: 'var(--color-brand, #1f4e6b)',
+        cursor: 'pointer',
+    }
 
     return (
         <section
@@ -160,46 +234,71 @@ export default function WritingSummaryPanel() {
                 marginBottom: 14,
             }}
         >
-            {/* 見出しと、月の切り替え */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            {/* 見出しと、送り */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text, #17222b)' }}>執筆の記録</span>
-                <span style={{ fontSize: 12.5, color: 'var(--color-text-muted, #71818c)' }}>{month.label}</span>
+                <span style={{ fontSize: 12.5, color: 'var(--color-text-muted, #71818c)' }}>{labelOf(at)}</span>
 
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                    {['今月', '先月'].map((label, index) => (
-                        <button
-                            key={label}
-                            type="button"
-                            onClick={() => setWhich(index)}
-                            style={{
-                                fontSize: 12.5,
-                                padding: '5px 12px',
-                                borderRadius: 7,
-                                cursor: 'pointer',
-                                border: '1px solid',
-                                borderColor: which === index ? 'var(--color-brand, #1f4e6b)' : 'var(--color-line, #e1e9ee)',
-                                background: which === index ? 'var(--color-brand, #1f4e6b)' : 'transparent',
-                                color: which === index ? '#fff' : 'var(--color-text-muted, #71818c)',
-                            }}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
+                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {/*
+                     * 月で見るか、年で見るか。
+                     * 押し具にせず、字の切り替えにする。送りの矢印より目立たせない。
+                     */}
+                    <span style={{ display: 'flex', gap: 8 }}>
+                        {(['month', 'year'] as const).map((key) => (
+                            <button
+                                key={key}
+                                type="button"
+                                onClick={() => changeSpan(key)}
+                                aria-pressed={span === key}
+                                style={{
+                                    border: 'none',
+                                    background: 'none',
+                                    padding: 0,
+                                    cursor: 'pointer',
+                                    fontSize: 12,
+                                    color:
+                                        span === key
+                                            ? 'var(--color-brand, #1f4e6b)'
+                                            : 'var(--color-text-faint, #9aa6ae)',
+                                    fontWeight: span === key ? 700 : 400,
+                                    textDecoration: span === key ? 'none' : 'underline',
+                                }}
+                            >
+                                {key === 'month' ? '月ごと' : '年ごと'}
+                            </button>
+                        ))}
+                    </span>
+
+                    <button
+                        type="button"
+                        onClick={() => setAt(stepKey(at, -1))}
+                        disabled={!canBack}
+                        aria-label={span === 'year' ? '前の年' : '前の月'}
+                        style={{ ...arrow, opacity: canBack ? 1 : 0.35, cursor: canBack ? 'pointer' : 'default' }}
+                    >
+                        ‹
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setAt(stepKey(at, 1))}
+                        disabled={isNow}
+                        aria-label={span === 'year' ? '次の年' : '次の月'}
+                        style={{ ...arrow, opacity: isNow ? 0.35 : 1, cursor: isNow ? 'default' : 'pointer' }}
+                    >
+                        ›
+                    </button>
+                </span>
             </div>
 
-            {month.chars === 0 ? (
+            {now.chars === 0 ? (
                 <p style={{ margin: '4px 0 6px', fontSize: 13.5, color: 'var(--color-text-muted, #71818c)' }}>
-                    {which === 0
-                        ? 'まだこの月の記録はありません。一文字でも書けば、ここに残ります。'
-                        : 'この月の記録はありません。'}
+                    {isNow
+                        ? `まだ${span === 'year' ? 'この年' : 'この月'}の記録はありません。一文字でも書けば、ここに残ります。`
+                        : `${span === 'year' ? 'この年' : 'この月'}の記録はありません。`}
                 </p>
             ) : (
                 <>
-                    {/*
-                     * 上の段。数の札を三つと、ひと月の升目。
-                     * ★ 札で埋めると、数が少ない月でも間延びしない。
-                     */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'stretch' }}>
                         <div
                             style={{
@@ -211,30 +310,40 @@ export default function WritingSummaryPanel() {
                         >
                             <Figure
                                 label="書いた文字数"
-                                value={month.chars.toLocaleString()}
+                                value={now.chars.toLocaleString()}
                                 unit="文字"
                                 note={
                                     sheets >= 1
                                         ? `原稿用紙 約${sheets.toLocaleString()} 枚`
-                                        : `原稿用紙 1 枚まで あと ${(400 - (month.chars % 400)).toLocaleString()} 文字`
+                                        : `原稿用紙 1 枚まで あと ${(400 - (now.chars % 400)).toLocaleString()} 文字`
                                 }
                                 strong
                             />
                             <Figure
                                 label="書いた日"
-                                value={`${month.days}`}
-                                unit={`日 / ${month.monthDays}日`}
-                                note={month.days > 0 ? `${Math.round((month.days / month.monthDays) * 100)}% の日に書きました` : undefined}
+                                value={`${now.days}`}
+                                unit={span === 'year' ? '日' : `日 / ${now.monthDays}日`}
+                                note={
+                                    before && before.chars > 0
+                                        ? `${span === 'year' ? '前の年' : '前の月'}より ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString()} 文字`
+                                        : undefined
+                                }
                             />
                             <Figure
-                                label="いちばん書いた日"
-                                value={month.bestDay > 0 ? `${Number(month.key.slice(5))}月${month.bestDay}日` : '—'}
+                                label={span === 'year' ? 'いちばん書いた月' : 'いちばん書いた日'}
+                                value={
+                                    now.bestIndex < 0
+                                        ? '—'
+                                        : span === 'year'
+                                          ? `${now.bestIndex + 1}月`
+                                          : `${Number(at.slice(5))}月${now.bestIndex + 1}日`
+                                }
                                 unit=""
-                                note={month.bestChars > 0 ? `${month.bestChars.toLocaleString()} 文字` : undefined}
+                                note={now.bestChars > 0 ? `${now.bestChars.toLocaleString()} 文字` : undefined}
                             />
                         </div>
 
-                        {/* ひと月の升目 */}
+                        {/* 月は升目、年は十二の棒 */}
                         <div
                             style={{
                                 flex: 'none',
@@ -243,40 +352,14 @@ export default function WritingSummaryPanel() {
                                 padding: '10px 12px',
                             }}
                         >
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 14px)', gap: 3.5, marginBottom: 4 }}>
-                                {['日', '月', '火', '水', '木', '金', '土'].map((one) => (
-                                    <span key={one} style={{ fontSize: 9, color: '#9aa9b3', textAlign: 'center', lineHeight: 1 }}>
-                                        {one}
-                                    </span>
-                                ))}
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 14px)', gap: 3.5 }}>
-                                {Array.from({ length: month.firstWeekday }, (_, index) => (
-                                    <span key={`blank-${index}`} style={{ width: 14, height: 14 }} />
-                                ))}
-                                {month.daily.map((one, index) => (
-                                    <span
-                                        key={index}
-                                        title={`${index + 1}日　${one.toLocaleString()} 文字`}
-                                        style={{
-                                            width: 14,
-                                            height: 14,
-                                            borderRadius: 3.5,
-                                            background:
-                                                one > 0
-                                                    ? `rgba(31, 78, 107, ${0.3 + (one / (month.bestChars || 1)) * 0.7})`
-                                                    : 'rgba(31, 78, 107, .08)',
-                                        }}
-                                    />
-                                ))}
-                            </div>
+                            {span === 'year' ? <YearBars bars={now.bars} best={now.bestChars} /> : <MonthCells period={now} />}
                         </div>
                     </div>
 
-                    {/* 下の段。作品ごと */}
-                    {month.works.length > 0 && (
+                    {/* 作品ごと */}
+                    {now.works.length > 0 && (
                         <div style={{ marginTop: 12, borderTop: '1px solid var(--color-line, #e8eef2)', paddingTop: 10 }}>
-                            {month.works.map((work) => (
+                            {now.works.map((work) => (
                                 <div
                                     key={work.id}
                                     style={{
@@ -299,18 +382,33 @@ export default function WritingSummaryPanel() {
                                     >
                                         {work.title}
                                     </span>
-                                    <span style={{ flex: 1, minWidth: 60, height: 7, borderRadius: 999, background: 'var(--color-brand-light, #eaf0f4)' }}>
+                                    <span
+                                        style={{
+                                            flex: 1,
+                                            minWidth: 60,
+                                            height: 7,
+                                            borderRadius: 999,
+                                            background: 'var(--color-brand-light, #eaf0f4)',
+                                        }}
+                                    >
                                         <span
                                             style={{
                                                 display: 'block',
                                                 height: '100%',
                                                 borderRadius: 999,
-                                                width: `${Math.max(5, (work.chars / (month.works[0].chars || 1)) * 100)}%`,
+                                                width: `${Math.max(5, (work.chars / (now.works[0].chars || 1)) * 100)}%`,
                                                 background: 'var(--color-brand, #1f4e6b)',
                                             }}
                                         />
                                     </span>
-                                    <span style={{ width: 84, textAlign: 'right', flex: 'none', color: 'var(--color-text-muted, #71818c)' }}>
+                                    <span
+                                        style={{
+                                            width: 84,
+                                            textAlign: 'right',
+                                            flex: 'none',
+                                            color: 'var(--color-text-muted, #71818c)',
+                                        }}
+                                    >
                                         {work.chars.toLocaleString()} 文字
                                     </span>
                                 </div>
@@ -320,6 +418,73 @@ export default function WritingSummaryPanel() {
                 </>
             )}
         </section>
+    )
+}
+
+/** ひと月の升目。曜日にそろえる */
+function MonthCells({ period }: { period: Period }) {
+    return (
+        <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 14px)', gap: 3.5, marginBottom: 4 }}>
+                {['日', '月', '火', '水', '木', '金', '土'].map((one) => (
+                    <span key={one} style={{ fontSize: 9, color: '#9aa9b3', textAlign: 'center', lineHeight: 1 }}>
+                        {one}
+                    </span>
+                ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 14px)', gap: 3.5 }}>
+                {Array.from({ length: period.firstWeekday }, (_, index) => (
+                    <span key={`blank-${index}`} style={{ width: 14, height: 14 }} />
+                ))}
+                {period.bars.map((one, index) => (
+                    <span
+                        key={index}
+                        title={`${index + 1}日　${one.toLocaleString()} 文字`}
+                        style={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: 3.5,
+                            background:
+                                one > 0
+                                    ? `rgba(31, 78, 107, ${0.3 + (one / (period.bestChars || 1)) * 0.7})`
+                                    : 'rgba(31, 78, 107, .08)',
+                        }}
+                    />
+                ))}
+            </div>
+        </div>
+    )
+}
+
+/** 一年の十二か月。棒で見せる */
+function YearBars({ bars, best }: { bars: number[]; best: number }) {
+    return (
+        <div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 74 }}>
+                {bars.map((one, index) => (
+                    <span
+                        key={index}
+                        title={`${index + 1}月　${one.toLocaleString()} 文字`}
+                        style={{
+                            width: 14,
+                            height: one > 0 ? `${Math.max(6, (one / (best || 1)) * 100)}%` : 3,
+                            borderRadius: '3px 3px 0 0',
+                            background: one > 0 ? 'rgba(31, 78, 107, .78)' : 'rgba(31, 78, 107, .12)',
+                        }}
+                    />
+                ))}
+            </div>
+            <div style={{ display: 'flex', gap: 5, marginTop: 4 }}>
+                {bars.map((_, index) => (
+                    <span
+                        key={index}
+                        style={{ width: 14, fontSize: 8.5, color: '#9aa9b3', textAlign: 'center', lineHeight: 1 }}
+                    >
+                        {index + 1}
+                    </span>
+                ))}
+            </div>
+        </div>
     )
 }
 
