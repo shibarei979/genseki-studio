@@ -40,6 +40,17 @@ import type { Episode, WorkWithStats } from "@/types";
 /** 出した月を覚えておく場所 */
 const SEEN_KEY = "genseki:writing-recap";
 
+/**
+ * 月初だけに出す。
+ *
+ * ★ 月の半ばや末に急に出ると、何の話か分からない。
+ *   「先月はこうでした」は、月が変わってすぐに言う。
+ *
+ * ★ 1 日ちょうどだけにすると、その日に来なかった人が
+ *   一度も見ないまま終わる。7 日までを月初とする。
+ */
+const OPEN_UNTIL_DAY = 7;
+
 interface WorkRow {
     id: string;
     title: string;
@@ -49,6 +60,8 @@ interface WorkRow {
     episodes: number;
     coverUrl: string | null;
     coverColor: number | null;
+    /** "wide" なら横長の表紙。棚と同じ形で出す */
+    coverShape: string | null;
     note: string;
 }
 
@@ -101,6 +114,13 @@ export default function WritingRecap({
         if (works.length === 0) return;
 
         const now = new Date();
+
+        /* 月初を過ぎていたら、今月はもう出さない */
+        const today = Number(
+            now.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" }).slice(8, 10),
+        );
+        if (today > OPEN_UNTIL_DAY) return;
+
         const last = monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 1, 1));
         const before = monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 2, 1));
 
@@ -169,6 +189,7 @@ export default function WritingRecap({
                     ).length,
                     coverUrl: work.cover_url ?? null,
                     coverColor: work.cover_color ?? null,
+                    coverShape: (work as { cover_shape?: string | null }).cover_shape ?? null,
                     note: "",
                 });
             });
@@ -373,9 +394,26 @@ export default function WritingRecap({
                 {/* 開いた合図。紙吹雪と、ひとすじの明かり */}
                 <Confetti />
 
-                {/* ── 見出しと絵 ───────────────────── */}
-                <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                {/*
+                  * ── 見出し ─────────────────────
+                  *
+                  * ★ 絵は置かない。
+                  *   代わりに、その月の数そのものを大きく置く。
+                  *   見出しの右に数が並ぶので、横幅が余らない。
+                  */}
+                <div
+                    className="wrec-head"
+                    style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 24,
+                        alignItems: "flex-end",
+                        justifyContent: "space-between",
+                        paddingBottom: 18,
+                        borderBottom: "1px solid #e4ecf1",
+                    }}
+                >
+                    <div style={{ minWidth: 0 }}>
                         <h2
                             style={{
                                 margin: 0,
@@ -388,56 +426,54 @@ export default function WritingRecap({
                         >
                             {monthLabel}の執筆
                         </h2>
-                        <p style={{ margin: "4px 0 0", fontSize: 12.5, color: "#71818c" }}>
+                        <p style={{ margin: "5px 0 0", fontSize: 12.5, color: "#71818c" }}>
                             作品がどう育ったかを見る
                         </p>
-
-                        {/* 文字数 */}
-                        <div className="wrec-head" style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 22, marginTop: 16 }}>
-                            <div style={{ borderLeft: "3px solid #bcd3e2", paddingLeft: 14 }}>
-                                <div style={{ fontSize: 11, color: "#71818c" }}>書いた文字数</div>
-                                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                                    <span
-                                        style={{
-                                            fontFamily: '"Hiragino Mincho ProN", garamond, serif',
-                                            fontSize: 40,
-                                            fontWeight: 700,
-                                            lineHeight: 1.1,
-                                            color: "#1f4e6b",
-                                        }}
-                                    >
-                                        {shown.chars.toLocaleString()}
-                                    </span>
-                                    <span style={{ fontSize: 14, color: "#33414b" }}>文字</span>
-                                </div>
-                            </div>
-
-                            <div style={{ borderLeft: "1px solid #e1e9ee", paddingLeft: 22, fontSize: 13.5, color: "#33414b", lineHeight: 2 }}>
-                                <div>
-                                    原稿用紙にすると <b style={{ fontSize: 17, color: "#17222b" }}>約{sheets.toLocaleString()}</b> 枚ぶん
-                                </div>
-                                {shown.prevChars > 0 && (
-                                    <div>
-                                        その前の月（{shown.prevChars.toLocaleString()} 文字）より{" "}
-                                        <b style={{ fontSize: 17, color: diff >= 0 ? "#2d6a4f" : "#8a6b4b" }}>
-                                            {diff >= 0 ? "+" : "−"}
-                                            {Math.abs(diff).toLocaleString()}
-                                        </b>{" "}
-                                        文字
-                                    </div>
-                                )}
-                            </div>
-                        </div>
                     </div>
 
-                    <DeskArt sheets={sheets} />
+                    {/* 文字数 */}
+                    <div className="wrec-sum" style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 20 }}>
+                        <div>
+                            <div style={{ fontSize: 11, color: "#71818c", letterSpacing: ".04em" }}>書いた文字数</div>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 2 }}>
+                                <span
+                                    style={{
+                                        fontFamily: '"Hiragino Mincho ProN", garamond, serif',
+                                        fontSize: 44,
+                                        fontWeight: 700,
+                                        lineHeight: 1.05,
+                                        color: "#1f4e6b",
+                                    }}
+                                >
+                                    {shown.chars.toLocaleString()}
+                                </span>
+                                <span style={{ fontSize: 14, color: "#33414b" }}>文字</span>
+                            </div>
+                        </div>
+
+                        <div style={{ borderLeft: "1px solid #e1e9ee", paddingLeft: 20, fontSize: 13, color: "#33414b", lineHeight: 1.95 }}>
+                            <div>
+                                原稿用紙にすると <b style={{ fontSize: 16, color: "#17222b" }}>約{sheets.toLocaleString()}</b> 枚ぶん
+                            </div>
+                            {shown.prevChars > 0 && (
+                                <div>
+                                    その前の月（{shown.prevChars.toLocaleString()} 文字）より{" "}
+                                    <b style={{ fontSize: 16, color: diff >= 0 ? "#2d6a4f" : "#8a6b4b" }}>
+                                        {diff >= 0 ? "+" : "−"}
+                                        {Math.abs(diff).toLocaleString()}
+                                    </b>{" "}
+                                    文字
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* ── 本体：左（作品とリズム）／右（記録と一言） ── */}
                 <div className="wrec-body" style={{ display: "flex", gap: 22, marginTop: 22, alignItems: "stretch" }}>
                     <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                         {/* 作品の伸び */}
-                        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+                        <div className="wrec-worktop" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
                             <div>
                                 <SectionTitle icon={<RankIcon />} text="作品の伸び" />
                                 <p style={{ margin: "2px 0 0 26px", fontSize: 11.5, color: "#8b98a1" }}>
@@ -614,8 +650,21 @@ export default function WritingRecap({
                         .wrec-body { flex-direction: column; }
                         .wrec-side { width: 100% !important; }
                         .wrec-works { grid-template-columns: 1fr !important; }
-                        .wrec-art { display: none !important; }
-                        .wrec-head { gap: 12px !important; }
+                        .wrec-head { gap: 14px !important; padding-bottom: 14px !important; }
+                        .wrec-sum { gap: 14px !important; }
+                    }
+
+                    /* 細い画面では、見出しと「すべての作品を見る」を縦に */
+                    @media (max-width: 599px) {
+                        .wrec-worktop { flex-direction: column; align-items: flex-start !important; gap: 6px !important; }
+                    }
+
+                    /* 見出しの数が、細い画面で折り返して散らからないように */
+                    @media (max-width: 479px) {
+                        .wrec-sum > div + div {
+                            border-left: none !important;
+                            padding-left: 0 !important;
+                        }
                     }
 
                     /* 動きを減らしている人には、紙吹雪も出さない */
@@ -793,6 +842,7 @@ function WorkCard({ work, rank, topChars }: { work: WorkRow; rank: number; topCh
     const growth = work.chars - work.prevChars;
     const ribbon = ["#d9b25c", "#adb7bd", "#b98a5e"][rank - 1] ?? "#adb7bd";
     const cover = coverFor({ id: work.id, title: work.title, cover_color: work.coverColor });
+    const isWide = work.coverShape === "wide";
 
     return (
         <div style={{ position: "relative", border: "1px solid #e3ebf0", borderRadius: 14, background: "#fff", padding: "14px 14px 12px" }}>
@@ -816,11 +866,18 @@ function WorkCard({ work, rank, topChars }: { work: WorkRow; rank: number; topCh
             </span>
 
             <div style={{ display: "flex", gap: 12 }}>
-                {/* 表紙 */}
+                {/*
+                  * 表紙。
+                  *
+                  * ★ 棚と同じ形で出す。
+                  *   横長の表紙を縦長の枠に入れると、
+                  *   絵の左右が切り落とされて別の絵になる。
+                  *   高さは揃えたまま、横長だけ幅を 1.5 倍にする。
+                  */}
                 <div
                     style={{
-                        width: 62,
-                        height: 88,
+                        width: isWide ? 96 : 64,
+                        height: isWide ? 64 : 84,
                         flex: "none",
                         borderRadius: "3px 6px 6px 3px",
                         overflow: "hidden",
@@ -908,10 +965,25 @@ function WorkCard({ work, rank, topChars }: { work: WorkRow; rank: number; topCh
     );
 }
 
-/** 日ごとの棒。いちばん書いた日には吹き出しを出す */
+/**
+ * 日ごとの棒。
+ *
+ * ★ 目盛りは引かない。
+ *   いくつ書いたかは、いちばん書いた日の数だけ上に置けば足りる。
+ *   横線を何本も引くと、表計算の画面のようになる。
+ *
+ * ★ 帯も枠線も敷かない。
+ *   縦に薄い柱が並ぶと、書いていない日にも棒が立って見える。
+ *
+ * ★ いちばん書いた日は、吹き出しではなく、棒の真上に書く。
+ *   濃い箱を浮かせると、そこだけ別の画面から来たように見える。
+ */
 function Rhythm({ recap, month }: { recap: Recap; month: number }) {
     const best = recap.bestChars || 1;
-    const marks = [1, 5, 10, 15, 20, 25, recap.monthDays];
+    const marks = [1, 10, 20, recap.monthDays];
+
+    /* 端に寄りすぎると、見出しが枠から出る */
+    const bestLeft = Math.min(92, Math.max(8, ((recap.bestDay - 0.5) / recap.monthDays) * 100));
 
     /*
      * ★ 書いた日の平均を、薄い線で引く。
@@ -922,126 +994,142 @@ function Rhythm({ recap, month }: { recap: Recap; month: number }) {
     const average = recap.days > 0 ? Math.round(recap.chars / recap.days) : 0;
 
     return (
-        <div style={{ marginTop: 10, position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
-            {/* 目盛り */}
-            <div style={{ display: "flex", gap: 10, flex: 1, minHeight: 0 }}>
-                <div style={{ width: 44, flex: "none", position: "relative", fontSize: 10, color: "#9aa6ae" }}>
-                    <span style={{ position: "absolute", right: 0, top: -5 }}>{best.toLocaleString()}</span>
-                    <span style={{ position: "absolute", right: 0, top: "50%" }}>{Math.round(best / 2).toLocaleString()}</span>
-                    <span style={{ position: "absolute", right: 0, bottom: -5 }}>0</span>
+        <div
+            style={{
+                marginTop: 12,
+                position: "relative",
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                padding: "12px 16px 8px",
+                borderRadius: 14,
+                border: "1px solid #e9f0f5",
+                background: "linear-gradient(180deg,#fbfdfe,#ffffff 70%)",
+            }}
+        >
+            {/* いちばん書いた日を、棒の真上に置くための場所 */}
+            <div style={{ position: "relative", height: 40, flex: "none" }}>
+                <div
+                    style={{
+                        position: "absolute",
+                        left: `${bestLeft}%`,
+                        bottom: 2,
+                        transform: "translateX(-50%)",
+                        textAlign: "center",
+                        whiteSpace: "nowrap",
+                    }}
+                >
+                    <div style={{ fontSize: 10, color: "#8b98a1", letterSpacing: ".02em" }}>
+                        {month}月{recap.bestDay}日
+                    </div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 3, justifyContent: "center" }}>
+                        <span
+                            style={{
+                                fontFamily: '"Hiragino Mincho ProN", garamond, serif',
+                                fontSize: 17,
+                                fontWeight: 700,
+                                lineHeight: 1.2,
+                                color: "#1f4e6b",
+                            }}
+                        >
+                            {recap.bestChars.toLocaleString()}
+                        </span>
+                        <span style={{ fontSize: 10, color: "#71818c" }}>文字</span>
+                    </div>
                 </div>
+            </div>
 
-                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-                    <div
-                        style={{
-                            position: "relative",
-                            flex: 1,
-                            minHeight: 150,
-                            display: "flex",
-                            alignItems: "flex-end",
-                            gap: 2,
-                            borderBottom: "1px solid #e1e9ee",
-                        }}
-                    >
-                        {/* 目安の線。高さが変わってもずれないよう、割合で置く */}
-                        {[0, 50].map((top) => (
+            {/* 棒 */}
+            <div
+                style={{
+                    position: "relative",
+                    flex: 1,
+                    minHeight: 110,
+                    borderBottom: "1px solid #dde7ed",
+                }}
+            >
+                {/*
+                  * ★ 棒は細く、日の目盛りの真上に立てる。
+                  *   枠いっぱいに太らせると、板が並んでいるように見える。
+                  *   ひと月ぶんを一息で眺められる細さにする。
+                  *
+                  *   日ごとの枠を横一列に並べ、その真ん中に棒を置く。
+                  *   こうすると、下の「10」「20」と必ず縦に揃う。
+                  */}
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "stretch" }}>
+                    {recap.daily.map((one, index) => {
+                        const isBest = index + 1 === recap.bestDay && one > 0;
+                        return (
                             <span
-                                key={top}
+                                key={index}
+                                title={`${month}月${index + 1}日　${one.toLocaleString()} 文字`}
                                 style={{
-                                    position: "absolute",
-                                    left: 0,
-                                    right: 0,
-                                    top: `${top}%`,
-                                    borderTop: "1px solid #eef3f6",
-                                    pointerEvents: "none",
-                                }}
-                            />
-                        ))}
-                        {recap.daily.map((one, index) => {
-                            const isBest = index + 1 === recap.bestDay && one > 0;
-                            return (
-                                <span
-                                    key={index}
-                                    title={`${month}月${index + 1}日　${one.toLocaleString()} 文字`}
-                                    style={{
-                                        flex: 1,
-                                        height: one > 0 ? `${Math.max(3, (one / best) * 96)}%` : 2,
-                                        borderRadius: "3px 3px 0 0",
-                                        background: one > 0 ? (isBest ? "#1f4e6b" : "rgba(91, 143, 174, .55)") : "#e6edf1",
-                                    }}
-                                />
-                            );
-                        })}
-
-                        {/* 書いた日の平均 */}
-                        {average > 0 && (
-                            <span
-                                style={{
-                                    position: "absolute",
-                                    left: 0,
-                                    right: 0,
-                                    bottom: `${(average / best) * 96}%`,
-                                    borderTop: "1px dashed #b7cbd8",
-                                    pointerEvents: "none",
+                                    flex: 1,
+                                    display: "flex",
+                                    alignItems: "flex-end",
+                                    justifyContent: "center",
                                 }}
                             >
                                 <span
                                     style={{
-                                        position: "absolute",
-                                        left: 0,
-                                        top: -13,
-                                        fontSize: 9.5,
-                                        color: "#7e929f",
-                                        background: "rgba(255,255,255,.85)",
-                                        padding: "0 4px",
-                                        borderRadius: 4,
+                                        width: "62%",
+                                        maxWidth: 13,
+                                        height: one > 0 ? `${Math.max(4, (one / best) * 100)}%` : 2,
+                                        borderRadius: "2px 2px 0 0",
+                                        background: one > 0
+                                            ? (isBest ? "#1f4e6b" : "#9dbed2")
+                                            : "#e8eef2",
                                     }}
-                                >
-                                    書いた日の平均 {average.toLocaleString()} 文字
-                                </span>
+                                />
                             </span>
-                        )}
+                        );
+                    })}
+                </div>
 
-                        {/* いちばん書いた日の吹き出し */}
+                {/* 書いた日の平均 */}
+                {average > 0 && (
+                    <span
+                        style={{
+                            position: "absolute",
+                            left: 0,
+                            right: 0,
+                            bottom: `${(average / best) * 100}%`,
+                            borderTop: "1px dashed #c3d5e0",
+                            pointerEvents: "none",
+                        }}
+                    >
                         <span
                             style={{
                                 position: "absolute",
-                                left: `${((recap.bestDay - 0.5) / recap.monthDays) * 100}%`,
-                                bottom: `calc(${Math.max(3, (recap.bestChars / best) * 96)}% + 8px)`,
-                                transform: "translateX(-50%)",
-                                background: "#1f4e6b",
-                                color: "#fff",
-                                borderRadius: 8,
-                                padding: "5px 9px",
-                                fontSize: 10.5,
-                                lineHeight: 1.45,
-                                whiteSpace: "nowrap",
-                                boxShadow: "0 4px 10px rgba(20,40,55,.2)",
+                                right: 0,
+                                top: -14,
+                                fontSize: 9.5,
+                                color: "#8b98a1",
+                                background: "#fff",
+                                padding: "0 3px",
                             }}
                         >
-                            {month}月{recap.bestDay}日
-                            <br />
-                            <b style={{ fontSize: 12 }}>{recap.bestChars.toLocaleString()}</b> 文字
+                            書いた日の平均 {average.toLocaleString()} 文字
                         </span>
-                    </div>
+                    </span>
+                )}
+            </div>
 
-                    {/* 日の目盛り */}
-                    <div style={{ position: "relative", height: 16, fontSize: 10, color: "#9aa6ae" }}>
-                        {marks.map((day) => (
-                            <span
-                                key={day}
-                                style={{
-                                    position: "absolute",
-                                    left: `${((day - 0.5) / recap.monthDays) * 100}%`,
-                                    transform: day === recap.monthDays ? "translateX(-100%)" : "translateX(-50%)",
-                                    top: 3,
-                                }}
-                            >
-                                {day === 1 ? `${month}/1` : day}
-                            </span>
-                        ))}
-                    </div>
-                </div>
+            {/* 日の目盛り */}
+            <div style={{ position: "relative", height: 18, flex: "none", fontSize: 10, color: "#9aa6ae" }}>
+                {marks.map((day) => (
+                    <span
+                        key={day}
+                        style={{
+                            position: "absolute",
+                            left: `${((day - 0.5) / recap.monthDays) * 100}%`,
+                            transform: day === recap.monthDays ? "translateX(-100%)" : "translateX(-50%)",
+                            top: 4,
+                        }}
+                    >
+                        {day === 1 ? `${month}/1` : day}
+                    </span>
+                ))}
             </div>
         </div>
     );
@@ -1050,148 +1138,6 @@ function Rhythm({ recap, month }: { recap: Recap; month: number }) {
 /* ============================================================
  * 絵と印
  * ========================================================== */
-
-/**
- * 右上の絵。原稿用紙の見開きと万年筆、そして書き上げた紙の束。
- *
- * ★ 紙の束は、その月の枚数で高くなる。
- *   絵がいつも同じだと、ただの飾りになる。
- *   たくさん書いた月ほど束が厚くなるので、
- *   数字を読む前に「書いたな」と分かる。
- *
- * ★ 束は紐で結んである。
- *   書き散らした紙ではなく、ひと月ぶんの仕事として置く。
- */
-function DeskArt({ sheets }: { sheets: number }) {
-    /* 下に重ねる枚数。原稿用紙 20 枚ごとに 1 枚、最大 6 枚 */
-    const extra = Math.min(6, Math.max(1, Math.round(sheets / 20) + 1));
-
-    return (
-        <div className="wrec-art" style={{ width: 316, flex: "none", position: "relative", height: 154 }}>
-            <svg width="316" height="154" viewBox="0 0 316 154" aria-hidden="true">
-                <defs>
-                    <radialGradient id="wrec-glow" cx="50%" cy="50%">
-                        <stop offset="0" stopColor="#fbeed4" stopOpacity=".85" />
-                        <stop offset="60%" stopColor="#f3e6d2" stopOpacity=".28" />
-                        <stop offset="100%" stopColor="#f3e6d2" stopOpacity="0" />
-                    </radialGradient>
-                    <linearGradient id="wrec-page-l" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0" stopColor="#ffffff" />
-                        <stop offset="1" stopColor="#eef5f9" />
-                    </linearGradient>
-                    <linearGradient id="wrec-page-r" x1="1" y1="0" x2="0" y2="1">
-                        <stop offset="0" stopColor="#ffffff" />
-                        <stop offset="1" stopColor="#eef5f9" />
-                    </linearGradient>
-                    <linearGradient id="wrec-pen" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0" stopColor="#22394e" />
-                        <stop offset="45%" stopColor="#3d5e79" />
-                        <stop offset="100%" stopColor="#1d3145" />
-                    </linearGradient>
-                    <linearGradient id="wrec-ribbon" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0" stopColor="#e3c27f" />
-                        <stop offset="100%" stopColor="#c79d51" />
-                    </linearGradient>
-                </defs>
-
-                {/* 朝の光 */}
-                <circle cx="240" cy="44" r="66" fill="url(#wrec-glow)" />
-                <circle cx="236" cy="48" r="54" fill="#eaf2f7" opacity=".85" />
-
-                {/* 手書きの言葉 */}
-                <text x="2" y="30" fontSize="11.5" fill="#8b98a1" fontFamily='"Hiragino Mincho ProN", serif' letterSpacing="1.6">
-                    今月も、
-                </text>
-                <text x="16" y="50" fontSize="11.5" fill="#8b98a1" fontFamily='"Hiragino Mincho ProN", serif' letterSpacing="1.6">
-                    よく書きました。
-                </text>
-                <path d="M6 60 C50 74 94 70 132 54" stroke="#c6d6e0" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-
-                {/* 置かれた影 */}
-                <ellipse cx="60" cy="140" rx="46" ry="6" fill="#dbe5eb" opacity=".7" />
-                <ellipse cx="180" cy="132" rx="82" ry="8" fill="#dbe5eb" opacity=".55" />
-
-                {/* 書き上げた紙の束 */}
-                <g>
-                    {Array.from({ length: extra }, (_, index) => {
-                        const step = extra - index;
-                        return (
-                            <rect
-                                key={index}
-                                x={10 + step * 1.8}
-                                y={106 - step * 4.6}
-                                width="66"
-                                height="31"
-                                rx="3"
-                                fill="#f9fbfd"
-                                stroke="#d5e1e9"
-                                strokeWidth="1.3"
-                                transform={`rotate(${-7.5 + step * 2} ${43 + step * 1.8} ${121 - step * 4.6})`}
-                            />
-                        );
-                    })}
-
-                    {/* いちばん上の一枚。ここに紐を掛ける */}
-                    <g style={{ animationDelay: `${0.25 + extra * 0.08}s` }}>
-                        <rect x="10" y="106" width="66" height="31" rx="3" fill="#ffffff" stroke="#cedbe4" strokeWidth="1.3" transform="rotate(-7.5 43 121)" />
-                        <path d="M20 115 h46 M20 122 h46 M20 129 h30" stroke="#e0eaf0" strokeWidth="1.8" strokeLinecap="round" transform="rotate(-7.5 43 121)" />
-                        <g transform="rotate(-7.5 43 121)">
-                            <path d="M41 104 V139" stroke="#d3ab5c" strokeWidth="3" />
-                            <path d="M11 121 H75" stroke="#dcb76b" strokeWidth="3" />
-                            <path d="M41 118 C34 112 28 113 29 118 C30 122 36 122 41 118 Z" fill="#e3c27f" />
-                            <path d="M41 118 C48 112 54 113 53 118 C52 122 46 122 41 118 Z" fill="#d9b25c" />
-                            <path d="M41 119 c-3 5 -6 8 -9 10 M41 119 c3 5 6 8 10 9" stroke="#d9b25c" strokeWidth="2" fill="none" strokeLinecap="round" />
-                            <circle cx="41" cy="118" r="2.6" fill="#c79d51" />
-                        </g>
-                    </g>
-                </g>
-
-                {/* 本の厚み */}
-                <path d="M104 124 C132 110 160 110 180 118 V113 C160 105 132 105 104 119 Z" fill="#d5e3ec" />
-                <path d="M180 118 C200 110 228 110 258 124 V119 C228 105 200 105 180 113 Z" fill="#d5e3ec" />
-                <path d="M104 119 C132 105 160 105 180 113 V109 C160 101 132 101 104 115 Z" fill="#e6eef4" />
-                <path d="M180 113 C200 105 228 105 258 119 V115 C228 101 200 101 180 109 Z" fill="#e6eef4" />
-
-                {/* 開いた本 */}
-                <path d="M104 115 C132 101 160 101 180 109 V50 C160 42 132 42 104 56 Z" fill="url(#wrec-page-l)" stroke="#bed2df" strokeWidth="1.7" />
-                <path d="M180 109 C200 101 228 101 258 115 V56 C228 42 200 42 180 50 Z" fill="url(#wrec-page-r)" stroke="#bed2df" strokeWidth="1.7" />
-
-                {/* 原稿用紙の升 */}
-                <g stroke="#e3edf3" strokeWidth="1">
-                    <path d="M116 64 h54 M116 74 h54 M116 84 h54 M116 94 h54" />
-                    <path d="M128 56 v48 M140 54 v50 M152 53 v52 M164 52 v53" />
-                    <path d="M192 58 h54 M192 68 h54 M192 78 h54 M192 88 h54" />
-                    <path d="M204 48 v48 M216 49 v49 M228 51 v50 M240 53 v51" />
-                </g>
-                <path d="M180 50 V109" stroke="#bed2df" strokeWidth="1.7" />
-                <path d="M176 52 C178 70 178 90 176 107" stroke="#dae7ef" strokeWidth="3" fill="none" />
-
-                {/* 書かれた行と、書きかけの行 */}
-                <path d="M120 60 h42 M120 70 h42 M120 80 h42 M120 90 h26" stroke="#b6cbda" strokeWidth="2" strokeLinecap="round" />
-                <path d="M196 64 h36" stroke="#1f4e6b" strokeWidth="2" strokeLinecap="round" opacity=".5" />
-
-                {/* しおり */}
-                <path d="M170 46 h10 v32 l-5 -5 l-5 5 z" fill="url(#wrec-ribbon)" />
-
-                {/* 万年筆 */}
-                <g transform="rotate(38 240 62)">
-                    <rect x="233" y="0" width="14" height="52" rx="7" fill="url(#wrec-pen)" />
-                    <rect x="236" y="4" width="3" height="44" rx="1.5" fill="#ffffff" opacity=".22" />
-                    <rect x="233" y="14" width="14" height="7" rx="2" fill="#dcc38a" />
-                    <path d="M233 52 h14 l-7 17 z" fill="#cbd9e2" />
-                    <path d="M233 52 h7 v17 z" fill="#b9cad6" />
-                    <path d="M240 56 v10" stroke="#5d7484" strokeWidth="1.3" />
-                </g>
-
-                {/* 葉 */}
-                <path d="M98 146 c-9 -7 -9 -21 -3 -29 c9 6 11 20 3 29 z" fill="#d3e3da" />
-                <path d="M95 142 c1 -9 2 -16 1 -22" stroke="#c0d6c9" strokeWidth="1" fill="none" />
-                <path d="M268 130 c8 -8 21 -9 29 -5 c-7 9 -20 11 -29 5 z" fill="#dfeae4" />
-                <path d="M272 129 c8 -3 15 -4 21 -3" stroke="#cbded4" strokeWidth="1" fill="none" />
-            </svg>
-        </div>
-    );
-}
 
 function LeafArt() {
     return (
