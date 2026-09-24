@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { VerticalText } from "@/components/novel/episode/mobile-episode-body";
+import { reportReadProgress } from "@/components/reader/read-progress-tracker";
 import { illustBox } from "@/config/illust-size";
 import { splitIntoSentences } from "@/lib/utils/sentences";
 
@@ -198,6 +199,18 @@ export default function ReadFullPage({
     function turn(step: 1 | -1) {
         setPage((p) => Math.min(Math.max(p + step, 0), pageCount - 1));
     }
+
+    /*
+     * どこまで読んだかを、計測へ渡す。
+     *
+     * ★ この読み方では、頁そのものは動かない。
+     *   巻物のように送らないので、外から見ると
+     *   いつまでも「頭で止まっている」ことになる。
+     *   何頁目かを、こちらから教える。
+     */
+    useEffect(() => {
+        if (pageCount > 0) reportReadProgress(((page + 1) / pageCount) * 100);
+    }, [page, pageCount]);
 
     useEffect(() => {
         function onKey(e: KeyboardEvent) {

@@ -7,6 +7,7 @@ import ReadingSettings, { Settings } from '@/components/novel/episode/reading-se
 import { splitRuby } from '@/lib/utils/ruby'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 import { usePathname, useRouter } from 'next/navigation'
+import { reportReadProgress } from '@/components/reader/read-progress-tracker'
 
 interface Props {
   title: string
@@ -467,6 +468,30 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
     }
   }, [isVertical, body])
 
+  /*
+   * 縦書きで読んでいるときの、進み具合。
+   *
+   * ★ 縦書きは、頁そのものを動かさない。
+   *   本文の入れ物だけが横へ送られる。
+   *   外から見ると頭で止まったままなので、
+   *   ここから「どこまで来たか」を渡す。
+   *
+   * ★ 縦書きは右から左へ流れる。
+   *   始まりは右端（送りが最大）、終わりは左端（送りが 0）。
+   */
+  function onVerticalScroll() {
+    const box = scrollRef.current
+    if (!box) return
+
+    const room = box.scrollWidth - box.clientWidth
+    if (room <= 0) {
+      reportReadProgress(100)
+      return
+    }
+
+    reportReadProgress(((room - box.scrollLeft) / room) * 100)
+  }
+
   function handleSettingsChange(s: Settings) {
     setSettings(s)
     setIsVertical(s.writingMode === 'vertical')
@@ -573,6 +598,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
         <div
           ref={scrollRef}
           className="v-scroll-m"
+          onScroll={onVerticalScroll}
           style={{
             overflowX: 'scroll',
             overflowY: 'hidden',

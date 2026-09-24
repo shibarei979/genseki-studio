@@ -34,6 +34,7 @@ import CopyAttribution from '@/components/novel/episode/copy-attribution'
 import VoicePlayer from '@/components/novel/episode/voice-player'
 import TypoReportButton from '@/components/novel/episode/typo-report-button'
 import ValidReadTracker from '@/components/novel/episode/valid-read-tracker'
+import ReadProgressTracker from '@/components/reader/read-progress-tracker'
 import { QuoteProvider } from '@/components/novel/episode/quote-context'
 import { appConfig } from '@/config'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
@@ -342,6 +343,18 @@ export default async function EpisodePage({ params }: Props) {
       episodeTitle={episode.title}
       authorName={author?.display_name}
     />
+    {/*
+      * どこまで読まれたかを控える。
+      *
+      * ★ 入っていない人も測る。
+      *   読む人のほとんどは入っていない。
+      *   入っている人だけ見ても、離脱の形は分からない。
+      *
+      * ★ 誰が読んだかは持たない。
+      *   作者かどうか、機械かどうかは受け口の側で見分ける。
+      */}
+    <ReadProgressTracker episodeId={params.epId}/>
+
     <div style={{minHeight:'100vh'}}>
       <Header />
 
