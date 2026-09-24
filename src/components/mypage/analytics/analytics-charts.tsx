@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 interface EpisodeRow {
   ep_number: number
@@ -54,6 +54,125 @@ function diffLabel(today: number, yesterday: number): string {
   return ratio > 0 ? `+${ratio}%` : `${ratio}%`
 }
 
+/**
+ * すべての作品をまとめた枠。
+ *
+ * ★ 作品ごとの数は見られても、全体がいくつかが分からなかった。
+ *   一覧の先頭に「すべての作品」を置いて、合計を出す。
+ *
+ * ★ 読んだ人の数だけは、単純に足した数（のべ）。
+ *   同じ人が 2 作品を読んでいても 2 人と数える。
+ *   作品をまたいで同じ人かどうかは、ここでは分からない。
+ */
+const ALL_ID = '__all__'
+
+/** 選んだ作品を覚えておく場所。開き直しても元に戻らないように */
+const PICK_KEY = 'genseki:analytics-novel'
+
+type Cell = { v: number; m: number; d: number; a: number }
+type SeriesRow = { date: string; views: number; m?: number; d?: number; a?: number }
+
+/** 日ごと・月ごとの記録を足し合わせる */
+function mergeCells(novels: NovelStat[], pick: (n: NovelStat) => Record<string, Cell> | undefined) {
+  const out: Record<string, Cell> = {}
+  novels.forEach(n => {
+    for (const [key, one] of Object.entries(pick(n) || {})) {
+      const cur = out[key] || (out[key] = { v: 0, m: 0, d: 0, a: 0 })
+      cur.v += one.v; cur.m += one.m; cur.d += one.d; cur.a += one.a
+    }
+  })
+  return out
+}
+
+/** 並び（7日・30日・1年など）を、同じ日どうしで足し合わせる */
+function mergeSeries(novels: NovelStat[], pick: (n: NovelStat) => SeriesRow[] | undefined): SeriesRow[] {
+  const out = new Map<string, { date: string; views: number; m: number; d: number; a: number }>()
+  const order: string[] = []
+  novels.forEach(n => {
+    (pick(n) || []).forEach(row => {
+      let cur = out.get(row.date)
+      if (!cur) {
+        cur = { date: row.date, views: 0, m: 0, d: 0, a: 0 }
+        out.set(row.date, cur)
+        order.push(row.date)
+      }
+      cur.views += row.views
+      cur.m += row.m ?? 0
+      cur.d += row.d ?? 0
+      cur.a += row.a ?? 0
+    })
+  })
+  return order.map(date => out.get(date)!)
+}
+
+function sumOf(novels: NovelStat[], pick: (n: NovelStat) => number) {
+  return novels.reduce((sum, n) => sum + (pick(n) || 0), 0)
+}
+
+function sumHours(novels: NovelStat[], pick: (n: NovelStat) => number[] | undefined) {
+  const out = new Array(24).fill(0)
+  novels.forEach(n => (pick(n) || []).forEach((one, hour) => { out[hour] += one || 0 }))
+  return out
+}
+
+function buildAll(novels: NovelStat[]): NovelStat {
+  const dailyByDay = mergeCells(novels, n => n.dailyByDay)
+  const monthlyByMonth = mergeCells(novels, n => n.monthlyByMonth)
+
+  /* 日ごとの上位は、直近 30 日のうちから選ぶ */
+  const from = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const dailyTop = Object.entries(dailyByDay)
+    .filter(([date]) => date >= from)
+    .map(([date, one]) => ({ date, views: one.v, m: one.m, d: one.d, a: one.a }))
+    .sort((x, y) => y.views - x.views)
+    .slice(0, 5)
+
+  const monthlyTop = Object.entries(monthlyByMonth)
+    .map(([month, one]) => ({ month, views: one.v, m: one.m, d: one.d, a: one.a }))
+    .sort((x, y) => y.views - x.views)
+    .slice(0, 5)
+
+  const allYears = mergeSeries(novels, n => n.allYears).sort((x, y) => x.date.localeCompare(y.date))
+
+  /* 話は作品名を添える。どの作品の話か分からなくなるため */
+  const episodeRows = novels
+    .flatMap(n => n.episodeRows.map(ep => ({ ...ep, title: `${n.title}　${ep.title}` })))
+    .sort((x, y) => y.views - x.views)
+
+  const commentList = novels
+    .flatMap(n => n.commentList)
+    .sort((x, y) => (y.created_at || '').localeCompare(x.created_at || ''))
+    .slice(0, 30)
+
+  return {
+    id: ALL_ID,
+    title: 'すべての作品',
+    genre: '',
+    published: true,
+    views: sumOf(novels, n => n.views),
+    viewsToday: sumOf(novels, n => n.viewsToday),
+    viewsYesterday: sumOf(novels, n => n.viewsYesterday),
+    viewsWeek: sumOf(novels, n => n.viewsWeek),
+    viewsMonth: sumOf(novels, n => n.viewsMonth),
+    likes: sumOf(novels, n => n.likes),
+    bookmarks: sumOf(novels, n => n.bookmarks),
+    comments: sumOf(novels, n => n.comments),
+    uniqueCount: sumOf(novels, n => n.uniqueCount),
+    hourlyToday: sumHours(novels, n => n.hourlyToday),
+    hourlyYesterday: sumHours(novels, n => n.hourlyYesterday),
+    daily7: mergeSeries(novels, n => n.daily7),
+    daily30: mergeSeries(novels, n => n.daily30),
+    dailyByDay,
+    monthlyByMonth,
+    yearly30: mergeSeries(novels, n => n.yearly30),
+    allYears,
+    dailyTop,
+    monthlyTop,
+    episodeRows,
+    commentList,
+  }
+}
+
 const RANGES: { key: 'month'|'year'|'all'; label: string }[] = [
   { key:'month', label:'1か月' },
   { key:'year',  label:'1年' },
@@ -68,8 +187,42 @@ export default function AnalyticsCharts({
   /** 端末ごとの数。右の柱の末尾に添える */
   deviceStats?: { desktopPv: number; mobilePv: number; desktopUsers: number; mobileUsers: number }
 }) {
-  const [selectedId, setSelectedId] = useState(novels[0]?.id || '')
+  /*
+   * 一覧の先頭に「すべての作品」を置く。
+   * 作品が 1 つしか無ければ、合計と中身が同じなので出さない。
+   */
+  const options = useMemo(
+    () => (novels.length > 1 ? [buildAll(novels), ...novels] : novels),
+    [novels],
+  )
+
+  const [selectedId, setSelectedId] = useState(options[0]?.id || '')
   const [range, setRange] = useState<'month'|'year'|'all'>('month')
+
+  /*
+   * 前に見ていた作品を、開き直しても出す。
+   *
+   * ★ 覚えていないと、毎回いちばん上（下書きのことが多い）に戻る。
+   *   読み込みのあとに読むので、画面を作る側とずれない。
+   */
+  useEffect(() => {
+    let saved: string | null = null
+    try {
+      saved = window.localStorage.getItem(PICK_KEY)
+    } catch {
+      /* 覚えられない端末では、今までどおり先頭から */
+    }
+    if (saved && options.some(n => n.id === saved)) setSelectedId(saved)
+  }, [options])
+
+  const pick = (id: string) => {
+    setSelectedId(id)
+    try {
+      window.localStorage.setItem(PICK_KEY, id)
+    } catch {
+      /* 覚えられなくても、今の画面は変わる */
+    }
+  }
 
   /*
    * どの月を見ているか。0 が今月、-1 が先月。
@@ -85,7 +238,7 @@ export default function AnalyticsCharts({
    * ★ 1年は「直近1年」ではなく「その年の1月から12月まで」。
    */
   const [yearBack, setYearBack] = useState(0)
-  const selected = novels.find(n => n.id === selectedId) || novels[0]
+  const selected = options.find(n => n.id === selectedId) || options[0]
   if (!selected) return null
 
   /*
@@ -134,7 +287,7 @@ export default function AnalyticsCharts({
       <div style={{marginBottom:20}}>
         <div style={{fontSize:12,color:'var(--color-text-muted)',fontWeight:600,marginBottom:8}}>作品を選択</div>
         <div style={{position:'relative',display:'inline-block',minWidth:260,maxWidth:'100%'}}>
-          <select value={selectedId} onChange={e=>setSelectedId(e.target.value)}
+          <select value={selectedId} onChange={e=>pick(e.target.value)}
             style={{
               width:'100%',appearance:'none',WebkitAppearance:'none',
               padding:'10px 40px 10px 16px',borderRadius:10,
@@ -142,9 +295,9 @@ export default function AnalyticsCharts({
               background:'var(--color-bg-card)',color:'var(--color-text)',
               fontSize:14,fontWeight:600,cursor:'pointer',
             }}>
-            {novels.map(n => (
+            {options.map(n => (
               <option key={n.id} value={n.id}>
-                {n.title}{n.published===false ? '（非公開）' : ''}
+                {n.id === ALL_ID ? `すべての作品（${novels.length}作品の合計）` : `${n.title}${n.published===false ? '（非公開）' : ''}`}
               </option>
             ))}
           </select>
@@ -303,6 +456,16 @@ export default function AnalyticsCharts({
             <div style={{marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:2}}>累計ユニークアクセス</div>
               <div style={{fontSize:22,fontWeight:700,color:'var(--color-text)'}}>{selected.uniqueCount.toLocaleString()} <span style={{fontSize:12,color:'var(--color-text-muted)',fontWeight:400}}>人</span></div>
+              {/*
+                * ★ 合計のときは「のべ」と断る。
+                *   作品をまたいで同じ人かどうかは分からないので、
+                *   2 作品を読んだ人は 2 人として足されている。
+                */}
+              {selected.id === ALL_ID && (
+                <div style={{fontSize:10.5,color:'var(--color-text-faint)',marginTop:4,lineHeight:1.7}}>
+                  作品ごとの人数を足した数です。2作品を読んだ人は2人として数えています。
+                </div>
+              )}
               {/*
                 * ★ 数え始めた日を書いておく。
                 *
