@@ -11,6 +11,7 @@ import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 import MobileEpisodeBody from '@/components/novel/episode/mobile-episode-body'
 import { useQuote } from '@/components/novel/episode/quote-context'
 import { useVerticalWheel } from '@/hooks/use-vertical-wheel'
+import { reportReadProgress } from '@/components/reader/read-progress-tracker'
 
 interface Props {
   title: string
@@ -1280,6 +1281,29 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], s
    */
   useVerticalWheel(scrollRef, true)
 
+  /*
+   * どこまで読んだかを、計測へ渡す。
+   *
+   * ★ 縦書きでは窓そのものが動かない。
+   *   本文の入れ物だけが横へ送られるので、
+   *   外から見ると、いつまでも頭で止まって見える。
+   *
+   * ★ 縦書きは右から左へ流れる。
+   *   始まりは送りが最大、終わりは 0。
+   */
+  function onVerticalScroll() {
+    const box = scrollRef.current
+    if (!box) return
+
+    const room = box.scrollWidth - box.clientWidth
+    if (room <= 0) {
+      reportReadProgress(100)
+      return
+    }
+
+    reportReadProgress(((room - box.scrollLeft) / room) * 100)
+  }
+
   const sentences = splitIntoSentences(body)
 
   function handleClick(raw: string) {
@@ -1331,7 +1355,7 @@ function VerticalBody({ marking, marks = [], onMark, onOpenMark, illusts = [], s
         * 180 は、上の帯と道しるべと押し具のぶん。
         * 実測すると 120 で足りる。
         */}
-      <div ref={scrollRef} className="v-scroll" style={{overflowX:'scroll',overflowY:'hidden',/*
+      <div ref={scrollRef} className="v-scroll" onScroll={onVerticalScroll} style={{overflowX:'scroll',overflowY:'hidden',/*
            * ★ 縦に広げる。
            *
            *   前は 120px 引いていた。

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import ReadFullPage from "@/components/novel/episode/read-full-page";
+import ReadProgressTracker from "@/components/reader/read-progress-tracker";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -78,11 +79,25 @@ export default async function ReadPage({
         .order("after_sentence", { ascending: true });
 
     return (
-        <ReadFullPage
-            title={episode.title || "無題"}
-            body={episode.body || ""}
-            illusts={(illustRows ?? []) as { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null; rec_width?: number | null; rec_align?: number | null }[]}
-            backHref={`/novel/${params.id}/episode/${params.epId}`}
-        />
+        <>
+            {/*
+              * どこまで読まれたかを控える。
+              *
+              * ★ この頁は別の住所なので、話の頁に置いたものは効かない。
+              *   ここでも 1 つ置く。
+              *
+              * ★ この読み方は頁送り。窓は動かない。
+              *   何頁目かは ReadFullPage が
+              *   reportReadProgress() で教える。
+              */}
+            <ReadProgressTracker episodeId={params.epId} />
+
+            <ReadFullPage
+                title={episode.title || "無題"}
+                body={episode.body || ""}
+                illusts={(illustRows ?? []) as { id: string; url: string; is_ai: boolean; after_sentence: number; size?: string | null; rec_width?: number | null; rec_align?: number | null }[]}
+                backHref={`/novel/${params.id}/episode/${params.epId}`}
+            />
+        </>
     );
 }
