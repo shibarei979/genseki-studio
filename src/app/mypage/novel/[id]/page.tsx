@@ -188,7 +188,6 @@ export default async function NovelManagePage({ params }: { params: { id: string
             episodes.map((ep: any, i: number) => (
               <div key={ep.id} style={{ display: 'flex', alignItems: 'center', padding: '11px 18px', borderBottom: i === episodes.length - 1 ? 'none' : '1px solid var(--color-brand-light)', gap: 10 }}>
                 <span style={{ fontSize: 10, color: 'var(--color-text-inverse)', background: ep.published === false ? 'var(--color-text-faint)' : 'var(--color-info)', padding: '2px 7px', borderRadius: 3, flexShrink: 0 }}>{ep.published === false ? '下書き' : '公開'}</span>
-                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', flexShrink: 0 }}>ep.{ep.ep_number}</span>
                 <Link href={`/novel/${novel.id}/episode/${ep.id}`} style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: 'var(--color-text)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ep.title}</Link>
                 <span style={{ fontSize: 11, color: 'var(--color-text-faint)', flexShrink: 0 }}>{(ep.body?.length || 0).toLocaleString()}字</span>
                 <span className="desktop-only" style={{ fontSize: 11, color: 'var(--color-text-faint)', flexShrink: 0 }}>{fmt(ep.created_at).split(' ')[0]}</span>
