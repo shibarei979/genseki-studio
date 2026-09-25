@@ -146,7 +146,13 @@ export default function SceneSearch({
                 if (!line.trim()) return;
                 if (!stems.every((stem) => line.includes(stem))) return;
 
-                if (whoPatterns.length > 0) {
+                /*
+                 * ★ 名前だけで探すとき（「何」が無い）は、その行に名前があること。
+                 *   前後の行まで見ると、同じ場面が何度も並んでしまう。
+                 */
+                if (stems.length === 0) {
+                    if (!whoPatterns.some((pattern) => pattern.test(line))) return;
+                } else if (whoPatterns.length > 0) {
                     const from = Math.max(0, index - NEAR_LINES);
                     const near = lines.slice(from, index + NEAR_LINES + 1).join("\n");
                     if (!whoPatterns.every((pattern) => pattern.test(near))) return;
@@ -155,9 +161,24 @@ export default function SceneSearch({
                 total += 1;
                 if (hits.length >= MAX_HITS) return;
 
-                const at = line.indexOf(stems[0] ?? "");
+                /* 長い行は、当たった言葉の前後だけを見せる */
+                let at = 0;
+                let hitLength = 0;
+                if (stems.length > 0) {
+                    at = line.indexOf(stems[0]);
+                    hitLength = stems[0].length;
+                } else {
+                    for (const pattern of whoPatterns) {
+                        const found = line.match(pattern);
+                        if (found && found.index !== undefined) {
+                            at = found.index;
+                            hitLength = found[0].length;
+                            break;
+                        }
+                    }
+                }
                 const start = Math.max(0, at - AROUND);
-                const end = Math.min(line.length, at + (stems[0]?.length ?? 0) + AROUND);
+                const end = Math.min(line.length, at + hitLength + AROUND);
                 const shown =
                     (start > 0 ? "…" : "") +
                     line.slice(start, end).trim() +
@@ -265,7 +286,9 @@ export default function SceneSearch({
                 )}
             </div>
             <p className="mt-0.5 px-1.5 text-[10.5px] text-faint">
-                {who.length > 0
+                {who.length > 0 && what.length === 0
+                    ? `${who.map((entry) => entry.name).join("・")}が出てくる行（名前・別名）`
+                    : who.length > 0
                     ? `${who.map((entry) => entry.name).join("・")}が近くにいて「${what.join("」「")}」が出てくる場面`
                     : `「${what.join("」「")}」が出てくる場面`}
                 {stems.some((stem, index) => stem !== what[index]) &&

@@ -111,7 +111,20 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
      * 一覧に出すもの。
      * 「リオ エバ」のように名前だけを並べたときは、当たった資料を並べる。
      */
-    const listed = tokens.length >= 2 ? who : matched;
+    /*
+     * ★ 言葉が 1 つのときは、名前の一部に当たるものと、別名に当たるものを合わせる。
+     *   前は名前だけを見ていたので、別名で打つと「資料にありません」と出ていた。
+     */
+    const listed =
+        tokens.length >= 2
+            ? who
+            : [...matched, ...who.filter((entry) => !matched.some((one) => one.id === entry.id))];
+
+    /*
+     * ★ 名前を 1 つだけ打ったとき。
+     *   資料の一覧の下に、その人が出てくる行を「第〇話 〇行」で並べる（Pro）。
+     */
+    const nameMode = tokens.length === 1 && who.length === 1 && what.length === 0;
 
     /* 資料を足す案内。言葉が 1 つのときだけ。「リオ 投げる」という資料は作らない */
     const createBlock = tokens.length === 1 && (
@@ -243,6 +256,7 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                         <p className="px-2 py-4 text-xs text-faint">当てはまる資料がありません。</p>
                     )
                 ) : (
+                    <>
                     <ul>
                         {listed.map((entry) => (
                             <li key={entry.id} className="flex items-center gap-1">
@@ -307,6 +321,30 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                             </li>
                         ))}
                     </ul>
+
+                    {nameMode && (
+                        entryReport ? (
+                            <>
+                                <div className="mx-2 my-2 border-t border-line" />
+                                <SceneSearch
+                                    workId={workId}
+                                    episodeId={episodeId}
+                                    who={who}
+                                    what={[]}
+                                    pages={pages}
+                                    locked={false}
+                                    onJumpToWord={onJumpToWord}
+                                    onOpenReport={(entryId) => setReportId(entryId)}
+                                />
+                            </>
+                        ) : (
+                            <p className="mx-2 mt-3 border-t border-line px-1 pt-2.5 text-[11px] leading-relaxed text-faint">
+                                <ProBadge className="mr-1" />
+                                なら、この人が出てくる行を「第〇話 〇行」で全話から並べます。
+                            </p>
+                        )
+                    )}
+                    </>
                 )}
             </div>
 
