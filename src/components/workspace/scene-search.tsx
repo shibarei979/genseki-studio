@@ -89,6 +89,14 @@ interface Props {
     locked: boolean;
     onJumpToWord?: (word: string) => void;
     onOpenReport?: (entryId: string) => void;
+    /**
+     * 「誰」ごとに、打った言葉。
+     *
+     * ★ 本文では、資料の名前どおりに書かれていないことが多い。
+     *   資料は「律さん」でも、本文は「律は」「律の声」。
+     *   打った「律」でも探す。
+     */
+    typedFor?: Record<string, string>;
 }
 
 export default function SceneSearch({
@@ -100,7 +108,16 @@ export default function SceneSearch({
     locked,
     onJumpToWord,
     onOpenReport,
+    typedFor = {},
 }: Props) {
+    /* その人を本文で探すときの呼び方。資料の名前・別名に、打った言葉を足す */
+    const wordsFor = (entry: ResourceEntry): string[] => {
+        const typed = typedFor[entry.id];
+        const list = wordsOf(entry);
+        if (typed && !list.includes(typed)) list.push(typed);
+        return list.sort((a, b) => b.length - a.length);
+    };
+
     const [episodes, setEpisodes] = useState<Episode[] | null>(null);
     const [failed, setFailed] = useState(false);
 
@@ -125,13 +142,16 @@ export default function SceneSearch({
     const stems = useMemo(() => what.map(stemOf).filter((stem) => stem.length > 0), [what]);
 
     /** 見出し。「リオ × 投げる」 */
-    const title = [...who.map((entry) => entry.name), ...what].join(" × ");
+    const title =
+        what.length === 0
+            ? `${who.map((entry) => entry.name).join("・")}が出てくる行`
+            : [...who.map((entry) => entry.name), ...what].join(" × ");
 
     const result = useMemo(() => {
         if (!episodes) return null;
 
         const whoPatterns = who.map(
-            (entry) => new RegExp(wordsOf(entry).map(escapeRegExp).join("|")),
+            (entry) => new RegExp(wordsFor(entry).map(escapeRegExp).join("|")),
         );
 
         const hits: Hit[] = [];
@@ -244,15 +264,17 @@ export default function SceneSearch({
         const episodeCount = new Set(hits.map((hit) => hit.episode.id)).size;
 
         return { hits, total, notes, episodeCount };
-    }, [episodes, who, stems, pages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [episodes, who, stems, pages, typedFor]);
 
     /* 当たった所を太くする。「誰」と「何」の両方 */
     const marker = useMemo(() => {
-        const words = [...stems, ...who.flatMap(wordsOf)]
+        const words = [...stems, ...who.flatMap(wordsFor)]
             .filter((word) => word.length > 0)
             .sort((a, b) => b.length - a.length);
         return words.length ? new RegExp(`(${words.map(escapeRegExp).join("|")})`, "g") : null;
-    }, [stems, who]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [stems, who, typedFor]);
 
     function marked(text: string) {
         if (!marker) return <>{text}</>;
@@ -261,7 +283,7 @@ export default function SceneSearch({
             <>
                 {parts.map((part, index) =>
                     index % 2 === 1 ? (
-                        <mark key={index} className="rounded-sm bg-forest-tint px-0.5 text-forest">
+                        <mark key={index} className="rounded-sm bg-forest-tint px-0.5 font-medium text-forest">
                             {part}
                         </mark>
                     ) : (
@@ -287,7 +309,7 @@ export default function SceneSearch({
             </div>
             <p className="mt-0.5 px-1.5 text-[10.5px] text-faint">
                 {who.length > 0 && what.length === 0
-                    ? `${who.map((entry) => entry.name).join("・")}が出てくる行（名前・別名）`
+                    ? "全話から、名前・別名・打った言葉で探しています"
                     : who.length > 0
                     ? `${who.map((entry) => entry.name).join("・")}が近くにいて「${what.join("」「")}」が出てくる場面`
                     : `「${what.join("」「")}」が出てくる場面`}
@@ -334,52 +356,83 @@ export default function SceneSearch({
                             言葉を短くするか、別の言い方で試してください。
                         </p>
                     ) : (
-                        <ul className="mt-2">
-                            {result.hits.map((hit, index) => {
-                                const isHere = hit.episode.id === episodeId;
-                                const showHead =
-                                    index === 0 || result.hits[index - 1].episode.id !== hit.episode.id;
+                        /*
+                         * ★ 話ごとに 1 枚の札にまとめる。
+                         *   前は話の見出しと行が同じ地の上に並び、
+                         *   どこからどこまでが 1 話ぶんか分かりにくかった。
+                         */
+                        <div className="mt-2 space-y-2 px-1">
+                            {(() => {
+                                const groups: { episode: Episode; hits: Hit[] }[] = [];
+                                for (const hit of result.hits) {
+                                    const last = groups[groups.length - 1];
+                                    if (last && last.episode.id === hit.episode.id) last.hits.push(hit);
+                                    else groups.push({ episode: hit.episode, hits: [hit] });
+                                }
 
-                                return (
-                                    <li key={`${hit.episode.id}-${hit.lineNo}`}>
-                                        {showHead && (
-                                            <p className="mt-2 flex items-baseline gap-1.5 px-1.5 text-[11px] text-muted first:mt-0">
-                                                <span className="font-medium text-ink">
-                                                    第{hit.episode.ep_number}話
+                                return groups.map((group) => {
+                                    const isHere = group.episode.id === episodeId;
+
+                                    return (
+                                        <section
+                                            key={group.episode.id}
+                                            className={[
+                                                "overflow-hidden rounded-lg border",
+                                                isHere ? "border-forest-line" : "border-line",
+                                            ].join(" ")}
+                                        >
+                                            <header
+                                                className={[
+                                                    "flex items-center gap-1.5 px-2.5 py-1.5 text-[11px]",
+                                                    isHere ? "bg-forest-tint" : "bg-canvas",
+                                                ].join(" ")}
+                                            >
+                                                <span className="shrink-0 font-medium text-ink">
+                                                    第{group.episode.ep_number}話
                                                 </span>
-                                                <span className="min-w-0 truncate">
-                                                    {hit.episode.title}
+                                                <span className="min-w-0 flex-1 truncate text-muted">
+                                                    {group.episode.title}
                                                 </span>
                                                 {isHere && (
-                                                    <span className="shrink-0 rounded bg-forest-tint px-1 text-[10px] text-forest">
+                                                    <span className="shrink-0 text-[10px] text-forest">
                                                         開いている話
                                                     </span>
                                                 )}
-                                            </p>
-                                        )}
-                                        <button
-                                            type="button"
-                                            disabled={!isHere || !onJumpToWord}
-                                            onClick={() => onJumpToWord?.(hit.line)}
-                                            title={isHere ? "本文のこの行へ移動します" : undefined}
-                                            className="flex w-full gap-2 rounded-md px-1.5 py-1 text-left enabled:hover:bg-canvas disabled:cursor-default"
-                                        >
-                                            <span className="w-9 shrink-0 pt-px text-right text-[10.5px] text-faint">
-                                                {hit.lineNo}行
-                                            </span>
-                                            <span className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink">
-                                                {hit.context && (
-                                                    <span className="mb-0.5 block text-[11px] leading-snug text-faint">
-                                                        {hit.context}
-                                                    </span>
-                                                )}
-                                                {marked(hit.shown)}
-                                            </span>
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                                                <span className="shrink-0 text-[10px] text-faint">
+                                                    {group.hits.length}か所
+                                                </span>
+                                            </header>
+
+                                            <ul className="divide-y divide-line bg-surface">
+                                                {group.hits.map((hit) => (
+                                                    <li key={hit.lineNo}>
+                                                        <button
+                                                            type="button"
+                                                            disabled={!isHere || !onJumpToWord}
+                                                            onClick={() => onJumpToWord?.(hit.line)}
+                                                            title={isHere ? "本文のこの行へ移動します" : undefined}
+                                                            className="flex w-full items-start gap-2 px-2.5 py-1.5 text-left enabled:hover:bg-canvas disabled:cursor-default"
+                                                        >
+                                                            <span className="mt-0.5 w-10 shrink-0 rounded border border-line px-1 py-px text-center text-[10px] text-muted">
+                                                                {hit.lineNo}行
+                                                            </span>
+                                                            <span className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink">
+                                                                {hit.context && (
+                                                                    <span className="mb-0.5 block text-[11px] leading-snug text-faint">
+                                                                        {hit.context}
+                                                                    </span>
+                                                                )}
+                                                                {marked(hit.shown)}
+                                                            </span>
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </section>
+                                    );
+                                });
+                            })()}
+                        </div>
                     )}
 
                     {result.total > result.hits.length && (
