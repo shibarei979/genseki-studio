@@ -413,8 +413,8 @@ export default function SceneSearch({
                                                             title={isHere ? "本文のこの行へ移動します" : undefined}
                                                             className="flex w-full items-start gap-2 px-2.5 py-1.5 text-left enabled:hover:bg-canvas disabled:cursor-default"
                                                         >
-                                                            <span className="mt-0.5 w-10 shrink-0 rounded border border-line px-1 py-px text-center text-[10px] text-muted">
-                                                                {hit.lineNo}行
+                                                            <span className="mt-0.5 min-w-[3.4rem] shrink-0 whitespace-nowrap rounded border border-line px-1 py-px text-center text-[10px] text-muted">
+                                                                {hit.lineNo}行目
                                                             </span>
                                                             <span className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink">
                                                                 {hit.context && (

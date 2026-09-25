@@ -184,7 +184,7 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
 
     /*
      * ★ 名前を 1 つだけ打ったとき。
-     *   資料の一覧の下に、その人が出てくる行を「第〇話 〇行」で並べる（Pro）。
+     *   資料の一覧の下に、その人が出てくる行を「第〇話 〇行目」で並べる（Pro）。
      */
     const nameMode = tokens.length === 1 && who.length === 1 && what.length === 0;
 
@@ -231,7 +231,7 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                         line.slice(start, end).trim() +
                         (end < line.length ? "…" : "");
 
-                    found = { label: `第${episode.ep_number}話 ${index + 1}行`, text, hit };
+                    found = { label: `第${episode.ep_number}話 ${index + 1}行目`, text, hit };
                 });
             }
 
@@ -563,7 +563,7 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                         ) : (
                             <p className="mx-2 mt-3 border-t border-line px-1 pt-2.5 text-[11px] leading-relaxed text-faint">
                                 <ProBadge className="mr-1" />
-                                なら、この人が出てくる行を「第〇話 〇行」で全話から並べます。
+                                なら、この人が出てくる行を「第〇話 〇行目」で全話から並べます。
                             </p>
                         )
                     )}
