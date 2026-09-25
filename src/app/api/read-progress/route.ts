@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { cookies } from "next/headers";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -23,7 +25,7 @@ import { createClient } from "@/lib/supabase/server";
  * ★ 数は減らさない。
  *
  *   後から届いた知らせのほうが小さくても、
- *   大きいほうを残す（SQL 側の record_read_progress）。
+ *   大きいほうを残す。
  *   戻って読み直したときに、記録が巻き戻らないため。
  *
  * ★ 誰が読んだかは持たない。
@@ -58,6 +60,31 @@ const BOT_WORDS = [
     "node-fetch",
 ];
 
+/**
+ * 今の台帳の様子を見る。
+ *
+ * ★ ブラウザでこの住所を開くだけで分かる。
+ *   {"ok":true,"rows":0}        … 台帳には届く。送る側が動いていない
+ *   {"ok":true,"rows":3}        … 記録されている
+ *   {"ok":false,"error":"..."}  … その文が原因
+ *
+ * ★ 数だけを返す。誰が何を読んだかは出さない。
+ */
+export async function GET() {
+    try {
+        const admin = createAdminClient();
+        const { count, error } = await admin
+            .from("read_progress")
+            .select("session_key", { count: "exact", head: true });
+        if (error) {
+            return NextResponse.json({ ok: false, error: error.message, code: error.code ?? null });
+        }
+        return NextResponse.json({ ok: true, rows: count ?? 0 });
+    } catch (e) {
+        return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    }
+}
+
 export async function POST(request: Request) {
     /*
      * 窓を閉じるときの知らせは sendBeacon で来る。
@@ -67,57 +94,142 @@ export async function POST(request: Request) {
     try {
         body = JSON.parse(await request.text());
     } catch {
-        return NextResponse.json({ ok: false }, { status: 400 });
+        return NextResponse.json({ ok: false, error: "bad body" }, { status: 400 });
     }
 
     const episodeId = String(body.episode_id || "");
     const sessionKey = String(body.session_key || "").slice(0, 40);
     if (!episodeId || !sessionKey) {
-        return NextResponse.json({ ok: false }, { status: 400 });
+        return NextResponse.json({ ok: false, error: "no key" }, { status: 400 });
     }
 
     /* 割合は 0〜100、時間は 6 時間まで。おかしな数を弾く */
     const maxPct = Math.max(0, Math.min(100, Math.round(Number(body.max_pct) || 0)));
     const seconds = Math.max(0, Math.min(6 * 60 * 60, Math.round(Number(body.read_seconds) || 0)));
 
-    const admin = createAdminClient();
+    try {
+        const admin = createAdminClient();
 
-    const { data: episode } = await admin
-        .from("episodes")
-        .select("id, novel_id")
-        .eq("id", episodeId)
-        .maybeSingle();
-    if (!episode) return NextResponse.json({ ok: false }, { status: 404 });
+        const { data: episode, error: epError } = await admin
+            .from("episodes")
+            .select("id, novel_id")
+            .eq("id", episodeId)
+            .maybeSingle();
+        if (epError) {
+            console.error("[read-progress] episodes", epError);
+            return NextResponse.json({ ok: false, error: epError.message }, { status: 500 });
+        }
+        if (!episode) return NextResponse.json({ ok: false, error: "no episode" }, { status: 404 });
 
-    const { data: novel } = await admin
-        .from("novels")
-        .select("id, author_id")
-        .eq("id", episode.novel_id)
-        .maybeSingle();
+        const { data: novel } = await admin
+            .from("novels")
+            .select("id, author_id")
+            .eq("id", episode.novel_id)
+            .maybeSingle();
 
-    /* 入っている人かどうか。入っていなくても控える */
-    const supabase = await createClient();
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+        /* 入っている人かどうか。入っていなくても控える */
+        let userId: string | null = null;
+        try {
+            const supabase = await createClient();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            userId = user?.id ?? null;
+        } catch {
+            userId = null;
+        }
 
-    const agent = (request.headers.get("user-agent") || "").toLowerCase();
-    const isBot = agent === "" || BOT_WORDS.some((word) => agent.includes(word));
-    const isPhone = /mobile|android|iphone|ipad|ipod/.test(agent);
+        /*
+         * その機械の札。
+         * 画面の側では読めないことがあるので、まず cookie を見る。
+         */
+        let visitor: string | null = null;
+        try {
+            visitor = (await cookies()).get("gk-visitor")?.value ?? null;
+        } catch {
+            visitor = null;
+        }
+        if (!visitor && body.visitor_key) visitor = String(body.visitor_key);
+        if (visitor) visitor = visitor.slice(0, 40);
 
-    await admin.rpc("record_read_progress", {
-        p_session_key: sessionKey,
-        p_episode_id: episodeId,
-        p_novel_id: episode.novel_id,
-        p_user_id: user?.id ?? null,
-        p_visitor_key: body.visitor_key ? String(body.visitor_key).slice(0, 40) : null,
-        p_max_pct: maxPct,
-        p_read_seconds: seconds,
-        p_is_author: !!(user && novel && novel.author_id === user.id),
-        p_is_bot: isBot,
-        p_device: isPhone ? "mobile" : "desktop",
-        p_referrer: body.referrer ? String(body.referrer).slice(0, 300) : null,
-    });
+        const agent = (request.headers.get("user-agent") || "").toLowerCase();
+        const isBot = agent === "" || BOT_WORDS.some((word) => agent.includes(word));
+        const isPhone = /mobile|android|iphone|ipad|ipod/.test(agent);
+        const now = new Date().toISOString();
 
-    return NextResponse.json({ ok: true });
+        /*
+         * ★ SQL の関数は通さず、表へ直に書く。
+         *   関数の実行権限や、関数が見つからない問題を避けるため。
+         *
+         * ★ 既にあれば、大きいほうを残して書き替える。
+         *   無ければ 1 行足す。
+         */
+        const { data: before, error: readError } = await admin
+            .from("read_progress")
+            .select("max_pct, read_seconds")
+            .eq("session_key", sessionKey)
+            .eq("episode_id", episodeId)
+            .maybeSingle();
+        if (readError) {
+            console.error("[read-progress] read", readError);
+            return NextResponse.json({ ok: false, error: readError.message }, { status: 500 });
+        }
+
+        if (before) {
+            const nextPct = Math.max(Number(before.max_pct) || 0, maxPct);
+            const nextSeconds = Math.max(Number(before.read_seconds) || 0, seconds);
+            const { error } = await admin
+                .from("read_progress")
+                .update({
+                    max_pct: nextPct,
+                    read_seconds: nextSeconds,
+                    reached_end: nextPct >= 95,
+                    updated_at: now,
+                })
+                .eq("session_key", sessionKey)
+                .eq("episode_id", episodeId);
+            if (error) {
+                console.error("[read-progress] update", error);
+                return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+            }
+            return NextResponse.json({ ok: true, updated: true });
+        }
+
+        const { error: insertError } = await admin.from("read_progress").insert({
+            session_key: sessionKey,
+            episode_id: episodeId,
+            novel_id: episode.novel_id,
+            user_id: userId,
+            visitor_key: visitor,
+            max_pct: maxPct,
+            read_seconds: seconds,
+            reached_end: maxPct >= 95,
+            is_author: !!(userId && novel && novel.author_id === userId),
+            is_bot: isBot,
+            device: isPhone ? "mobile" : "desktop",
+            referrer: body.referrer ? String(body.referrer).slice(0, 300) : null,
+            started_at: now,
+            updated_at: now,
+        });
+
+        if (insertError) {
+            /*
+             * ほぼ同時に 2 つ届いて、先に片方が行を作ったとき。
+             * 次の知らせで書き替わるので、ここでは失敗にしない。
+             */
+            if (insertError.code === "23505") {
+                return NextResponse.json({ ok: true, raced: true });
+            }
+            console.error("[read-progress] insert", insertError);
+            return NextResponse.json({ ok: false, error: insertError.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ ok: true, inserted: true });
+    } catch (e) {
+        console.error("[read-progress] crash", e);
+        return NextResponse.json(
+            { ok: false, error: e instanceof Error ? e.message : String(e) },
+            { status: 500 },
+        );
+    }
 }
