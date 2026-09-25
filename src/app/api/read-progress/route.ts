@@ -73,11 +73,24 @@ const BOT_WORDS = [
 export async function GET() {
     try {
         const admin = createAdminClient();
-        const { count, error } = await admin
+        /*
+         * ★ head（数だけ聞く形）にしない。
+         *   head だと、失敗したときに理由の文が返ってこない。
+         *   1 行だけ実際に読んで、理由の文ごと受け取る。
+         */
+        const { count, error, status } = await admin
             .from("read_progress")
-            .select("session_key", { count: "exact", head: true });
+            .select("session_key", { count: "exact" })
+            .limit(1);
         if (error) {
-            return NextResponse.json({ ok: false, error: error.message, code: error.code ?? null });
+            return NextResponse.json({
+                ok: false,
+                status,
+                error: error.message,
+                code: error.code ?? null,
+                details: error.details ?? null,
+                hint: error.hint ?? null,
+            });
         }
         return NextResponse.json({ ok: true, rows: count ?? 0 });
     } catch (e) {
