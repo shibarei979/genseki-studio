@@ -13,7 +13,10 @@
 
 import { useEffect, useState } from "react";
 
+import EntryReport from "@/components/workspace/entry-report";
+import SceneSearch from "@/components/workspace/scene-search";
 import { getRepository } from "@/lib/repository";
+import { useMemberFeatures } from "@/lib/subscription/use-member-features";
 import type { EntryMention, ResourceEntry, ResourcePage } from "@/types";
 
 interface Props {
@@ -36,6 +39,15 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
     const [entries, setEntries] = useState<ResourceEntry[]>([]);
     const [mentions, setMentions] = useState<EntryMention[]>([]);
     const [keyword, setKeyword] = useState("");
+
+    /*
+     * ★ 報告書（会員）。
+     *   開いている資料の id。null なら一覧を出す。
+     *   会員でない人が押したときは、案内だけ出す。
+     */
+    const { entryReport } = useMemberFeatures();
+    const [reportId, setReportId] = useState<string | null>(null);
+    const [showLocked, setShowLocked] = useState(false);
 
     async function reload() {
         const repository = getRepository();
@@ -64,6 +76,66 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
         ? searchable.filter((entry) => entry.name.includes(keyword.trim()))
         : searchable;
 
+    /*
+     * ★ 打った言葉を「誰」と「何」に分ける。
+     *
+     *   「リオ 投げる」なら、リオが「誰」、投げるが「何」。
+     *   資料の名前・別名に当たる言葉が「誰」、残りが「何」。
+     *
+     *   「何」があるときは、資料の一覧ではなく場面を探す。
+     *   ・言葉が 2 つ以上
+     *   ・言葉が 1 つで、どの資料にも当たらない
+     */
+    const tokens = keyword.trim().split(/[\s　]+/).filter((token) => token.length > 0);
+    const who: ResourceEntry[] = [];
+    const what: string[] = [];
+
+    for (const token of tokens) {
+        const exact = searchable.find(
+            (entry) => entry.name === token || entry.aliases.includes(token),
+        );
+        const partial = exact ?? searchable.find((entry) => entry.name.includes(token));
+
+        if (partial) {
+            if (!who.some((entry) => entry.id === partial.id)) who.push(partial);
+        } else {
+            what.push(token);
+        }
+    }
+
+    const sceneMode =
+        what.length > 0 && (tokens.length >= 2 || matched.length === 0);
+
+    /*
+     * 一覧に出すもの。
+     * 「リオ エバ」のように名前だけを並べたときは、当たった資料を並べる。
+     */
+    const listed = tokens.length >= 2 ? who : matched;
+
+    /* 資料を足す案内。言葉が 1 つのときだけ。「リオ 投げる」という資料は作らない */
+    const createBlock = tokens.length === 1 && (
+        <div className="px-2 pb-1 pt-2">
+            <p className="text-xs text-faint">
+                「{tokens[0]}」は資料にありません。新しく作って結びつけられます。
+            </p>
+            <ul className="mt-2 flex flex-wrap gap-1">
+                {pages
+                    .filter((page) => page.kind === "entries")
+                    .map((page) => (
+                        <li key={page.id}>
+                            <button
+                                type="button"
+                                onClick={() => void handleCreateAndLink(page.id)}
+                                className="rounded-full border border-line px-2.5 py-1 text-[11px] text-ink hover:border-forest-line hover:text-forest"
+                            >
+                                {page.label}に追加
+                            </button>
+                        </li>
+                    ))}
+            </ul>
+        </div>
+    );
+
     async function handleLink(entryId: string) {
         const surface = selection.trim() || entryById.get(entryId)?.name || "";
         if (!surface) return;
@@ -81,7 +153,13 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
     }
 
     return (
-        <div className="flex h-full w-full shrink-0 flex-col rounded-lg border border-line bg-surface lg:w-[320px]">
+        <div
+            className={[
+                "flex h-full w-full shrink-0 flex-col rounded-lg border border-line bg-surface",
+                /* 報告書は中身が多いので、少し広げる */
+                reportId ? "lg:w-[400px]" : "lg:w-[320px]",
+            ].join(" ")}
+        >
             <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
                 <h2 className="text-[13px] font-medium text-ink">資料へのリンク</h2>
                 <button
@@ -94,12 +172,22 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                 </button>
             </div>
 
+            {reportId ? (
+                <EntryReport
+                    workId={workId}
+                    entryId={reportId}
+                    episodeId={episodeId}
+                    onBack={() => setReportId(null)}
+                    onJumpToWord={onJumpToWord}
+                />
+            ) : (
+            <>
             <div className="border-b border-line px-3.5 py-2.5">
                 <input
                     type="text"
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
-                    placeholder="本文で言葉を選ぶか、ここに入力"
+                    placeholder="名前や言葉を入力（例：リオ 投げる）"
                     aria-label="資料を探す"
                     className="w-full rounded-md border border-line px-3 py-1.5 text-[13px] outline-none focus:border-forest"
                 />
@@ -110,34 +198,52 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                 )}
             </div>
 
-            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2">
-                {matched.length === 0 ? (
-                    <div className="px-2 py-4">
-                        <p className="text-xs text-faint">
-                            当てはまる資料がありません。
-                            {keyword.trim() && "新しく作って結びつけられます。"}
+            {/* 押した所の近くに出す。一覧の上 */}
+            {showLocked && (
+                <div className="mx-3 mt-2 rounded-md border border-forest-line bg-forest-tint px-3 py-2">
+                    <div className="flex items-start gap-2">
+                        <p className="min-w-0 flex-1 text-[11.5px] leading-relaxed text-forest">
+                            報告書は会員の機能です。
+                            <br />
+                            <span className="text-[11px] text-muted">
+                                設定・初登場と最後の登場・関係・まだ書いていない欄を、1枚にまとめて見られます。
+                            </span>
                         </p>
-                        {keyword.trim() && (
-                            <ul className="mt-3 space-y-1">
-                                {pages
-                                    .filter((page) => page.kind === "entries")
-                                    .map((page) => (
-                                        <li key={page.id}>
-                                            <button
-                                                type="button"
-                                                onClick={() => void handleCreateAndLink(page.id)}
-                                                className="w-full rounded-md border border-line px-3 py-1.5 text-left text-xs text-ink hover:border-forest-line hover:text-forest"
-                                            >
-                                                「{keyword.trim()}」を{page.label}に追加
-                                            </button>
-                                        </li>
-                                    ))}
-                            </ul>
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => setShowLocked(false)}
+                            aria-label="閉じる"
+                            className="shrink-0 text-[11px] text-faint hover:text-ink"
+                        >
+                            ✕
+                        </button>
                     </div>
+                </div>
+            )}
+
+            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2">
+                {sceneMode ? (
+                    <>
+                        {createBlock}
+                        {tokens.length === 1 && <div className="mx-2 my-2 border-t border-line" />}
+                        <SceneSearch
+                            workId={workId}
+                            episodeId={episodeId}
+                            who={who}
+                            what={what}
+                            pages={pages}
+                            locked={!entryReport}
+                            onJumpToWord={onJumpToWord}
+                            onOpenReport={(entryId) => setReportId(entryId)}
+                        />
+                    </>
+                ) : listed.length === 0 ? (
+                    createBlock || (
+                        <p className="px-2 py-4 text-xs text-faint">当てはまる資料がありません。</p>
+                    )
                 ) : (
                     <ul>
-                        {matched.map((entry) => (
+                        {listed.map((entry) => (
                             <li key={entry.id} className="flex items-center gap-1">
                                 <button
                                     type="button"
@@ -174,6 +280,27 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                                             {entry.summary}
                                         </span>
                                     )}
+                                </button>
+
+                                {/*
+                                  * ★ 報告書を開く。
+                                  *   会員でない人にも押し具は見せる。
+                                  *   押したら、会員で使えることを伝える。
+                                  */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (entryReport) {
+                                            setReportId(entry.id);
+                                            setShowLocked(false);
+                                        } else {
+                                            setShowLocked(true);
+                                        }
+                                    }}
+                                    title="この資料を報告書の形で見る"
+                                    className="mr-1 shrink-0 rounded-md border border-line px-2 py-1 text-[10.5px] text-muted hover:border-forest-line hover:text-forest"
+                                >
+                                    報告書
                                 </button>
                             </li>
                         ))}
@@ -217,6 +344,8 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                     </ul>
                 )}
             </div>
+            </>
+            )}
         </div>
     );
 }

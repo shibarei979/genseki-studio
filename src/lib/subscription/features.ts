@@ -15,7 +15,8 @@ import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
  *   「上限を広げる（limit）」に合言葉を入れておけば、
  *   売り物の中身は、運営がその場で足せる。
  *
- *   graph_group  関係図を、所属で囲む・線を折れ曲がらせる
+ *   graph_group   関係図を、所属で囲む・線を折れ曲がらせる
+ *   entry_report  資料へのリンクで、資料を報告書の形で見る
  *
  * ★ 運営は、はじめから全部が使える。
  *
@@ -28,17 +29,21 @@ import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
 export interface MemberFeatures {
     /** 関係図の囲みと、よけて回る線 */
     graphGroup: boolean;
+    /** 資料の報告書 */
+    entryReport: boolean;
     /** 運営として通っているか。画面に出すためのもの */
     operator: boolean;
 }
 
 const NONE: MemberFeatures = {
     graphGroup: false,
+    entryReport: false,
     operator: false,
 };
 
 const ALL: MemberFeatures = {
     graphGroup: true,
+    entryReport: true,
     operator: true,
 };
 
@@ -62,6 +67,7 @@ export async function memberFeatures(): Promise<MemberFeatures> {
 
     return {
         graphGroup: has("graph_group"),
+        entryReport: has("entry_report"),
         operator: false,
     };
 }

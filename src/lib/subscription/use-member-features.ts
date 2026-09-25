@@ -24,10 +24,11 @@ import { useEffect, useState } from "react";
 
 export interface MemberFeatures {
     graphGroup: boolean;
+    entryReport: boolean;
     operator: boolean;
 }
 
-const NONE: MemberFeatures = { graphGroup: false, operator: false };
+const NONE: MemberFeatures = { graphGroup: false, entryReport: false, operator: false };
 
 let asking: Promise<MemberFeatures> | null = null;
 
@@ -37,6 +38,7 @@ function ask(): Promise<MemberFeatures> {
             .then((res) => (res.ok ? res.json() : null))
             .then((data) => ({
                 graphGroup: data?.graphGroup === true,
+                entryReport: data?.entryReport === true,
                 operator: data?.operator === true,
             }))
             .catch(() => {
