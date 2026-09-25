@@ -29,6 +29,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { getRepository } from "@/lib/repository";
+import ProBadge from "@/components/common/pro-badge";
 import type {
     Episode,
     EntryMention,
@@ -295,8 +296,9 @@ export default function EntryReport({
                 >
                     ← 一覧へ戻る
                 </button>
-                <span className="ml-auto rounded bg-forest-tint px-1.5 py-0.5 text-[10px] text-forest">
+                <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-muted">
                     報告書
+                    <ProBadge />
                 </span>
             </div>
 

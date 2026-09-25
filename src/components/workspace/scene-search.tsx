@@ -27,6 +27,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { getRepository } from "@/lib/repository";
+import ProBadge from "@/components/common/pro-badge";
 import type { Episode, FieldValue, ResourceEntry, ResourcePage } from "@/types";
 
 /** 「誰」の前後、何行までを同じ場面とみなすか */
@@ -253,7 +254,10 @@ export default function SceneSearch({
     return (
         <div className="px-1.5 py-1">
             <div className="flex items-baseline gap-2 px-1.5">
-                <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">{title}</p>
+                <p className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-medium text-ink">
+                    <span className="truncate">{title}</span>
+                    <ProBadge />
+                </p>
                 {result && !locked && (
                     <span className="shrink-0 text-[11px] text-muted">
                         {result.total}件{result.episodeCount > 0 && `・${result.episodeCount}話`}
@@ -270,7 +274,9 @@ export default function SceneSearch({
 
             {locked ? (
                 <div className="mx-1.5 mt-2.5 rounded-md border border-forest-line bg-forest-tint px-3 py-2">
-                    <p className="text-[11.5px] text-forest">場面探しは会員の機能です。</p>
+                    <p className="text-[11.5px] text-forest">
+                        場面探しは<ProBadge className="mx-0.5" />の機能です。サブスクに入ると使えます。
+                    </p>
                     <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
                         「リオ 投げる」のように、人の名前と言葉を並べて打つと、その人がそうしている場面だけを全話から集めます。
                     </p>

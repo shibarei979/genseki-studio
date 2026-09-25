@@ -17,6 +17,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
+import ProBadge from "@/components/common/pro-badge";
 import { pairKey, suggestRelations } from "@/lib/resource/relation-suggest";
 import { useMemberFeatures } from "@/lib/subscription/use-member-features";
 import GroupPanel from "@/components/resource/group-panel";
@@ -304,7 +305,10 @@ export default function RelationsView({
                                 : "ml-auto rounded-md border border-line bg-surface px-3 py-1 text-[11px] text-muted hover:border-forest-line hover:text-forest"
                         }
                     >
-                        {editingGroups ? "組の編集を閉じる" : "組を編集"}
+                        <span className="inline-flex items-center gap-1.5">
+                            {editingGroups ? "組の編集を閉じる" : "組を編集"}
+                            <ProBadge />
+                        </span>
                     </button>
                 )}
             </header>

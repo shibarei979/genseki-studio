@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { getImage } from "@/lib/storage/image-store";
+import ProBadge from "@/components/common/pro-badge";
 import {
     AUTHORED,
     assignColors,
@@ -4374,7 +4375,10 @@ export default function RelationGraph({
                                         : "rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
                                 }
                             >
-                                {grouped ? "組み直す" : "組分け"}
+                                <span className="inline-flex items-center gap-1.5">
+                                    {grouped ? "組み直す" : "組分け"}
+                                    <ProBadge />
+                                </span>
                             </button>
                         )}
 
@@ -4390,7 +4394,10 @@ export default function RelationGraph({
                                         : "rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
                                 }
                             >
-                                {editingGroups ? "組の欄を閉じる" : "組を作る・直す"}
+                                <span className="inline-flex items-center gap-1.5">
+                                    {editingGroups ? "組の欄を閉じる" : "組を作る・直す"}
+                                    <ProBadge />
+                                </span>
                             </button>
                         )}
 

@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 
 import EntryReport from "@/components/workspace/entry-report";
+import ProBadge from "@/components/common/pro-badge";
 import SceneSearch from "@/components/workspace/scene-search";
 import { getRepository } from "@/lib/repository";
 import { useMemberFeatures } from "@/lib/subscription/use-member-features";
@@ -203,7 +204,7 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                 <div className="mx-3 mt-2 rounded-md border border-forest-line bg-forest-tint px-3 py-2">
                     <div className="flex items-start gap-2">
                         <p className="min-w-0 flex-1 text-[11.5px] leading-relaxed text-forest">
-                            報告書は会員の機能です。
+                            報告書は<ProBadge className="mx-0.5" />の機能です。サブスクに入ると使えます。
                             <br />
                             <span className="text-[11px] text-muted">
                                 設定・初登場と最後の登場・関係・まだ書いていない欄を、1枚にまとめて見られます。
@@ -298,9 +299,10 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                                         }
                                     }}
                                     title="この資料を報告書の形で見る"
-                                    className="mr-1 shrink-0 rounded-md border border-line px-2 py-1 text-[10.5px] text-muted hover:border-forest-line hover:text-forest"
+                                    className="mr-1 inline-flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1 text-[10.5px] text-muted hover:border-forest-line hover:text-forest"
                                 >
                                     報告書
+                                    <ProBadge />
                                 </button>
                             </li>
                         ))}
