@@ -1405,6 +1405,19 @@ export default function ResourceClient({ workId }: Props) {
                                     onDissolveGroup={dissolveGroup}
                                     onSetGroupColor={setGroupColor}
                                     onSetLead={setLead}
+                                    /*
+                                     * 資料に無い名前を、関係図からそのまま足す。
+                                     * 足したら読み直して、図と選び具に出す。
+                                     */
+                                    onCreateEntry={async (pageId, name) => {
+                                        const created = await repository.createEntry(
+                                            workId,
+                                            pageId,
+                                            { name },
+                                        );
+                                        await reload();
+                                        return created?.id ?? null;
+                                    }}
                                 />
                             ) : currentPage.kind === "timeline" ? (
                                 <TimelineView

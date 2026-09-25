@@ -67,6 +67,14 @@ interface Props {
     onSetGroupColor?: (groupId: string, color: string | null) => Promise<void>;
     /** 関係図の主人公を選ぶ（会員） */
     onSetLead?: (entryId: string | null) => Promise<void>;
+    /*
+     * 資料に無い名前を、その場で足す。
+     *
+     * ★ 本文から拾えるのは、ほとんど人の名前だけ。
+     *   物・場所・組織・出来事も結びたい、という声があった。
+     *   打った名前をそのまま資料に足し、足した項目の id を返す。
+     */
+    onCreateEntry?: (pageId: string, name: string) => Promise<string | null>;
 }
 
 export default function RelationsView({
@@ -85,6 +93,7 @@ export default function RelationsView({
     onDissolveGroup,
     onSetGroupColor,
     onSetLead,
+    onCreateEntry,
 }: Props) {
     const [mode, setMode] = useState<"graph" | "list">("graph");
 
@@ -336,7 +345,8 @@ export default function RelationsView({
                                 onChange={setFromId}
                                 entries={pickable}
                                 pages={pages}
-                                label="出発点を選ぶ"
+                                label="出発点を選ぶ・入力"
+                                onCreateEntry={onCreateEntry}
                             />
                             <span className="text-sm text-faint">→</span>
                             <EntrySelect
@@ -344,7 +354,8 @@ export default function RelationsView({
                                 onChange={setToId}
                                 entries={pickable.filter((entry) => entry.id !== fromId)}
                                 pages={pages}
-                                label="到達点を選ぶ"
+                                label="到達点を選ぶ・入力"
+                                onCreateEntry={onCreateEntry}
                             />
                             <input
                                 type="text"
@@ -1137,15 +1148,56 @@ function EntrySelect({
     entries,
     pages,
     label,
+    onCreateEntry,
 }: {
     value: string;
     onChange: (value: string) => void;
     entries: ResourceEntry[];
     pages: ResourcePage[];
     label: string;
+    onCreateEntry?: (pageId: string, name: string) => Promise<string | null>;
 }) {
     const [text, setText] = useState("");
     const [isOpen, setIsOpen] = useState(false);
+    const [creating, setCreating] = useState(false);
+
+    /*
+     * ★ 打った名前を、そのまま足せる資料。
+     *
+     *   人物・場所・組織など、名前で並べる資料だけ。
+     *   年表やプロットには、名前だけの項目は置けない。
+     *   人物を先頭にする。結ぶ相手は、たいてい人。
+     */
+    const addablePages = pages
+        .filter((page) => page.kind === "entries")
+        .slice()
+        .sort((a, b) => {
+            const rank = (page: ResourcePage) =>
+                page.builtin_key === "character" ? 0 : page.builtin_key === "place" ? 1 : 2;
+            return rank(a) - rank(b);
+        });
+
+    /* 同じ名前が既にあれば、足す案内は出さない */
+    const typed = text.trim();
+    const sameExists = entries.some(
+        (entry) => entry.name === typed || entry.aliases.some((alias) => alias === typed),
+    );
+    const canAdd = Boolean(onCreateEntry && typed && !sameExists && addablePages.length > 0);
+
+    async function addNew(pageId: string) {
+        if (!onCreateEntry || !typed || creating) return;
+        setCreating(true);
+        try {
+            const id = await onCreateEntry(pageId, typed);
+            if (id) {
+                onChange(id);
+                setIsOpen(false);
+                setText("");
+            }
+        } finally {
+            setCreating(false);
+        }
+    }
 
     const pageById = new Map(pages.map((page) => [page.id, page]));
     const picked = entries.find((entry) => entry.id === value) ?? null;
@@ -1222,7 +1274,7 @@ function EntrySelect({
                 onFocus={() => setIsOpen(true)}
                 placeholder={label}
                 aria-label={label}
-                className="w-40 rounded-md border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-forest"
+                className="w-44 rounded-md border border-line bg-surface px-3 py-1.5 text-sm outline-none focus:border-forest"
             />
 
             {isOpen && (
@@ -1236,11 +1288,38 @@ function EntrySelect({
                         className="fixed inset-0 z-10 cursor-default"
                     />
 
-                    <ul className="thin-scroll absolute left-0 top-full z-20 mt-1 max-h-64 w-56 overflow-y-auto rounded-md border border-line bg-surface py-1 shadow-lg">
-                        {found.length === 0 ? (
-                            <li className="px-3 py-2 text-xs text-faint">
-                                見つかりません
+                    <ul className="thin-scroll absolute left-0 top-full z-20 mt-1 max-h-72 w-60 overflow-y-auto rounded-md border border-line bg-surface py-1 shadow-lg">
+                        {/*
+                          * ★ 資料に無い名前も、打ったまま結べる。
+                          *   どの資料に置くかだけ選んでもらう。
+                          */}
+                        {canAdd && (
+                            <li className="border-b border-line px-3 pb-2 pt-1.5">
+                                <p className="text-[11px] text-muted">
+                                    「<span className="text-ink">{typed}</span>」を新しく追加
+                                </p>
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                    {addablePages.map((page) => (
+                                        <button
+                                            key={page.id}
+                                            type="button"
+                                            disabled={creating}
+                                            onClick={() => void addNew(page.id)}
+                                            className="rounded-full border border-forest-line px-2.5 py-0.5 text-[11px] text-forest hover:bg-forest-tint disabled:opacity-40"
+                                        >
+                                            {page.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </li>
+                        )}
+
+                        {found.length === 0 ? (
+                            !canAdd && (
+                                <li className="px-3 py-2 text-xs text-faint">
+                                    見つかりません
+                                </li>
+                            )
                         ) : (
                             found.map((entry) => (
                                 <li key={entry.id}>

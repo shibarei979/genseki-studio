@@ -3007,18 +3007,9 @@ export default function RelationGraph({
                 ref={panRef}
                 className="thin-scroll min-h-0 flex-1 overflow-auto"
                 /*
-                 * ★ 組分けの方眼は、枠いっぱいに敷く。
-                 *   図の中に敷くと、図の外側で方眼が途切れ、四角い継ぎ目が見えた。
+                 * ★ 組分けのときも、方眼は敷かない。
+                 *   後ろの格子が囲みや線とまぎれて、うるさいという声があった。
                  */
-                style={
-                    grouping
-                        ? {
-                              backgroundImage:
-                                  "linear-gradient(#f0eee8 1px, transparent 1px), linear-gradient(90deg, #f0eee8 1px, transparent 1px)",
-                              backgroundSize: "24px 24px",
-                          }
-                        : undefined
-                }
             >
                 {/*
                   * ★ 縦にも真ん中へ置くための、内側の一枚。
