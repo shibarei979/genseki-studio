@@ -743,21 +743,17 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                             {episodes.length > 0 && (
                                 <div className="mt-2 border-t border-line pt-2">
                                     {!isPicking ? (
-                                        /* ？ は押し具の外に置く。押し具の中だと一緒に反応する */
-                                        <div className="flex items-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setIsPicking(true);
-                                                    setPicked([]);
-                                                }}
-                                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border border-line bg-surface py-1.5 text-[11px] text-muted hover:border-forest-line hover:text-forest"
-                                            >
-                                                <span aria-hidden="true">☑</span>
-                                                話を選んで、まとめて投稿する
-                                            </button>
-                                            <HelpTip topic="post-bulk" size={14} />
-                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsPicking(true);
+                                                setPicked([]);
+                                            }}
+                                            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-surface py-1.5 text-[11px] text-muted hover:border-forest-line hover:text-forest"
+                                        >
+                                            <span aria-hidden="true">☑</span>
+                                            話を選んで、まとめて投稿する
+                                        </button>
                                     ) : (
                                         <div className="rounded-md border border-line bg-canvas px-2.5 py-2">
                                             <div className="flex items-center justify-between gap-2">
@@ -2124,7 +2120,7 @@ function PostForm({
                                 <HelpTip topic="post-when" size={15} />
                             </h2>
 
-                            <div role="radiogroup" aria-label="いつ出すか" className="grid grid-cols-2 gap-2">
+                            <div role="radiogroup" aria-label="いつ出すか" className="grid gap-2">
                                 {(
                                     [
                                         { value: "now", label: "いますぐ投稿", sub: "すぐ読者に出ます" },
@@ -2153,15 +2149,15 @@ function PostForm({
                                         <span
                                             aria-hidden
                                             className={[
-                                                "mt-[3px] h-3.5 w-3.5 shrink-0 rounded-full border",
+                                                "mt-[2px] h-3.5 w-3.5 shrink-0 rounded-full border",
                                                 mode === row.value
                                                     ? "border-forest bg-[radial-gradient(circle,var(--color-forest)_45%,transparent_50%)]"
                                                     : "border-faint",
                                             ].join(" ")}
                                         />
-                                        <span className="min-w-0">
-                                            <span className="block text-[13px] font-medium text-ink">{row.label}</span>
-                                            <span className="mt-0.5 block text-[11px] leading-snug text-muted">{row.sub}</span>
+                                        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                                            <span className="text-[13px] font-medium text-ink">{row.label}</span>
+                                            <span className="text-[11px] text-muted">{row.sub}</span>
                                         </span>
                                     </button>
                                 ))}

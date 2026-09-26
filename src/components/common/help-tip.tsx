@@ -167,6 +167,24 @@ export default function HelpTip({ topic, className = "", size = 16, label }: Pro
                     ))}
                 </div>
             )}
+            {"items" in data && data.items && data.items.length > 0 && (
+                <dl style={{ margin: "10px 0 0", display: "grid", gap: 5 }}>
+                    {data.items.map((one) => (
+                        <div key={one.name} style={{ display: "flex", gap: 8, fontSize: 12, lineHeight: 1.6 }}>
+                            <dt
+                                style={{
+                                    flex: "none", minWidth: 64, textAlign: "center", fontSize: 11.5,
+                                    color: "var(--color-ink,#1a211d)", border: "1px solid var(--color-line,#dcdfda)",
+                                    borderRadius: 4, padding: "0 6px", background: "var(--color-surface,#fff)", height: "fit-content",
+                                }}
+                            >
+                                {one.name}
+                            </dt>
+                            <dd style={{ margin: 0, color: "var(--color-muted,#3c4540)" }}>{one.text}</dd>
+                        </div>
+                    ))}
+                </dl>
+            )}
             {"tip" in data && data.tip && (
                 <p
                     style={{
@@ -227,6 +245,7 @@ export default function HelpTip({ topic, className = "", size = 16, label }: Pro
                 90 +
                 ((("steps" in data && data.steps?.length) || 0) * 34) +
                 ((("examples" in data && data.examples?.length) || 0) * 32) +
+                ((("items" in data && data.items?.length) || 0) * 26) +
                 ("tip" in data && data.tip ? 56 : 0);
             const top = r && below + guess > window.innerHeight ? Math.max(12, r.top - guess - 10) : below;
             panel = (

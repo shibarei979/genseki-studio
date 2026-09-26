@@ -770,9 +770,6 @@ export default function EpisodeEditor({
                     傍点
                 </button>
 
-                {/* ルビ・注釈・傍点の書き方。押し具の中ではなく、並びの後ろに置く */}
-                <HelpTip topic="write-marks" />
-
                 {/*
                  * 場面を分ける線。
                  *
@@ -820,6 +817,13 @@ export default function EpisodeEditor({
                 >
                     置換
                 </button>
+
+                {/*
+                  * 書く道具の使い方。
+                  * ★ 並びのいちばん後ろに 1 つ。ルビから置換までの 7 つをまとめて説明する。
+                  * ★ 押し具の中ではなく外に置く。
+                  */}
+                <HelpTip topic="write-marks" />
 
                 {beforeNormalize !== null && (
                     <button
