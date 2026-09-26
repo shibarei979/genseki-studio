@@ -14,6 +14,7 @@
 
 "use client";
 
+import HelpTip from "@/components/common/help-tip";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -149,8 +150,9 @@ export default function PostClient() {
                             className="mx-auto block"
                         />
 
-                        <h2 className="mt-6 text-[18px] font-semibold text-ink">
+                        <h2 className="mt-6 flex items-center justify-center gap-2 text-[18px] font-semibold text-ink">
                             新しく書き始める
+                            <HelpTip topic="work-new" />
                         </h2>
                         <p className="mt-3.5 text-[13px] leading-loose text-muted">
                             新しい物語をゼロから始めます。

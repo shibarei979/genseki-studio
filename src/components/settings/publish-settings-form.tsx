@@ -7,25 +7,25 @@
 
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useState } from "react";
 
+import HelpTip from "@/components/common/help-tip";
+import WorkAudience from "@/components/common/work-audience";
 import { appConfig } from "@/config";
 import { getRepository } from "@/lib/repository";
 import type {
     NotifyTiming,
     PublishSettings,
     SerialStatus,
-    Visibility,
     Work,
 } from "@/types";
 import {
     NOTIFY_TIMING_LABEL,
     SERIAL_STATUS_LABEL,
     validateSchedule,
-    VISIBILITY_DESCRIPTION,
-    VISIBILITY_LABEL,
 } from "@/types";
 
 interface Props {
@@ -76,58 +76,46 @@ export default function PublishSettingsForm({ work, settings, livePisodeCount = 
               *
               * ★ -1 は「まだ数えていない」。そのときは出さない。
               */}
-            {livePisodeCount === 0 && (
-                <div className="rounded-lg border border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_8%,transparent)] px-4 py-3.5">
-                    <p className="text-[13px] font-bold text-ink">
-                        話がまだ公開されていません
-                    </p>
-                    <p className="mt-2 text-[12px] leading-[1.9] text-muted">
-                        作品を公開にしても、公開された話が 1 つも無いと、
-                        読者には出てきません。
-                        <br />
-                        「投稿」の画面から、話を公開してください。
-                    </p>
-                </div>
-            )}
-
+            {/*
+              * ★ 作品を「公開する」操作は置かない。
+              *
+              *   前はここに「下書き／限定公開／公開」があり、
+              *   ここで公開にしても話が無ければ何も出なかった。
+              *   「公開したのに出ない」「どちらを先に押すのか」の元。
+              *
+              *   話を 1 話投稿すると、作品も一緒に出る。
+              *   ここで決めるのは、見せる相手と、作品ごと隠すかだけ。
+              */}
             <Card
-                title="作品の公開設定"
-                description="作品そのものを、誰が読めるようにするかを決めます。"
+                title="作品の見え方"
+                description="話を投稿すると、作品も一緒に読者に出ます。ここでは、誰に見せるかを決めます。"
             >
                 <div className="grid gap-6 lg:grid-cols-2">
                     <section>
-                        <h3 className="text-sm font-medium text-ink">公開状態</h3>
-                        <div className="mt-2 space-y-2">
-                            {(Object.keys(VISIBILITY_LABEL) as Visibility[]).map((key) => (
-                                <label
-                                    key={key}
-                                    className={[
-                                        "flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5",
-                                        settings.visibility === key
-                                            ? "border-forest bg-forest-tint"
-                                            : "border-line hover:bg-canvas",
-                                    ].join(" ")}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="visibility"
-                                        checked={settings.visibility === key}
-                                        onChange={() => onChange({ visibility: key })}
-                                        className="mt-0.5 accent-[var(--color-forest)]"
-                                    />
-                                    <span>
-                                        <span className="block text-sm text-ink">
-                                            {VISIBILITY_LABEL[key]}
-                                        </span>
-                                        <span className="mt-0.5 block text-xs text-muted">
-                                            {VISIBILITY_DESCRIPTION[key]}
-                                        </span>
-                                    </span>
-                                </label>
-                            ))}
-                        </div>
+                        <WorkAudience
+                            visibility={settings.visibility}
+                            postedCount={livePisodeCount}
+                            onChange={(next) => onChange({ visibility: next })}
+                        />
                     </section>
 
+                    <section className="rounded-md bg-canvas px-4 py-3.5">
+                        <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                            話を読者に出すには
+                            <HelpTip topic="post-flow" />
+                        </p>
+                        <ol className="mt-2 space-y-1.5 text-[12.5px] leading-relaxed text-muted">
+                            <li>1. 執筆室で話を書く</li>
+                            <li>2. 「投稿」の画面で、出したい話を選ぶ</li>
+                            <li>3. 「いますぐ投稿」か「日時を決めて予約」を選んで押す</li>
+                        </ol>
+                        <Link
+                            href={`/workspace/${work.id}/post`}
+                            className="mt-3 inline-block rounded-md bg-forest-dark px-4 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                        >
+                            投稿の画面へ
+                        </Link>
+                    </section>
                 </div>
             </Card>
 

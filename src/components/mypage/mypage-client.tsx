@@ -1225,7 +1225,8 @@ export default function MypageClient({
             <div style={{minWidth:0,cursor:'pointer'}} onClick={()=>router.push(`/mypage/novel/${novel.id}`)}>
               <div style={{fontSize:17,fontWeight:700,color:'var(--color-text)',lineHeight:1.4,marginBottom:8,overflowWrap:'anywhere' as any}}>{novel.title}</div>
               <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
-                <span style={{fontSize:10,fontWeight:700,color:'var(--color-text-inverse)',background:novel.published?'var(--color-info)':'var(--color-text-faint)',padding:'2px 9px',borderRadius:4}}>{novel.published?'公開中':'下書き'}</span>
+                {/* 見え方は visibility で見る。限定公開は published が false なので、前は「下書き」と出ていた */}
+                <span style={{fontSize:10,fontWeight:700,color:'var(--color-text-inverse)',background:((novel as any).visibility==='limited'||novel.published)?'var(--color-info)':'var(--color-text-faint)',padding:'2px 9px',borderRadius:4}}>{(novel as any).visibility==='limited'?'限定公開':novel.published?'公開中':'非公開'}</span>
                 <span style={{fontSize:10,fontWeight:700,color:(novel as any).is_serial?'var(--color-success)':'var(--color-text-muted)',background:(novel as any).is_serial?'#e8f5e9':'#f5f5f5',border:`1px solid ${(novel as any).is_serial?'#a5d6a7':'#e0e0e0'}`,padding:'2px 9px',borderRadius:4}}>{(novel as any).is_serial?'連載中':'完結'}</span>
                 <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'2px 9px',borderRadius:4}}>{novel.genre}</span>
                 {(novel as any).novel_type && <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'2px 9px',borderRadius:4}}>{(novel as any).novel_type}</span>}

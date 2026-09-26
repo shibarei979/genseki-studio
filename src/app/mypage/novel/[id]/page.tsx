@@ -131,7 +131,7 @@ export default async function NovelManagePage({ params }: { params: { id: string
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
           <div style={{ ...secStyle, marginBottom: 0 }}>
             <div style={secHead}>データ</div>
-            <div style={row}><span style={rowLabel}>投稿状態</span><span style={rowValue}>{novel.published ? '公開中' : '下書き'}〈{novel.is_serial ? '連載中' : '完結'}〉</span></div>
+            <div style={row}><span style={rowLabel}>投稿状態</span><span style={rowValue}>{publishedEps.length === 0 ? 'まだ投稿していません' : novel.visibility === 'draft' ? '非公開' : novel.visibility === 'limited' ? '限定公開中' : '公開中'}〈{novel.is_serial ? '連載中' : '完結'}〉</span></div>
             <div style={row}><span style={rowLabel}>話数</span><span style={rowValue}>{publishedEps.length}話{episodes.length !== publishedEps.length ? `（下書き${episodes.length - publishedEps.length}話）` : ''}</span></div>
             <div style={row}><span style={rowLabel}>投稿文字数</span><span style={rowValue}>{totalChars.toLocaleString()}文字</span></div>
             {/*
@@ -174,7 +174,7 @@ export default async function NovelManagePage({ params }: { params: { id: string
         </div>
 
         {/* 公開・状態設定（その場で切替） */}
-        <NovelManageActions novelId={novel.id} novelTitle={novel.title} initialPublished={!!novel.published} initialIsSerial={!!novel.is_serial} initialAllowComments={novel.allow_comments !== false} />
+        <NovelManageActions novelId={novel.id} novelTitle={novel.title} initialPublished={!!novel.published} initialVisibility={novel.visibility} postedCount={publishedEps.length} initialIsSerial={!!novel.is_serial} initialAllowComments={novel.allow_comments !== false} />
 
         {/* エピソード一覧 */}
         <div style={secStyle}>

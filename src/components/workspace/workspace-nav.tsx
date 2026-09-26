@@ -132,6 +132,8 @@ export default function WorkspaceNav({ workId, current, episodeId }: Props) {
                 isActive={current === "post"}
             />
 
+
+
             {/*
              * 読者の目で見る。
              *

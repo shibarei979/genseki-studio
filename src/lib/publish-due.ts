@@ -189,7 +189,13 @@ export async function publishDueEpisodes(
                 continue;
             }
 
-            if (novel.visibility === "public") {
+            /*
+             * ★ 限定公開も出す。
+             *   前は「公開」のときだけ出していたので、限定公開の作品の予約は
+             *   一度でも話を出したあとだと、ずっと止まったままだった。
+             *   限定公開は「見せる相手を絞っている」だけで、隠しているのではない。
+             */
+            if (novel.visibility === "public" || novel.visibility === "limited") {
                 going.push(row);
                 continue;
             }

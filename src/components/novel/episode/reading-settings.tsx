@@ -1,4 +1,5 @@
 'use client'
+import HelpTip from '@/components/common/help-tip'
 import { ILLUST_SHAPE_LABEL } from '@/config/illust-size'
 import { useState, useEffect } from 'react'
 import FontPicker from '@/components/common/font-picker'
@@ -160,7 +161,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
   })
 
   return (
-    <div style={{position:'relative', display:'inline-block'}}>
+    <div style={{position:'relative', display:'inline-flex', alignItems:'center', gap:6}}>
       <button
         onClick={() => setOpen(o => !o)}
         title="読書設定"
@@ -177,6 +178,8 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
         </svg>
         読書設定
       </button>
+      {/* 何ができるかの説明。押し具の中ではなく横に置く */}
+      <HelpTip topic="reading-settings" />
 
       {open && (
         <>

@@ -49,7 +49,7 @@ export default async function MypagePage() {
     await Promise.all([
       supabase
         .from('novels')
-        .select('id, author_id, title, summary, genre, tags, is_serial, published, novel_type, created_at, updated_at, views')
+        .select('id, author_id, title, summary, genre, tags, is_serial, published, visibility, novel_type, created_at, updated_at, views')
         .eq('author_id', user.id).order('created_at', { ascending: false }),
 
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', user.id),

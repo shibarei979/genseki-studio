@@ -81,6 +81,22 @@ export default function WorkspaceClient({ workId }: Props) {
     const [settings, setSettings] = useState<DisplaySettings | null>(null);
     const [isWorkLoading, setIsWorkLoading] = useState(true);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+
+    /*
+     * いま開いている話を、この端末に覚えておく。
+     *
+     * ★ 携帯の下の帯の「投稿」が、これを見て ?ep= を付ける。
+     *   住所からは ?ep= を消しているので、帯の側からは分からなかった。
+     *   そのため携帯で「投稿」を押すと、いつも 1 話目が開いていた。
+     */
+    useEffect(() => {
+        if (!selectedId) return;
+        try {
+            window.sessionStorage.setItem(`gk-current-ep:${workId}`, selectedId);
+        } catch {
+            /* 覚えられなくても、1 話目が開くだけ */
+        }
+    }, [selectedId, workId]);
     /**
      * 資料から飛んできたときの行番号。
      * 一度使ったら消す。話を切り替えるたびに飛ぶと邪魔になる。

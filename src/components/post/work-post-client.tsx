@@ -18,6 +18,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import HelpTip from "@/components/common/help-tip";
+import WorkAudience from "@/components/common/work-audience";
 import EpisodeIllustManager from "@/components/post/episode-illust-manager";
 import TagInput from "@/components/works/tag-input";
 import Header from "@/components/layout/header";
@@ -481,6 +483,12 @@ export default function WorkPostClient({ workId }: { workId: string }) {
     const posted = episodes.filter((row) => row.is_published).length;
 
     /*
+     * 作品ごと隠しているか。
+     * 1 話でも出したあとで「下書き」に戻したもの。まだ出していない作品は、隠しているのではない。
+     */
+    const isHiddenWork = publish?.visibility === "draft" && posted > 0;
+
+    /*
      * 予約している話。
      *
      * 出る順に並べる。近いものから見たい。
@@ -581,9 +589,18 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                      */}
                     {scheduled.length > 0 && (
                         <div className="mt-4 rounded-lg border border-[var(--color-amber)] bg-[var(--color-amber-tint)]/40 px-4 py-3.5">
-                            <p className="text-[12px] font-medium text-ink">
+                            <p className="flex items-center gap-1.5 text-[12px] font-medium text-ink">
                                 投稿の予約（{scheduled.length}件）
+                                <HelpTip topic="post-scheduled" size={14} />
                             </p>
+
+                            {/* 作品ごと隠していると、時刻が来ても出ない。黙って止まらないよう、ここで言う */}
+                            {isHiddenWork && (
+                                <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--color-danger)]">
+                                    作品を非公開にしているので、時刻が来ても出ません。
+                                    「作品の見え方」で見せる相手を選ぶと出るようになります。
+                                </p>
+                            )}
 
                             <ul className="mt-2 space-y-1.5">
                                 {scheduled.map((row) => (
@@ -594,7 +611,7 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                                             className="flex w-full items-baseline gap-2 text-left hover:text-forest"
                                         >
                                             <span className="shrink-0 text-[10px] tabular-nums text-muted">
-                                                {formatAt(row.publish_at)}
+                                                {formatAt(row.publish_at ?? row.scheduled_at)}
                                             </span>
                                             <span className="min-w-0 truncate text-[11px] text-ink">
                                                 {row.title || "無題"}
@@ -688,17 +705,18 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                              * 作品が公開されていないと、投稿しても読まれない。
                              * 押す前に気づけるようにする。
                              */}
-                            {publish && publish.visibility !== "public" && (
-                                <p className="mt-2.5 flex items-start gap-1.5 rounded bg-[var(--color-amber-tint)] px-2.5 py-2 text-[10px] leading-relaxed text-ink">
+                            {/*
+                              * ★ 警告は「作品ごと隠している」ときだけ。
+                              *
+                              *   前は「まだ公開されていません」を、1 話も出していない作品にも出していた。
+                              *   ところが話を投稿すれば作品も出るので、設定を見に行く必要は無かった。
+                              *   「先に作品を公開しないといけないのか」と迷わせていた。
+                              */}
+                            {isHiddenWork && (
+                                <p className="mt-2.5 flex items-start gap-1.5 rounded bg-[var(--color-amber-tint)] px-2.5 py-2 text-[10.5px] leading-relaxed text-ink">
                                     <span className="text-[var(--color-amber)]">⚠</span>
                                     <span>
-                                        この作品はまだ公開されていません。
-                                        <Link
-                                            href={`/workspace/${workId}/settings`}
-                                            className="ml-0.5 underline"
-                                        >
-                                            公開設定を確認
-                                        </Link>
+                                        作品を非公開にしています。投稿しても読者には見えません。
                                     </span>
                                 </p>
                             )}
@@ -725,17 +743,21 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                             {episodes.length > 0 && (
                                 <div className="mt-2 border-t border-line pt-2">
                                     {!isPicking ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setIsPicking(true);
-                                                setPicked([]);
-                                            }}
-                                            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-surface py-1.5 text-[11px] text-muted hover:border-forest-line hover:text-forest"
-                                        >
-                                            <span aria-hidden="true">☑</span>
-                                            話を選んで、まとめて投稿する
-                                        </button>
+                                        /* ？ は押し具の外に置く。押し具の中だと一緒に反応する */
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsPicking(true);
+                                                    setPicked([]);
+                                                }}
+                                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border border-line bg-surface py-1.5 text-[11px] text-muted hover:border-forest-line hover:text-forest"
+                                            >
+                                                <span aria-hidden="true">☑</span>
+                                                話を選んで、まとめて投稿する
+                                            </button>
+                                            <HelpTip topic="post-bulk" size={14} />
+                                        </div>
                                     ) : (
                                         <div className="rounded-md border border-line bg-canvas px-2.5 py-2">
                                             <div className="flex items-center justify-between gap-2">
@@ -1226,6 +1248,8 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                              * 出す前だけ、作品の題名をここで直せるようにする。
                              */
                             canEditWorkTitle={posted === 0}
+                            postedCount={posted}
+                            scheduledCount={scheduled.length}
                             onChangeWorkInfo={(patch) =>
                                 void (async () => {
                                     await getRepository().updateWork(workId, patch);
@@ -1302,7 +1326,13 @@ function PostForm({
     work,
     lastScheduledAt,
     askBeforePublish = false,
+    postedCount = -1,
+    scheduledCount = 0,
 }: {
+    /** 読者に出ている話の数（作品の見え方を決めるのに使う） */
+    postedCount?: number;
+    /** 予約の入っている話の数 */
+    scheduledCount?: number;
     /** 最後に予約した話の時刻。次の予定を組み立てるのに使う */
     lastScheduledAt?: string | null;
     /**
@@ -1379,6 +1409,22 @@ function PostForm({
     const [at, setAt] = useState(
         toLocalInput(episode.publish_at ?? episode.scheduled_at),
     );
+
+    /*
+     * いつ出すか。「いますぐ」か「予約」か。
+     *
+     * ★ 押し具のすぐ上で、先に選ばせる。
+     *
+     *   前は、右の欄の奥に日時の入力があり、そこに日時が入っているかどうかで
+     *   押し具の名前が黙って「投稿する」「予約する」に変わっていた。
+     *   予約の欄に気づかない人、予約のつもりで即座に出してしまう人がいた。
+     *
+     * ★ 予約のあと自動で次の話へ進んできたときは、「予約」のまま始める。
+     *   続けて予約しているところなので、流れで押しても即座には出ない。
+     */
+    const [mode, setMode] = useState<"now" | "schedule">(
+        episode.publish_at || episode.scheduled_at || askBeforePublish ? "schedule" : "now",
+    );
     const [error, setError] = useState("");
 
     /* 詳細設定を開いているか。畳んで置く */
@@ -1427,6 +1473,10 @@ function PostForm({
     const isScheduled =
         Boolean(episode.publish_at || episode.scheduled_at) &&
         !episode.is_published;
+    const scheduledAtIso = episode.publish_at ?? episode.scheduled_at ?? null;
+
+    /* 作品ごと隠しているか（1 話でも出したあとで下書きに戻したもの） */
+    const isHiddenWork = publish?.visibility === "draft" && postedCount > 0;
 
     /*
      * 書き換えたところがあるか。
@@ -1438,7 +1488,7 @@ function PostForm({
     const isDirty =
         title !== episode.title ||
         /* 予約の日時も、書き換えたうちに入れる */
-        at !== toLocalInput(episode.publish_at) ||
+        at !== toLocalInput(scheduledAtIso) ||
         illustUrl !== (episode.illust_url ?? "") ||
         illustIsAi !== (episode.illust_is_ai ?? false) ||
         preface !== (episode.preface ?? "") ||
@@ -1449,7 +1499,7 @@ function PostForm({
     /** 投稿の前に確かめること */
     const checks = [
         { label: "話タイトル入力済み", isDone: title.trim().length > 0 },
-        { label: "公開範囲を確認", isDone: publish?.visibility === "public" },
+        { label: "作品が非公開になっていない", isDone: !isHiddenWork },
         { label: "所属章を確認", isDone: Boolean(chapterId) },
         { label: "本文あり", isDone: episode.body.trim().length > 0 },
     ];
@@ -1535,8 +1585,14 @@ function PostForm({
             illust_is_ai: illustIsAi,
         };
 
-        /* 時刻が入っていれば予約 */
-        if (at) {
+        /* 予約を選んでいるのに、日時が空 */
+        if (mode === "schedule" && !at) {
+            setError("予約する日時を入れてください。");
+            return;
+        }
+
+        /* 予約を選んでいれば予約 */
+        if (mode === "schedule" && at) {
             const target = new Date(at);
             if (Number.isNaN(target.getTime())) {
                 setError("日時の形が正しくありません。");
@@ -1615,8 +1671,9 @@ function PostForm({
 
     return (
         <div>
-            <h1 className="text-lg font-medium text-ink">
+            <h1 className="flex items-center gap-2 text-lg font-medium text-ink">
                 この話を投稿
+                <HelpTip topic="post-flow" />
             </h1>
             <p className="mt-1 text-xs text-muted">
                 公開内容を確認して、投稿します。
@@ -1937,11 +1994,14 @@ function PostForm({
                                     };
 
                                     /* 予約の日時が入っていて、まだ入れていなければ控える */
-                                    if (at) {
+                                    if (mode === "schedule" && at) {
                                         const target = new Date(at);
                                         if (!Number.isNaN(target.getTime()) && target.getTime() > Date.now()) {
+                                            /* ★ 予約の時刻は 2 つの列に持っている。必ず両方書く */
+                                            const when = floorTo5Min(target).toISOString();
                                             patch.is_published = false;
-                                            patch.publish_at = floorTo5Min(target).toISOString();
+                                            patch.publish_at = when;
+                                            patch.scheduled_at = when;
                                         }
                                     }
 
@@ -2035,210 +2095,206 @@ function PostForm({
 
                 {/* ---- 右：公開設定とプレビュー ---- */}
                 <div className="space-y-4">
-                    <Card title="公開設定">
-                        {/*
-                         * 作品の公開状態も、ここで見えるようにする。
-                         * 話を出す直前に確かめたいのは、まずこれ。
-                         */}
-                        <p className="mb-2 text-xs font-medium text-ink">公開状態</p>
+                    {/*
+                      * 作品の見え方。
+                      *
+                      * ★ 決めるのは「見せる相手」だけ。作品を公開する操作は無い。
+                      *   話を 1 話投稿すると、作品も一緒に出る。
+                      *
+                      * ★ 予約の日時は、ここから押し具のすぐ上へ移した。
+                      */}
+                    <Card title="作品の見え方">
+                        <WorkAudience
+                            compact
+                            visibility={publish?.visibility}
+                            postedCount={postedCount}
+                            scheduledCount={scheduledCount}
+                            onChange={(next) => onChangeWork?.(next)}
+                        />
+                    </Card>
 
-                        <div className="mb-4 space-y-1.5">
-                            {(
-                                [
-                                    {
-                                        value: "draft",
-                                        label: "下書き",
-                                        note: "自分のみ閲覧できます。",
-                                    },
-                                    {
-                                        value: "limited",
-                                        label: "限定公開",
-                                        note: "URLを知っている人だけが閲覧できます。",
-                                    },
-                                    {
-                                        value: "public",
-                                        label: "公開",
-                                        note: "すべての人に公開されます。",
-                                    },
-                                ] as const
-                            ).map((row) => (
-                                <label
-                                    key={row.value}
-                                    className={[
-                                        "flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5",
-                                        publish?.visibility === row.value
-                                            ? "border-forest bg-forest-tint/50"
-                                            : "border-line hover:bg-canvas",
-                                    ].join(" ")}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="work-visibility"
-                                        checked={publish?.visibility === row.value}
-                                        onChange={() => onChangeWork?.(row.value)}
-                                        className="mt-0.5 accent-[var(--color-forest)]"
-                                    />
-                                    <span className="min-w-0">
-                                        <span className="block text-[13px] text-ink">
-                                            {row.label}
-                                        </span>
-                                        <span className="mt-0.5 block text-[11px] leading-relaxed text-muted">
-                                            {row.note}
-                                        </span>
-                                    </span>
-                                </label>
-                            ))}
-                        </div>
+                    {/*
+                      * いつ出すか。右の欄の「作品の見え方」のすぐ下。
+                      * 投稿済みの話には出さない（もう出ている）。
+                      */}
+                    {!episode.is_published && (
+                        <section className="rounded-lg border border-line bg-surface px-5 py-4">
+                            <h2 className="mb-2.5 flex items-center gap-1.5 text-[13px] font-medium text-ink">
+                                いつ出すか
+                                <HelpTip topic="post-when" size={15} />
+                            </h2>
 
-                        <Field label="予約公開（任意）">
-                            <input
-                                type="datetime-local"
-                        /*
-                         * 5 分刻み。
-                         *
-                         * 公開の見回りが 5 分ごとなので、
-                         * 1 分単位で選べても、その間は待つことになる。
-                         * 選べる時刻と実際に出る時刻を揃える。
-                         */
-                        step={300}
-                                value={at}
-                                onChange={(e) => setAt(e.target.value)}
-                                className={inputClass}
-                            />
-
-                            <div className="mt-1 flex items-baseline justify-between gap-2">
-                                <p className="text-[10px] text-faint">
-                                    空のままなら、押した時点で投稿します。
-                                </p>
-
-                                {/*
-                                  * ★ 入れた時刻を消す道を置く。
-                                  *
-                                  *   入れてから「やっぱり今すぐ出す」と
-                                  *   思い直したとき、消す手が無かった。
-                                  *   欄を空にする押し方は端末によって違い、
-                                  *   携帯では消せないことがある。
-                                  *
-                                  *   入っているときだけ出す。
-                                  */}
-                                {at && (
+                            <div role="radiogroup" aria-label="いつ出すか" className="grid grid-cols-2 gap-2">
+                                {(
+                                    [
+                                        { value: "now", label: "いますぐ投稿", sub: "すぐ読者に出ます" },
+                                        { value: "schedule", label: "日時を決めて予約", sub: "決めた時刻に出ます" },
+                                    ] as const
+                                ).map((row) => (
                                     <button
+                                        key={row.value}
                                         type="button"
-                                        onClick={() => setAt("")}
-                                        className="shrink-0 text-[10px] text-muted underline hover:text-ink"
+                                        role="radio"
+                                        aria-checked={mode === row.value}
+                                        onClick={() => {
+                                            setMode(row.value);
+                                            setError("");
+                                            setConfirming(false);
+                                            /* いますぐに戻したら、入れた日時は消す。残すと押し具の名前と中身がずれる */
+                                            if (row.value === "now" && !isScheduled) setAt("");
+                                        }}
+                                        className={[
+                                            "flex items-start gap-2 rounded-md border px-3 py-2.5 text-left",
+                                            mode === row.value
+                                                ? "border-forest bg-forest-tint/60"
+                                                : "border-line hover:bg-canvas",
+                                        ].join(" ")}
                                     >
-                                        時刻を消す
+                                        <span
+                                            aria-hidden
+                                            className={[
+                                                "mt-[3px] h-3.5 w-3.5 shrink-0 rounded-full border",
+                                                mode === row.value
+                                                    ? "border-forest bg-[radial-gradient(circle,var(--color-forest)_45%,transparent_50%)]"
+                                                    : "border-faint",
+                                            ].join(" ")}
+                                        />
+                                        <span className="min-w-0">
+                                            <span className="block text-[13px] font-medium text-ink">{row.label}</span>
+                                            <span className="mt-0.5 block text-[11px] leading-snug text-muted">{row.sub}</span>
+                                        </span>
                                     </button>
-                                )}
+                                ))}
                             </div>
 
-                            {/*
-                              * 次の予定を一押しで入れる。
-                              *
-                              * ★ 何十話もまとめて予約する人がいる。
-                              *   1 話ごとに日と時刻を選び直すのは、
-                              *   同じ手を何十回も繰り返すことになる。
-                              *
-                              * ★ 押すまで欄は空のまま。
-                              *   初めから入れておくと、いま出したい人が
-                              *   気付かず予約してしまう。
-                              */}
-                            <div className="mt-2 rounded-md border border-line bg-canvas px-2.5 py-2">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setAt(
-                                            toLocalInput(
+                            {mode === "schedule" && (
+                                <div className="mt-3">
+                                    <label className="block">
+                                        <span className="text-xs font-medium text-ink">
+                                            出す日時
+                                            <span className="ml-1.5 text-[11px] font-normal text-faint">
+                                                （{tzLabel()}）
+                                            </span>
+                                        </span>
+                                        <input
+                                            type="datetime-local"
+                                            step={60}
+                                            value={at}
+                                            onChange={(e) => {
+                                                setAt(e.target.value);
+                                                setError("");
+                                            }}
+                                            className={`${inputClass} mt-1.5 sm:max-w-[18rem]`}
+                                        />
+                                    </label>
+
+                                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                        {/*
+                                          * 次の予定を一押しで入れる。
+                                          * ★ 押すまで欄は空のまま。初めから入れると、気づかず予約になる。
+                                          */}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setAt(
+                                                    toLocalInput(
+                                                        nextSlot(
+                                                            lastScheduledAt,
+                                                            work.default_publish_time,
+                                                            work.default_publish_days,
+                                                        ).toISOString(),
+                                                    ),
+                                                )
+                                            }
+                                            className="text-[11.5px] text-forest hover:underline"
+                                        >
+                                            次の予定を入れる（
+                                            {formatAt(
                                                 nextSlot(
                                                     lastScheduledAt,
                                                     work.default_publish_time,
                                                     work.default_publish_days,
                                                 ).toISOString(),
-                                            ),
-                                        )
-                                    }
-                                    className="text-[11px] text-forest hover:underline"
-                                >
-                                    次の予定を入れる（
-                                    {formatAt(
-                                        nextSlot(
-                                            lastScheduledAt,
-                                            work.default_publish_time,
-                                            work.default_publish_days,
-                                        ).toISOString(),
-                                    )}
-                                    ）
-                                </button>
-
-                            </div>
-                        </Field>
-
-                        {isScheduled && (
-                            <div className="rounded-md bg-[var(--color-amber-tint)] px-3 py-2.5">
-                                <p className="text-[11px] text-ink">
-                                    {formatAt(episode.publish_at)}に投稿されます。
-                                </p>
-
-                                {/*
-                                 * 予約の取り消し。
-                                 *
-                                 * 日時を消して押し直す道もあるが、
-                                 * 分かりにくい。ここに 1 つ置く。
-                                 */}
-                                {/*
-                                  * ★ 窓を出さない。
-                                  *   押したら、その場で確かめを出す。
-                                  */}
-                                {!isCancelling ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsCancelling(true)}
-                                        className="mt-2 text-[11px] text-[var(--color-danger)] hover:underline"
-                                    >
-                                        予約を取り消す
-                                    </button>
-                                ) : (
-                                    <div className="mt-2 rounded border border-line bg-surface px-2.5 py-2">
-                                        <p className="text-[11px] leading-relaxed text-ink">
-                                            予約を取り消します。この話は下書きに戻ります。
-                                        </p>
-
-                                        <div className="mt-2 flex gap-1.5">
+                                            )}
+                                            ）
+                                        </button>
+                                        {at && !isScheduled && (
                                             <button
                                                 type="button"
-                                                onClick={() => setIsCancelling(false)}
-                                                className="rounded border border-line px-3 py-1 text-[10.5px] text-muted hover:text-ink"
+                                                onClick={() => setAt("")}
+                                                className="text-[11px] text-muted underline hover:text-ink"
                                             >
-                                                やめる
+                                                日時を消す
                                             </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setIsCancelling(false);
-                                                    setAt("");
-                                                    onChange({
-                                                        is_published: false,
-                                                        /* 取り消しも、両方とも消す */
-                                                        publish_at: null,
-                                                        scheduled_at: null,
-                                                    });
-                                                }}
-                                                className="flex-1 rounded bg-[var(--color-danger)] py-1 text-[10.5px] font-medium text-white hover:opacity-90"
-                                            >
-                                                取り消す
-                                            </button>
-                                        </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        )}
+                                </div>
+                            )}
 
-                        {error && (
-                            <p className="mt-2 text-[11px] text-[var(--color-danger)]">
-                                {error}
-                            </p>
-                        )}
-                    </Card>
+                            {isScheduled && (
+                                <div className="mt-3 rounded-md bg-[var(--color-amber-tint)] px-3 py-2.5">
+                                    <p className="text-[12px] text-ink">
+                                        いまの予約：<strong>{formatAt(scheduledAtIso)}</strong> に投稿されます。
+                                    </p>
+
+                                    {!isCancelling ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsCancelling(true)}
+                                            className="mt-1.5 text-[11px] text-[var(--color-danger)] hover:underline"
+                                        >
+                                            予約を取り消す
+                                        </button>
+                                    ) : (
+                                        <div className="mt-2 rounded border border-line bg-surface px-2.5 py-2">
+                                            <p className="text-[11px] leading-relaxed text-ink">
+                                                予約を取り消します。この話は下書きに戻ります。
+                                            </p>
+
+                                            <div className="mt-2 flex gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsCancelling(false)}
+                                                    className="rounded border border-line px-3 py-1 text-[10.5px] text-muted hover:text-ink"
+                                                >
+                                                    やめる
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIsCancelling(false);
+                                                        setAt("");
+                                                        setMode("now");
+                                                        onChange({
+                                                            is_published: false,
+                                                            /* 取り消しも、両方とも消す */
+                                                            publish_at: null,
+                                                            scheduled_at: null,
+                                                        });
+                                                    }}
+                                                    className="flex-1 rounded bg-[var(--color-danger)] py-1 text-[10.5px] font-medium text-white hover:opacity-90"
+                                                >
+                                                    取り消す
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {isHiddenWork && (
+                                <p className="mt-3 rounded-md border border-[var(--color-amber)] bg-[var(--color-amber-tint)] px-3 py-2 text-[11.5px] leading-relaxed text-ink">
+                                    作品を非公開にしているので、
+                                    {mode === "schedule" ? "時刻が来ても出ません" : "投稿しても読者には見えません"}
+                                    。「作品の見え方」で見せる相手を選んでください。
+                                </p>
+                            )}
+
+                            {error && (
+                                <p className="mt-2 text-[11.5px] text-[var(--color-danger)]">{error}</p>
+                            )}
+                        </section>
+                    )}
 
                     <Card title="読者とのやり取り">
                         {/*
@@ -2390,6 +2446,7 @@ function PostForm({
                  *   押せないときも同じ場所に置いておけば、
                  *   ボタンの位置が動かない。
                  */}
+                {!episode.is_published && <HelpTip topic="post-save" size={14} />}
                 {!episode.is_published && (
                     <button
                         type="button"
@@ -2412,15 +2469,16 @@ function PostForm({
                     </button>
                 )}
 
-                {episode.is_published || isScheduled ? (
+                {/* 予約中の話は「予約を取り消す」が上にある。同じことをする押し具を 2 つ並べない */}
+                {episode.is_published ? (
                     <button
                         type="button"
                         onClick={() =>
-                            onChange({ is_published: false, publish_at: null })
+                            onChange({ is_published: false, publish_at: null, scheduled_at: null })
                         }
                         className="rounded-md border border-line px-5 py-2.5 text-sm text-muted hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
                     >
-                        非公開にする
+                        この話を非公開にする
                     </button>
                 ) : null}
 
@@ -2466,7 +2524,7 @@ function PostForm({
                           *   押すと予約になる。逆も起きる。
                           *   押す前に何が起きるか分からなかった。
                           */}
-                        {at
+                        {mode === "schedule"
                             ? isScheduled
                                 ? "予約を変える"
                                 : "この話を予約する"
@@ -2504,7 +2562,13 @@ function PostForm({
                                 予約のあと、次の話へ進んできています。この話は日時が空です。
                             </li>
                         )}
-                        <li>読者から読めるようになります。</li>
+                        <li>
+                            {isHiddenWork
+                                ? "作品を非公開にしているので、いまは読者には見えません。"
+                                : postedCount === 0
+                                  ? "読者から読めるようになります。作品も一緒に読者に出ます。"
+                                  : "読者から読めるようになります。"}
+                        </li>
                         {notifyWho.length > 0 && (
                             <li>
                                 {notifyWho.join("と")}に、知らせが届きます。
@@ -2512,7 +2576,7 @@ function PostForm({
                             </li>
                         )}
                         <li>
-                            予約したいときは「やめる」を押して、予約公開に日時を入れてください。
+                            予約したいときは「やめる」を押して、「日時を決めて予約」を選んでください。
                         </li>
                     </ul>
 
@@ -2602,7 +2666,7 @@ function StateChip({ episode }: { episode: Episode }) {
             {episode.is_published
                 ? "投稿済み"
                 : isScheduled
-                  ? `予約 ${formatAt(episode.publish_at)}`
+                  ? `予約 ${formatAt(episode.publish_at ?? episode.scheduled_at)}`
                   : "未投稿"}
         </span>
     );
@@ -2648,6 +2712,12 @@ function formatAt(iso: string | null | undefined): string {
 
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${at.getMonth() + 1}/${at.getDate()} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
+/** 日時の欄の横に出す、どの時刻で入れるか */
+function tzLabel(): string {
+    if (typeof window === "undefined") return "日本時間";
+    return new Date().getTimezoneOffset() === -540 ? "日本時間" : "この端末の時刻";
 }
 
 function EyeIcon() {

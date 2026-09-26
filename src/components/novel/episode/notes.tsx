@@ -11,6 +11,8 @@
  *   スマホ　：画面の下から説明の欄（前後の注釈へも送れる）
  *
  * ★ 話の終わりに「注釈」の一覧。「本文へ ↑」で元の場所に戻れる。
+ *   一覧ははじめ畳んでおく（▸ 注釈 3件）。あとがきの下が長くならないように。
+ *   吹き出しの「注釈の一覧で見る」を押したときは、開いてから そこへ送る。
  *
  * ★ 読書設定で「注釈の印を出す」を切れる。切っても一覧は残す。
  * ============================================================
@@ -200,10 +202,15 @@ export function NoteLayer({ items }: { items: NoteItem[] }) {
 
     const toList = () => {
         close();
-        const row = document.getElementById(`gk-note-${item.index}`);
-        row?.scrollIntoView({ behavior: "smooth", block: "center" });
-        row?.classList.add("gk-note--flash");
-        window.setTimeout(() => row?.classList.remove("gk-note--flash"), 1700);
+        /* 一覧が畳まれていたら開く。開いて描かれてから送る */
+        window.dispatchEvent(new CustomEvent(NOTES_OPEN_EVENT));
+        const n = item.index;
+        window.setTimeout(() => {
+            const row = document.getElementById(`gk-note-${n}`);
+            row?.scrollIntoView({ behavior: "smooth", block: "center" });
+            row?.classList.add("gk-note--flash");
+            window.setTimeout(() => row?.classList.remove("gk-note--flash"), 1700);
+        }, 60);
     };
 
     const step = (delta: number) => {
@@ -292,7 +299,18 @@ function navBtn(disabled: boolean): React.CSSProperties {
 
 /* ---------- 話の終わりの一覧 ---------- */
 
+/** 吹き出しから「一覧を開いて」と頼むための合図 */
+const NOTES_OPEN_EVENT = "gk-notes-open";
+
 export function NotesList({ items }: { items: NoteItem[] }) {
+    const [expanded, setExpanded] = useState(false);
+
+    useEffect(() => {
+        const openList = () => setExpanded(true);
+        window.addEventListener(NOTES_OPEN_EVENT, openList);
+        return () => window.removeEventListener(NOTES_OPEN_EVENT, openList);
+    }, []);
+
     if (items.length === 0) return null;
 
     const back = (n: number) => {
@@ -307,15 +325,39 @@ export function NotesList({ items }: { items: NoteItem[] }) {
         <section
             aria-label="注釈"
             style={{
-                borderTop: "1px solid var(--color-brand-border,#dcdfda)", padding: "16px 18px 18px",
+                borderTop: "1px solid var(--color-brand-border,#dcdfda)", padding: "12px 18px",
                 fontFamily: "var(--font-sans),sans-serif", writingMode: "horizontal-tb",
             }}
         >
-            <h3 style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, margin: "0 0 8px", color: "var(--color-text,#1a211d)" }}>
-                <span style={{ width: 3, height: 14, background: "var(--color-brand,#1f4e6b)", borderRadius: 2, display: "inline-block" }} />
-                注釈
+            <h3 style={{ margin: 0, fontSize: 13 }}>
+                <button
+                    type="button"
+                    onClick={() => setExpanded((on) => !on)}
+                    aria-expanded={expanded}
+                    aria-controls="gk-notes-list"
+                    style={{
+                        display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: 0,
+                        padding: "2px 0", cursor: "pointer", font: "inherit", fontWeight: 700, textAlign: "left",
+                        color: "var(--color-text,#1a211d)",
+                    }}
+                >
+                    <span style={{ width: 3, height: 14, background: "var(--color-brand,#1f4e6b)", borderRadius: 2, display: "inline-block" }} />
+                    注釈
+                    <span style={{ fontWeight: 400, fontSize: 11.5, color: "var(--color-text-muted,#6b746e)" }}>{items.length}件</span>
+                    <span
+                        aria-hidden
+                        style={{
+                            marginLeft: "auto", fontSize: 11, color: "var(--color-brand,#1f4e6b)", fontWeight: 400,
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                        }}
+                    >
+                        {expanded ? "閉じる" : "開く"}
+                        <span style={{ display: "inline-block", transition: "transform .15s", transform: expanded ? "rotate(180deg)" : "none" }}>▾</span>
+                    </span>
+                </button>
             </h3>
-            <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {expanded && (
+            <ol id="gk-notes-list" style={{ listStyle: "none", margin: "8px 0 0", padding: 0 }}>
                 {items.map((item, i) => (
                     <li
                         key={item.index}
@@ -339,6 +381,7 @@ export function NotesList({ items }: { items: NoteItem[] }) {
                     </li>
                 ))}
             </ol>
+            )}
         </section>
     );
 }

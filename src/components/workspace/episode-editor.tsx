@@ -7,6 +7,7 @@
 
 "use client";
 
+import HelpTip from "@/components/common/help-tip";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -768,6 +769,9 @@ export default function EpisodeEditor({
                 >
                     傍点
                 </button>
+
+                {/* ルビ・注釈・傍点の書き方。押し具の中ではなく、並びの後ろに置く */}
+                <HelpTip topic="write-marks" />
 
                 {/*
                  * 場面を分ける線。

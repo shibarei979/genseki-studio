@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { getRepository } from '@/lib/repository'
@@ -77,6 +77,7 @@ const WORKSPACE_PATTERN = /^\/workspace\/([^/]+)/
 
 export default function MobileTabBar() {
     const pathname = usePathname() || '/'
+    const router = useRouter()
 
     /*
      * 見る向き。
@@ -221,6 +222,25 @@ export default function MobileTabBar() {
                         rel={tab.blank ? 'noopener' : undefined}
                         className={`mtb_item${isHere ? ' is-here' : ''}`}
                         aria-current={isHere ? 'page' : undefined}
+                        /*
+                         * ★ 「投稿」は、いま書いている話を開く。
+                         *   執筆室が覚えた話を、押した時に読んで ?ep= を付ける。
+                         */
+                        onClick={
+                            tab.icon === 'send' && inWorkspace
+                                ? (event: React.MouseEvent) => {
+                                      let ep: string | null = null
+                                      try {
+                                          ep = window.sessionStorage.getItem(`gk-current-ep:${inWorkspace[1]}`)
+                                      } catch {
+                                          ep = null
+                                      }
+                                      if (!ep) return
+                                      event.preventDefault()
+                                      router.push(`${tab.href}?ep=${encodeURIComponent(ep)}`)
+                                  }
+                                : undefined
+                        }
                     >
                         <Icon name={tab.icon} />
                         <span className="mtb_label">{tab.label}</span>

@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import HelpTip from '@/components/common/help-tip'
 import { createClient } from '@/lib/supabase/client'
 import ChapterEditModal from '@/components/mypage/chapter-edit-modal'
 
@@ -8,14 +10,31 @@ interface Props {
   novelId: string
   novelTitle: string
   initialPublished: boolean
+  /** 作品の見せる相手。public / limited / draft */
+  initialVisibility?: string | null
+  /** 読者に出ている話の数 */
+  postedCount?: number
   initialIsSerial: boolean
   initialAllowComments: boolean
 }
 
-export default function NovelManageActions({ novelId, novelTitle, initialPublished, initialIsSerial, initialAllowComments }: Props) {
+export default function NovelManageActions({ novelId, novelTitle, initialPublished, initialVisibility, postedCount = 0, initialIsSerial, initialAllowComments }: Props) {
   const supabase = createClient()
   const router = useRouter()
-  const [published, setPublished] = useState(initialPublished)
+  /*
+   * ★ 見え方は visibility で決める。
+   *
+   *   前は published だけを書き換えていた。読者の頁は visibility を見ているので、
+   *   ここで「公開する」を押しても読者には出なかった。
+   *   マイページは「公開中」、執筆側は「下書き」、読者は見られない、とずれていた。
+   *
+   *   いまは「作品ごと隠す／見えるようにする」だけを置き、両方の列を揃えて書く。
+   *   作品を公開する操作は無い。話を投稿すると作品も出る。
+   */
+  const [visibility, setVisibility] = useState<string>(
+    initialVisibility ?? (initialPublished ? 'public' : 'draft'),
+  )
+  const [askHide, setAskHide] = useState(false)
   const [isSerial, setIsSerial] = useState(initialIsSerial)
   const [allowComments, setAllowComments] = useState(initialAllowComments)
   const [saving, setSaving] = useState('')
@@ -30,13 +49,25 @@ export default function NovelManageActions({ novelId, novelTitle, initialPublish
     setTimeout(() => setToast(''), 1800)
   }
 
-  async function togglePublished() {
+  async function setAudience(next: 'public' | 'draft') {
     setSaving('published')
-    const next = !published
-    const { error } = await supabase.from('novels').update({ published: next }).eq('id', novelId)
-    if (!error) { setPublished(next); showToast(next ? '公開しました' : '非公開にしました') }
+    const { error } = await supabase
+      .from('novels')
+      .update({ visibility: next, published: next === 'public' })
+      .eq('id', novelId)
+    if (!error) {
+      setVisibility(next)
+      showToast(next === 'public' ? '作品を公開に戻しました' : '作品を非公開にしました')
+      router.refresh()
+    } else {
+      showToast('変えられませんでした')
+    }
     setSaving('')
+    setAskHide(false)
   }
+
+  const neverPosted = postedCount === 0
+  const isHidden = visibility === 'draft' && !neverPosted
 
   async function toggleSerial() {
     setSaving('serial')
@@ -81,14 +112,45 @@ export default function NovelManageActions({ novelId, novelTitle, initialPublish
       <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--color-brand-light)', fontSize: 14, fontWeight: 700, color: 'var(--color-text)' }}>公開・受付設定</div>
 
       <div style={rowStyle}>
-        <div style={{ minWidth: 180 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 2 }}>公開状態</div>
-          <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{published ? '読者に公開されています' : '非公開（自分だけが見られます）'}</div>
+        <div style={{ minWidth: 180, flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+            作品の見え方
+            <HelpTip topic="mypage-visibility" size={15} />
+          </div>
+          <div style={{ fontSize: 11.5, color: isHidden ? 'var(--color-danger)' : 'var(--color-text-muted)', lineHeight: 1.7 }}>
+            {neverPosted
+              ? 'まだ1話も投稿していません。話を投稿すると、作品も読者に出ます。'
+              : isHidden
+                ? '作品を非公開にしています。読者には見えません（予約した話も出ません）。'
+                : visibility === 'limited'
+                  ? 'URLを知っている人に見えています。'
+                  : 'みんなに見えています。'}
+          </div>
+          {askHide && (
+            <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.7, color: 'var(--color-text)', background: 'var(--color-bg)', border: '1px solid var(--color-brand-border)', borderRadius: 8, padding: '8px 10px' }}>
+              作品と、投稿した話がすべて読者から見えなくなります。話やコメントは消えません。
+              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                <button autoFocus onClick={() => setAskHide(false)} style={{ ...btnStyle(false), padding: '5px 12px' }}>やめる</button>
+                <button onClick={() => setAudience('draft')} disabled={saving === 'published'}
+                  style={{ ...btnStyle(false), padding: '5px 14px', background: 'var(--color-danger)', color: 'var(--color-text-inverse)', border: 'none' }}>
+                  {saving === 'published' ? '...' : '非公開にする'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-        <button onClick={togglePublished} disabled={saving === 'published'}
-          style={{ ...btnStyle(false), background: published ? 'var(--color-bg-card)' : 'var(--color-brand)', color: published ? 'var(--color-text-muted)' : 'var(--base-color-1)' }}>
-          {saving === 'published' ? '...' : published ? '非公開にする' : '公開する'}
-        </button>
+        {neverPosted ? (
+          <Link href={`/workspace/${novelId}/post`} style={{ ...btnStyle(false), background: 'var(--color-brand)', color: 'var(--base-color-1)', textDecoration: 'none' }}>
+            投稿の画面へ
+          </Link>
+        ) : isHidden ? (
+          <button onClick={() => setAudience('public')} disabled={saving === 'published'}
+            style={{ ...btnStyle(false), background: 'var(--color-brand)', color: 'var(--base-color-1)' }}>
+            {saving === 'published' ? '...' : '公開に戻す'}
+          </button>
+        ) : !askHide ? (
+          <button onClick={() => setAskHide(true)} style={btnStyle(false)}>作品を非公開にする</button>
+        ) : null}
       </div>
 
       <div style={rowStyle}>

@@ -14,6 +14,7 @@
 
 "use client";
 
+import HelpTip from "@/components/common/help-tip";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
@@ -284,6 +285,7 @@ export default function RelationsView({
                         <ResourceIcon builtinKey="relation" size={18} />
                     </span>
                     関係図
+                    <HelpTip topic="relation-graph" />
                 </h1>
 
                 {/*
