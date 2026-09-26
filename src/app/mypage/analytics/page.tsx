@@ -8,7 +8,16 @@ import AnalyticsCharts from '@/components/mypage/analytics/analytics-charts'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AnalyticsPage() {
+/*
+ * ★ ?novel=<作品の id> で開くと、その作品を最初に出す。
+ *   作品の管理画面の「アクセス解析」から来たときに使う。
+ *   付いていなければ、いちばん新しい作品を出す（AnalyticsCharts の側で決める）。
+ */
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams?: { novel?: string }
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -395,7 +404,7 @@ export default async function AnalyticsPage() {
         {novelStats.length === 0 ? (
           <div style={{textAlign:'center',padding:'60px 20px',color:'var(--color-text-muted)'}}>まだ作品がありません</div>
         ) : (
-          <AnalyticsCharts novels={novelStats} deviceStats={deviceStats} />
+          <AnalyticsCharts novels={novelStats} deviceStats={deviceStats} initialId={searchParams?.novel} />
         )}
       </div>
       <Footer />

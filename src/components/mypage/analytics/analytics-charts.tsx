@@ -66,8 +66,6 @@ function diffLabel(today: number, yesterday: number): string {
  */
 const ALL_ID = '__all__'
 
-/** 選んだ作品を覚えておく場所。開き直しても元に戻らないように */
-const PICK_KEY = 'genseki:analytics-novel'
 
 type Cell = { v: number; m: number; d: number; a: number }
 type SeriesRow = { date: string; views: number; m?: number; d?: number; a?: number }
@@ -182,8 +180,11 @@ const RANGES: { key: 'month'|'year'|'all'; label: string }[] = [
 export default function AnalyticsCharts({
   novels,
   deviceStats,
+  initialId,
 }: {
   novels: NovelStat[]
+  /** 最初に出す作品。作品の管理画面から来たとき */
+  initialId?: string
   /** 端末ごとの数。右の柱の末尾に添える */
   deviceStats?: { desktopPv: number; mobilePv: number; desktopUsers: number; mobileUsers: number }
 }) {
@@ -196,33 +197,30 @@ export default function AnalyticsCharts({
     [novels],
   )
 
-  const [selectedId, setSelectedId] = useState(options[0]?.id || '')
+  /*
+   * ★ 最初に出す作品。
+   *
+   *   作品の管理画面から来たら、その作品（?novel=）。
+   *   そうでなければ、いちばん新しい作品。
+   *   novels は新しい順に並んで届く（page.tsx で created_at の降順）。
+   *
+   *   前は「すべての作品（合計）」を最初に出し、前に見た作品を覚えていた。
+   *   作品の管理画面から来ても別の作品や合計が出て、選び直す手間があった。
+   *   合計は一覧から選べば見られる。
+   */
+  const firstId =
+    (initialId && novels.some(n => n.id === initialId) ? initialId : novels[0]?.id) ||
+    options[0]?.id ||
+    ''
+  const [selectedId, setSelectedId] = useState(firstId)
   const [range, setRange] = useState<'month'|'year'|'all'>('month')
 
-  /*
-   * 前に見ていた作品を、開き直しても出す。
-   *
-   * ★ 覚えていないと、毎回いちばん上（下書きのことが多い）に戻る。
-   *   読み込みのあとに読むので、画面を作る側とずれない。
-   */
+  /* 別の作品の管理画面から来直したときも、その作品に合わせる */
   useEffect(() => {
-    let saved: string | null = null
-    try {
-      saved = window.localStorage.getItem(PICK_KEY)
-    } catch {
-      /* 覚えられない端末では、今までどおり先頭から */
-    }
-    if (saved && options.some(n => n.id === saved)) setSelectedId(saved)
-  }, [options])
+    setSelectedId(firstId)
+  }, [firstId])
 
-  const pick = (id: string) => {
-    setSelectedId(id)
-    try {
-      window.localStorage.setItem(PICK_KEY, id)
-    } catch {
-      /* 覚えられなくても、今の画面は変わる */
-    }
-  }
+  const pick = (id: string) => setSelectedId(id)
 
   /*
    * どの月を見ているか。0 が今月、-1 が先月。

@@ -112,7 +112,7 @@ export default async function NovelManagePage({ params }: { params: { id: string
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
           <Link href={`/workspace/${novel.id}?new=1`} style={{ background: 'var(--color-brand)', color: 'var(--color-text-inverse)', fontSize: 12.5, fontWeight: 700, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}>＋ 新しい話を追加</Link>
           <Link href={`/workspace/${novel.id}`} style={{ border: '1px solid var(--color-brand-border)', color: 'var(--color-brand)', fontSize: 12.5, fontWeight: 600, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}>作品・話を編集</Link>
-          <Link href="/mypage/analytics" style={{ border: '1px solid var(--color-brand-border)', color: 'var(--color-brand)', fontSize: 12.5, fontWeight: 600, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}>アクセス解析</Link>
+          <Link href={`/mypage/analytics?novel=${novel.id}`} style={{ border: '1px solid var(--color-brand-border)', color: 'var(--color-brand)', fontSize: 12.5, fontWeight: 600, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}>アクセス解析</Link>
         </div>
 
         {/*
