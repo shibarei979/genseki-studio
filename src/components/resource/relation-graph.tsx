@@ -785,6 +785,22 @@ export default function RelationGraph({
     const [wideValue, setWideValue] = useState(80);
 
     /*
+     * 全体を見る。
+     *
+     * ★ 図を枠ぴったりに縮めると、名前も一緒に縮んで読めなかった。
+     *   地図と同じにする。縮めても、名前の字は読める大きさのまま。
+     *
+     *   ・大きさを枠ぴったりに戻す
+     *   ・名前は、画面で 13px 前後に見える大きさで描く
+     *   ・関係名は出さない（押した人・指を乗せた人の分だけ出す）
+     *   ・名前どうしが重なるところは、上や横へずらす
+     */
+    const [overview, setOverview] = useState(false);
+
+    /* 画面いっぱいに広げるか。下の「画面いっぱい」の説明を参照 */
+    const [isFull, setIsFull] = useState(false);
+
+    /*
      * 送る枠。
      *
      * 大きさを変えたとき、真ん中が見えるように寄せ直す。
@@ -912,7 +928,12 @@ export default function RelationGraph({
         watcher?.observe(el);
 
         return () => watcher?.disconnect();
-    }, []);
+        /*
+         * ★ 画面いっぱいに広げたとき・戻したときも測り直す。
+         *   広げると入れ物が作り直されるので、前の入れ物を見たままだと
+         *   広げても図が小さいままだった。
+         */
+    }, [isFull]);
 
     useEffect(() => {
         const box = panRef.current;
@@ -937,7 +958,7 @@ export default function RelationGraph({
      * ★ 広げるのは器だけ。図の作りは変えない。
      * ★ Esc で閉じる。押し具だけだと、逃げ場が無い。
      */
-    const [isFull, setIsFull] = useState(false);
+    /* 画面いっぱいに広げるか（決めているのは上。大きさを測り直すのに先に要る） */
 
     useEffect(() => {
         if (!isFull) return;
@@ -1657,6 +1678,179 @@ export default function RelationGraph({
     untangle(positions, fixedIds);
 
     /*
+     * ============================================================
+     * 全体を見るときの並べ方：主人公を真ん中に、輪で並べる
+     *
+     * ★ ばらばらに置くと、線が四方八方に交差して読めなかった。
+     *   人物相関図と同じく、主人公から近い順に輪に並べる。
+     *     真ん中   主人公
+     *     内側の輪 主人公と直接つながる人
+     *     外側の輪 その先の人（つながっている内側の人のすぐ外）
+     *     いちばん外 さらに遠い人・主人公とつながっていない人
+     *   線が放射状にのびるので、交差がほとんど出ない。
+     *
+     * ★ この並びは見るためだけのもの。覚えない。
+     *   「全体表示をやめる」を押すと、作者が置いた場所に戻る。
+     * ============================================================
+     */
+    /* 輪で並べたときの、主人公と「木の枝」にあたる線 */
+    const radialLead: { id: string | null } = { id: null };
+    const radialTree = new Set<string>();
+    const radialLeadEdges = new Set<string>();
+
+    if (overview && !focusId && !(mayGroup && grouped) && shownNodes.length > 1) {
+        const ids = new Set(shownNodes.map((node) => node.id));
+        const links = shownRelations.filter(
+            (relation) => ids.has(relation.from_entry_id) && ids.has(relation.to_entry_id) && relation.from_entry_id !== relation.to_entry_id,
+        );
+        const near = new Map<string, { other: string; relationId: string; label: string }[]>();
+        for (const relation of links) {
+            const a = relation.from_entry_id;
+            const b = relation.to_entry_id;
+            (near.get(a) ?? near.set(a, []).get(a)!).push({ other: b, relationId: relation.id, label: relation.label ?? "" });
+            (near.get(b) ?? near.set(b, []).get(b)!).push({ other: a, relationId: relation.id, label: relation.label ?? "" });
+        }
+        const degree = (id: string) => near.get(id)?.length ?? 0;
+
+        /* 主人公：図で選んだ人 → 役割に「主人公」 → いちばんつながりの多い人 */
+        const pageOf = (id: string) => entries.find((entry) => entry.id === id);
+        const roleText = (id: string) => {
+            const entry = pageOf(id);
+            if (!entry) return "";
+            const page = pages.find((one) => one.id === entry.page_id);
+            const field = page?.fields.find((one) => one.label === "役割");
+            const raw = entry.values?.[field?.key ?? "role"];
+            return typeof raw === "string" ? raw : "";
+        };
+        const chosen = entries.find((entry) => entry.values?.[LEAD_KEY] === true && ids.has(entry.id))?.id;
+        const byRole = shownNodes.find((node) => roleText(node.id).includes("主人公"))?.id;
+        const busiest = [...shownNodes].sort((a, b) => degree(b.id) - degree(a.id))[0]?.id;
+        const lead = chosen ?? byRole ?? busiest ?? null;
+
+        if (lead) {
+            radialLead.id = lead;
+
+            /* 主人公からの近さ */
+            const dist = new Map<string, number>([[lead, 0]]);
+            const parent = new Map<string, string>();
+            const queue = [lead];
+            while (queue.length > 0) {
+                const now = queue.shift()!;
+                /* つながりの多い相手から先に辿る。親は、つながりの多い人になる */
+                const next = [...(near.get(now) ?? [])].sort((a, b) => degree(b.other) - degree(a.other));
+                for (const one of next) {
+                    if (dist.has(one.other)) continue;
+                    dist.set(one.other, (dist.get(now) ?? 0) + 1);
+                    parent.set(one.other, now);
+                    radialTree.add(one.relationId);
+                    if (now === lead) radialLeadEdges.add(one.relationId);
+                    queue.push(one.other);
+                }
+            }
+
+            /* 内側の輪の順番：主人公との関係の種類ごとにまとめ、同じ種類の中はつながりの多い順 */
+            const kindToLead = (id: string) => {
+                const one = (near.get(lead) ?? []).find((link) => link.other === id);
+                return one ? groupOf(one.label).key : "zz";
+            };
+            const ring1 = shownNodes
+                .filter((node) => dist.get(node.id) === 1)
+                .map((node) => node.id)
+                .sort((a, b) => kindToLead(a).localeCompare(kindToLead(b)) || degree(b) - degree(a));
+
+            /* 内側の人ごとに、その外に並ぶ人（子孫）を数える */
+            const childrenOf = new Map<string, string[]>();
+            parent.forEach((p, child) => {
+                (childrenOf.get(p) ?? childrenOf.set(p, []).get(p)!).push(child);
+            });
+            const descendants = (id: string): string[] => {
+                const out: string[] = [];
+                for (const child of childrenOf.get(id) ?? []) out.push(child, ...descendants(child));
+                return out;
+            };
+
+            /* 主人公とつながっていない人 */
+            const stray = shownNodes.filter((node) => !dist.has(node.id)).map((node) => node.id);
+
+            const maxDist = Math.max(1, ...Array.from(dist.values()));
+            const rings = Math.min(3, maxDist + (stray.length > 0 && maxDist < 3 ? 1 : 0));
+
+            /* 輪の半径。枠の形に合わせて横長の楕円にする */
+            /*
+             * ★ 内側の輪は広めに取る。
+             *   等間隔だと、主人公との関係名が真ん中に集まって重なった。
+             */
+            const SHARE: Record<number, number[]> = { 1: [1], 2: [0.58, 1], 3: [0.44, 0.74, 1] };
+            const radiusY = (k: number) => MAX_Y * 0.94 * (SHARE[rings]?.[k - 1] ?? k / rings);
+            /*
+             * 横は枠の形に合わせる。横長の枠なら横長、縦長（携帯）なら縦長の楕円。
+             * 名前は横に長いので、縦長にしすぎない。
+             */
+            const radiusX = (k: number) => radiusY(k) * Math.max(0.78, liveAspect * 0.85);
+
+            /* 角度の割り当て：内側の人ごとに、外に並ぶ人の数に合わせた幅を取る */
+            /*
+             * ★ 幅は、外の輪でいちばん人の多い段に合わせる。
+             *   すぐ外の人数だけで決めると、その先に大勢いる人の枝が細い扇に詰め込まれた。
+             */
+            const widthOf = (id: string) => {
+                const perRing = new Map<number, number>();
+                for (const one of descendants(id)) {
+                    const k = Math.min(rings, dist.get(one) ?? rings);
+                    perRing.set(k, (perRing.get(k) ?? 0) + 1);
+                }
+                return Math.max(1, ...Array.from(perRing.values()));
+            };
+            /*
+             * ★ どの人にも、ならした幅を足す。
+             *   先に大勢いる人がほとんど一周を取り、主人公のすぐ隣の人たちが
+             *   一か所に押し込められていた。内側の輪は、なるべく一周に散らす。
+             */
+            const widths = ring1.map((id) => widthOf(id));
+            const even = widths.length > 0 ? widths.reduce((sum, one) => sum + one, 0) / widths.length : 1;
+            const slots: { id: string | null; weight: number }[] = [
+                ...ring1.map((id, i) => ({ id, weight: widths[i] + even })),
+                ...stray.map(() => ({ id: null, weight: 1 })),
+            ];
+            const total = slots.reduce((sum, one) => sum + one.weight, 0) || 1;
+
+            positions.set(lead, { x: CENTER_X, y: CENTER_Y });
+            const place = (id: string, angle: number, k: number) =>
+                positions.set(id, {
+                    x: CENTER_X + Math.cos(angle) * radiusX(k),
+                    y: CENTER_Y + Math.sin(angle) * radiusY(k),
+                });
+
+            let from = -Math.PI / 2;
+            let strayIndex = 0;
+            for (const slot of slots) {
+                const width = (Math.PI * 2 * slot.weight) / total;
+                const mid = from + width / 2;
+                if (slot.id) {
+                    place(slot.id, mid, 1);
+                    /* 外の人は、この幅の中に広げる。遠い人ほど外の輪 */
+                    const outer = descendants(slot.id);
+                    const byRing = new Map<number, string[]>();
+                    for (const id of outer) {
+                        const k = Math.min(rings, dist.get(id) ?? rings);
+                        (byRing.get(k) ?? byRing.set(k, []).get(k)!).push(id);
+                    }
+                    byRing.forEach((list, k) => {
+                        list.forEach((id, i) => {
+                            const angle = from + (width * (i + 0.5)) / list.length;
+                            place(id, angle, k);
+                        });
+                    });
+                } else {
+                    place(stray[strayIndex], mid, rings);
+                    strayIndex += 1;
+                }
+                from += width;
+            }
+        }
+    }
+
+    /*
      * 描いたものが、実際に占めている範囲。
      *
      * ★ 紙ではなく、中身に合わせて枠に収める。
@@ -1783,6 +1977,41 @@ export default function RelationGraph({
         if ((degreeOf.get(id) ?? 0) >= 3) return 2;
         return 3;
     };
+
+    /*
+     * 全体を見るときに残す、いちばん要る線。
+     *
+     * ★ 47 本すべてを同じ濃さで出すと、どれが骨組みか分からない。
+     *   残すのは次の 2 つだけ。ほかは薄くする。
+     *     ・主人公と主要な人どうしの線
+     *     ・一人に 1 本、その人のいちばん大事な相手への線
+     *       （主人公に近い人。同じなら、つながりの多い人。変化の記録がある線を先に）
+     *   これで、どの人も図から浮かず、主要な人を通る骨組みが見える。
+     */
+    const essentialIds = new Set<string>(radialLead.id ? Array.from(radialTree) : []);
+    if (overview && !grouping && !radialLead.id) {
+        for (const relation of shownRelations) {
+            if (tierOf(relation.from_entry_id) <= 1 && tierOf(relation.to_entry_id) <= 1) {
+                essentialIds.add(relation.id);
+            }
+        }
+        const best = new Map<string, { id: string; score: number }>();
+        for (const relation of shownRelations) {
+            for (const [self, other] of [
+                [relation.from_entry_id, relation.to_entry_id],
+                [relation.to_entry_id, relation.from_entry_id],
+            ] as const) {
+                /* 小さいほど大事。主人公に近い人 → つながりの多い人 → 変化の記録がある線 */
+                const score =
+                    tierOf(other) * 1000 -
+                    (degreeOf.get(other) ?? 0) * 10 -
+                    (relation.changes.length > 0 ? 1 : 0);
+                const now = best.get(self);
+                if (!now || score < now.score) best.set(self, { id: relation.id, score });
+            }
+        }
+        best.forEach((one) => essentialIds.add(one.id));
+    }
 
     const CARD_IMAGE = NODE_RADIUS * 2.1;
 
@@ -2491,6 +2720,87 @@ export default function RelationGraph({
                   NODE_CAP_PX / NODE_RADIUS,
               )
             : 0;
+
+    /* 紙の 1 目盛りが、画面で何ピクセルになるか */
+    const pxPerUnit = fitRatio * zoom;
+
+    /* 全体を見るときの、名前の大きさ（紙の目盛り）。画面で 13px に見える大きさ */
+    const OVERVIEW_NAME =
+        overview && pxPerUnit > 0 ? Math.max(NAME_SIZE, 13 / pxPerUnit) : NAME_SIZE;
+
+    /*
+     * 全体を見るときの、名前の置き場所。
+     *
+     * ★ まず丸の下。重なるなら、上 → 右 → 左 → もう一段下 → もう一段上 の順に試す。
+     *   どこも空いていなければ、丸の下のまま（重なっても読める方を選べないため）。
+     *
+     * ★ 上から順に決めていく。先に置いた名前と、ほかの人の丸に触れない所を選ぶ。
+     */
+    const overviewNames = new Map<string, { x: number; y: number; anchor: "middle" | "start" | "end"; hidden?: boolean }>();
+    if (overview && !grouping) {
+        const fs = OVERVIEW_NAME;
+        const lineH = fs * 1.25;
+        const placed: { x1: number; y1: number; x2: number; y2: number }[] = [];
+        const circles = shownNodes
+            .map((node) => ({ id: node.id, at: positions.get(node.id) }))
+            .filter((one): one is { id: string; at: { x: number; y: number } } => !!one.at);
+
+        const order = [...circles].sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x);
+        for (const { id, at } of order) {
+            const node = shownNodes.find((one) => one.id === id);
+            const text = node ? (node.name.length > 8 ? `${node.name.slice(0, 8)}…` : node.name) : "";
+            const w = Array.from(text).length * fs * 1.02;
+            const gap = NODE_RADIUS + fs * 0.35;
+
+            const tries: { x: number; y: number; anchor: "middle" | "start" | "end" }[] = [
+                { x: at.x, y: at.y + gap + fs * 0.85, anchor: "middle" },
+                { x: at.x, y: at.y - gap - fs * 0.25, anchor: "middle" },
+                { x: at.x + gap, y: at.y + fs * 0.35, anchor: "start" },
+                { x: at.x - gap, y: at.y + fs * 0.35, anchor: "end" },
+                { x: at.x, y: at.y + gap + fs * 0.85 + lineH, anchor: "middle" },
+                { x: at.x, y: at.y - gap - fs * 0.25 - lineH, anchor: "middle" },
+            ];
+
+            /*
+             * ★ 図の外へはみ出さないよう、横に寄せる。
+             *   端の人の名前が「リオ・ア」のように切れていた。
+             */
+            const fit = (one: { x: number; y: number; anchor: "middle" | "start" | "end" }) => {
+                const x1 = one.anchor === "middle" ? one.x - w / 2 : one.anchor === "start" ? one.x : one.x - w;
+                const left = view.x + 2;
+                const right = view.x + view.w - 2;
+                const shift = x1 < left ? left - x1 : x1 + w > right ? right - (x1 + w) : 0;
+                return { ...one, x: one.x + shift };
+            };
+            const boxOf = (one: { x: number; y: number; anchor: string }) => {
+                const x1 = one.anchor === "middle" ? one.x - w / 2 : one.anchor === "start" ? one.x : one.x - w;
+                return { x1, y1: one.y - fs * 0.95, x2: x1 + w, y2: one.y + fs * 0.25 };
+            };
+            const hits = (b: { x1: number; y1: number; x2: number; y2: number }) =>
+                placed.some((p) => b.x1 < p.x2 && b.x2 > p.x1 && b.y1 < p.y2 && b.y2 > p.y1) ||
+                circles.some(
+                    (c) =>
+                        c.id !== id &&
+                        c.at.x + NODE_RADIUS > b.x1 &&
+                        c.at.x - NODE_RADIUS < b.x2 &&
+                        c.at.y + NODE_RADIUS > b.y1 &&
+                        c.at.y - NODE_RADIUS < b.y2,
+                );
+
+            /*
+             * ★ どこにも入らない名前は、出さない。
+             *   重ねて出すと、どれも読めなくなる。丸の中の頭文字は残り、
+             *   押す（指を乗せる）と名前が出る。
+             */
+            const chosen = tries.map(fit).find((one) => !hits(boxOf(one)));
+            if (chosen) {
+                placed.push(boxOf(chosen));
+                overviewNames.set(id, chosen);
+            } else {
+                overviewNames.set(id, { ...fit(tries[0]), hidden: true });
+            }
+        }
+    }
 
     /*
      * 重なりをほどく。
@@ -3649,7 +3959,10 @@ export default function RelationGraph({
 
                     const curve = around?.curve ?? null;
 
-                    const path = bent
+                    const path = overview && !grouping && radialLead.id
+                        ? /* 輪で並べたときは、まっすぐ引く。放射状の線がいちばん読みやすい */
+                          `M${head.x} ${head.y} L${tail.x} ${tail.y}`
+                        : bent
                         ? `M${head.x} ${head.y} L${bent.x} ${bent.y} L${tail.x} ${tail.y}`
                         : curve
                           ? curve.d
@@ -3709,7 +4022,7 @@ export default function RelationGraph({
 
                     /* この線に名前を出すか */
                     const nameShown =
-                        !!relation.label && (touchesActive || (grouping && showNames));
+                        !!relation.label && (touchesActive || (grouping && showNames && !overview));
 
                     const labelAt =
                         grouping && curve && nameShown
@@ -3724,8 +4037,23 @@ export default function RelationGraph({
                               )
                             : onLine;
 
-                    const controlX = labelAt.x;
-                    const controlY = labelAt.y;
+                    /* 輪で並べたときは、まっすぐな線の真ん中。主人公の近くに寄りすぎないよう、少し外寄り */
+                    /* 主人公から出る線は、主人公から 6 割ほど外。真ん中に名前が集まらないように */
+                    const along =
+                        relation.from_entry_id === radialLead.id
+                            ? 0.62
+                            : relation.to_entry_id === radialLead.id
+                              ? 0.38
+                              : 0.5;
+                    const straightMid =
+                        overview && !grouping && radialLead.id
+                            ? {
+                                  x: head.x + (tail.x - head.x) * along,
+                                  y: head.y + (tail.y - head.y) * along,
+                              }
+                            : null;
+                    const controlX = straightMid ? straightMid.x : labelAt.x;
+                    const controlY = straightMid ? straightMid.y : labelAt.y;
 
                     /*
                      * 線の形。
@@ -3752,7 +4080,23 @@ export default function RelationGraph({
                           */
                         <g
                             key={relation.id}
-                            opacity={isActive ? 1 : grouping ? 0.16 : 0.06}
+                            opacity={
+                                /*
+                                 * ★ 全体を見るときは、線を背景に下げる。
+                                 *   47 本が色つきの破線で重なると、名前より線が目に入った。
+                                 *   誰も選んでいないときは細い灰色の実線で薄く、
+                                 *   人を押す（指を乗せる）と、その人の線だけ色が戻る。
+                                 */
+                                overview && !grouping && !active
+                                    ? essentialIds.has(relation.id)
+                                        ? 0.85
+                                        : 0.1
+                                    : isActive
+                                      ? 1
+                                      : grouping
+                                        ? 0.16
+                                        : 0.06
+                            }
                         >
                             {/*
                               * ★ 線を二度押すと、中間点が出る。
@@ -3780,9 +4124,11 @@ export default function RelationGraph({
                                 d={path}
                                 fill="none"
                                 stroke={
-                                    grouping
-                                        ? strongColorOf(relation.label)
-                                        : colorOf(relation.label)
+                                    overview && !grouping && !touchesActive && !(!active && essentialIds.has(relation.id))
+                                        ? "#7d8783"
+                                        : grouping
+                                          ? strongColorOf(relation.label)
+                                          : colorOf(relation.label)
                                 }
                                 /*
                                  * ★ 線の太さは、画面の点で決める。
@@ -3792,7 +4138,15 @@ export default function RelationGraph({
                                  * ★ 相関図のときは、さらに太く。線が主役。
                                  */
                                 strokeWidth={
-                                    grouping ? 3 : relation.changes.length > 0 ? 2.6 : 1.9
+                                    overview && !grouping && !touchesActive
+                                        ? !active && essentialIds.has(relation.id)
+                                            ? 1.6
+                                            : 1
+                                        : grouping
+                                          ? 3
+                                          : relation.changes.length > 0
+                                            ? 2.6
+                                            : 1.9
                                 }
                                 vectorEffect="non-scaling-stroke"
                                 /*
@@ -3803,10 +4157,14 @@ export default function RelationGraph({
                                  *   変化の記録があれば実線、無ければ破線。
                                  */
                                 strokeDasharray={
-                                    lineStyle === "dashed" ? "7 6" : "0"
+                                    overview && !grouping && !touchesActive
+                                        ? "0"
+                                        : lineStyle === "dashed"
+                                          ? "7 6"
+                                          : "0"
                                 }
                                 markerEnd={
-                                    lineStyle === "arrow"
+                                    lineStyle === "arrow" && !(overview && !grouping && !touchesActive)
                                         ? grouping
                                             ? `url(#arrow-strong-${groupOf(relation.label).key})`
                                             : `url(#arrow-${groupOf(relation.label).key})`
@@ -3899,7 +4257,9 @@ export default function RelationGraph({
                                 });
                                 return null;
                             })()}
-                            {!grouping && relation.label && touchesActive && (() => {
+                            {!grouping &&
+                                relation.label &&
+                                (touchesActive || (overview && !active && radialLeadEdges.has(relation.id))) && (() => {
                                 /*
                                  * ★ 組分けしているときは、名前を大きく太く。
                                  *   全体を見たときに読める大きさにする。
@@ -3907,7 +4267,10 @@ export default function RelationGraph({
                                  */
                                 const size = grouping
                                     ? Math.round(NAME_SIZE * 1.02)
-                                    : EDGE_SIZE;
+                                    : overview && pxPerUnit > 0
+                                      ? /* 全体を見るときは、画面で 11px に見える大きさ */
+                                        Math.max(EDGE_SIZE, 11 / pxPerUnit)
+                                      : EDGE_SIZE;
                                 const chars = Array.from(relation.label).length;
                                 const plateW = chars * size + size * 0.7;
                                 const plateH = size * 1.45;
@@ -4023,7 +4386,8 @@ export default function RelationGraph({
                             onMouseEnter={() => setHoveredId(node.id)}
                             onMouseLeave={() => setHoveredId(null)}
                             onPointerDown={(event) => {
-                                if (!onMove) {
+                                /* 全体を見るときの並びは見るためだけ。掴んで動かすと、作者の置き場所が変わってしまう */
+                                if (!onMove || overview) {
                                     onSelect(node.id === selectedId ? null : node.id);
                                     return;
                                 }
@@ -4226,7 +4590,12 @@ export default function RelationGraph({
                                     cx={position.x}
                                     cy={position.y}
                                     r={NODE_RADIUS}
-                                    fill="var(--color-forest-tint)"
+                                    /* 全体を見るときは、主人公を濃い色にして真ん中だと分かるようにする */
+                                    fill={
+                                        overview && node.id === radialLead.id
+                                            ? "var(--color-forest)"
+                                            : "var(--color-forest-tint)"
+                                    }
                                     filter="url(#node-shadow)"
                                 />
                             )}
@@ -4262,7 +4631,9 @@ export default function RelationGraph({
                                 strokeWidth={node.id === selectedId ? 2.5 : 0}
                             />
 
-                            {!pictures[node.id] && (
+                            {!pictures[node.id] &&
+                                /* 全体を見るときは、名前が下にあるので頭文字は出さない（入らなかった人だけ出す） */
+                                !(overview && overviewNames.get(node.id) && !overviewNames.get(node.id)!.hidden) && (
                                 <text
                                     x={position.x}
                                     y={position.y + Math.round(INITIAL_SIZE * 0.35)}
@@ -4275,6 +4646,28 @@ export default function RelationGraph({
                                 </text>
                             )}
 
+                            {overview && overviewNames.get(node.id) ? (() => {
+                                const spot = overviewNames.get(node.id)!;
+                                /* 入らなかった名前は、押した人のときだけ出す */
+                                if (spot.hidden && node.id !== active) return null;
+                                return (
+                                    <text
+                                        x={spot.x}
+                                        y={spot.y}
+                                        textAnchor={spot.anchor}
+                                        fontSize={node.id === radialLead.id ? OVERVIEW_NAME * 1.2 : OVERVIEW_NAME}
+                                        fontWeight={node.id === radialLead.id ? 800 : 600}
+                                        fill="var(--color-ink)"
+                                        /* 線の上に乗っても読めるよう、白く縁取る */
+                                        paintOrder="stroke"
+                                        stroke="#ffffff"
+                                        strokeWidth={OVERVIEW_NAME * 0.3}
+                                        strokeLinejoin="round"
+                                    >
+                                        {node.name.length > 8 ? `${node.name.slice(0, 8)}…` : node.name}
+                                    </text>
+                                );
+                            })() : (
                             <text
                                 x={position.x}
                                 y={position.y + NAME_DROP}
@@ -4297,6 +4690,7 @@ export default function RelationGraph({
                                     ? `${node.name.slice(0, 8)}…`
                                     : node.name}
                             </text>
+                            )}
                             </>
                             )}
                         </g>
@@ -4351,6 +4745,30 @@ export default function RelationGraph({
                             className="rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
                         >
                             整理する
+                        </button>
+
+                        {/*
+                          * 全体を見る。
+                          * ★ 押すと枠ぴったりに戻し、関係名を隠して名前を大きく出す。
+                          */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const next = !overview;
+                                setOverview(next);
+                                if (next) setWideValue(80);
+                                /* 狭い画面では、画面いっぱいに広げる。枠のままでは名前が入りきらない */
+                                if (typeof window !== "undefined" && window.innerWidth < 768) setIsFull(next);
+                            }}
+                            aria-pressed={overview}
+                            title="全体を枠に収めて、名前を読める大きさで出します。関係名は、人を押したときだけ出ます"
+                            className={
+                                overview
+                                    ? "rounded-md border border-forest bg-forest-tint px-3 py-1 text-[11px] text-forest"
+                                    : "rounded-md border border-forest bg-surface px-3 py-1 text-[11px] text-forest hover:bg-forest-tint/60"
+                            }
+                        >
+                            {overview ? "全体表示をやめる" : "全体を見る"}
                         </button>
 
                         {/*
@@ -4609,6 +5027,8 @@ export default function RelationGraph({
                 padding: 16,
                 display: "flex",
                 flexDirection: "column",
+                /* globals.css の [role=dialog] の幅の上限を外す。画面いっぱいに出す */
+                maxWidth: "none",
             }}
             role="dialog"
             aria-modal="true"
