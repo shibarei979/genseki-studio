@@ -15,6 +15,7 @@ import ManuscriptSurface from "@/components/workspace/manuscript-surface";
 import { VERSION_AUTO_INTERVAL_MS } from "@/config";
 import { useAutosave } from "@/hooks/use-autosave";
 import { insertEmphasis, insertRuby } from "@/lib/manuscript/notation";
+import { insertAnnotation } from "@/lib/utils/annotation";
 import { scrollToLine } from "@/lib/manuscript/scroll-to-line";
 import { realignIllusts } from "@/lib/illust/realign";
 import { getRepository } from "@/lib/repository";
@@ -265,6 +266,29 @@ export default function EpisodeEditor({
     useEffect(() => {
         onRegisterBody(body, setBody);
     }, [body, onRegisterBody]);
+
+    /**
+     * 注釈を付ける。
+     *
+     * ★ 選んだ言葉のあとに ［＃注：説明］ を入れる（先頭に ｜ を付けて範囲をはっきりさせる）。
+     *   記法は lib/utils/annotation.ts。読む画面では点線と ※番号になり、押すと説明が出る。
+     */
+    async function handleNote() {
+        if (range.start === range.end) {
+            setNotice("注釈を付ける言葉を選んでください");
+            window.setTimeout(() => setNotice(""), 2500);
+            return;
+        }
+        const word = body.slice(range.start, range.end);
+        if (word.includes("\n")) {
+            setNotice("注釈は1行の中の言葉に付けてください");
+            window.setTimeout(() => setNotice(""), 2500);
+            return;
+        }
+        const note = await ask(`「${word}」の注釈を入れてください（読む人が押すと出ます）`, "");
+        if (!note?.trim()) return;
+        setBody(insertAnnotation(body, range.start, range.end, note.trim()));
+    }
 
     async function handleRuby() {
         if (range.start === range.end) {
@@ -725,6 +749,15 @@ export default function EpisodeEditor({
                     className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
                 >
                     ルビ
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => void handleNote()}
+                    title="選んだ言葉に注釈を付けます（｜言葉［＃注：説明］）。読む人が押すと説明が出ます"
+                    className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
+                >
+                    注釈
                 </button>
 
                 <button

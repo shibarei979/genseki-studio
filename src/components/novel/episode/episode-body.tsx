@@ -2,9 +2,11 @@
 import ShioriMark, { SHIORI_COLORS } from '@/components/common/shiori-mark'
 import { useEpisodeMarks } from '@/hooks/use-episode-marks'
 import { illustBox } from '@/config/illust-size'
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby, stripRuby } from '@/lib/utils/ruby'
+import { buildNoteIndex, markAnnotations, tokensToHtml } from '@/lib/utils/annotation'
+import { NoteContext, NoteLayer, NotesList, NoteStyles, renderNoteTokens, useNoteContext } from '@/components/novel/episode/notes'
 import { splitIntoSentences } from '@/lib/utils/sentences'
 import { isDividerLine } from '@/components/novel/episode/mobile-episode-body'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
@@ -158,7 +160,13 @@ function normalizeForHorizontalReading(text: string): string {
     .join('\n')
 }
 
-function renderBodyH(text: string): string {
+function renderBodyH(text: string, notes?: { lookup?: Map<string, number>; show: boolean }): string {
+  /*
+   * ★ 注釈の記法は、最初に目印へ置き換える（lib/utils/annotation.ts）。
+   *   ふりがな・整えにかけたあと、最後に目印を印（点線と ※番号）に変える。
+   */
+  text = markAnnotations(text, notes?.lookup, notes?.show ?? true)
+
   /*
    * 整えるのは、ルビを取り出したあと。
    * 先にかけると ｜ や 《》 が半角になり、
@@ -185,7 +193,7 @@ function renderBodyH(text: string): string {
     .join('')
 
   r = r.replace(/\n/g, '<br/>')
-  return r
+  return tokensToHtml(r)
 }
 
 /**
@@ -266,7 +274,9 @@ function VerticalText({ text }: { text: string }) {
    * 先にかけると ｜ や 《》 まで全角になり、
    * ルビの印として読めなくなる。
    */
-  let processed = text
+  /* 注釈の記法は、先に目印へ置き換える（lib/utils/annotation.ts） */
+  const noteCtx = useNoteContext()
+  let processed = markAnnotations(text, noteCtx.lookup, noteCtx.show)
   /*
    * 三点リーダも置き換えない。
    *
@@ -323,7 +333,8 @@ function VerticalText({ text }: { text: string }) {
             * 英数字は縦中横で立てる。
             * そのままだと「35歳」の 35 も (Pr. I) も寝たまま出る。
             */
-          withTateChuYoko(line, `${keyPrefix}-${i}`)
+          /* 注釈の目印があれば、印に変える（ふつうの字は縦中横の組み方のまま） */
+          renderNoteTokens(line, `${keyPrefix}-${i}`, (t, k) => withTateChuYoko(t, k))
         )}
         {i < all.length - 1 ? <br/> : null}
       </span>
@@ -615,6 +626,8 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
 }) {
   const sentences = splitIntoSentences(body)
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+  /* 注釈の番号は、話全体で振ったものを使う */
+  const noteCtx = useNoteContext()
 
   function handleClick(raw: string, idx: number) {
     if (!selecting) return
@@ -631,7 +644,7 @@ function QuotableBody({ marking, marks = [], onMark, onOpenMark, body, illusts =
     <div style={{fontSize,lineHeight,color:'var(--color-text)',fontFamily,wordBreak:'break-all',whiteSpace:'pre-wrap'}}>
       {sentences.map((raw, idx) => {
         const trimmedForDisplay = raw === '\n' ? '' : raw
-        const htmlInner = renderBodyH(trimmedForDisplay)
+        const htmlInner = renderBodyH(trimmedForDisplay, noteCtx)
         const isHover = (selecting || marking) && hoverIdx === idx
 
         /* この文に付いている栞 */
@@ -940,6 +953,16 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
    */
   const fontFamily = useFontStack(settings.font)
 
+  /*
+   * 注釈。話全体で、出てきた順に番号を振る。
+   * 読書設定で「注釈の印を出す」を切っていれば、印は出さない（一覧は残す）。
+   */
+  const notes = useMemo(() => buildNoteIndex(body), [body])
+  const noteCtx = useMemo(
+    () => ({ lookup: notes.lookup, show: settings.showNotes !== false }),
+    [notes, settings.showNotes],
+  )
+
   // ===== モバイル =====
   if (isMobile) {
     return (
@@ -1003,7 +1026,9 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
 
   // ===== デスクトップ =====
   return (
-    <>
+    <NoteContext.Provider value={noteCtx}>
+      <NoteStyles/>
+      <NoteLayer items={notes.items}/>
       <SpeechPanel title={title} body={body} isMobile={false}/>
       {/*
         * 本文の枠。
@@ -1147,9 +1172,13 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
         )}
 
         {vertical ? (
-          <VerticalBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} illusts={illusts} settingsForRec={settings.useRecommend !== false} illustUrl={illustUrl} illustIsAi={illustIsAi} illustSize={settings.illustSize} title={title} body={body} preface={preface} afterword={afterword}
-            authorName={authorName} fontSize={settings.fontSize} fontFamily={fontFamily}
-            selecting={selecting} onQuote={handleQuote} onAfterQuote={handleAfterQuote}/>
+          <>
+            <VerticalBody marking={marking} marks={marks} onMark={handleMark} onOpenMark={setAskingMark} illusts={illusts} settingsForRec={settings.useRecommend !== false} illustUrl={illustUrl} illustIsAi={illustIsAi} illustSize={settings.illustSize} title={title} body={body} preface={preface} afterword={afterword}
+              authorName={authorName} fontSize={settings.fontSize} fontFamily={fontFamily}
+              selecting={selecting} onQuote={handleQuote} onAfterQuote={handleAfterQuote}/>
+            {/* 注釈の一覧。縦書きの枠の外（下）に、横書きで出す */}
+            <NotesList items={notes.items}/>
+          </>
         ) : (
           <>
             {/*
@@ -1235,10 +1264,12 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
                 </div>
               </div>
             )}
+            {/* 注釈の一覧。後書きの下 */}
+            <NotesList items={notes.items}/>
           </>
         )}
       </div>
-    </>
+    </NoteContext.Provider>
   )
 }
 

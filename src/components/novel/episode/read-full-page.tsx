@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { NoteContext, NoteLayer, NoteStyles } from "@/components/novel/episode/notes";
+import { buildNoteIndex } from "@/lib/utils/annotation";
 import { VerticalText } from "@/components/novel/episode/mobile-episode-body";
 import { reportReadProgress } from "@/components/reader/read-progress-tracker";
 import { illustBox } from "@/config/illust-size";
@@ -100,6 +102,10 @@ export default function ReadFullPage({
     const [isVertical, setIsVertical] = useState(true);
     const [page, setPage] = useState(0);
     const [isBarOpen, setIsBarOpen] = useState(false);
+
+    /* 注釈の番号（話全体で振る） */
+    const notes = useMemo(() => buildNoteIndex(body), [body]);
+    const noteCtx = useMemo(() => ({ lookup: notes.lookup, show: true }), [notes]);
 
     useEffect(() => {
         function measure() {
@@ -239,6 +245,13 @@ export default function ReadFullPage({
     });
 
     return (
+        /*
+         * 注釈。話全体で振った番号を、縦書きの組み（VerticalText）に渡す。
+         * 全画面では一覧は出さない（頁送りの画面なので）。押すと下から説明が出る。
+         */
+        <NoteContext.Provider value={noteCtx}>
+        <NoteStyles />
+        <NoteLayer items={notes.items} />
         <div
             style={{
                 position: "fixed",
@@ -540,6 +553,7 @@ export default function ReadFullPage({
                 />
             </div>
         </div>
+        </NoteContext.Provider>
     );
 }
 

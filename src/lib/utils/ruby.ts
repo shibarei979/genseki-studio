@@ -39,6 +39,8 @@
  * ひらがな・カタカナを含めると、
  * 「ここで《おわり》」のような書き方まで拾ってしまう。
  */
+import { stripAnnotations } from "@/lib/utils/annotation";
+
 const BASE = "\\u4E00-\\u9FFF\\u3005\\u3006\\u3007\\u30F5\\u30F6";
 
 /**
@@ -82,7 +84,11 @@ export function rubyPattern(): RegExp {
 
 /** ふりがなと傍点の印を外して、素の文だけにする */
 export function stripRuby(text: string): string {
-    return text.replace(
+    /*
+     * ★ 注釈の記法（［＃注：…］）も外す。
+     *   読み上げ・字数・印の位置合わせで、説明の文まで本文に数えないように。
+     */
+    return stripAnnotations(text).replace(
         rubyPattern(),
         (
             _match,

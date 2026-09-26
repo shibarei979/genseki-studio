@@ -12,13 +12,18 @@
 "use client";
 
 import { parseNotation } from "@/lib/manuscript/notation";
+import { markAnnotations, splitNoteTokens } from "@/lib/utils/annotation";
 
 interface Props {
     text: string;
 }
 
 export default function RenderedText({ text }: Props) {
-    const segments = parseNotation(text);
+    /*
+     * ★ 注釈の記法（［＃注：…］）は、書く側の確かめ用に「※」だけ添えて出す。
+     *   説明の文は出さない（読む画面では押すと出る）。
+     */
+    const segments = parseNotation(markAnnotations(text));
 
     return (
         <>
@@ -35,6 +40,21 @@ export default function RenderedText({ text }: Props) {
                     return (
                         <span key={index} className="manuscript-emphasis">
                             {segment.text}
+                        </span>
+                    );
+                }
+                if (/[\uE000\uE001]/.test(segment.text)) {
+                    return (
+                        <span key={index}>
+                            {splitNoteTokens(segment.text).map((part, i) =>
+                                part.type === "text" ? (
+                                    <span key={i}>{part.body}</span>
+                                ) : part.type === "end" ? (
+                                    <sup key={i} style={{ fontSize: "0.55em", color: "var(--color-forest)" }}>
+                                        ※{part.n}
+                                    </sup>
+                                ) : null,
+                            )}
                         </span>
                     );
                 }

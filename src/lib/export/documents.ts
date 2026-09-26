@@ -14,6 +14,7 @@
  */
 
 import type { Episode, Work } from "@/types";
+import { annotationsForExport } from "@/lib/utils/annotation";
 import { splitRuby } from "@/lib/utils/ruby";
 
 /** 記法を外して、そのまま読める形にする */
@@ -26,12 +27,26 @@ function plain(body: string): string {
      * ここに書き写すと、書き方が増えたときに
      * この画面だけ取り残される。
      */
-    return splitRuby(body)
+    /*
+     * ★ 注釈は「月読（※1）」の形にして、話の終わりに一覧を付ける。
+     *   記法のまま残ると読めない。
+     */
+    const { text, notes } = annotationsForExport(body);
+
+    const main = splitRuby(text)
         .map((part) => {
             if (part.type === "ruby") return `${part.body}（${part.ruby}）`;
             return part.body;
         })
         .join("");
+
+    if (notes.length === 0) return main;
+
+    const list = notes
+        .map((note) => `※${note.index}　${note.word ? `${note.word}：` : ""}${note.note}`)
+        .join("\n");
+
+    return `${main}\n\n注釈\n${list}`;
 }
 
 function escapeHtml(text: string): string {

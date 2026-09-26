@@ -19,10 +19,21 @@
 export function splitIntoSentences(text: string): string[] {
     const result: string[] = [];
     let buf = "";
+    /*
+     * ★ 注釈の記法（［＃注：…。］）の中では切らない。
+     *   説明の文に「。」があると、記法が途中で割れて、印にならなかった。
+     */
+    let inNote = false;
 
     for (let i = 0; i < text.length; i++) {
         const ch = text[i];
         buf += ch;
+
+        if (!inNote && ch === "［" && text.startsWith("＃注：", i + 1)) inNote = true;
+        if (inNote) {
+            if (ch === "］") inNote = false;
+            else if (ch !== "\n") continue;
+        }
 
         const isEnder =
             ch === "。" || ch === "！" || ch === "？" || ch === "」" || ch === "』";
@@ -36,7 +47,8 @@ export function splitIntoSentences(text: string): string[] {
         }
 
         /* 閉じ括弧が続くときは、そこまでを 1 文にする */
-        if (isEnder && next !== "」" && next !== "』") {
+        /* 直後に注釈が付くときは、注釈まで同じ文にする（「」の言葉に付く注釈） */
+        if (isEnder && next !== "」" && next !== "』" && !text.startsWith("［＃注：", i + 1)) {
             result.push(buf);
             buf = "";
         }

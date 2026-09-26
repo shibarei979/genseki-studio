@@ -2,9 +2,11 @@
 import ShioriMark, { SHIORI_COLORS } from '@/components/common/shiori-mark'
 import { illustBox } from '@/config/illust-size'
 import { splitIntoSentences } from '@/lib/utils/sentences'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby } from '@/lib/utils/ruby'
+import { buildNoteIndex, markAnnotations, tokensToHtml } from '@/lib/utils/annotation'
+import { NoteContext, NoteLayer, NotesList, NoteStyles, renderNoteTokens, useNoteContext } from '@/components/novel/episode/notes'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 import { usePathname, useRouter } from 'next/navigation'
 import { reportReadProgress } from '@/components/reader/read-progress-tracker'
@@ -97,7 +99,9 @@ function normalizeForHorizontalReading(text: string): string {
     .join('\n')
 }
 
-function renderBody(text: string): string {
+function renderBody(text: string, notes?: { lookup?: Map<string, number>; show: boolean }): string {
+  /* 注釈の記法は、最初に目印へ置き換える（lib/utils/annotation.ts） */
+  text = markAnnotations(text, notes?.lookup, notes?.show ?? true)
   /* 整えるのはルビを取り出したあと。先だと ｜《》 が壊れる */
   let result = splitRuby(text).map((part) => {
     if (part.type === 'ruby') {
@@ -115,7 +119,7 @@ function renderBody(text: string): string {
     .join('')
 
   result = result.replace(/\n/g, '<br/>')
-  return result
+  return tokensToHtml(result)
 }
 
 /**
@@ -214,7 +218,12 @@ export function VerticalText({ text }: { text: string }) {
    * 先にかけると ｜ や 《》 まで全角になり、
    * ルビの印として読めなくなる。
    */
-  let processed = text
+  /*
+   * 注釈の記法は、先に目印へ置き換える（lib/utils/annotation.ts）。
+   * 番号は話全体で振ったもの（NoteContext）。無ければこの文の中で振る。
+   */
+  const noteCtx = useNoteContext()
+  let processed = markAnnotations(text, noteCtx.lookup, noteCtx.show)
   /*
    * 三点リーダも置き換えない。
    *
@@ -262,7 +271,7 @@ export function VerticalText({ text }: { text: string }) {
             * 英数字は縦中横で立てる。
             * そのままだと「35歳」の 35 も (Pr. I) も寝たまま出る。
             */
-          withTateChuYoko(line, `${keyPrefix}-${i}`)
+          renderNoteTokens(line, `${keyPrefix}-${i}`, (t, k) => withTateChuYoko(t, k))
         )}
         {i < all.length - 1 ? <br/> : null}
       </span>
@@ -494,6 +503,21 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
   /* 書体は lib/fonts/catalog.ts から（30 書体。Pro でない人の Pro 書体は明朝） */
   const fontFamily = useFontStack(settings.font)
 
+  /* 注釈。話全体で、出てきた順に番号を振る */
+  const notes = useMemo(() => buildNoteIndex(body), [body])
+  const noteCtx = useMemo(
+    () => ({ lookup: notes.lookup, show: settings.showNotes !== false }),
+    [notes, settings.showNotes],
+  )
+  /* 印の見た目・押したときの欄・話の終わりの一覧 */
+  const NotesBlock = (
+    <>
+      <NoteStyles/>
+      <NoteLayer items={notes.items}/>
+      <NotesList items={notes.items}/>
+    </>
+  )
+
   const Afterword = afterword ? (
     <div style={{borderTop:'1px solid var(--color-brand-border)'}}>
       <div style={{padding:'10px 14px',borderBottom:'1px solid var(--color-brand-border)',background:'var(--color-bg)',display:'flex',alignItems:'center',gap:8}}>
@@ -523,6 +547,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
 
 
     return (
+      <NoteContext.Provider value={noteCtx}>
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
         <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
           <>
@@ -751,12 +776,15 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
         </div>
 
         {Afterword}
+        {NotesBlock}
       </div>
+      </NoteContext.Provider>
     )
   }
 
   // ===== 横書き =====
   return (
+    <NoteContext.Provider value={noteCtx}>
     <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
       <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
         <>
@@ -874,7 +902,7 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
                         background: marking
                           ? 'color-mix(in srgb, var(--color-brand) 8%, transparent)'
                           : 'transparent'}}>
-                  <span dangerouslySetInnerHTML={{__html: renderBody(raw)}}/>
+                  <span dangerouslySetInnerHTML={{__html: renderBody(raw, noteCtx)}}/>
                   {mark && (
                     <span onClick={(e)=>{ e.stopPropagation(); onOpenMark?.(mark) }}
                       title="栞"
@@ -902,12 +930,14 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
         ) : (
           <div
             style={{fontSize:settings.fontSize, lineHeight:settings.lineHeight, color:'var(--color-text)', fontFamily, wordBreak:'break-all', whiteSpace:'pre-wrap'}}
-            dangerouslySetInnerHTML={{__html: renderBody(body)}}
+            dangerouslySetInnerHTML={{__html: renderBody(body, noteCtx)}}
           />
         )}
       </div>
 
       {Afterword}
+      {NotesBlock}
     </div>
+    </NoteContext.Provider>
   )
 }

@@ -43,6 +43,8 @@ export interface Settings {
    *   選んだのに次の作品で戻されるほうが、気持ちが悪い。
    */
   writingModeChosen?: boolean
+  /** 注釈の印（点線と ※番号）を出すか。既定は出す。切っても話の終わりの一覧は残る */
+  showNotes?: boolean
 }
 
 const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'wide', useRecommend: true, lineHeight: 2.1, writingMode: 'horizontal' }
@@ -324,6 +326,17 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                     {o.label}
                   </button>
                 ))}
+              </div>
+            </div>
+            {/*
+              * 注釈の印。
+              * ★ 没入したい人は切れる。切っても、話の終わりの一覧は残る。
+              */}
+            <div style={{marginTop:14}}>
+              <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>注釈の印</div>
+              <div style={{display:'flex',gap:6}}>
+                <button onClick={()=>update({showNotes:true})} style={btnBase(settings.showNotes !== false)}>出す</button>
+                <button onClick={()=>update({showNotes:false})} style={btnBase(settings.showNotes === false)}>出さない</button>
               </div>
             </div>
           </div>
