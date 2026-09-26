@@ -15,6 +15,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import EntryReport from "@/components/workspace/entry-report";
 import ProBadge from "@/components/common/pro-badge";
+import AppearanceList from "@/components/workspace/appearance-list";
+import { scanMentions } from "@/lib/resource/mention-scan";
 import SceneSearch from "@/components/workspace/scene-search";
 import { getRepository } from "@/lib/repository";
 import { useMemberFeatures } from "@/lib/subscription/use-member-features";
@@ -203,45 +205,43 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
             string,
             { label: string; text: string; count: number; hit: string }
         >();
-        const sorted = episodes.slice().sort((a, b) => a.ep_number - b.ep_number);
-        const split = sorted.map((episode) => ({ episode, lines: (episode.body ?? "").split("\n") }));
-
+        /*
+         * ★ 数え方は資料の頁の「本文での登場」と同じもの。
+         *   件数が、下の登場行や資料の頁とずれないように。
+         */
         for (const entry of listed.slice(0, 30)) {
-            const words = [entry.name, ...entry.aliases]
-                .map((word) => word.trim())
-                .filter((word) => word.length > 0);
-            if (words.length === 0) continue;
+            if (episodes.length === 0) break;
 
-            let found: { label: string; text: string; hit: string } | null = null;
-            let count = 0;
-
-            for (const { episode, lines } of split) {
-                lines.forEach((line, index) => {
-                    const hit = words.find((word) => line.includes(word));
-                    if (!hit) return;
-                    count += 1;
-                    if (found) return;
-
-                    /* 長い行は、当たった言葉の前後だけ */
-                    const at = line.indexOf(hit);
-                    const start = Math.max(0, at - 14);
-                    const end = Math.min(line.length, at + hit.length + 30);
-                    const text =
-                        (start > 0 ? "…" : "") +
-                        line.slice(start, end).trim() +
-                        (end < line.length ? "…" : "");
-
-                    found = { label: `第${episode.ep_number}話 ${index + 1}行目`, text, hit };
-                });
-            }
-
-            if (found) {
-                const { label, text, hit } = found;
-                map.set(entry.id, { label, text, count, hit });
-            } else if (split.length > 0) {
+            const found = scanMentions(entry, episodes);
+            if (found.length === 0) {
                 /* 本文に一度も出てこない。拾い損ねた切れ端などを見分ける手がかり */
                 map.set(entry.id, { label: "", text: "", count: 0, hit: "" });
+                continue;
             }
+
+            const first = found[0];
+            const words = [entry.name, ...entry.aliases]
+                .map((word) => word.trim())
+                .filter((word) => word.length > 0)
+                .sort((x, y) => y.length - x.length);
+            const hit = words.find((word) => first.text.includes(word)) ?? "";
+
+            /* 長い行は、当たった言葉の前後だけ */
+            const line = first.text;
+            const at = hit ? line.indexOf(hit) : 0;
+            const start = Math.max(0, at - 14);
+            const end = Math.min(line.length, at + hit.length + 30);
+            const text =
+                (start > 0 ? "…" : "") +
+                line.slice(start, end).trim() +
+                (end < line.length ? "…" : "");
+
+            map.set(entry.id, {
+                label: `第${first.epNumber}話 ${first.line}行目`,
+                text,
+                count: found.length,
+                hit,
+            });
         }
 
         return map;
@@ -429,6 +429,7 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                     workId={workId}
                     entryId={reportId}
                     episodeId={episodeId}
+                    typed={typedFor[reportId]}
                     onBack={() => setReportId(null)}
                     onJumpToWord={onJumpToWord}
                 />
@@ -548,22 +549,23 @@ export default function MentionPanel({ workId, episodeId, selection, onClose, on
                         entryReport ? (
                             <>
                                 <div className="mx-2 my-2 border-t border-line" />
-                                <SceneSearch
+                                {/*
+                                  * 名前だけのときは、資料の頁と同じ数え方で並べる。
+                                  * 台詞・行動・言及で絞れ、資料の頁で外した行は出ない。
+                                  */}
+                                <AppearanceList
                                     workId={workId}
                                     episodeId={episodeId}
-                                    who={who}
-                                    what={[]}
-                                    pages={pages}
-                                    locked={false}
+                                    entry={who[0]}
+                                    typed={typedFor[who[0].id]}
                                     onJumpToWord={onJumpToWord}
                                     onOpenReport={(entryId) => setReportId(entryId)}
-                                    typedFor={typedFor}
                                 />
                             </>
                         ) : (
                             <p className="mx-2 mt-3 border-t border-line px-1 pt-2.5 text-[11px] leading-relaxed text-faint">
                                 <ProBadge className="mr-1" />
-                                なら、この人が出てくる行を「第〇話 〇行目」で全話から並べます。
+                                なら、この人が出てくる行を「第〇話 〇行目」で全話から並べます（台詞・行動・言及で絞れます）。
                             </p>
                         )
                     )}

@@ -29,6 +29,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { getRepository } from "@/lib/repository";
+import { applyLineMarks, scanMentions } from "@/lib/resource/mention-scan";
 import ProBadge from "@/components/common/pro-badge";
 import type {
     Episode,
@@ -44,6 +45,8 @@ interface Props {
     entryId: string;
     /** いま開いている話。この話に出てくるときだけ「探す」を出す */
     episodeId?: string;
+    /** 検索で打った言葉。資料の名前と本文の書き方が違うとき（「律さん」を「律」で）に使う */
+    typed?: string;
     onBack: () => void;
     /** 本文のその語へ飛ぶ。いま開いている話のときだけ効く */
     onJumpToWord?: (word: string) => void;
@@ -55,26 +58,8 @@ interface Loaded {
     relations: ResourceRelation[];
     episodes: Episode[];
     mentions: EntryMention[];
-}
-
-/** 正規表現で特別な意味を持つ字を、ただの字にする */
-function escapeRegExp(text: string): string {
-    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/** その字の前後から、一文を切り出す */
-function sentenceAround(body: string, at: number, length: number): string {
-    const stops = /[。！？!?\n]/;
-
-    let start = at;
-    while (start > 0 && !stops.test(body[start - 1])) start -= 1;
-
-    let end = at + length;
-    while (end < body.length && !stops.test(body[end])) end += 1;
-    if (end < body.length && body[end] !== "\n") end += 1;
-
-    const text = body.slice(start, end).trim();
-    return text.length > 90 ? `${text.slice(0, 90)}…` : text;
+    /** 資料の頁で外した行・足した行 */
+    marks: { episode_id: string; line: number; kind: string; text: string }[];
 }
 
 /** 話の呼び名。「第3話 旅立ち」 */
@@ -87,6 +72,7 @@ export default function EntryReport({
     workId,
     entryId,
     episodeId,
+    typed,
     onBack,
     onJumpToWord,
 }: Props) {
@@ -104,8 +90,9 @@ export default function EntryReport({
             repository.listEpisodes(workId),
             repository.listMentions(workId),
         ])
-            .then(([pages, entries, relations, episodes, mentions]) => {
-                if (alive) setData({ pages, entries, relations, episodes, mentions });
+            .then(async ([pages, entries, relations, episodes, mentions]) => {
+                const marks = await repository.listLineMarks(entryId).catch(() => []);
+                if (alive) setData({ pages, entries, relations, episodes, mentions, marks });
             })
             .catch(() => {
                 if (alive) setFailed(true);
@@ -155,14 +142,21 @@ export default function EntryReport({
          *   名前と別名を、長いものから先に探す。
          *   「リオン」の中の「リオ」を二度数えないため。
          */
-        const words = [entry.name, ...(entry.aliases ?? [])]
-            .map((word) => word.trim())
-            .filter((word) => word.length > 0)
-            .sort((a, b) => b.length - a.length);
+        /*
+         * ★ 数え方は、資料の頁の「本文での登場」と同じもの（mention-scan）。
+         *   前はここだけ別の数え方で、資料の頁と件数が合わなかった。
+         *   資料の頁で「外した」行・「足した」行も同じように当てる。
+         */
+        const episodes = data.episodes
+            .slice()
+            .sort((a, b) => a.ep_number - b.ep_number);
 
-        const pattern = words.length
-            ? new RegExp(words.map(escapeRegExp).join("|"), "g")
-            : null;
+        const scanned = applyLineMarks(
+            scanMentions(entry, episodes, typed ? [typed] : []),
+            episodes,
+            data.marks.filter((row) => row.kind === "hidden"),
+            data.marks.filter((row) => row.kind === "picked"),
+        );
 
         const linkedEpisodes = new Set(
             data.mentions
@@ -170,41 +164,34 @@ export default function EntryReport({
                 .map((mention) => mention.episode_id),
         );
 
-        const episodes = data.episodes
-            .slice()
-            .sort((a, b) => a.ep_number - b.ep_number);
+        const words = [entry.name, ...(entry.aliases ?? []), typed ?? ""]
+            .map((word) => word.trim())
+            .filter((word) => word.length > 0)
+            .sort((a, b) => b.length - a.length);
+
+        /* 行の中で、どの呼び方で出てきたか。本文で探すときに使う */
+        const wordIn = (text: string) => words.find((word) => text.includes(word)) ?? "";
+        const clip = (text: string) => (text.length > 90 ? `${text.slice(0, 90)}…` : text);
 
         const perEpisode = episodes.map((episode): EpisodeRow => {
-            const body = episode.body ?? "";
-            let count = 0;
-            let firstAt = -1;
-            let firstWord = "";
-            let lastAt = -1;
-            let lastWord = "";
-
-            if (pattern) {
-                pattern.lastIndex = 0;
-                let match: RegExpExecArray | null;
-                while ((match = pattern.exec(body)) !== null) {
-                    count += 1;
-                    if (firstAt < 0) {
-                        firstAt = match.index;
-                        firstWord = match[0];
-                    }
-                    lastAt = match.index;
-                    lastWord = match[0];
-                }
-            }
+            const rows = scanned.filter((row) => row.episodeId === episode.id);
+            const first = rows[0];
+            const last = rows[rows.length - 1];
 
             return {
                 episode,
-                count,
+                count: rows.length,
                 linked: linkedEpisodes.has(episode.id),
-                first: firstAt >= 0 ? sentenceAround(body, firstAt, firstWord.length) : "",
-                last: lastAt >= 0 ? sentenceAround(body, lastAt, lastWord.length) : "",
-                firstWord,
+                first: first ? clip(first.text) : "",
+                last: last ? clip(last.text) : "",
+                firstWord: first ? wordIn(first.text) : "",
             };
         });
+
+        const kindCounts = {
+            speech: scanned.filter((row) => row.kind === "speech").length,
+            action: scanned.filter((row) => row.kind === "action").length,
+        };
 
         const appeared = perEpisode.filter((row) => row.count > 0 || row.linked);
         const totalCount = perEpisode.reduce((sum, row) => sum + row.count, 0);
@@ -277,6 +264,7 @@ export default function EntryReport({
             perEpisode,
             appeared,
             totalCount,
+            kindCounts,
             firstRow,
             lastRow,
             sinceLast,
@@ -284,7 +272,7 @@ export default function EntryReport({
             relations,
             referencedBy,
         };
-    }, [data, entryId]);
+    }, [data, entryId, typed]);
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -353,6 +341,8 @@ interface Report {
     perEpisode: EpisodeRow[];
     appeared: EpisodeRow[];
     totalCount: number;
+    /** 台詞・行動の数。残りは言及 */
+    kindCounts: { speech: number; action: number };
     firstRow: EpisodeRow | null;
     lastRow: EpisodeRow | null;
     sinceLast: number | null;
@@ -479,7 +469,11 @@ function ReportBody({
                     value={`${report.appeared.length}`}
                     sub={`全${report.episodeCount}話中`}
                 />
-                <Stat label="本文に出た回数" value={`${report.totalCount}`} sub="名前・別名" />
+                <Stat
+                    label="本文に出た回数"
+                    value={`${report.totalCount}`}
+                    sub={`台詞${report.kindCounts.speech}・行動${report.kindCounts.action}`}
+                />
                 <Stat label="関係" value={`${report.relations.length}`} sub="関係図" />
             </div>
 

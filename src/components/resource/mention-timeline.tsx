@@ -17,8 +17,15 @@
 
 import { useMemo, useState } from "react";
 
+import ProBadge from "@/components/common/pro-badge";
 import type { Mention, MentionKind } from "@/lib/resource/mention-scan";
-import { MENTION_KIND_LABEL, scanMentions, summarizeMentions } from "@/lib/resource/mention-scan";
+import {
+    applyLineMarks,
+    MENTION_KIND_LABEL,
+    scanMentions,
+    summarizeMentions,
+} from "@/lib/resource/mention-scan";
+import { useMemberFeatures } from "@/lib/subscription/use-member-features";
 import type { Episode, ResourceEntry } from "@/types";
 
 type Filter = "all" | MentionKind;
@@ -45,59 +52,20 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
     const [filter, setFilter] = useState<Filter>("all");
     const [limit, setLimit] = useState(20);
 
+    /*
+     * ★ Pro だけ、上に 2 つ足す。
+     *   ・話ごとの出番の帯（出ていない話が続くと分かる）
+     *   ・台詞をまとめて写す（口調を確かめる・別の場所へ貼る）
+     *   今ある一覧・絞り込み・外す・足すは、誰でもこれまでどおり使える。
+     */
+    const { entryReport: isPro } = useMemberFeatures();
+    const [copied, setCopied] = useState(false);
+
     // 本文を全部走査する。項目か本文が変わったときだけ数え直す
-    const mentions = useMemo(() => {
-        const found = scanMentions(entry, episodes);
-
-        if (hidden.length === 0) return found;
-
-        /*
-         * 消した行を外す。
-         *
-         * ★ 行の番号だけでは足りない。
-         *
-         *   消したあとで作者が前のほうに段落を足すと、
-         *   その行の番号がずれる。
-         *   番号だけで判断すると、別の行を消してしまう。
-         *
-         *   本文も照らし合わせて、同じときだけ外す。
-         *   違っていたら、その覚え書きはもう合っていない。
-         */
-        /*
-         * 自分で足した行を混ぜる。
-         *
-         * 数え直しでは見つからなかったが、
-         * 本文を読んで手で入れたもの。
-         */
-        for (const one of picked) {
-            const already = found.some(
-                (row) => row.episodeId === one.episode_id && row.line === one.line,
-            );
-            if (already) continue;
-
-            const ep = episodes.find((e) => e.id === one.episode_id);
-            found.push({
-                episodeId: one.episode_id,
-                epNumber: ep?.ep_number ?? 0,
-                line: one.line,
-                kind: "mention",
-                text: one.text,
-                speech: "",
-            } as Mention);
-        }
-
-        found.sort((a, b) => a.epNumber - b.epNumber || a.line - b.line);
-
-        return found.filter((row) => {
-            const mark = hidden.find(
-                (h) => h.episode_id === row.episodeId && h.line === row.line,
-            );
-            if (!mark) return true;
-
-            const now = (row.speech || row.text || "").trim();
-            return mark.text.trim() !== now.trim();
-        });
-    }, [entry, episodes, hidden, picked]);
+    const mentions = useMemo(
+        () => applyLineMarks(scanMentions(entry, episodes), episodes, hidden, picked),
+        [entry, episodes, hidden, picked],
+    );
     const summary = useMemo(() => summarizeMentions(mentions), [mentions]);
 
     if (mentions.length === 0) {
@@ -119,8 +87,84 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
         mention: summary.total - summary.speech - summary.action,
     };
 
+    /* 話ごとの出番。帯に使う */
+    const sortedEpisodes = episodes.slice().sort((a, b) => a.ep_number - b.ep_number);
+    const perEpisode = new Map<string, number>();
+    for (const row of mentions) {
+        perEpisode.set(row.episodeId, (perEpisode.get(row.episodeId) ?? 0) + 1);
+    }
+    const latestNumber = sortedEpisodes[sortedEpisodes.length - 1]?.ep_number ?? 0;
+    const sinceLast = summary.lastAppearance
+        ? latestNumber - summary.lastAppearance.epNumber
+        : null;
+
+    async function copySpeech() {
+        const lines = mentions
+            .filter((row) => row.kind === "speech" && row.speech)
+            .map((row) => `第${row.epNumber}話 ${row.line}行目　「${row.speech}」`);
+        if (lines.length === 0) return;
+        try {
+            await navigator.clipboard.writeText(`${entry.name}の台詞\n\n${lines.join("\n")}`);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1800);
+        } catch {
+            /* 写せない端末では何もしない */
+        }
+    }
+
     return (
         <div>
+            {/* ===== Pro：出番の帯と、台詞をまとめて写す ===== */}
+            {isPro ? (
+                <div className="mb-3 rounded-md border border-line bg-canvas px-2.5 py-2">
+                    <div className="flex items-center gap-1.5 text-[10.5px] text-muted">
+                        話ごとの出番
+                        <ProBadge />
+                        {sinceLast !== null && sinceLast >= 3 && (
+                            <span className="ml-auto text-[var(--color-amber)]">
+                                最新話まで{sinceLast}話、出ていません
+                            </span>
+                        )}
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-[3px]">
+                        {sortedEpisodes.map((episode) => {
+                            const count = perEpisode.get(episode.id) ?? 0;
+                            return (
+                                <span
+                                    key={episode.id}
+                                    title={`第${episode.ep_number}話：${count}回`}
+                                    className={[
+                                        "h-3.5 w-3.5 rounded-sm",
+                                        count > 0 ? "bg-forest" : "border border-line bg-surface",
+                                    ].join(" ")}
+                                    style={
+                                        count > 0
+                                            ? { opacity: Math.min(1, 0.7 + count / 20) }
+                                            : undefined
+                                    }
+                                />
+                            );
+                        })}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => void copySpeech()}
+                            disabled={summary.speech === 0}
+                            className="rounded-md border border-line bg-surface px-2.5 py-1 text-[11px] text-muted hover:border-forest-line hover:text-forest disabled:opacity-40"
+                        >
+                            台詞をまとめて写す（{summary.speech}件）
+                        </button>
+                        {copied && <span className="text-[11px] text-forest">写しました</span>}
+                    </div>
+                </div>
+            ) : (
+                <p className="mb-3 flex items-center gap-1 text-[11px] text-faint">
+                    <ProBadge />
+                    なら、話ごとの出番の帯と、台詞をまとめて写す機能が使えます。
+                </p>
+            )}
+
             {/* まとめ */}
             <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
                 <span>

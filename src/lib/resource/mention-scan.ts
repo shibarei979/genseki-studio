@@ -44,10 +44,32 @@ const ACTOR_PARTICLES = ["は", "が", "も", "を", "に"];
  * @param entry    調べたい項目
  * @param episodes 話（本文つき）
  */
-export function scanMentions(entry: ResourceEntry, episodes: Episode[]): Mention[] {
-    const names = [entry.name, ...(entry.aliases ?? [])]
-        .map((name) => name.trim())
-        .filter((name) => name.length >= 2);
+export function scanMentions(
+    entry: ResourceEntry,
+    episodes: Episode[],
+    /**
+     * ほかにも探す呼び方。
+     * 資料へのリンクで打った言葉（「律さん」の資料を「律」で探す）など。
+     */
+    extraWords: string[] = [],
+): Mention[] {
+    /*
+     * ★ 1 字の名前・別名も探す。
+     *
+     *   前は 2 字以上に限っていたので、「律」「玲」のような人物は
+     *   本文に何度出てきても一度も拾われなかった。
+     *   作者が名前や別名として登録したものは、1 字でも作者の意図として扱う。
+     *   （「王」のような 1 字は「王都」にも当たる。気になれば別名から外してもらう）
+     */
+    const names = [
+        entry.name.trim(),
+        ...(entry.aliases ?? []).map((name) => name.trim()),
+        ...extraWords.map((word) => word.trim()),
+    ]
+        .filter((name) => name.length >= 1)
+        .filter((name, index, list) => list.indexOf(name) === index)
+        /* 長い呼び方から探す。「リオン」の中の「リオ」を先に拾わないため */
+        .sort((a, b) => b.length - a.length);
 
     if (names.length === 0) return [];
 
@@ -161,4 +183,68 @@ export function summarizeMentions(mentions: Mention[]): MentionSummary {
         lastAppearance: mentions[mentions.length - 1],
         episodeCount: new Set(mentions.map((row) => row.episodeId)).size,
     };
+}
+
+/**
+ * ============================================================
+ * 消した行・足した行を当てる
+ *
+ * 資料の頁で「この行を外す」「蛍光ペンで足す」をしたもの。
+ * 資料の頁と、執筆中の欄（資料へのリンク）で同じ結果になるよう、ここにまとめる。
+ * ============================================================
+ */
+
+export interface LineMark {
+    episode_id: string;
+    line: number;
+    text: string;
+}
+
+export function applyLineMarks(
+    found: Mention[],
+    episodes: Episode[],
+    hidden: LineMark[] = [],
+    picked: LineMark[] = [],
+): Mention[] {
+    const rows = found.slice();
+
+    /* 自分で足した行を混ぜる。数え直しでは見つからなかったもの */
+    for (const one of picked) {
+        const already = rows.some(
+            (row) => row.episodeId === one.episode_id && row.line === one.line,
+        );
+        if (already) continue;
+
+        const episode = episodes.find((item) => item.id === one.episode_id);
+        rows.push({
+            episodeId: one.episode_id,
+            epNumber: episode?.ep_number ?? 0,
+            episodeTitle: episode?.title ?? "",
+            line: one.line,
+            kind: "mention",
+            text: one.text,
+            speech: "",
+        });
+    }
+
+    rows.sort((a, b) => a.epNumber - b.epNumber || a.line - b.line);
+
+    if (hidden.length === 0) return rows;
+
+    /*
+     * 消した行を外す。
+     *
+     * ★ 行の番号だけでは足りない。
+     *   消したあとで前のほうに段落を足すと、番号がずれる。
+     *   本文も照らし合わせて、同じときだけ外す。
+     */
+    return rows.filter((row) => {
+        const mark = hidden.find(
+            (item) => item.episode_id === row.episodeId && item.line === row.line,
+        );
+        if (!mark) return true;
+
+        const now = (row.speech || row.text || "").trim();
+        return mark.text.trim() !== now;
+    });
 }
