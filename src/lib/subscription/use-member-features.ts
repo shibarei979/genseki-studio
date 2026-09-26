@@ -25,10 +25,18 @@ import { useEffect, useState } from "react";
 export interface MemberFeatures {
     graphGroup: boolean;
     entryReport: boolean;
+    noAds: boolean;
+    versionKeep: number;
     operator: boolean;
 }
 
-const NONE: MemberFeatures = { graphGroup: false, entryReport: false, operator: false };
+const NONE: MemberFeatures = {
+    graphGroup: false,
+    entryReport: false,
+    noAds: false,
+    versionKeep: 30,
+    operator: false,
+};
 
 let asking: Promise<MemberFeatures> | null = null;
 
@@ -39,6 +47,11 @@ function ask(): Promise<MemberFeatures> {
             .then((data) => ({
                 graphGroup: data?.graphGroup === true,
                 entryReport: data?.entryReport === true,
+                noAds: data?.noAds === true,
+                versionKeep:
+                    typeof data?.versionKeep === "number" && data.versionKeep > 0
+                        ? data.versionKeep
+                        : 30,
                 operator: data?.operator === true,
             }))
             .catch(() => {

@@ -298,14 +298,39 @@ export const proceduralImageGenerator: ImageGenerator = {
  * 失敗したら手元の図案に戻す。
  * 図案が出ないより、簡素でも出るほうがよい。
  */
+/**
+ * 回数を使い切ったとき。
+ *
+ * ★ これだけは、手元の簡易な図に差し替えない。
+ *   差し替えると、使い切ったのに描けたように見え、
+ *   なぜ AI の絵にならないのか分からなくなる。
+ */
+export class ImageQuotaError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "ImageQuotaError";
+    }
+}
+
 export const apiImageGenerator: ImageGenerator = {
     async generate(name, style, hint, era) {
+        let response: Response;
         try {
-            const response = await fetch("/api/ai/image", {
+            response = await fetch("/api/ai/image", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name, style, hint, era }),
             });
+        } catch {
+            return proceduralImageGenerator.generate(name, style);
+        }
+
+        if (response.status === 429 || response.status === 401) {
+            const data = (await response.json().catch(() => null)) as { message?: string } | null;
+            throw new ImageQuotaError(data?.message ?? "今月AIで描ける枚数を使い切りました。");
+        }
+
+        try {
             if (!response.ok) throw new Error("failed");
 
             const data = (await response.json()) as { image?: string };

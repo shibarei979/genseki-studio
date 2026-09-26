@@ -17,6 +17,10 @@ import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
  *
  *   graph_group   関係図を、所属で囲む・線を折れ曲がらせる
  *   entry_report  資料へのリンクで、資料を報告書の形で見る
+ *   version_keep  版の履歴を 200 版まで残す（無料は 30 版）
+ *   image_monthly 資料の画像づくりの月の上限（数を入れる。image-quota.ts）
+ *
+ *   広告なしだけは合言葉でなく、特典の種類「広告を出さない」で見る。
  *
  * ★ 運営は、はじめから全部が使える。
  *
@@ -31,19 +35,31 @@ export interface MemberFeatures {
     graphGroup: boolean;
     /** 資料の報告書 */
     entryReport: boolean;
+    /** 広告を出さない（特典の種類 no_ads） */
+    noAds: boolean;
+    /** 版の履歴を 1 話につき何版まで残すか */
+    versionKeep: number;
     /** 運営として通っているか。画面に出すためのもの */
     operator: boolean;
 }
 
+/** 版の履歴。無料は今までどおり 30 版、Pro は 200 版 */
+export const VERSION_KEEP_BASE = 30;
+export const VERSION_KEEP_PRO = 200;
+
 const NONE: MemberFeatures = {
     graphGroup: false,
     entryReport: false,
+    noAds: false,
+    versionKeep: VERSION_KEEP_BASE,
     operator: false,
 };
 
 const ALL: MemberFeatures = {
     graphGroup: true,
     entryReport: true,
+    noAds: true,
+    versionKeep: VERSION_KEEP_PRO,
     operator: true,
 };
 
@@ -68,6 +84,8 @@ export async function memberFeatures(): Promise<MemberFeatures> {
     return {
         graphGroup: has("graph_group"),
         entryReport: has("entry_report"),
+        noAds: live.perks.some((perk) => perk.kind === "no_ads"),
+        versionKeep: has("version_keep") ? VERSION_KEEP_PRO : VERSION_KEEP_BASE,
         operator: false,
     };
 }

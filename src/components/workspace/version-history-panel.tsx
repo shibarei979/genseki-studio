@@ -16,6 +16,8 @@ import { getRepository } from "@/lib/repository";
 import { formatDateTime, formatNumber } from "@/lib/utils/text";
 import type { Episode, EpisodeVersion } from "@/types";
 import { VERSION_TRIGGER_LABEL } from "@/types";
+import ProBadge from "@/components/common/pro-badge";
+import { useMemberFeatures } from "@/lib/subscription/use-member-features";
 
 interface Props {
     episode: Episode;
@@ -27,6 +29,10 @@ export default function VersionHistoryPanel({ episode, onClose, onRestored }: Pr
     const [versions, setVersions] = useState<EpisodeVersion[]>([]);
     const [selected, setSelected] = useState<EpisodeVersion | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    /* 何版まで残るか。無料は 30 版、Pro は 200 版 */
+    const { versionKeep } = useMemberFeatures();
+    const isPro = versionKeep > 30;
 
     async function reload() {
         const rows = await getRepository().listVersions(episode.id);
@@ -84,6 +90,29 @@ export default function VersionHistoryPanel({ episode, onClose, onRestored }: Pr
                     </button>
                 </div>
             </div>
+
+            {/*
+              * ★ 何版まで残るかを見せる。
+              *   上限を知らないと、古い版が消えたときに驚く。
+              */}
+            {!isLoading && (
+                <div className="flex items-center gap-2 border-b border-line bg-canvas px-4 py-1.5 text-[11px]">
+                    <span className="flex items-baseline gap-1.5 text-muted">
+                        この話の履歴
+                        <span>
+                            <span className="font-medium text-ink">{versions.length}</span> / {versionKeep}版
+                        </span>
+                    </span>
+                    {isPro ? (
+                        <ProBadge className="ml-auto" />
+                    ) : (
+                        <span className="ml-auto flex items-center gap-1 text-faint">
+                            <ProBadge />
+                            なら200版まで
+                        </span>
+                    )}
+                </div>
+            )}
 
             {isLoading ? (
                 <p className="py-10 text-center text-[13px] text-faint">読み込んでいます</p>

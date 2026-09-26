@@ -4,7 +4,7 @@
  * EntryImagePanel — 資料の画像
  *
  * 3 つの道がある。
- *   1. 文章で頼んで作らせる（1 作品 3 枚まで）
+ *   1. 文章で頼んで作らせる（1 人 月 3 枚まで。Pro は月 10 枚。数えるのはサーバー）
  *   2. 自分で用意した画像を貼る（何枚でも）
  *   3. 何も置かない
  *
@@ -22,7 +22,7 @@ import { findRealPlaces, MAP_ERA_LABEL } from "@/lib/ai/real-places";
 import type { MapEra } from "@/lib/ai/real-places";
 import { deleteImage, putImage, shrinkImage } from "@/lib/storage/image-store";
 import type { ImageStyle } from "@/types";
-import { IMAGE_QUOTA } from "@/types";
+import ProBadge from "@/components/common/pro-badge";
 
 /**
  * 作風ごとの、頼み方の例。
@@ -56,12 +56,22 @@ const HINT_POINTS: Record<ImageStyle, string[]> = {
     map: ["海・山・川の位置", "町の数と場所", "街道や航路", "全体の広さ"],
 };
 
+/** AIで描ける枚数。サーバーが数えたもの */
+export interface ImageQuota {
+    /** あと何枚。null は無制限 */
+    left: number | null;
+    /** 月の上限。0 は無制限 */
+    limit: number;
+    /** Pro の上限で数えているか */
+    pro: boolean;
+}
+
 interface Props {
     style: ImageStyle;
     name: string;
     imageUrl: string | null;
-    /** 作品全体で作った枚数 */
-    usedCount: number;
+    /** 今月あと何枚描けるか。サーバーで数えている */
+    quota: ImageQuota;
     canGenerate: boolean;
     onGenerate: (hint: string, era: MapEra) => Promise<void>;
     onChange: (imageUrl: string | null) => void;
@@ -71,7 +81,7 @@ export default function EntryImagePanel({
     style,
     name,
     imageUrl,
-    usedCount,
+    quota,
     canGenerate,
     onGenerate,
     onChange,
@@ -84,7 +94,9 @@ export default function EntryImagePanel({
     const [notice, setNotice] = useState("");
     const fileRef = useRef<HTMLInputElement>(null);
 
-    const remaining = Math.max(0, IMAGE_QUOTA - usedCount);
+    /* null は無制限 */
+    const unlimited = quota.left === null;
+    const remaining = quota.left ?? Number.POSITIVE_INFINITY;
     const isWide = style === "map";
 
     /*
@@ -163,7 +175,11 @@ export default function EntryImagePanel({
                     <p className="mt-1.5 text-[11px] leading-relaxed text-faint">
                         自分で用意した画像はいくつでも貼れます。
                         <br />
-                        AIに描かせられるのは、この作品であと{remaining}枚です。
+                        {unlimited
+                            ? "AIに描かせる枚数に上限はありません。"
+                            : remaining === 0
+                              ? "AIで描ける今月の枚数は使い切りました。"
+                              : `AIに描かせられるのは、今月あと${remaining}枚です。`}
                     </p>
                 </div>
             </div>
@@ -202,14 +218,24 @@ export default function EntryImagePanel({
                                     remaining === 0 ? "text-[var(--color-amber)]" : "text-faint",
                                 ].join(" ")}
                             >
-                                残り {remaining} / {IMAGE_QUOTA} 枚
+                                {unlimited ? (
+                                    "上限なし"
+                                ) : (
+                                    <>今月 残り {remaining} / {quota.limit} 枚</>
+                                )}
                             </span>
                         </div>
 
                         {remaining === 0 ? (
                             <p className="mt-1.5 rounded-md bg-[var(--color-amber-tint)] px-3 py-2 text-[11px] leading-relaxed text-ink">
-                                この作品で作れる枚数を使い切りました。
+                                今月AIで描ける枚数を使い切りました。来月1日にまた描けます。
                                 自分で用意した画像は、引き続き貼れます。
+                                {!quota.pro && (
+                                    <span className="mt-1 flex items-center gap-1 text-muted">
+                                        <ProBadge />
+                                        なら、月10枚まで描けます。
+                                    </span>
+                                )}
                             </p>
                         ) : !canGenerate ? (
                             <p className="mt-1.5 text-[11px] text-faint">

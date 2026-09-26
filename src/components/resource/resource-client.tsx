@@ -34,7 +34,7 @@ import {
     KIND_FALLBACK_PAGE,
 } from "@/lib/ai/extractor";
 import type { CandidateKind } from "@/lib/ai/extractor";
-import { getImageGenerator } from "@/lib/ai/image-generator";
+import { getImageGenerator, ImageQuotaError } from "@/lib/ai/image-generator";
 import { appendLeftover, mapAttributes } from "@/lib/resource/attribute-map";
 import { COLOR_KEY, LEAD_KEY, isBelongField, isMemberField } from "@/lib/resource/graph-groups";
 import {
@@ -49,7 +49,7 @@ import { deleteImage, putImage } from "@/lib/storage/image-store";
 import { getRepository } from "@/lib/repository";
 import { useAiStatus } from "@/hooks/use-ai-status";
 import { formatNumber } from "@/lib/utils/text";
-import { IMAGE_QUOTA } from "@/types";
+import type { ImageQuota } from "@/components/resource/entry-image-panel";
 import type {
     AiSettings,
     Episode,
@@ -202,6 +202,40 @@ export default function ResourceClient({ workId }: Props) {
     useEffect(() => {
         void readScanLeft();
     }, [readScanLeft]);
+
+    /*
+     * AIで描ける残りの枚数。
+     *
+     * ★ サーバーが数えたものを出す。
+     *   前は作品の設定の中に枚数を持ち、画面で数えていた。
+     */
+    const [imageQuota, setImageQuota] = useState<ImageQuota>({
+        left: null,
+        limit: 0,
+        pro: false,
+    });
+
+    const readImageQuota = useCallback(async () => {
+        try {
+            const response = await fetch("/api/ai/image");
+            const data = (await response.json()) as {
+                left?: number | null;
+                limit?: number;
+                pro?: boolean;
+            };
+            setImageQuota({
+                left: data.left ?? null,
+                limit: data.limit ?? 0,
+                pro: data.pro === true,
+            });
+        } catch {
+            /* 読めなくても、押したときにサーバーが断る */
+        }
+    }, []);
+
+    useEffect(() => {
+        void readImageQuota();
+    }, [readImageQuota]);
 
     const aiStatus = useAiStatus();
 
@@ -999,14 +1033,25 @@ export default function ResourceClient({ workId }: Props) {
         era: string,
     ) {
         if (!ai?.generate_images || !page.image_style) return;
-        if ((ai.generated_image_count ?? 0) >= IMAGE_QUOTA) return;
+        if (aiStatus.connected && imageQuota.left === 0) return;
 
-        const dataUrl = await getImageGenerator(aiStatus.connected).generate(
-            entry.name,
-            page.image_style,
-            [hint, entry.summary].filter(Boolean).join("。"),
-            era,
-        );
+        let dataUrl: string;
+        try {
+            dataUrl = await getImageGenerator(aiStatus.connected).generate(
+                entry.name,
+                page.image_style,
+                [hint, entry.summary].filter(Boolean).join("。"),
+                era,
+            );
+        } catch (error) {
+            /* 使い切っていたとき。サーバーの言い分をそのまま出す */
+            if (error instanceof ImageQuotaError) {
+                setScanNotice(error.message);
+                await readImageQuota();
+                return;
+            }
+            throw error;
+        }
 
         const ref = await putImage(dataUrl);
         if (entry.image_url) await deleteImage(entry.image_url);
@@ -1021,14 +1066,8 @@ export default function ResourceClient({ workId }: Props) {
             return;
         }
 
-        // 使った枚数を数える。手元の簡易版で作ったものは数えない
-        if (aiStatus.connected) {
-            setAi(
-                await repository.saveAiSettings(workId, {
-                    generated_image_count: (ai.generated_image_count ?? 0) + 1,
-                }),
-            );
-        }
+        /* 数えるのはサーバー。ここでは残りを読み直すだけ */
+        if (aiStatus.connected) await readImageQuota();
         await reload();
     }
 
@@ -1533,7 +1572,7 @@ export default function ResourceClient({ workId }: Props) {
                                             ai.generate_images &&
                                             currentPage.image_style,
                                     )}
-                                    imageUsedCount={ai?.generated_image_count ?? 0}
+                                    imageQuota={imageQuota}
                                     onMergeDuplicates={async (group) => {
                                         /*
                                          * 中身を残すほうへ移してから消す。

@@ -16,6 +16,9 @@ import { NextResponse } from "next/server";
 import { hasModelAccess, serverEnv } from "@/config/env.server";
 import { buildImageUserPrompt, imageSizeFor } from "@/lib/ai/prompts";
 import type { MapEra } from "@/lib/ai/real-places";
+import { countImage, imageLeft } from "@/lib/subscription/image-quota";
+
+export const dynamic = "force-dynamic";
 
 const ALLOWED_STYLES = new Set(["portrait", "scene", "crest", "icon", "map"]);
 
@@ -30,9 +33,44 @@ interface RequestBody {
     era?: string;
 }
 
+/**
+ * 今月あと何枚描けるか。画面の「残り〇枚」に使う。
+ */
+export async function GET() {
+    const gate = await imageLeft();
+    return NextResponse.json({
+        limit: gate.limit,
+        used: gate.used,
+        left: gate.left,
+        pro: gate.pro,
+        signedIn: Boolean(gate.userId),
+    });
+}
+
 export async function POST(request: Request) {
     if (!hasModelAccess()) {
         return NextResponse.json({ error: "model_unavailable" }, { status: 501 });
+    }
+
+    /*
+     * ★ 描く前に、回数を見る。
+     *
+     *   前はここに何の歯止めも無く、入っていない人でも
+     *   この住所を直に叩けば何枚でも描けた。
+     *   1 枚ごとに費用がかかるので、入口で止める。
+     */
+    const gate = await imageLeft();
+    if (!gate.userId) {
+        return NextResponse.json(
+            { error: "unauthorized", message: "ログインすると使えます。" },
+            { status: 401 },
+        );
+    }
+    if (!gate.ok) {
+        return NextResponse.json(
+            { error: "quota", message: gate.message, limit: gate.limit, left: 0, pro: gate.pro },
+            { status: 429 },
+        );
     }
 
     let body: RequestBody;
@@ -103,8 +141,14 @@ export async function POST(request: Request) {
             );
         }
 
+        /* 描けたので 1 枚ぶん数える */
+        await countImage(gate.userId, gate.limit);
+
         // データURI にして返す。保存先ができるまではこの形で持つ
-        return NextResponse.json({ image: `data:image/png;base64,${encoded}` });
+        return NextResponse.json({
+            image: `data:image/png;base64,${encoded}`,
+            left: gate.left === null ? null : Math.max(0, gate.left - 1),
+        });
     } catch (error) {
         const isAbort = error instanceof Error && error.name === "AbortError";
         return NextResponse.json(

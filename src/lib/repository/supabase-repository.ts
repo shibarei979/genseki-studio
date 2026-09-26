@@ -398,6 +398,48 @@ function toContest(row: Record<string, unknown>): Contest {
  * ============================================================
  */
 
+
+/**
+ * 版の履歴を 1 話につき何版まで残すか。
+ *
+ * ★ 会員かどうかはサーバーに聞く（/api/member/features）。
+ *   一度聞いたら、この頁を開いている間は覚えておく。
+ *   聞けなかったときは、無料と同じ 30 版。
+ *
+ * ★ 減らすことはしない。
+ *   Pro が切れても、すでにある版は消さない。
+ *   次に版を残したときに、30 版を超えるぶんが古いほうから消える。
+ */
+let keepAsking: Promise<number> | null = null;
+
+function versionKeep(): Promise<number> {
+    if (typeof window === "undefined") return Promise.resolve(30);
+    if (!keepAsking) {
+        keepAsking = fetch("/api/member/features")
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) =>
+                typeof data?.versionKeep === "number" && data.versionKeep > 0
+                    ? data.versionKeep
+                    : 30,
+            )
+            .catch(() => {
+                keepAsking = null;
+                return 30;
+            });
+    }
+    return keepAsking;
+}
+
+/** 次の版の番号。「v12」なら 13 */
+function nextVersionNumber(versions: EpisodeVersion[]): number {
+    let max = 0;
+    for (const version of versions) {
+        const number = Number(/^v(\d+)$/.exec(version.label ?? "")?.[1] ?? 0);
+        if (number > max) max = number;
+    }
+    return Math.max(max, versions.length) + 1;
+}
+
 export const supabaseRepository: Repository = {
     /**
      * ==========================================================
@@ -1364,12 +1406,13 @@ export const supabaseRepository: Repository = {
      */
 
     async listVersions(episodeId: string): Promise<EpisodeVersion[]> {
+        const keep = await versionKeep();
         const { data } = await db()
             .from("episode_versions")
             .select("*")
             .eq("episode_id", episodeId)
             .order("created_at", { ascending: false })
-            .limit(30);
+            .limit(keep);
         return rows<Record<string, unknown>>(data).map(toVersion);
     },
 
@@ -1381,6 +1424,7 @@ export const supabaseRepository: Repository = {
         if (!episode) return null;
 
         const versions = await this.listVersions(episodeId);
+        const keep = await versionKeep();
 
         /*
          * 中身が前と同じなら控えない。
@@ -1396,16 +1440,24 @@ export const supabaseRepository: Repository = {
                 body: episode.body,
                 char_count: episode.char_count,
                 trigger,
-                label: `v${versions.length + 1}`,
+                /*
+                 * ★ 番号は、いちばん新しい版の番号の次。
+                 *   前は「今ある数 + 1」だったので、上限まで溜まると
+                 *   古い版が消えても数が増えず、同じ番号が続いていた。
+                 */
+                label: `v${nextVersionNumber(versions)}`,
             })
             .select()
             .single();
 
         if (error) throw new Error(describeError(error.message));
 
-        /* 30 版を超えたら古いものから消す */
-        if (versions.length >= 30) {
-            const old = versions.slice(29).map((row) => row.id);
+        /*
+         * 上限を超えたら古いものから消す。
+         * 無料は 30 版、Pro は 200 版（features.ts の versionKeep）。
+         */
+        if (versions.length >= keep) {
+            const old = versions.slice(keep - 1).map((row) => row.id);
             if (old.length > 0) {
                 await db().from("episode_versions").delete().in("id", old);
             }

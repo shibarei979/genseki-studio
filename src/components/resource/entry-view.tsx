@@ -38,6 +38,7 @@ import type {
     ResourceRelation,
 } from "@/types";
 import { formatEpisodeLabel } from "@/types";
+import type { ImageQuota } from "@/components/resource/entry-image-panel";
 
 const PER_PAGE = 12;
 
@@ -63,7 +64,7 @@ interface Props {
     ) => Promise<void>;
     canGenerateImage: boolean;
     /** その作品でこれまでに作った図案の数 */
-    imageUsedCount: number;
+    imageQuota: ImageQuota;
     /**
      * 開いた瞬間に選んでおく項目。
      * 資料の地図から「この人をくわしく」と飛んでくる道のため。
@@ -90,7 +91,7 @@ export default function EntryView({
     onMerge,
     onGenerateImage,
     canGenerateImage,
-    imageUsedCount,
+    imageQuota,
     initialEntryId,
     onJump,
     onPick,
@@ -677,7 +678,7 @@ export default function EntryView({
                                 relations={relations}
                                 mentions={mentions}
                                 canGenerateImage={canGenerateImage}
-                                imageUsedCount={imageUsedCount}
+                                imageQuota={imageQuota}
                                 onGenerateImage={(hint, era) => onGenerateImage(selected, hint, era)}
                                 onJump={onJump}
                                 onPick={onPick}

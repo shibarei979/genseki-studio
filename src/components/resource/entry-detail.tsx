@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 
 import EntryImage from "@/components/common/entry-image";
-import EntryImagePanel from "@/components/resource/entry-image-panel";
+import EntryImagePanel, { type ImageQuota } from "@/components/resource/entry-image-panel";
 import MentionTimeline from "@/components/resource/mention-timeline";
 import ResourceIcon from "@/components/resource/resource-icons";
 import { getRepository } from "@/lib/repository";
@@ -39,7 +39,7 @@ interface Props {
     mentions: EntryMention[];
     canGenerateImage: boolean;
     /** その作品でこれまでに作った図案の数 */
-    imageUsedCount: number;
+    imageQuota: ImageQuota;
     onGenerateImage: (hint: string, era: string) => Promise<void>;
     onChange: (patch: Partial<ResourceEntry>) => void;
     onSelectEntry: (entryId: string) => void;
@@ -59,7 +59,7 @@ export default function EntryDetail({
     relations,
     mentions,
     canGenerateImage,
-    imageUsedCount,
+    imageQuota,
     onGenerateImage,
     onChange,
     onSelectEntry,
@@ -186,7 +186,7 @@ export default function EntryDetail({
                         allEntries={allEntries}
                         episodes={episodes}
                         canGenerateImage={canGenerateImage}
-                        imageUsedCount={imageUsedCount}
+                        imageQuota={imageQuota}
                         onGenerateImage={onGenerateImage}
                         onChange={onChange}
                     />
@@ -470,7 +470,7 @@ function EntryForm({
     allEntries,
     episodes,
     canGenerateImage,
-    imageUsedCount,
+    imageQuota,
     onGenerateImage,
     onChange,
 }: {
@@ -480,7 +480,7 @@ function EntryForm({
     allEntries: ResourceEntry[];
     episodes: Episode[];
     canGenerateImage: boolean;
-    imageUsedCount: number;
+    imageQuota: ImageQuota;
     onGenerateImage: (hint: string, era: string) => Promise<void>;
     onChange: (patch: Partial<ResourceEntry>) => void;
 }) {
@@ -513,7 +513,7 @@ function EntryForm({
                         style={page.image_style}
                         name={entry.name}
                         imageUrl={entry.image_url}
-                        usedCount={imageUsedCount}
+                        quota={imageQuota}
                         canGenerate={canGenerateImage}
                         onGenerate={onGenerateImage}
                         onChange={(imageUrl) => onChange({ image_url: imageUrl })}
