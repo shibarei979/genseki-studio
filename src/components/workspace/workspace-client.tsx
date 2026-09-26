@@ -19,7 +19,7 @@ import Header from "@/components/layout/header";
 import EpisodeEditor from "@/components/workspace/episode-editor";
 import EpisodeList from "@/components/workspace/episode-list";
 import MentionPanel from "@/components/workspace/mention-panel";
-import ProofreadPanel from "@/components/workspace/proofread-panel";
+import AiCheckPanel from "@/components/workspace/ai-check-panel";
 import ReadPanel from "@/components/workspace/read-panel";
 import VersionHistoryPanel from "@/components/workspace/version-history-panel";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
@@ -111,7 +111,7 @@ export default function WorkspaceClient({ workId }: Props) {
      *
      * 狭い画面では、本文と窓のどちらかだけを出す。
      */
-    const isAnyPanelOpen = isReadOpen || isMentionsOpen || isHistoryOpen;
+    const isAnyPanelOpen = isReadOpen || isMentionsOpen || isHistoryOpen || isProofreadOpen;
     const aiStatus = useAiStatus();
     /** 推敲パネルが読む本文と、直した結果を戻す口 */
     const [draft, setDraft] = useState<{ body: string; apply: (next: string) => void }>({
@@ -939,10 +939,16 @@ export default function WorkspaceClient({ workId }: Props) {
                         />
                     )}
 
+                    {/*
+                      * AIチェック（Pro）。前の推敲の場所をそのまま使う。
+                      * 書きかけの本文（draft.body）を見る。直すのは作者の手で。
+                      */}
                     {selected && isProofreadOpen && (
-                        <ProofreadPanel
+                        <AiCheckPanel
+                            workId={workId}
+                            episodeId={selected.id}
                             body={draft.body}
-                            onApplyFix={(next) => draft.apply(next)}
+                            onJump={(line) => setJumpLine(line)}
                             onClose={() => setIsProofreadOpen(false)}
                         />
                     )}

@@ -28,6 +28,7 @@ import { WRITING_MODE_LABEL } from "@/types";
 import IllustPlaceSurface from "@/components/workspace/illust-place-surface";
 import PickSurface from "@/components/workspace/pick-surface";
 import { useRouter } from "next/navigation";
+import ProBadge from "@/components/common/pro-badge";
 
 interface Props {
     episode: Episode;
@@ -565,27 +566,26 @@ export default function EpisodeEditor({
                         通し読み
                     </button>
                     {/*
-                     * 推敲は出さない。
+                     * AIチェック（Pro）。
                      *
-                     * 中身の作り込みが追いついていないので、
-                     * 押せる所だけ用意されている状態を避ける。
-                     * 仕上がったら、この囲みを外すだけで戻せる。
+                     * ★ 前は「推敲」をここに置く予定で、隠してあった。
+                     *   同じ場所・同じ開き方で、AI の誤字脱字・表記揺れチェックを出す。
+                     *   会員でない人にも見せ、開くと Pro の案内が出る。
                      */}
-                    {false && (
-                        <button
-                            type="button"
-                            onClick={onOpenProofread}
-                            aria-pressed={isProofreadOpen}
-                            className={[
-                                "shrink-0 rounded border px-2 py-0.5",
-                                isProofreadOpen
-                                    ? "border-forest bg-forest-tint text-forest"
-                                    : "border-line hover:border-forest-line hover:text-forest",
-                            ].join(" ")}
-                        >
-                            推敲
-                        </button>
-                    )}
+                    <button
+                        type="button"
+                        onClick={onOpenProofread}
+                        aria-pressed={isProofreadOpen}
+                        className={[
+                            "inline-flex shrink-0 items-center gap-1 rounded border px-2 py-0.5",
+                            isProofreadOpen
+                                ? "border-forest bg-forest-tint text-forest"
+                                : "border-line hover:border-forest-line hover:text-forest",
+                        ].join(" ")}
+                    >
+                        AIチェック
+                        <ProBadge />
+                    </button>
                     <button
                         type="button"
                         onClick={onOpenMentions}

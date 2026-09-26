@@ -26,6 +26,7 @@ export interface MemberFeatures {
     graphGroup: boolean;
     entryReport: boolean;
     noAds: boolean;
+    aiCheck: boolean;
     versionKeep: number;
     operator: boolean;
 }
@@ -34,6 +35,7 @@ const NONE: MemberFeatures = {
     graphGroup: false,
     entryReport: false,
     noAds: false,
+    aiCheck: false,
     versionKeep: 30,
     operator: false,
 };
@@ -48,6 +50,7 @@ function ask(): Promise<MemberFeatures> {
                 graphGroup: data?.graphGroup === true,
                 entryReport: data?.entryReport === true,
                 noAds: data?.noAds === true,
+                aiCheck: data?.aiCheck === true,
                 versionKeep:
                     typeof data?.versionKeep === "number" && data.versionKeep > 0
                         ? data.versionKeep
