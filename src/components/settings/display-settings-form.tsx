@@ -13,12 +13,14 @@
 
 import { useState } from "react";
 
+import FontPicker from "@/components/common/font-picker";
+import { useMemberFeatures } from "@/lib/subscription/use-member-features";
+
 import MobilePreview from "@/components/settings/mobile-preview";
 import ManuscriptSurface from "@/components/workspace/manuscript-surface";
 import PagedReader from "@/components/workspace/paged-reader";
 import type {
     DisplaySettings,
-    FontKey,
     LetterSpacingKey,
     LineHeightKey,
     PageMode,
@@ -26,10 +28,7 @@ import type {
     WritingMode,
 } from "@/types";
 import {
-    FONT_DESCRIPTION,
-    FONT_LABEL,
     FONT_SIZES,
-    FONT_STACK,
     LETTER_SPACING_LABEL,
     LINE_HEIGHT_LABEL,
     READER_MODE_LABEL,
@@ -59,6 +58,8 @@ interface Props {
 }
 
 export default function DisplaySettingsForm({ settings, workTitle, onChange }: Props) {
+    /* 30 書体は Pro。無料は 4 書体 */
+    const { fonts } = useMemberFeatures();
     const [device, setDevice] = useState<Device>("pc");
 
     const pageMode = device === "pc" ? settings.page_mode_pc : settings.page_mode_mobile;
@@ -122,47 +123,19 @@ export default function DisplaySettingsForm({ settings, workTitle, onChange }: P
                         />
                     </Section>
 
-                    <Section title="書体" note="端末に入っている書体から選びます。">
-                        <ul className="space-y-1.5">
-                            {(Object.keys(FONT_LABEL) as FontKey[]).map((key) => (
-                                <li key={key}>
-                                    <button
-                                        type="button"
-                                        onClick={() => onChange({ font_family: key })}
-                                        aria-pressed={settings.font_family === key}
-                                        className={[
-                                            "flex w-full items-center gap-4 rounded-lg border px-4 py-3 text-left",
-                                            settings.font_family === key
-                                                ? "border-forest bg-forest-tint/50"
-                                                : "border-line hover:border-forest-line",
-                                        ].join(" ")}
-                                    >
-                                        {/*
-                                         * 見本を左に、説明を右に。
-                                         *
-                                         * 名前と説明と見本を横一列に並べると、
-                                         * どれがどれか分からなくなる。
-                                         * 見本は大きく出して、選ぶ手がかりにする。
-                                         */}
-                                        <span
-                                            className="w-20 shrink-0 text-[19px] leading-tight text-ink"
-                                            style={{ fontFamily: FONT_STACK[key] }}
-                                        >
-                                            海へ出る
-                                        </span>
-
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block text-[13px] font-medium text-ink">
-                                                {FONT_LABEL[key]}
-                                            </span>
-                                            <span className="mt-0.5 block text-[11px] leading-relaxed text-muted">
-                                                {FONT_DESCRIPTION[key]}
-                                            </span>
-                                        </span>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
+                    {/*
+                      * 書体。
+                      *
+                      * ★ 無料は 4 書体、Pro は 30 書体（lib/fonts/catalog.ts）。
+                      *   前は端末の書体に任せていて、書く画面には当たっていなかった
+                      *   （選べるのに変わらなかった）。今は書く画面・読み上げの確認・通し読みに当たる。
+                      */}
+                    <Section title="書体" note="書く画面で使う書体です。">
+                        <FontPicker
+                            value={settings.font_family}
+                            onChange={(key) => onChange({ font_family: key })}
+                            isPro={fonts}
+                        />
                     </Section>
 
                     <Section title="背景色テーマ">

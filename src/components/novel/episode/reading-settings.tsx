@@ -1,9 +1,15 @@
 'use client'
 import { ILLUST_SHAPE_LABEL } from '@/config/illust-size'
 import { useState, useEffect } from 'react'
+import FontPicker from '@/components/common/font-picker'
+import { useMemberFeatures } from '@/lib/subscription/use-member-features'
 
 export interface Settings {
-  font: 'serif' | 'sans' | 'rounded' | 'ud'
+  /**
+   * 書体。lib/fonts/catalog.ts の key。
+   * 無料は serif / sans / rounded / ud、Pro は 30 書体。
+   */
+  font: string
   fontSize: number
   /**
    * 挿絵の大きさ。
@@ -42,12 +48,7 @@ export interface Settings {
 const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'wide', useRecommend: true, lineHeight: 2.1, writingMode: 'horizontal' }
 const STORAGE_KEY = 'reading_settings'
 
-const FONT_OPTIONS = [
-  { label: '明朝', value: 'serif' as const },
-  { label: 'ゴシック', value: 'sans' as const },
-  { label: '丸ゴシック', value: 'rounded' as const },
-  { label: 'UD', value: 'ud' as const },
-]
+
 /*
  * 字の大きさ。
  *
@@ -103,6 +104,8 @@ interface Props {
 
 export default function ReadingSettings({ onChange, isMobile = false, showWritingMode = false, recommendedMode = null, onFullscreen }: Props) {
   const [open, setOpen] = useState(false)
+  /* 30 書体は Pro */
+  const { fonts } = useMemberFeatures()
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
 
   useEffect(() => {
@@ -180,7 +183,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
             position:'absolute', top:'calc(100% + 8px)', right:0,
             background:'var(--color-bg-card)', border:'1px solid var(--color-brand-border)', borderRadius:12,
             boxShadow:'0 4px 20px rgba(0,0,0,0.12)',
-            padding:'16px', minWidth:'min(260px, 100%)', zIndex:99,
+            padding:'16px', minWidth:'min(300px, calc(100vw - 32px))', maxHeight:'calc(100vh - 120px)', overflowY:'auto', zIndex:99,
           }}>
             {/* 縦書き/横書き（モバイル または showWritingMode時） */}
             {/*
@@ -250,13 +253,10 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
             {/* フォント */}
             <div style={{marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>フォント</div>
-              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                {FONT_OPTIONS.map(o => (
-                  <button key={o.value} onClick={()=>update({font:o.value})} style={btnBase(settings.font===o.value)}>
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+              {/*
+                * ★ 無料は 4 書体。Pro は「ほかの書体」を開くと 30 書体から選べる。
+                */}
+              <FontPicker value={settings.font} onChange={(key)=>update({font:key})} isPro={fonts} compact />
             </div>
             {/* 文字サイズ */}
             <div style={{marginBottom:14}}>

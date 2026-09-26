@@ -8,6 +8,7 @@ import { splitRuby } from '@/lib/utils/ruby'
 import { withTateChuYoko } from '@/components/novel/episode/tate-chu-yoko'
 import { usePathname, useRouter } from 'next/navigation'
 import { reportReadProgress } from '@/components/reader/read-progress-tracker'
+import { useFontStack } from '@/lib/fonts/use-font'
 
 interface Props {
   title: string
@@ -39,13 +40,6 @@ interface Props {
 
 const DEFAULTS: Settings = { font: 'serif', illustSize: 'wide', useRecommend: true, fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
 
-function fontFamilyOf(font: Settings['font']): string {
-  /* 執筆画面と同じ指定にする。名前で書くと当たらず、別の明朝で描かれる */
-  return font === 'serif'   ? "var(--font-serif), 'Noto Serif JP', serif"
-       : font === 'rounded' ? "'Zen Maru Gothic', 'Noto Sans JP', sans-serif"
-       : font === 'ud'      ? "'BIZ UDPGothic', 'Noto Sans JP', sans-serif"
-       :                      "'Noto Sans JP', sans-serif"
-}
 
 /**
  * 読む側の横書き用に、見た目だけ整える。
@@ -497,7 +491,8 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
     setIsVertical(s.writingMode === 'vertical')
   }
 
-  const fontFamily = fontFamilyOf(settings.font)
+  /* 書体は lib/fonts/catalog.ts から（30 書体。Pro でない人の Pro 書体は明朝） */
+  const fontFamily = useFontStack(settings.font)
 
   const Afterword = afterword ? (
     <div style={{borderTop:'1px solid var(--color-brand-border)'}}>

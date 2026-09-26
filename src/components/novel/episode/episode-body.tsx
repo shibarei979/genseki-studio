@@ -12,6 +12,7 @@ import MobileEpisodeBody from '@/components/novel/episode/mobile-episode-body'
 import { useQuote } from '@/components/novel/episode/quote-context'
 import { useVerticalWheel } from '@/hooks/use-vertical-wheel'
 import { reportReadProgress } from '@/components/reader/read-progress-tracker'
+import { useFontStack } from '@/lib/fonts/use-font'
 
 interface Props {
   title: string
@@ -932,11 +933,12 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
    *   読む画面では切れる、という食い違いが出ていた。
    *   var(--font-serif) が、執筆画面が使っているものと同じ。
    */
-  const fontFamily =
-    settings.font === 'serif'   ? "var(--font-serif), 'Noto Serif JP', serif" :
-    settings.font === 'rounded' ? "'Zen Maru Gothic', 'Noto Sans JP', sans-serif" :
-    settings.font === 'ud'      ? "'BIZ UDPGothic', var(--font-sans), 'Noto Sans JP', sans-serif" :
-                                  "var(--font-sans), 'Noto Sans JP', sans-serif"
+  /*
+   * ★ 書体は lib/fonts/catalog.ts から。30 書体（無料は 4 書体）。
+   *   Pro でない人が Pro の書体を選んでいたら（切れたときなど）、明朝で出す。
+   *   選ばれた書体は、そのときだけ読み込む。
+   */
+  const fontFamily = useFontStack(settings.font)
 
   // ===== モバイル =====
   if (isMobile) {

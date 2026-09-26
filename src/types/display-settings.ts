@@ -94,15 +94,24 @@ export const WRITING_MODE_DESCRIPTION: Record<WritingMode, string> = {
  * 無ければ隣の書体になる。
  * 選べるのに変わらない、というのが一番よくない。
  */
-export type FontKey = "mincho" | "gothic" | "maru";
+/**
+ * 書体の呼び名。
+ *
+ * ★ 30 書体（lib/fonts/catalog.ts）から選べるようにしたので、文字列にした。
+ *   前の 3 つ（mincho / gothic / maru）も、そのまま読める（catalog 側で読み替える）。
+ */
+export type FontKey = string;
 
-export const FONT_LABEL: Record<FontKey, string> = {
+/** 前の 3 書体。下の見出し・説明・補正の表に使う */
+export type LegacyFontKey = "mincho" | "gothic" | "maru";
+
+export const FONT_LABEL: Record<LegacyFontKey, string> = {
     mincho: "明朝",
     gothic: "ゴシック",
     maru: "丸ゴシック",
 };
 
-export const FONT_DESCRIPTION: Record<FontKey, string> = {
+export const FONT_DESCRIPTION: Record<LegacyFontKey, string> = {
     mincho: "縦線が太く横線が細い。小説らしい書体",
     gothic: "線の太さが均一。画面で読みやすい",
     maru: "角が丸い。やわらかい印象になる",
@@ -114,7 +123,7 @@ export const FONT_DESCRIPTION: Record<FontKey, string> = {
  * 端末に入っているものを前から順に試す。
  * どれも無ければ、最後の総称（serif など）に落ちる。
  */
-export const FONT_STACK: Record<FontKey, string> = {
+export const FONT_STACK: Record<LegacyFontKey, string> = {
     mincho:
         '"Hiragino Mincho ProN", "HiraMinProN-W3", "Yu Mincho", "YuMincho", "MS PMincho", "Noto Serif JP", serif',
     gothic:
@@ -128,7 +137,7 @@ export const FONT_STACK: Record<FontKey, string> = {
  * 同じ大きさでも、書体によって字面の大きさが違う。
  * 明朝は小さく、丸ゴシックは大きく見える。
  */
-export const FONT_SCALE: Record<FontKey, number> = {
+export const FONT_SCALE: Record<LegacyFontKey, number> = {
     mincho: 1.04,
     gothic: 1,
     maru: 0.98,

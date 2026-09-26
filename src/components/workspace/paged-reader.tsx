@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { estimateMetrics, paginate } from "@/lib/utils/pagination";
 import type { DisplaySettings } from "@/types";
 import { LINE_HEIGHT_VALUE } from "@/types";
+import { useFontStack } from "@/lib/fonts/use-font";
 
 interface Props {
     settings: DisplaySettings;
@@ -111,6 +112,9 @@ export default function PagedReader({
      * 次へ進むときは中身が左へ抜ける。
      * 戻るときはその逆で右へ抜ける。
      */
+    /* 書体。書く画面と同じもの */
+    const fontStack = useFontStack(settings.font_family);
+
     const turnStyle =
         turning === "next"
             ? { transform: "translateX(-12%)", opacity: 0 }
@@ -182,6 +186,7 @@ export default function PagedReader({
                     className="manuscript absolute inset-0 transition-all duration-150 ease-out"
                     style={{
                         padding: `${padding}px`,
+                        fontFamily: fontStack,
                         fontSize: `${settings.font_size}px`,
                         lineHeight: LINE_HEIGHT_VALUE[settings.line_height],
                         writingMode: isVertical ? "vertical-rl" : "horizontal-tb",

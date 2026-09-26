@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { useVerticalWheel } from "@/hooks/use-vertical-wheel";
 import type { DisplaySettings } from "@/types";
 import { LINE_HEIGHT_VALUE } from "@/types";
+import { useFontStack } from "@/lib/fonts/use-font";
 
 interface Props {
     /**
@@ -189,7 +190,11 @@ export default function ManuscriptSurface({
      */
     const scaled = Math.round(settings.font_size * zoom);
 
+    /* 書体。表示の設定で選んだもの（Pro でない人の Pro 書体は明朝に戻す） */
+    const fontStack = useFontStack(settings.font_family);
+
     const style: CSSProperties = {
+        fontFamily: fontStack,
         fontSize: `${scaled}px`,
         lineHeight: LINE_HEIGHT_VALUE[settings.line_height],
         /*

@@ -23,6 +23,7 @@ import { toFullWidthLatin } from "@/lib/manuscript/notation";
 import { formatNumber } from "@/lib/utils/text";
 import type { DisplaySettings, Episode } from "@/types";
 import { formatEpisodeLabel, LINE_HEIGHT_VALUE } from "@/types";
+import { useFontStack } from "@/lib/fonts/use-font";
 
 type Scope = "all" | "done";
 
@@ -50,6 +51,9 @@ export default function ReadPanel({
             : episodes;
 
     const isVertical = settings.writing_mode === "vertical";
+
+    /* 書体。書く画面と同じもの */
+    const fontStack = useFontStack(settings.font_family);
 
     /*
      * 通し読みも縦書きになる。
@@ -124,6 +128,7 @@ export default function ReadPanel({
                     <div
                         className="manuscript px-6 py-6"
                         style={{
+                            fontFamily: fontStack,
                             fontSize: `${Math.max(13, settings.font_size - 2)}px`,
                             lineHeight: LINE_HEIGHT_VALUE[settings.line_height],
                             writingMode: isVertical ? "vertical-rl" : "horizontal-tb",

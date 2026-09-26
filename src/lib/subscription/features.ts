@@ -18,6 +18,7 @@ import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
  *   graph_group   関係図を、所属で囲む・線を折れ曲がらせる
  *   entry_report  資料へのリンクで、資料を報告書の形で見る
  *   version_keep  版の履歴を 200 版まで残す（無料は 30 版）
+ *   fonts         読む・書くで 30 書体（無料は 4 書体）
  *   ai_check      AI 誤字脱字・表記揺れチェックと語彙集（数＝月の回数。ai-check-quota.ts）
  *   image_monthly 資料の画像づくりの月の上限（数を入れる。image-quota.ts）
  *
@@ -40,6 +41,8 @@ export interface MemberFeatures {
     noAds: boolean;
     /** AI 誤字脱字・表記揺れチェックと語彙集 */
     aiCheck: boolean;
+    /** 30 書体 */
+    fonts: boolean;
     /** 版の履歴を 1 話につき何版まで残すか */
     versionKeep: number;
     /** 運営として通っているか。画面に出すためのもの */
@@ -55,6 +58,7 @@ const NONE: MemberFeatures = {
     entryReport: false,
     noAds: false,
     aiCheck: false,
+    fonts: false,
     versionKeep: VERSION_KEEP_BASE,
     operator: false,
 };
@@ -64,6 +68,7 @@ const ALL: MemberFeatures = {
     entryReport: true,
     noAds: true,
     aiCheck: true,
+    fonts: true,
     versionKeep: VERSION_KEEP_PRO,
     operator: true,
 };
@@ -91,6 +96,7 @@ export async function memberFeatures(): Promise<MemberFeatures> {
         entryReport: has("entry_report"),
         noAds: live.perks.some((perk) => perk.kind === "no_ads"),
         aiCheck: has("ai_check"),
+        fonts: has("fonts"),
         versionKeep: has("version_keep") ? VERSION_KEEP_PRO : VERSION_KEEP_BASE,
         operator: false,
     };
