@@ -1,10 +1,15 @@
 /**
  * ============================================================
  * 原石航路 Studio
- * AiCheckPanel — AI 誤字脱字・表記揺れチェックと語彙集（Pro）
+ * AiCheckPanel — 誤字脱字チェックと語彙集（Pro）
  *
- * ★ 見つけるだけ。本文は書き換えない。
- *   押すと本文のその行へ飛ぶ。直すのは作者の手で。
+ * ★ 画面では「AI」と言わない。「誤字脱字」「システム」と呼ぶ（運営の決まり）。
+ *
+ * ★ 回数の上限は無い（運営の決まり）。
+ *
+ * ★ 見つけるだけ。本文は書き換えない（運営の決まり）。
+ *   候補を見せ、押すと本文のその行へ飛ぶ。直すのは作家自身の手で。
+ *   一括で直す押し具・候補をそのまま当てはめる押し具は作らない。
  *
  * ★ タブは 2 つ。
  *   チェック：開いている 1 話を見る
@@ -49,19 +54,6 @@ export default function AiCheckPanel({ workId, episodeId, body, onJump, onClose 
     const { aiCheck } = useMemberFeatures();
     const [tab, setTab] = useState<Tab>("check");
 
-    /* ---------- 回数 ---------- */
-    const [quota, setQuota] = useState<{ left: number | null; limit: number } | null>(null);
-
-    const readQuota = useCallback(async () => {
-        try {
-            const res = await fetch("/api/ai/check");
-            const data = await res.json();
-            setQuota({ left: data.left ?? null, limit: data.limit ?? 0 });
-        } catch {
-            /* 読めなくても、押したときにサーバーが断る */
-        }
-    }, []);
-
     /* ---------- 語彙集 ---------- */
     const [terms, setTerms] = useState<GlossaryTerm[]>([]);
     const [otherWorks, setOtherWorks] = useState<{ id: string; title: string; count: number }[]>([]);
@@ -81,9 +73,8 @@ export default function AiCheckPanel({ workId, episodeId, body, onJump, onClose 
 
     useEffect(() => {
         if (!aiCheck) return;
-        void readQuota();
         void readTerms();
-    }, [aiCheck, readQuota, readTerms]);
+    }, [aiCheck, readTerms]);
 
     /* ---------- チェック ---------- */
     const [issues, setIssues] = useState<CheckIssue[] | null>(null);
@@ -123,9 +114,8 @@ export default function AiCheckPanel({ workId, episodeId, body, onJump, onClose 
             setCheckedEpisode(episodeId);
             setDismissed(new Set());
             setFilter("all");
-            if (quota && data.left !== undefined) setQuota({ ...quota, left: data.left });
         } catch {
-            setNotice("AIに繋げませんでした。少し待ってからもう一度押してください。");
+            setNotice("チェックできませんでした。少し待ってからもう一度押してください。");
         } finally {
             setBusy(false);
         }
@@ -174,7 +164,7 @@ export default function AiCheckPanel({ workId, episodeId, body, onJump, onClose 
         <div className="flex h-full w-full shrink-0 flex-col rounded-lg border border-line bg-surface lg:w-[380px]">
             <div className="flex items-center justify-between border-b border-line px-3.5 py-2.5">
                 <h2 className="flex items-center gap-1.5 text-[13px] font-medium text-ink">
-                    AIチェック
+                    誤字脱字
                     <ProBadge />
                 </h2>
                 <button
@@ -220,8 +210,8 @@ export default function AiCheckPanel({ workId, episodeId, body, onJump, onClose 
                         {tab === "check" ? (
                             <div className="px-3.5 py-3">
                                 <p className="text-[11.5px] leading-relaxed text-muted">
-                                    開いている話から、誤字・脱字・表記揺れを探します。
-                                    <span className="text-ink">本文は書き換えません。</span>
+                                    開いている話から、誤字・脱字・表記揺れの候補を探します。
+                                    <span className="text-ink">本文は書き換えません。候補を見て、ご自身で直してください。</span>
                                     保存前の書きかけも含めて見ます。
                                 </p>
 
@@ -229,18 +219,11 @@ export default function AiCheckPanel({ workId, episodeId, body, onJump, onClose 
                                     <button
                                         type="button"
                                         onClick={() => void runCheck()}
-                                        disabled={busy || quota?.left === 0 || !body.trim()}
+                                        disabled={busy || !body.trim()}
                                         className="rounded-md bg-forest px-4 py-1.5 text-[12.5px] text-white hover:bg-forest-dark disabled:opacity-40"
                                     >
                                         {busy ? "見ています…（数十秒）" : issues ? "もう一度チェック" : "この話をチェック"}
                                     </button>
-                                    {quota && (
-                                        <span className="text-[11px] text-faint">
-                                            {quota.left === null
-                                                ? "回数の上限なし"
-                                                : `今月あと ${quota.left} / ${quota.limit} 回`}
-                                        </span>
-                                    )}
                                 </div>
 
                                 {notice && (
@@ -317,7 +300,7 @@ export default function AiCheckPanel({ workId, episodeId, body, onJump, onClose 
                                                     ))}
                                                 </ul>
                                                 <p className="mt-2.5 text-[10.5px] leading-relaxed text-faint">
-                                                    AIの指摘は間違うこともあります。わざと崩した台詞や方言は、そのままで大丈夫です。
+                                                    システムの候補は外れることもあります。わざと崩した台詞や方言は、そのままで大丈夫です。直すかどうかは、ご自身で決めてください。
                                                 </p>
                                             </>
                                         )}
@@ -350,8 +333,8 @@ function Locked() {
                 の機能です
             </p>
             <ul className="mt-2.5 space-y-1.5 text-[12px] leading-relaxed text-muted">
-                <li>・開いている話から、誤字・脱字・表記揺れをAIが探します（月100回）</li>
-                <li>・本文は書き換えません。見つけた所へ飛んで、自分で直せます</li>
+                <li>・開いている話から、誤字・脱字・表記揺れをシステムが探します（回数の制限はありません）</li>
+                <li>・本文は書き換えません。見つけた所へ飛んで、ご自身で直します</li>
                 <li>・作品ごとの語彙集に「正しい書き方」を登録すると、揺れを確実に見つけます</li>
                 <li>・ほかの作品の語彙集を写して使えます</li>
             </ul>
@@ -385,7 +368,7 @@ function IssueRow({
                     type="button"
                     onClick={() => onJump?.(issue.line)}
                     disabled={!onJump}
-                    title="本文のこの行へ移動します"
+                    title="本文のこの行へ移動して、ご自身で直します"
                     className="rounded border border-forest-line bg-surface px-1.5 py-px text-[10px] text-forest hover:bg-forest-tint"
                 >
                     {issue.line}行目
@@ -418,7 +401,7 @@ function IssueRow({
                 </p>
                 <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-[12px]">
                     <span className="text-faint line-through">{issue.word}</span>
-                    <span className="text-faint">→</span>
+                    <span className="text-faint">→ 候補</span>
                     <span className="font-medium text-forest">{issue.suggestion}</span>
                     {issue.reason && <span className="text-[11px] text-muted">　{issue.reason}</span>}
                 </p>

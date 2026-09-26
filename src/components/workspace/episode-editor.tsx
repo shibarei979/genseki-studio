@@ -566,10 +566,11 @@ export default function EpisodeEditor({
                         通し読み
                     </button>
                     {/*
-                     * AIチェック（Pro）。
+                     * 誤字脱字（Pro）。
                      *
                      * ★ 前は「推敲」をここに置く予定で、隠してあった。
-                     *   同じ場所・同じ開き方で、AI の誤字脱字・表記揺れチェックを出す。
+                     *   同じ場所・同じ開き方で、誤字脱字・表記揺れのチェックを出す。
+                     *   画面では「AI」と言わない（運営の決まり）。
                      *   会員でない人にも見せ、開くと Pro の案内が出る。
                      */}
                     <button
@@ -583,7 +584,7 @@ export default function EpisodeEditor({
                                 : "border-line hover:border-forest-line hover:text-forest",
                         ].join(" ")}
                     >
-                        AIチェック
+                        誤字脱字
                         <ProBadge />
                     </button>
                     <button

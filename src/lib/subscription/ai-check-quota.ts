@@ -5,15 +5,14 @@ import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
 /**
  * ============================================================
  * 原石航路 Studio
- * AI 誤字脱字・表記揺れチェックの回数と、使えるかどうか
+ * 誤字脱字チェックを使えるかどうか（と、使った回数の記録）
  *
  * ★ Pro だけの機能。語彙集も同じ合言葉で開く。
+ *   特典の「上限を広げる」に ref = ai_check（数は何でもよい）
  *
- *   特典の「上限を広げる」に ref = ai_check
- *   数（amount）がその月の上限。0 なら無制限
- *   （Pro は月 100 回の想定。/admin/plans で 100 を入れる）
- *
- * ★ 数えるのはサーバーだけ。1 回ごとに AI の費用がかかる。
+ * ★ 回数の上限は無い（運営の決まり）。
+ *   使った回数だけは記録する。費用の見当をつけるため。
+ *   止めることはしない。
  * ★ 月は日本の時刻で区切る（1 日の 0 時に戻る）。
  * ★ 先に見て、返事が返ってから数える。
  * ============================================================
@@ -46,7 +45,8 @@ async function planFor(userId: string): Promise<{ allowed: boolean; limit: numbe
     const perk = live?.perks.find((one) => one.kind === "limit" && one.ref === PERK_REF);
     if (!perk) return { allowed: false, limit: 0 };
 
-    return { allowed: true, limit: Math.max(0, perk.amount) };
+    /* 上限は設けない。数は記録のためだけ */
+    return { allowed: true, limit: 0 };
 }
 
 export async function checkLeft(): Promise<CheckGate> {
@@ -68,7 +68,7 @@ export async function checkLeft(): Promise<CheckGate> {
             used: 0,
             left: 0,
             userId: user.id,
-            message: "AIチェックは Pro の機能です。",
+            message: "誤字脱字チェックは Pro の機能です。",
         };
     }
 
@@ -98,7 +98,7 @@ export async function checkLeft(): Promise<CheckGate> {
         message:
             left > 0
                 ? undefined
-                : `今月のAIチェック（${limit}回）を使い切りました。来月1日にまた使えます。`,
+                : `今月のチェック（${limit}回）を使い切りました。`,
     };
 }
 

@@ -9,7 +9,10 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * ============================================================
  * 原石航路 Studio
- * /api/ai/check — AI 誤字脱字・表記揺れチェック（Pro）
+ * /api/ai/check — 誤字脱字・表記揺れチェック（Pro）
+ *
+ * ★ 画面へ返す文では「AI」と言わない（運営の決まり）。
+ * ★ 回数の上限は無い（運営の決まり）。使った回数は記録だけする。
  *
  * GET   今月あと何回使えるか
  * POST  { work, text }  開いている 1 話の本文を見て、気になる所を返す
@@ -72,13 +75,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "unauthorized", message: "ログインすると使えます。" }, { status: 401 });
     }
     if (!gate.allowed) {
-        return NextResponse.json({ error: "pro", message: "AIチェックは Pro の機能です。" }, { status: 403 });
+        return NextResponse.json({ error: "pro", message: "誤字脱字チェックは Pro の機能です。" }, { status: 403 });
     }
     if (!gate.ok) {
         return NextResponse.json({ error: "quota", message: gate.message }, { status: 429 });
     }
     if (!hasModelAccess()) {
-        return NextResponse.json({ error: "model_unavailable", message: "AIに繋がっていません。" }, { status: 501 });
+        return NextResponse.json({ error: "model_unavailable", message: "いまはチェックできません。" }, { status: 501 });
     }
 
     let body: { work?: string; text?: string };
@@ -167,7 +170,7 @@ export async function POST(request: Request) {
 
         if (!response.ok) {
             return NextResponse.json(
-                { error: "upstream_error", message: "AIの返事を受け取れませんでした。少し待ってからもう一度押してください。" },
+                { error: "upstream_error", message: "チェックできませんでした。少し待ってからもう一度押してください。" },
                 { status: 502 },
             );
         }
@@ -179,7 +182,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
             {
                 error: isAbort ? "timeout" : "request_failed",
-                message: isAbort ? "時間内に終わりませんでした。" : "AIに繋げませんでした。",
+                message: isAbort ? "時間内に終わりませんでした。もう一度押してください。" : "チェックできませんでした。",
             },
             { status: 502 },
         );
@@ -187,8 +190,8 @@ export async function POST(request: Request) {
         clearTimeout(timer);
     }
 
-    /* 返事が返ったので 1 回ぶん数える */
-    await countCheck(gate.userId, gate.limit);
+    /* 返事が返ったので 1 回ぶん記録する（止めはしない） */
+    await countCheck(gate.userId, 0);
 
     /* 同じ行・同じ言葉は 1 つに。語彙集のほうを残す */
     const seen = new Set<string>();
