@@ -18,6 +18,7 @@
 import { useMemo, useState } from "react";
 
 import ProBadge from "@/components/common/pro-badge";
+import EpisodePresence from "@/components/resource/episode-presence";
 import type { Mention, MentionKind } from "@/lib/resource/mention-scan";
 import {
     applyLineMarks,
@@ -93,10 +94,6 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
     for (const row of mentions) {
         perEpisode.set(row.episodeId, (perEpisode.get(row.episodeId) ?? 0) + 1);
     }
-    const latestNumber = sortedEpisodes[sortedEpisodes.length - 1]?.ep_number ?? 0;
-    const sinceLast = summary.lastAppearance
-        ? latestNumber - summary.lastAppearance.epNumber
-        : null;
 
     async function copySpeech() {
         const lines = mentions
@@ -116,36 +113,12 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
         <div>
             {/* ===== Pro：出番の帯と、台詞をまとめて写す ===== */}
             {isPro ? (
-                <div className="mb-3 rounded-md border border-line bg-canvas px-2.5 py-2">
-                    <div className="flex items-center gap-1.5 text-[10.5px] text-muted">
+                <div className="mb-3 rounded-md border border-line bg-surface px-3 py-2.5">
+                    <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-ink">
                         話ごとの出番
                         <ProBadge />
-                        {sinceLast !== null && sinceLast >= 3 && (
-                            <span className="ml-auto text-[var(--color-amber)]">
-                                最新話まで{sinceLast}話、出ていません
-                            </span>
-                        )}
                     </div>
-                    <div className="mt-1.5 flex flex-wrap gap-[3px]">
-                        {sortedEpisodes.map((episode) => {
-                            const count = perEpisode.get(episode.id) ?? 0;
-                            return (
-                                <span
-                                    key={episode.id}
-                                    title={`第${episode.ep_number}話：${count}回`}
-                                    className={[
-                                        "h-3.5 w-3.5 rounded-sm",
-                                        count > 0 ? "bg-forest" : "border border-line bg-surface",
-                                    ].join(" ")}
-                                    style={
-                                        count > 0
-                                            ? { opacity: Math.min(1, 0.7 + count / 20) }
-                                            : undefined
-                                    }
-                                />
-                            );
-                        })}
-                    </div>
+                    <EpisodePresence episodes={sortedEpisodes} counts={perEpisode} />
                     <div className="mt-2 flex items-center gap-2">
                         <button
                             type="button"

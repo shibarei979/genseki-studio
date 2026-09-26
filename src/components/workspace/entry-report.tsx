@@ -31,6 +31,7 @@ import type { ReactNode } from "react";
 import { getRepository } from "@/lib/repository";
 import { applyLineMarks, scanMentions } from "@/lib/resource/mention-scan";
 import ProBadge from "@/components/common/pro-badge";
+import EpisodePresence from "@/components/resource/episode-presence";
 import type {
     Episode,
     EntryMention,
@@ -509,29 +510,18 @@ function ReportBody({
                           * ★ 話ごとの帯。出た話だけ色が付く。
                           *   長く出ていない、がひと目で分かる。
                           */}
-                        <div className="flex flex-wrap gap-[3px]" aria-label="話ごとの登場">
-                            {report.perEpisode.map((row) => {
-                                const on = row.count > 0 || row.linked;
-                                return (
-                                    <span
-                                        key={row.episode.id}
-                                        title={`${episodeName(row.episode)}：${row.count}回`}
-                                        className={[
-                                            "h-3.5 w-3.5 rounded-sm",
-                                            on ? "bg-forest" : "border border-line bg-canvas",
-                                        ].join(" ")}
-                                        style={
-                                            on && row.count > 0
-                                                ? { opacity: Math.min(1, 0.7 + row.count / 20) }
-                                                : undefined
-                                        }
-                                    />
-                                );
-                            })}
-                        </div>
-                        <p className="mt-1 text-[10px] text-faint">
-                            第1話〜第{report.episodeCount}話　色の付いた話に登場
-                        </p>
+                        <EpisodePresence
+                            episodes={report.perEpisode.map((row) => row.episode)}
+                            counts={
+                                new Map(
+                                    report.perEpisode.map((row) => [
+                                        row.episode.id,
+                                        /* 手で結んだだけの話も、出た話として 1 回に数える */
+                                        row.count > 0 ? row.count : row.linked ? 1 : 0,
+                                    ]),
+                                )
+                            }
+                        />
 
                         <dl className="mt-2.5 space-y-2">
                             {report.firstRow && (
@@ -562,12 +552,6 @@ function ReportBody({
                                     </div>
                                 )}
                         </dl>
-
-                        {report.sinceLast !== null && report.sinceLast >= 3 && (
-                            <p className="mt-2 rounded-md bg-canvas px-2.5 py-1.5 text-[11px] text-muted">
-                                最新話まで{report.sinceLast}話、本文に出てきていません。
-                            </p>
-                        )}
 
                         {onJumpToWord && jumpWord && (
                             <button
