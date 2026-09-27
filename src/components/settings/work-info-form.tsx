@@ -17,7 +17,7 @@ import { shrinkImage } from "@/lib/storage/image-store";
 import { uploadImage } from "@/lib/storage/remote-image";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { getRepository } from "@/lib/repository";
 import {
@@ -275,7 +275,54 @@ export default function WorkInfoForm({
         setIsSaving(false);
     }
 
+    /*
+     * 変えたところがあるか。
+     *
+     * ★ 下の保存の帯で「保存していない変更があります」を出すのに使う。
+     *   長い画面のいちばん下にだけ保存の押し具があると、押し忘れて離れてしまう。
+     */
+    const isDirty =
+        title !== work.title ||
+        genre !== work.genre ||
+        format !== (work.format ?? null) ||
+        coverUrl !== (work.cover_url ?? null) ||
+        coverColor !== (work.cover_color ?? null) ||
+        coverIsAi !== (work.cover_is_ai === true) ||
+        stampCorner !== (work.cover_stamp_corner ?? "tr") ||
+        aiUsage !== (work.ai_usage ?? "none") ||
+        tags.join("\u0000") !== work.tags.join("\u0000") ||
+        summary !== (work.summary ?? "") ||
+        ageRating !== work.age_rating ||
+        recommendedMode !== (work.recommended_mode ?? null) ||
+        coverShape !== (work.cover_shape === "wide" ? "wide" : "tall");
+
+    /*
+     * 下の保存の帯が、いま画面に見えているか。
+     *
+     * ★ 画面に貼り付ける（sticky）は使えない。
+     *   サイト全体で html と body に overflow-x: hidden を掛けているため効かない
+     *   （縦書きの画面のために外せない）。
+     *   代わりに、変えたところがあって帯が画面の外にあるときだけ、下に浮かべて出す。
+     */
+    const barRef = useRef<HTMLDivElement | null>(null);
+    const [barVisible, setBarVisible] = useState(true);
+    useEffect(() => {
+        const el = barRef.current;
+        if (!el || typeof IntersectionObserver === "undefined") return;
+        const watcher = new IntersectionObserver(([entry]) => setBarVisible(entry.isIntersecting), {
+            threshold: 0.6,
+        });
+        watcher.observe(el);
+        return () => watcher.disconnect();
+    }, []);
+
+    async function saveNow() {
+        await handleSave();
+        if (isNew) router.push(`/workspace/${work.id}`);
+    }
+
     return (
+        <>
         <div className="rounded-lg border border-line bg-surface">
             <div className="border-b border-line px-6 py-5">
                 <h2 className="text-base font-medium text-ink">作品情報</h2>
@@ -457,11 +504,23 @@ export default function WorkInfoForm({
                             )}
 
                             <div className="min-w-0 flex-1">
-                                <input
-                                    id="info-cover"
-                                    type="file"
-                                    accept="image/jpeg,image/png"
-                                    disabled={coverBusy}
+                                {/*
+                                  * ★ 画像を選ぶ押し具は、自前で描く。
+                                  *   ブラウザそのままだと「Choose File / No file chosen」と英語で出ていた。
+                                  */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <label
+                                        className={[
+                                            "inline-flex cursor-pointer items-center rounded-md border border-forest bg-surface px-3.5 py-1.5 text-[12.5px] text-forest hover:bg-forest-tint",
+                                            coverBusy ? "pointer-events-none opacity-50" : "",
+                                        ].join(" ")}
+                                    >
+                                        <input
+                                            id="info-cover"
+                                            type="file"
+                                            accept="image/jpeg,image/png"
+                                            disabled={coverBusy}
+                                            className="sr-only"
                                     onChange={async (e) => {
                                         const file = e.target.files?.[0];
                                         e.target.value = "";
@@ -488,8 +547,19 @@ export default function WorkInfoForm({
                                         setCoverError("");
                                         setCropTarget(file);
                                     }}
-                                    className="block w-full text-xs text-muted file:mr-2 file:rounded file:border file:border-line file:bg-surface file:px-2.5 file:py-1 file:text-xs file:text-ink"
-                                />
+                                        />
+                                        {coverBusy ? "置いています…" : coverUrl ? "画像を変える" : "画像を選ぶ"}
+                                    </label>
+                                    {coverUrl && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setCoverUrl(null)}
+                                            className="rounded-md px-2 py-1.5 text-[12px] text-muted hover:text-[var(--color-danger)]"
+                                        >
+                                            表紙を外す
+                                        </button>
+                                    )}
+                                </div>
 
                                 <p className="mt-2 text-[11px] leading-relaxed text-muted">
                                     JPEG または PNG。作品ページで、あらすじの横に出ます。
@@ -623,15 +693,6 @@ export default function WorkInfoForm({
                                     </p>
                                 )}
 
-                                {coverUrl && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setCoverUrl(null)}
-                                        className="mt-2 text-[11px] text-faint hover:text-[var(--color-danger)]"
-                                    >
-                                        表紙を外す
-                                    </button>
-                                )}
                             </div>
                         </div>
                     </Field>
@@ -819,13 +880,9 @@ export default function WorkInfoForm({
                         </p>
                     </Field>
 
-                    <div className="rounded-md border border-line bg-canvas px-3 py-2.5">
-                        <p className="text-xs text-muted">
-                            公開するかどうか、連載中か完結かは
-                            <span className="text-ink">「公開設定」</span>
-                            にまとめました。同じことを2か所で持つと必ず食い違うためです。
-                        </p>
-                    </div>
+                    <p className="text-xs text-muted">
+                        公開のしかたや連載中・完結は、「公開・読者設定」で決めます。
+                    </p>
 
                     {/*
                      * AI をどう使ったか。
@@ -914,10 +971,22 @@ export default function WorkInfoForm({
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line px-6 py-4">
-                {savedMessage && (
-                    <span className="text-sm text-forest">{savedMessage}</span>
-                )}
+            <div
+                ref={barRef}
+                className={[
+                    "flex flex-wrap items-center justify-end gap-3 rounded-b-lg border-t px-6 py-4",
+                    isDirty ? "border-forest-line bg-forest-tint" : "border-line",
+                ].join(" ")}
+            >
+                <span
+                    className={[
+                        "text-sm",
+                        savedMessage ? "text-forest" : isDirty ? "font-medium text-ink" : "hidden",
+                    ].join(" ")}
+                    aria-live="polite"
+                >
+                    {savedMessage || (isDirty ? "保存していない変更があります" : "")}
+                </span>
 
                 {/*
                  * 作ったばかりのときは、書きに行く道も出す。
@@ -934,10 +1003,7 @@ export default function WorkInfoForm({
 
                 <button
                     type="button"
-                    onClick={async () => {
-                        await handleSave();
-                        if (isNew) router.push(`/workspace/${work.id}`);
-                    }}
+                    onClick={() => void saveNow()}
                     disabled={!canSave}
                     className="rounded-md bg-forest px-5 py-2 text-sm text-white hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -945,6 +1011,32 @@ export default function WorkInfoForm({
                 </button>
             </div>
         </div>
+
+        {/*
+          * 浮かべる保存。変えたところがあって、下の帯が見えていないときだけ。
+          * ★ 携帯の下の帯（--mtb-h）の上に出す。
+          */}
+        {isDirty && !barVisible && (
+            <div
+                className="fixed inset-x-0 z-40 flex justify-center px-3"
+                style={{ bottom: "calc(var(--mtb-h, 0px) + 12px)" }}
+            >
+                <div className="flex w-full max-w-md items-center gap-3 rounded-full border border-forest-line bg-surface py-1.5 pl-4 pr-1.5 shadow-[0_6px_20px_rgba(31,78,107,.22)]">
+                    <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
+                        保存していない変更があります
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => void saveNow()}
+                        disabled={!canSave}
+                        className="shrink-0 rounded-full bg-forest-dark px-5 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40"
+                    >
+                        {isSaving ? "保存しています…" : "保存"}
+                    </button>
+                </div>
+            </div>
+        )}
+        </>
     );
 }
 
