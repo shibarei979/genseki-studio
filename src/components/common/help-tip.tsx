@@ -53,6 +53,17 @@ export default function HelpTip({ topic, className = "", size = 16, label }: Pro
             if (buttonRef.current?.contains(target)) return;
             if ((target as HTMLElement).closest?.(`[data-help-panel="${panelId}"]`)) return;
             setOpen(false);
+            /*
+             * ★ 閉じるための一押しは、下にある押し具に通さない。
+             *   説明を閉じようと外を押したら、そこにあった「この話を投稿する」が押された、を防ぐ。
+             */
+            const swallow = (click: Event) => {
+                click.preventDefault();
+                click.stopPropagation();
+            };
+            document.addEventListener("click", swallow, { capture: true, once: true });
+            /* 押しが click にならなかったとき（なぞった等）に、次の本当の押しを食べないよう、少しで外す */
+            window.setTimeout(() => document.removeEventListener("click", swallow, { capture: true }), 600);
         }
         function onKey(event: KeyboardEvent) {
             if (event.key === "Escape") {
@@ -88,11 +99,37 @@ export default function HelpTip({ topic, className = "", size = 16, label }: Pro
 
     const body = (
         <>
+            {/*
+              * ★ 閉じる押し具は、右上の × にする。
+              *
+              *   前は説明の下に「わかった」を置いていた。
+              *   投稿の画面では、その位置が「この話を投稿する」と重なり、
+              *   閉じるつもりで続けて押すと、投稿の押し具に当たる危険があった。
+              *   押し具の多い画面の下側に、閉じる押し具を置かない。
+              */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Mark size={18} active />
-                <span style={{ fontWeight: 700, fontSize: isNarrow ? 15 : 14, color: "var(--color-text,#1a211d)" }}>
+                <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: isNarrow ? 15 : 14, color: "var(--color-text,#1a211d)" }}>
                     {data.title}
                 </span>
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        close();
+                    }}
+                    aria-label="閉じる"
+                    title="閉じる"
+                    style={{
+                        flex: "none", width: 28, height: 28, margin: "-4px -6px -4px 0", borderRadius: 6,
+                        background: "none", border: 0, cursor: "pointer", color: "var(--color-muted,#6b746e)",
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    }}
+                >
+                    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                </button>
             </div>
             <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--color-text-muted,#3c4540)", margin: "6px 0 0" }}>
                 {data.what}
@@ -195,18 +232,6 @@ export default function HelpTip({ topic, className = "", size = 16, label }: Pro
                     {data.tip}
                 </p>
             )}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10, borderTop: "1px solid var(--color-line,#eef0ef)", paddingTop: 8 }}>
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        close();
-                    }}
-                    style={{ background: "none", border: 0, padding: "2px 4px", cursor: "pointer", font: "inherit", fontSize: 12, color: "var(--color-brand,#1f4e6b)" }}
-                >
-                    わかった
-                </button>
-            </div>
         </>
     );
 
