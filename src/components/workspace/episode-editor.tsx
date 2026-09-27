@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useAskText } from "@/hooks/use-ask-text";
 import ManuscriptSurface from "@/components/workspace/manuscript-surface";
+import NotePicker from "@/components/workspace/note-picker";
 import { VERSION_AUTO_INTERVAL_MS } from "@/config";
 import { useAutosave } from "@/hooks/use-autosave";
 import { insertEmphasis, insertRuby } from "@/lib/manuscript/notation";
@@ -80,6 +81,8 @@ interface Props {
     /** 集中モード。一覧やまわりを隠して本文だけにする */
     isFocusMode?: boolean;
     onToggleFocus?: () => void;
+    /** 作品の話。注釈を付けるとき、前に同じ言葉へ付けた説明を探すのに使う */
+    allEpisodes?: Episode[];
 }
 
 export default function EpisodeEditor({
@@ -106,6 +109,7 @@ export default function EpisodeEditor({
     onRegisterBody,
     isFocusMode = false,
     onToggleFocus,
+    allEpisodes = [],
 }: Props) {
     /* ルビ・置き換えの問い。ブラウザの prompt は出ない機械がある */
     const { ask, dialog: askDialog } = useAskText();
@@ -142,6 +146,8 @@ export default function EpisodeEditor({
     const surfaceRef = useRef<HTMLDivElement>(null);
     /** 本文の選択位置。ルビを振るときに使う */
     const [range, setRange] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
+    /* 注釈を付ける小窓。開いたときの選び（カーソルの位置）を持つ */
+    const [notePick, setNotePick] = useState<{ start: number; end: number } | null>(null);
 
     /*
      * 蛍光ペン。
@@ -274,21 +280,14 @@ export default function EpisodeEditor({
      * ★ 選んだ言葉のあとに ［＃注：説明］ を入れる（先頭に ｜ を付けて範囲をはっきりさせる）。
      *   記法は lib/utils/annotation.ts。読む画面では点線と ※番号になり、押すと説明が出る。
      */
-    async function handleNote() {
-        if (range.start === range.end) {
-            setNotice("注釈を付ける言葉を選んでください");
-            window.setTimeout(() => setNotice(""), 2500);
-            return;
-        }
-        const word = body.slice(range.start, range.end);
-        if (word.includes("\n")) {
-            setNotice("注釈は1行の中の言葉に付けてください");
-            window.setTimeout(() => setNotice(""), 2500);
-            return;
-        }
-        const note = await ask(`「${word}」の注釈を入れてください（読む人が押すと出ます）`, "");
-        if (!note?.trim()) return;
-        setBody(insertAnnotation(body, range.start, range.end, note.trim()));
+    function handleNote() {
+        /*
+         * ★ 言葉を選んでいなくても、小窓を開く。
+         *   携帯では本文の中で言葉を指で選ぶのが難しく、前はここで止まっていた。
+         *   小窓の中で、字の札を押して選べる（note-picker.tsx）。
+         */
+        setIsToolsOpen(false);
+        setNotePick(range);
     }
 
     async function handleRuby() {
@@ -754,8 +753,8 @@ export default function EpisodeEditor({
 
                 <button
                     type="button"
-                    onClick={() => void handleNote()}
-                    title="選んだ言葉に注釈を付けます（｜言葉［＃注：説明］）。読む人が押すと説明が出ます"
+                    onClick={handleNote}
+                    title="言葉に注釈を付けます（｜言葉［＃注：説明］）。読む人が押すと説明が出ます"
                     className="rounded border border-line bg-surface px-2 py-0.5 text-muted hover:border-forest-line hover:text-forest"
                 >
                     注釈
@@ -965,6 +964,20 @@ export default function EpisodeEditor({
             </div>
 
             {askDialog}
+            {notePick && (
+                <NotePicker
+                    body={body}
+                    range={notePick}
+                    otherEpisodes={allEpisodes
+                        .filter((one) => one.id !== episode.id)
+                        .map((one) => ({ title: one.title, body: one.body ?? "" }))}
+                    onCancel={() => setNotePick(null)}
+                    onSubmit={(start, end, note) => {
+                        setBody(insertAnnotation(body, start, end, note));
+                        setNotePick(null);
+                    }}
+                />
+            )}
         </div>
     );
 }

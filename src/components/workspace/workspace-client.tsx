@@ -886,6 +886,8 @@ export default function WorkspaceClient({ workId }: Props) {
                             illustPlacingUrl={searchParams.get("illustUrl")}
                             key={selected.id}
                             episode={selected}
+                            /* 注釈を付けるとき、前に同じ言葉へ付けた説明を探す */
+                            allEpisodes={episodes}
                             /* どの作品を書いているのか、上に小さく出す */
                             workTitle={work?.title ?? ""}
                             settings={settings}
