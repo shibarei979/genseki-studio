@@ -19,8 +19,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import DeleteButton from "@/components/common/delete-button";
+import ProBadge from "@/components/common/pro-badge";
+import { useMemberFeatures } from "@/lib/subscription/use-member-features";
 import EntryImage from "@/components/common/entry-image";
 import CandidateStrip from "@/components/resource/candidate-strip";
 import MergePanel from "@/components/resource/merge-panel";
@@ -131,6 +134,22 @@ export default function EntryView({
         if (initialEntryId) setSelectedId(initialEntryId);
     }, [initialEntryId]);
     const [mode, setMode] = useState<ViewMode>("cards");
+    /*
+     * ★ 図鑑（絵を大きく並べる見方）は Pro。一覧は誰でも。
+     *   Pro でないときは、選んでいても一覧で出す。
+     */
+    const { entryReport: isPro } = useMemberFeatures();
+    const isGallery = isPro && mode === "grid";
+    const [showProNote, setShowProNote] = useState(false);
+    /* 図鑑の板は Esc で閉じる */
+    useEffect(() => {
+        if (!isGallery || !selectedId) return;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setSelectedId(null);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [isGallery, selectedId]);
     const [keyword, setKeyword] = useState("");
     const [typeFilter, setTypeFilter] = useState("all");
     const [sourceFilter, setSourceFilter] = useState<"all" | "body" | "manual">("all");
@@ -242,6 +261,177 @@ export default function EntryView({
             confirmed.some((entry) => entry.id === relation.from_entry_id) ||
             confirmed.some((entry) => entry.id === relation.to_entry_id),
     ).length;
+
+    /*
+     * 詳細（と「同じ人にまとめる」）。
+     * 一覧では右（携帯では下）に、図鑑では横から出る板の中に出す。
+     */
+    const detailBody = selected ? (
+        <>
+            <EntryDetail
+                key={selected.id}
+                page={page}
+                pages={pages}
+                entry={selected}
+                allEntries={allEntries}
+                episodes={episodes}
+                relations={relations}
+                mentions={mentions}
+                canGenerateImage={canGenerateImage}
+                imageQuota={imageQuota}
+                onGenerateImage={(hint, era) => onGenerateImage(selected, hint, era)}
+                onJump={onJump}
+                onPick={onPick}
+                onChange={(patch) => onUpdate(selected.id, patch)}
+                onSelectEntry={setSelectedId}
+                onClose={() => setSelectedId(null)}
+            />
+
+            {/*
+              * 同じ人にまとめる。
+              * ★ 詳細の下に置く。
+              *   前は詳細のいちばん上に大きな押し具で出ていた。使う回数は少ないので、読む邪魔にならない所へ。
+              * ★ ただし、字だけの小さな印では何ができるのか分からなかった。
+              *   「どんなときに使うか」「押すとどうなるか」を一言添え、押し具も枠付きにする。
+              */}
+            <div className="mt-4 rounded-lg border border-dashed border-line bg-canvas/60 p-3">
+                {!isUniting ? (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[12.5px] font-medium text-ink">
+                                同じ{page.label === "人物" ? "人" : "もの"}が、別の名前で登録されていませんか？
+                            </p>
+                            <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+                                あだ名や名字だけの呼び方が、別の{page.label}として並んでいるときに使います。
+                                まとめると、名前は「{selected.name}」のまま、もう一方は呼び名として残ります。
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsUniting(true);
+                                setUniteQuery("");
+                            }}
+                            className="shrink-0 self-start rounded-md border border-forest-line bg-surface px-3 py-1.5 text-[12px] text-forest hover:bg-forest-tint sm:self-center"
+                        >
+                            まとめる相手を選ぶ
+                        </button>
+                    </div>
+                ) : (
+                    <div>
+                        <div className="flex items-center justify-between gap-2">
+                            <p className="text-[12px] font-medium text-ink">
+                                「{selected.name}」にまとめる相手を選んでください
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setIsUniting(false)
+                                }
+                                className="shrink-0 text-[11px] text-faint hover:text-ink"
+                            >
+                                やめる
+                            </button>
+                        </div>
+
+                        <input
+                            type="text"
+                            value={uniteQuery}
+                            onChange={(e) =>
+                                setUniteQuery(e.target.value)
+                            }
+                            placeholder="呼び名で探す"
+                            className="mt-2 w-full rounded-lg border border-line bg-surface px-3 py-2 text-[12px] text-ink outline-none placeholder:text-faint focus:border-forest-line"
+                        />
+
+                        <ul className="thin-scroll mt-2 max-h-44 space-y-1 overflow-y-auto">
+                            {entries
+                                .filter(
+                                    (row) =>
+                                        row.id !== selected.id &&
+                                        (!uniteQuery.trim() ||
+                                            [
+                                                row.name,
+                                                ...row.aliases,
+                                            ]
+                                                .join(" ")
+                                                .toLowerCase()
+                                                .includes(
+                                                    uniteQuery
+                                                        .trim()
+                                                        .toLowerCase(),
+                                                )),
+                                )
+                                .slice(0, 12)
+                                .map((row) => (
+                                    <li key={row.id}>
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                /*
+                                                 * ★ 確認を出さない。
+                                                 *
+                                                 *   「同じものかもしれない」と
+                                                 *   出ている時点で、
+                                                 *   合体させるかどうかは
+                                                 *   もう決まっている。
+                                                 *
+                                                 *   間違えたら、
+                                                 *   分けて作り直せばよい。
+                                                 *   一件ずつ確認を挟むと、
+                                                 *   数が多いときに手間が勝つ。
+                                                 */
+                                                await onMerge(
+                                                    selected.id,
+                                                    row.id,
+                                                );
+                                                setIsUniting(
+                                                    false,
+                                                );
+                                            }}
+                                            className="flex w-full items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-left hover:border-forest-line"
+                                        >
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-[12px] text-ink">
+                                                    {row.name}
+                                                </span>
+                                                {row.summary && (
+                                                    <span className="block truncate text-[10px] text-faint">
+                                                        {
+                                                            row.summary
+                                                        }
+                                                    </span>
+                                                )}
+                                            </span>
+                                            <span className="shrink-0 text-[11px] text-forest">
+                                                まとめる
+                                            </span>
+                                        </button>
+                                    </li>
+                                ))}
+                        </ul>
+                    </div>
+                )}
+
+                {/* いま何と同じ扱いになっているか */}
+                {isUniting && selected.aliases.length > 0 && (
+                    <p className="mt-2 flex flex-wrap items-center gap-1">
+                        <span className="text-[10px] text-faint">
+                            同じ扱い：
+                        </span>
+                        {selected.aliases.map((alias) => (
+                            <span
+                                key={alias}
+                                className="rounded-full bg-surface px-2 py-0.5 text-[10px] text-muted"
+                            >
+                                {alias}
+                            </span>
+                        ))}
+                    </p>
+                )}
+            </div>
+        </>
+    ) : null;
 
     return (
         <div className="space-y-4">
@@ -394,25 +584,51 @@ export default function EntryView({
                     )}
 
                     <div className="ml-auto flex gap-0.5 rounded-md border border-line p-0.5">
-                        {(["cards", "grid"] as ViewMode[]).map((key) => (
-                            <button
-                                key={key}
-                                type="button"
-                                onClick={() => setMode(key)}
-                                aria-pressed={mode === key}
-                                aria-label={key === "cards" ? "一覧表示" : "格子表示"}
-                                className={[
-                                    "rounded px-2.5 py-1 text-xs",
-                                    mode === key
-                                        ? "bg-forest text-white"
-                                        : "text-muted hover:text-ink",
-                                ].join(" ")}
-                            >
-                                {key === "cards" ? "一覧" : "格子"}
-                            </button>
-                        ))}
+                        {(["cards", "grid"] as ViewMode[]).map((key) => {
+                            const isOn = key === "cards" ? !isGallery : isGallery;
+                            return (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => {
+                                        if (key === "grid" && !isPro) {
+                                            setShowProNote((on) => !on);
+                                            return;
+                                        }
+                                        setShowProNote(false);
+                                        setMode(key);
+                                    }}
+                                    aria-pressed={isOn}
+                                    aria-label={key === "cards" ? "一覧で見る" : "格子で見る"}
+                                    className={[
+                                        "inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs",
+                                        isOn ? "bg-forest text-white" : "text-muted hover:text-ink",
+                                    ].join(" ")}
+                                >
+                                    {key === "cards" ? "一覧" : "格子"}
+                                    {key === "grid" && <ProBadge />}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
+
+                {showProNote && !isPro && (
+                    <div className="flex flex-wrap items-center gap-2 border-b border-line bg-canvas px-4 py-2.5 text-[12px] text-muted">
+                        <span>
+                            格子は、カードを並べて一度に見渡せる見方です。
+                            <ProBadge className="mx-0.5" />
+                            の機能です。サブスクに入ると使えます。
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setShowProNote(false)}
+                            className="ml-auto text-[11px] text-faint hover:text-ink"
+                        >
+                            閉じる
+                        </button>
+                    </div>
+                )}
 
                 {/* 一覧と詳細 */}
                 {/*
@@ -423,7 +639,7 @@ export default function EntryView({
                 <div
                     className={[
                         "grid gap-0",
-                        selected ? "lg:grid-cols-[300px_minmax(0,1fr)]" : "",
+                        selected && !isGallery ? "lg:grid-cols-[300px_minmax(0,1fr)]" : "",
                     ].join(" ")}
                 >
                     <div
@@ -460,6 +676,29 @@ export default function EntryView({
                                 </p>
                             )
                         ) : (
+                            isGallery ? (
+                                /*
+                                 * ★ 格子。絵を中心に、名前をその下に。
+                                 *   選んでも並びは崩さず、詳細は横から出る板に出す。
+                                 */
+                                <ul className="grid grid-cols-2 gap-2 p-3 min-[520px]:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5">
+                                    {shown.map((entry) => (
+                                        <li key={entry.id}>
+                                            <GalleryCard
+                                                entry={entry}
+                                                isWide={page.image_style === "map"}
+                                                isSelected={entry.id === selectedId}
+                                                relationCount={relationCountById.get(entry.id) ?? 0}
+                                                bodyCount={liveCounts.get(entry.id) ?? 0}
+                                                typeValue={
+                                                    typeField ? String(entry.values[typeField.key] ?? "") : ""
+                                                }
+                                                onSelect={() => setSelectedId(entry.id)}
+                                            />
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
                             <ul
                                 className={[
                                     "gap-3 p-4",
@@ -474,7 +713,7 @@ export default function EntryView({
                                     <li key={entry.id}>
                                         <EntryCard
                                             entry={entry}
-                                            mode={mode}
+                                            mode="cards"
                                             isWide={page.image_style === "map"}
                                             isSelected={entry.id === selectedId}
                                             relationCount={relationCountById.get(entry.id) ?? 0}
@@ -496,6 +735,7 @@ export default function EntryView({
 
                                 {/* ★ 下の「＋新規追加」は外した。右上の「＋追加」と同じことをしていた */}
                             </ul>
+                            )
                         )}
 
                         {filtered.length > PER_PAGE && (
@@ -536,174 +776,47 @@ export default function EntryView({
                         )}
                     </div>
 
-                    {selected && (
+                    {selected && !isGallery && (
                         <div ref={detailRef} className="min-w-0 scroll-mt-3 p-4">
-                            <EntryDetail
-                                key={selected.id}
-                                page={page}
-                                pages={pages}
-                                entry={selected}
-                                allEntries={allEntries}
-                                episodes={episodes}
-                                relations={relations}
-                                mentions={mentions}
-                                canGenerateImage={canGenerateImage}
-                                imageQuota={imageQuota}
-                                onGenerateImage={(hint, era) => onGenerateImage(selected, hint, era)}
-                                onJump={onJump}
-                                onPick={onPick}
-                                onChange={(patch) => onUpdate(selected.id, patch)}
-                                onSelectEntry={setSelectedId}
-                                onClose={() => setSelectedId(null)}
-                            />
-
-                            {/*
-                              * 同じ人にまとめる。
-                              * ★ 詳細の下に置く。
-                              *   前は詳細のいちばん上に大きな押し具で出ていた。使う回数は少ないので、読む邪魔にならない所へ。
-                              * ★ ただし、字だけの小さな印では何ができるのか分からなかった。
-                              *   「どんなときに使うか」「押すとどうなるか」を一言添え、押し具も枠付きにする。
-                              */}
-                            <div className="mt-4 rounded-lg border border-dashed border-line bg-canvas/60 p-3">
-                                {!isUniting ? (
-                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-[12.5px] font-medium text-ink">
-                                                同じ{page.label === "人物" ? "人" : "もの"}が、別の名前で登録されていませんか？
-                                            </p>
-                                            <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
-                                                あだ名や名字だけの呼び方が、別の{page.label}として並んでいるときに使います。
-                                                まとめると、名前は「{selected.name}」のまま、もう一方は呼び名として残ります。
-                                            </p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setIsUniting(true);
-                                                setUniteQuery("");
-                                            }}
-                                            className="shrink-0 self-start rounded-md border border-forest-line bg-surface px-3 py-1.5 text-[12px] text-forest hover:bg-forest-tint sm:self-center"
-                                        >
-                                            まとめる相手を選ぶ
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div>
-                                        <div className="flex items-center justify-between gap-2">
-                                            <p className="text-[12px] font-medium text-ink">
-                                                「{selected.name}」にまとめる相手を選んでください
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setIsUniting(false)
-                                                }
-                                                className="shrink-0 text-[11px] text-faint hover:text-ink"
-                                            >
-                                                やめる
-                                            </button>
-                                        </div>
-
-                                        <input
-                                            type="text"
-                                            value={uniteQuery}
-                                            onChange={(e) =>
-                                                setUniteQuery(e.target.value)
-                                            }
-                                            placeholder="呼び名で探す"
-                                            className="mt-2 w-full rounded-lg border border-line bg-surface px-3 py-2 text-[12px] text-ink outline-none placeholder:text-faint focus:border-forest-line"
-                                        />
-
-                                        <ul className="thin-scroll mt-2 max-h-44 space-y-1 overflow-y-auto">
-                                            {entries
-                                                .filter(
-                                                    (row) =>
-                                                        row.id !== selected.id &&
-                                                        (!uniteQuery.trim() ||
-                                                            [
-                                                                row.name,
-                                                                ...row.aliases,
-                                                            ]
-                                                                .join(" ")
-                                                                .toLowerCase()
-                                                                .includes(
-                                                                    uniteQuery
-                                                                        .trim()
-                                                                        .toLowerCase(),
-                                                                )),
-                                                )
-                                                .slice(0, 12)
-                                                .map((row) => (
-                                                    <li key={row.id}>
-                                                        <button
-                                                            type="button"
-                                                            onClick={async () => {
-                                                                /*
-                                                                 * ★ 確認を出さない。
-                                                                 *
-                                                                 *   「同じものかもしれない」と
-                                                                 *   出ている時点で、
-                                                                 *   合体させるかどうかは
-                                                                 *   もう決まっている。
-                                                                 *
-                                                                 *   間違えたら、
-                                                                 *   分けて作り直せばよい。
-                                                                 *   一件ずつ確認を挟むと、
-                                                                 *   数が多いときに手間が勝つ。
-                                                                 */
-                                                                await onMerge(
-                                                                    selected.id,
-                                                                    row.id,
-                                                                );
-                                                                setIsUniting(
-                                                                    false,
-                                                                );
-                                                            }}
-                                                            className="flex w-full items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-left hover:border-forest-line"
-                                                        >
-                                                            <span className="min-w-0 flex-1">
-                                                                <span className="block truncate text-[12px] text-ink">
-                                                                    {row.name}
-                                                                </span>
-                                                                {row.summary && (
-                                                                    <span className="block truncate text-[10px] text-faint">
-                                                                        {
-                                                                            row.summary
-                                                                        }
-                                                                    </span>
-                                                                )}
-                                                            </span>
-                                                            <span className="shrink-0 text-[11px] text-forest">
-                                                                まとめる
-                                                            </span>
-                                                        </button>
-                                                    </li>
-                                                ))}
-                                        </ul>
-                                    </div>
-                                )}
-
-                                {/* いま何と同じ扱いになっているか */}
-                                {isUniting && selected.aliases.length > 0 && (
-                                    <p className="mt-2 flex flex-wrap items-center gap-1">
-                                        <span className="text-[10px] text-faint">
-                                            同じ扱い：
-                                        </span>
-                                        {selected.aliases.map((alias) => (
-                                            <span
-                                                key={alias}
-                                                className="rounded-full bg-surface px-2 py-0.5 text-[10px] text-muted"
-                                            >
-                                                {alias}
-                                            </span>
-                                        ))}
-                                    </p>
-                                )}
-                            </div>
+                            {detailBody}
                         </div>
                     )}
                 </div>
             </div>
+
+            {/*
+              * 図鑑で選んだときの板。
+              * ★ パソコンは右から、携帯は画面いっぱいに出す。後ろを押すか × で閉じる。
+              */}
+            {/*
+              * ★ body の直下へ出す。
+              *   親に transform があると、fixed が画面ではなく親に合わせて置かれ、上がずれていた。
+              */}
+            {selected && isGallery && typeof document !== "undefined" && createPortal(
+                <div className="fixed inset-0 z-[450]" aria-modal="true">
+                    <div className="absolute inset-0 bg-black/30" onClick={() => setSelectedId(null)} />
+                    <div
+                        className="thin-scroll absolute inset-y-0 right-0 w-full overflow-y-auto bg-surface shadow-2xl sm:w-[min(640px,92vw)]"
+                        style={{ maxWidth: "none" }}
+                    >
+                        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface/95 px-4 py-2.5 backdrop-blur">
+                            <p className="truncate text-[13px] text-muted">
+                                {page.label}
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedId(null)}
+                                aria-label="閉じる"
+                                className="flex h-8 w-8 items-center justify-center rounded-md text-[18px] text-muted hover:bg-canvas"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="p-4">{detailBody}</div>
+                    </div>
+                </div>,
+                document.body,
+            )}
         </div>
     );
 }
@@ -815,6 +928,73 @@ function EntryCard({
                 />
             </div>
         </div>
+    );
+}
+
+/**
+ * 格子の 1 枚（Pro）。
+ * ★ 絵が主役。正方形の絵を上に大きく、名前をその下の真ん中に。
+ *   札（主要・種類）と数は小さく添えるだけにして、絵の邪魔をしない。
+ *   地図のように横長の絵を持つページは、横長のまま。
+ * ★ 絵の無い人は、頭文字を控えめに。大きな字で埋めると、並んだとき重たく見えた。
+ */
+function GalleryCard({
+    entry,
+    isWide,
+    isSelected,
+    relationCount,
+    bodyCount,
+    typeValue,
+    onSelect,
+}: {
+    entry: ResourceEntry;
+    isWide: boolean;
+    isSelected: boolean;
+    relationCount: number;
+    bodyCount: number;
+    typeValue: string;
+    onSelect: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onSelect}
+            className={[
+                "flex h-full w-full flex-col overflow-hidden rounded-lg border bg-surface text-left transition-colors",
+                isSelected
+                    ? "border-forest ring-2 ring-forest/25"
+                    : "border-line hover:border-forest-line",
+            ].join(" ")}
+        >
+            <span className={["relative block w-full border-b border-line", isWide ? "aspect-[3/2]" : "aspect-square"].join(" ")}>
+                <EntryImage
+                    src={entry.image_url}
+                    fallback={Array.from(entry.name)[0] ?? "?"}
+                    className="h-full w-full object-cover !text-[28px] sm:!text-[32px]"
+                />
+                {entry.is_major && (
+                    <span className="absolute left-1.5 top-1.5 rounded bg-forest px-1.5 py-px text-[10px] text-white">
+                        主要
+                    </span>
+                )}
+            </span>
+            <span className="flex flex-1 flex-col items-center px-2 pb-2.5 pt-2 text-center">
+                <span className="w-full truncate text-[13px] font-medium text-ink sm:text-[14px]">
+                    {entry.name || "（名前未設定）"}
+                </span>
+                {typeValue && (
+                    <span className="mt-0.5 max-w-full truncate text-[10.5px] text-muted">{typeValue}</span>
+                )}
+                <span className="mt-auto flex items-center gap-2 pt-1.5 text-[10.5px] text-faint">
+                    <span>
+                        関係 <span className="tabular-nums text-ink">{relationCount}</span>
+                    </span>
+                    <span>
+                        本文 <span className="tabular-nums text-ink">{bodyCount}</span>回
+                    </span>
+                </span>
+            </span>
+        </button>
     );
 }
 

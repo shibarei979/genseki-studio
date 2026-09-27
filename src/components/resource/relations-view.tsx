@@ -24,7 +24,11 @@ import { useMemberFeatures } from "@/lib/subscription/use-member-features";
 import GroupPanel from "@/components/resource/group-panel";
 import RelationGraph from "@/components/resource/relation-graph";
 import ResourceIcon from "@/components/resource/resource-icons";
-import type { Episode, ResourceEntry, ResourcePage, ResourceRelation } from "@/types";
+import RelationTimeBar from "@/components/resource/relation-time-bar";
+import type { ChapterStop } from "@/components/resource/relation-time-bar";
+import { buildChapterGroups, formatChapterNumber, formatPartNumber } from "@/components/workspace/chapter-tree";
+import { firstAppearances, relationsAt } from "@/lib/resource/relation-at";
+import type { Chapter, Episode, ResourceEntry, ResourcePage, ResourceRelation } from "@/types";
 import { formatEpisodeLabel } from "@/types";
 
 const PRESETS = ["家族", "友人", "恋人", "師弟", "所属", "対立", "協力", "容疑者", "片想い"];
@@ -34,6 +38,8 @@ interface Props {
     entries: ResourceEntry[];
     pages: ResourcePage[];
     episodes: Episode[];
+    /** 章。話・章ごとの関係図で、章の終わりへ飛ぶのに使う */
+    chapters?: Chapter[];
     /*
      * ★ 終わるのを待てるようにしておく。
      *
@@ -85,6 +91,7 @@ export default function RelationsView({
     entries,
     pages,
     episodes,
+    chapters = [],
     onCreate,
     onUpdate,
     onDelete,
@@ -200,6 +207,41 @@ export default function RelationsView({
     const pickable = entries.filter(
         (entry) => entry.candidate_status === "none" && entry.name.trim(),
     );
+
+    /*
+     * ★ 話・章ごとの関係図（Pro）。
+     *   upTo は「何話まで読んだ時点か」（0 から）。null なら、いまの全体。
+     */
+    const [upTo, setUpTo] = useState<number | null>(null);
+    const orderedEpisodes = useMemo(
+        () => episodes.slice().sort((a, b) => a.ep_number - b.ep_number),
+        [episodes],
+    );
+    const firstSeen = useMemo(
+        () => (graphGroup ? firstAppearances(pickable, orderedEpisodes) : new Map<string, number>()),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [graphGroup, entries, orderedEpisodes],
+    );
+    const point = useMemo(
+        () =>
+            graphGroup && upTo !== null && upTo < orderedEpisodes.length
+                ? relationsAt(pickable, relations, orderedEpisodes, firstSeen, upTo)
+                : null,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [graphGroup, upTo, entries, relations, orderedEpisodes, firstSeen],
+    );
+    const chapterStops = useMemo<ChapterStop[]>(() => {
+        if (chapters.length === 0) return [];
+        const indexOf = new Map(orderedEpisodes.map((episode, index) => [episode.id, index]));
+        return buildChapterGroups(chapters, orderedEpisodes)
+            .filter((group) => group.chapter && group.items.length > 0)
+            .map((group) => ({
+                label:
+                    group.chapter!.title?.trim() ||
+                    (group.isBig ? formatPartNumber(group.labelIndex) : formatChapterNumber(group.labelIndex)),
+                lastIndex: Math.max(...group.items.map((episode) => indexOf.get(episode.id) ?? 0)),
+            }));
+    }, [chapters, orderedEpisodes]);
 
     const [fromId, setFromId] = useState("");
     const [toId, setToId] = useState("");
@@ -562,6 +604,17 @@ export default function RelationsView({
                           *   あちらは行が並ぶだけで、
                           *   高さを切ると読みにくくなる。
                           */}
+                        {mode === "graph" && (
+                            <RelationTimeBar
+                                isPro={graphGroup}
+                                episodes={orderedEpisodes}
+                                chapterStops={chapterStops}
+                                upTo={upTo}
+                                onChange={setUpTo}
+                                point={point}
+                                entryById={entryById}
+                            />
+                        )}
                         <div
                             className={[
                                 "rounded-lg border border-line bg-surface p-4",
@@ -625,8 +678,8 @@ export default function RelationsView({
                                      *   本文から拾った断片が丸になると、
                                      *   図が読めなくなる。
                                      */
-                                    entries={pickable}
-                                    relations={relations}
+                                    entries={point ? point.entries : pickable}
+                                    relations={point ? point.relations : relations}
                                     /*
                                      * ★ 組分けで、欄の見出しを読むのに使う。
                                      *   「所属する人」がどのページのどの欄かは、
@@ -983,6 +1036,7 @@ export default function RelationsView({
 
                                     <ChangeEditor
                                         relation={selected}
+                                        episodes={orderedEpisodes}
                                         onUpdate={(patch) => onUpdate(selected.id, patch)}
                                     />
                                 </>
@@ -1019,9 +1073,11 @@ export default function RelationsView({
 
 function ChangeEditor({
     relation,
+    episodes,
     onUpdate,
 }: {
     relation: ResourceRelation;
+    episodes: Episode[];
     onUpdate: (patch: Partial<ResourceRelation>) => void;
 }) {
     const [at, setAt] = useState("");
@@ -1091,8 +1147,18 @@ function ChangeEditor({
                     onChange={(e) => setAt(e.target.value)}
                     placeholder="第5話"
                     aria-label="いつ"
-                    className="w-20 rounded border border-line px-2 py-1 text-[11px] outline-none focus:border-forest"
+                    /*
+                     * ★ 話の題名を候補に出す。
+                     *   題名で書いておくと、話ごとの関係図でその話から名前が変わる。
+                     */
+                    list={`gk-change-at-${relation.id}`}
+                    className="w-24 rounded border border-line px-2 py-1 text-[11px] outline-none focus:border-forest"
                 />
+                <datalist id={`gk-change-at-${relation.id}`}>
+                    {episodes.map((episode, index) => (
+                        <option key={episode.id} value={episode.title.trim() || `${index + 1}話`} />
+                    ))}
+                </datalist>
                 <input
                     type="text"
                     value={label}

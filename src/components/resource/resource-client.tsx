@@ -52,6 +52,7 @@ import { formatNumber } from "@/lib/utils/text";
 import type { ImageQuota } from "@/components/resource/entry-image-panel";
 import type {
     AiSettings,
+    Chapter,
     Episode,
     EntryMention,
     PlotScene,
@@ -162,6 +163,8 @@ export default function ResourceClient({ workId }: Props) {
     const [scenes, setScenes] = useState<PlotScene[]>([]);
     const [logs, setLogs] = useState<WritingLog[]>([]);
     const [episodes, setEpisodes] = useState<Episode[]>([]);
+    /* 章。話・章ごとの関係図で使う。読めなくても、ほかは動かす */
+    const [chapters, setChapters] = useState<Chapter[]>([]);
     const [mentions, setMentions] = useState<EntryMention[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -385,6 +388,11 @@ export default function ResourceClient({ workId }: Props) {
         setScenes(sceneData);
         setLogs(logData);
         setEpisodes(episodeData);
+        try {
+            setChapters(await repository.listChapters(workId));
+        } catch {
+            setChapters([]);
+        }
         setMentions(mentionData);
         setAi(aiData);
         setIsLoading(false);
@@ -1427,6 +1435,7 @@ export default function ResourceClient({ workId }: Props) {
                                     )}
                                     pages={pages}
                                     episodes={episodes}
+                                    chapters={chapters}
                                     onCreate={async (fromId, toId, label, lineStyle) => {
                                         await repository.createRelation(workId, {
                                             from_entry_id: fromId,
