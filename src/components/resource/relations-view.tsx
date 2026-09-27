@@ -25,6 +25,7 @@ import GroupPanel from "@/components/resource/group-panel";
 import RelationGraph from "@/components/resource/relation-graph";
 import ResourceIcon from "@/components/resource/resource-icons";
 import type { Episode, ResourceEntry, ResourcePage, ResourceRelation } from "@/types";
+import { formatEpisodeLabel } from "@/types";
 
 const PRESETS = ["家族", "友人", "恋人", "師弟", "所属", "対立", "協力", "容疑者", "片想い"];
 
@@ -179,7 +180,7 @@ export default function RelationsView({
             episodes.map((episode) => episode.body),
             entries.filter((entry) => entry.candidate_status === "none"),
             existing,
-            episodes.map((episode) => `第${episode.ep_number}話`),
+            episodes.map((episode) => `「${formatEpisodeLabel(episode)}」`),
         );
     }, [relations, entries, episodes, dismissed]);
     /*

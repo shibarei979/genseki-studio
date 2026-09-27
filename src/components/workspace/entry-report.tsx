@@ -32,6 +32,7 @@ import { getRepository } from "@/lib/repository";
 import { applyLineMarks, scanMentions } from "@/lib/resource/mention-scan";
 import ProBadge from "@/components/common/pro-badge";
 import EpisodePresence from "@/components/resource/episode-presence";
+import { formatEpisodeLabel } from "@/types";
 import type {
     Episode,
     EntryMention,
@@ -63,10 +64,13 @@ interface Loaded {
     marks: { episode_id: string; line: number; kind: string; text: string }[];
 }
 
-/** 話の呼び名。「第3話 旅立ち」 */
+/**
+ * 話の呼び名。「旅立ち」
+ * ★ 番号（ep_number）は出さない。並べ替えのあとで飛ぶことがあり、
+ *   プロローグが「第9話」と出ていた。
+ */
 function episodeName(episode: Episode): string {
-    const title = episode.title?.trim();
-    return title ? `第${episode.ep_number}話「${title}」` : `第${episode.ep_number}話`;
+    return `「${formatEpisodeLabel(episode)}」`;
 }
 
 export default function EntryReport({
@@ -201,7 +205,7 @@ export default function EntryReport({
         const latestEpisode = episodes.length ? episodes[episodes.length - 1] : null;
         const sinceLast =
             lastRow && latestEpisode
-                ? latestEpisode.ep_number - lastRow.episode.ep_number
+                ? episodes.indexOf(latestEpisode) - episodes.indexOf(lastRow.episode)
                 : null;
 
         /*

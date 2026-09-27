@@ -28,6 +28,7 @@ import {
 } from "@/lib/resource/mention-scan";
 import { useMemberFeatures } from "@/lib/subscription/use-member-features";
 import type { Episode, ResourceEntry } from "@/types";
+import { formatEpisodeLabel } from "@/types";
 
 type Filter = "all" | MentionKind;
 
@@ -90,6 +91,12 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
 
     /* 話ごとの出番。帯に使う */
     const sortedEpisodes = episodes.slice().sort((a, b) => a.ep_number - b.ep_number);
+    /*
+     * ★ 話は題名で出す。番号（ep_number）は並べ替えのあとで飛ぶことがあり、
+     *   プロローグが「第9話」と出ていた。
+     */
+    const episodeNameById = new Map(episodes.map((episode) => [episode.id, formatEpisodeLabel(episode)]));
+    const episodeName = (id: string) => episodeNameById.get(id) ?? "";
     const perEpisode = new Map<string, number>();
     for (const row of mentions) {
         perEpisode.set(row.episodeId, (perEpisode.get(row.episodeId) ?? 0) + 1);
@@ -98,7 +105,7 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
     async function copySpeech() {
         const lines = mentions
             .filter((row) => row.kind === "speech" && row.speech)
-            .map((row) => `第${row.epNumber}話 ${row.line}行目　「${row.speech}」`);
+            .map((row) => `${episodeName(row.episodeId)} ${row.line}行目　「${row.speech}」`);
         if (lines.length === 0) return;
         try {
             await navigator.clipboard.writeText(`${entry.name}の台詞\n\n${lines.join("\n")}`);
@@ -145,14 +152,14 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
                 </span>
                 {summary.firstAppearance && (
                     <span>
-                        初登場 第{summary.firstAppearance.epNumber}話
+                        初登場「{episodeName(summary.firstAppearance.episodeId)}」
                         {summary.firstAppearance.line}行目
                     </span>
                 )}
                 {summary.lastAppearance &&
                     summary.lastAppearance !== summary.firstAppearance && (
                         <span>
-                            最後 第{summary.lastAppearance.epNumber}話
+                            最後「{episodeName(summary.lastAppearance.episodeId)}」
                             {summary.lastAppearance.line}行目
                         </span>
                     )}
@@ -186,7 +193,7 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
             <ul className="thin-scroll max-h-96 space-y-1 overflow-y-auto">
                 {shown.map((row, index) => (
                     <li key={`${row.episodeId}-${row.line}-${index}`}>
-                        <MentionRow mention={row} onJump={onJump} onHide={onHide} />
+                        <MentionRow mention={row} episodeLabel={episodeName(row.episodeId)} onJump={onJump} onHide={onHide} />
                     </li>
                 ))}
             </ul>
@@ -208,14 +215,16 @@ export default function MentionTimeline({ entry, episodes, onJump, hidden = [], 
 
 function MentionRow({
     mention,
+    episodeLabel,
     onJump,
     onHide,
 }: {
     mention: Mention;
+    episodeLabel: string;
     onJump?: (episodeId: string, line: number) => void;
     onHide?: (episodeId: string, line: number, text: string) => void;
 }) {
-    const label = `第${mention.epNumber}話 ${mention.line}行目`;
+    const label = `${episodeLabel} ${mention.line}行目`;
 
     return (
         <div className="group flex items-start gap-2 rounded-md px-1.5 py-1.5 hover:bg-canvas">
@@ -261,7 +270,7 @@ function MentionRow({
                 disabled={!onJump}
                 title={onJump ? "本文のこの場所へ移動します" : undefined}
                 className={[
-                    "shrink-0 rounded border px-1.5 py-0.5 text-[10px] tabular-nums",
+                    "max-w-[11rem] shrink-0 truncate rounded border px-1.5 py-0.5 text-[10px] tabular-nums",
                     onJump
                         ? "border-forest-line text-forest hover:bg-forest-tint"
                         : "border-line text-faint",

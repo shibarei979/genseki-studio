@@ -147,6 +147,12 @@ interface Props {
 export default function ResourceClient({ workId }: Props) {
     const router = useRouter();
     const [work, setWork] = useState<Work | null>(null);
+    /*
+     * 携帯で、資料のページ一覧を開いているか。
+     * ★ 既定は畳む。前は一覧と「本文から資料を集める」が、どのページでも画面のいちばん上を占め、
+     *   本題が 1 画面ぶん下に押し出されていた。設定の画面と同じ形にする。
+     */
+    const [isNavOpen, setIsNavOpen] = useState(false);
     /* 地図から「この項目をくわしく」と指名されたときの覚え */
     const [jumpEntryId, setJumpEntryId] = useState<string | null>(null);
     const [pages, setPages] = useState<ResourcePage[]>([]);
@@ -1100,12 +1106,35 @@ export default function ResourceClient({ workId }: Props) {
                             </p>
                         </div>
 
-                        <nav className="p-2">
+                        {/* 携帯：いまのページ名と「ほかのページ」だけ */}
+                        <button
+                            type="button"
+                            onClick={() => setIsNavOpen((v) => !v)}
+                            aria-expanded={isNavOpen}
+                            className="flex w-full items-center justify-between px-4 py-3 text-left text-[13px] text-ink lg:hidden"
+                        >
+                            <span className="font-medium">
+                                {view === "top"
+                                    ? "資料トップ"
+                                    : view === "add"
+                                      ? "ページを追加"
+                                      : pages.find((page) => page.id === view)?.label ?? "資料"}
+                            </span>
+                            <span className="shrink-0 rounded-full border border-line bg-canvas px-3 py-1 text-[11px] text-muted">
+                                {isNavOpen ? "とじる" : "ほかのページ"}
+                            </span>
+                        </button>
+
+                        <div className={`${isNavOpen ? "" : "hidden"} lg:block`}>
+                        <nav className="border-t border-line p-2 lg:border-t-0">
                             <NavItem
                                 label="資料トップ"
                                 icon={<ResourceIcon builtinKey="home" size={16} />}
                                 isActive={view === "top"}
-                                onClick={() => setView("top")}
+                                onClick={() => {
+                                    setView("top");
+                                    setIsNavOpen(false);
+                                }}
                             />
 
                             {pages.map((page) => (
@@ -1122,7 +1151,10 @@ export default function ResourceClient({ workId }: Props) {
                                     }
                                     pending={pendingByPage(page.id)}
                                     isActive={view === page.id}
-                                    onClick={() => setView(page.id)}
+                                    onClick={() => {
+                                        setView(page.id);
+                                        setIsNavOpen(false);
+                                    }}
                                 />
                             ))}
 
@@ -1131,7 +1163,10 @@ export default function ResourceClient({ workId }: Props) {
                             <NavItem
                                 label="ページを追加"
                                 isActive={view === "add"}
-                                onClick={() => setView("add")}
+                                onClick={() => {
+                                    setView("add");
+                                    setIsNavOpen(false);
+                                }}
                             />
                         </nav>
 
@@ -1268,6 +1303,7 @@ export default function ResourceClient({ workId }: Props) {
                                     設定から切り替えられます。
                                 </p>
                             )}
+                        </div>
                         </div>
                     </div>
                 </aside>

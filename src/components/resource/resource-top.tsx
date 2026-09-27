@@ -368,10 +368,16 @@ export default function ResourceTop({
 
     /* 件数で丸が育つ。0件=88px、増えるほど最大132pxまで */
     function sizeOf(count: number): number {
-        /* 狭い画面では一回り小さく。並べる余地が無い */
-        const base = isNarrow ? 74 : 88;
-        const grow = isNarrow ? 26 : 44;
-        return base + Math.min(grow, Math.round(Math.log2(count + 1) * 11));
+        /*
+         * 中の件数が増えるほど、丸を大きく。
+         *
+         * ★ 前は増え方が小さく（最大 +44px）、5件と50件で見分けが付かなかった。
+         *   増え幅を広げた。ただし上限を決めて、ほかの丸を押しのけないようにする。
+         * 狭い画面では一回り小さく。並べる余地が無い
+         */
+        const base = isNarrow ? 72 : 84;
+        const grow = isNarrow ? 34 : 68;
+        return base + Math.min(grow, Math.round(Math.log2(count + 1) * (isNarrow ? 10 : 16)));
     }
 
     /* 分類同士の糸。両方のページがあるときだけ */
@@ -639,7 +645,13 @@ export default function ResourceTop({
                                 onMouseLeave={() => setHoveredId(null)}
                                 className="absolute transition-all duration-300"
                                 style={{
-                                    left: isSpread ? `${slot.x}%` : "50%",
+                                    /*
+                                     * ★ 丸が枠の外へはみ出さないよう、端は内側へ寄せる。
+                                     *   携帯で、端の丸（関係図など）が半分切れていた。
+                                     */
+                                    left: isSpread
+                                        ? `clamp(${size / 2 + 6}px, ${slot.x}%, calc(100% - ${size / 2 + 6}px))`
+                                        : "50%",
                                     top: isSpread ? `${slot.y}%` : "47%",
                                     transform: `translate(-50%, -50%) scale(${isSpread ? 1 : 0.2})`,
                                     opacity: isSpread ? 1 : 0,
@@ -683,8 +695,17 @@ export default function ResourceTop({
                                                 size={19}
                                             />
                                         </span>
+                                        {/*
+                                          * ★ 名前は「・」のあとで折る。
+                                          *   丸の幅まかせだと「組織・グル／ープ」のように言葉の途中で折れていた。
+                                          */}
                                         <span className="mt-0.5 px-2 text-[12px] font-medium leading-tight text-ink">
-                                            {page.label}
+                                            {page.label.split("・").map((part, i, all) => (
+                                                <span key={i} className="block whitespace-nowrap">
+                                                    {part}
+                                                    {i < all.length - 1 ? "・" : ""}
+                                                </span>
+                                            ))}
                                         </span>
                                         <span className="text-[10px] text-muted">
                                             {count > 0
@@ -1015,8 +1036,9 @@ export default function ResourceTop({
                 </div>
             </div>
 
+            {/* ★ 増えていないときは出さない。「+0 文字育ちました」は意味が無い */}
             <p className="mt-2 text-center text-[11px] text-faint">
-                この14日で本文が +{formatNumber(grew)} 文字育ちました
+                {grew > 0 && <>この14日で本文が +{formatNumber(grew)} 文字育ちました</>}
                 {pendingTotal > 0 && (
                     <span className="text-amber">
                         （未整理 {pendingTotal} 件）

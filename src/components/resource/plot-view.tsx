@@ -141,17 +141,15 @@ export default function PlotView({
                         onClick={onCreateStage}
                         className="rounded-md bg-forest px-4 py-2 text-sm text-white hover:bg-forest-dark"
                     >
-                        ＋ ステージを追加
+                        ＋ 段を追加
                     </button>
                 </div>
             </header>
 
-            <div className="rounded-md border border-line bg-canvas px-4 py-2.5">
-                <p className="text-xs text-muted">
-                    AIはプロットを自動生成しません。このページは、あなたの構想を整理し、
-                    書きやすくするための場所です。
-                </p>
-            </div>
+            {/*
+              * ★ 「AIはプロットを自動生成しません」の帯は外した。
+              *   何の前置きもなく出てくるので、かえって不思議に見えた。
+              */}
 
             {/*
              * まだ何も無いとき、見本を出す。
@@ -293,7 +291,7 @@ export default function PlotView({
                         onClick={onCreateStage}
                         className="mt-5 rounded-md bg-forest px-5 py-2 text-sm text-white hover:bg-forest-dark"
                     >
-                        最初のステージを作る
+                        最初の段を作る
                     </button>
                 </div>
             ) : mode === "board" ? (
@@ -428,9 +426,9 @@ export default function PlotView({
                         <span className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-forest">
                             ＋
                         </span>
-                        <span className="text-sm text-ink">ステージを追加</span>
+                        <span className="text-sm text-ink">段を追加</span>
                         <span className="text-xs text-muted">
-                            物語の流れに合わせて、新しいステージを作れます。
+                            物語の流れに合わせて、新しい段を作れます。
                         </span>
                     </button>
                 </div>

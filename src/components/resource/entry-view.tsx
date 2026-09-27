@@ -18,7 +18,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
 import EntryImage from "@/components/common/entry-image";
@@ -30,6 +30,7 @@ import EntryDetail from "@/components/resource/entry-detail";
 import ResourceIcon from "@/components/resource/resource-icons";
 import type { DuplicateGroup } from "@/lib/resource/dedupe";
 import { formatNumber } from "@/lib/utils/text";
+import { scanMentions } from "@/lib/resource/mention-scan";
 import type {
     Episode,
     EntryMention,
@@ -100,6 +101,27 @@ export default function EntryView({
     const [selectedId, setSelectedId] = useState<string | null>(
         initialEntryId ?? null,
     );
+    /*
+     * 詳細の入れ物。
+     *
+     * ★ 携帯では、選んだら詳細まで画面を送る。
+     *   詳細は一覧の下に出るので、押しても画面が動かず、出たことに気づきにくかった。
+     */
+    const detailRef = useRef<HTMLDivElement | null>(null);
+    const firstSelect = useRef(true);
+    useEffect(() => {
+        /* 開いた直後（外から指名されて開いたとき）は送らない */
+        if (firstSelect.current) {
+            firstSelect.current = false;
+            return;
+        }
+        if (!selectedId || typeof window === "undefined" || window.innerWidth >= 1024) return;
+        const timer = window.setTimeout(() => {
+            detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 60);
+        return () => window.clearTimeout(timer);
+    }, [selectedId]);
+
     /* 「同じ人にまとめる」を開いているか。開くと相手を選ぶ列が出る */
     const [isUniting, setIsUniting] = useState(false);
     const [uniteQuery, setUniteQuery] = useState("");
@@ -165,6 +187,22 @@ export default function EntryView({
         [episodes],
     );
 
+    /*
+     * 本文に出てくる回数。
+     *
+     * ★ 詳細の「本文での登場」と同じ数え方にする。
+     *   前は保存しておいた記録（mentions）を数えていたので、
+     *   詳細では「2話に3回」なのに、一覧の上では「本文に登場 0件」と食い違っていた。
+     *   詳細と同じく、いまの本文を読んで数える。
+     */
+    const liveCounts = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const entry of confirmed) {
+            if (!entry.name) continue;
+            map.set(entry.id, scanMentions(entry, episodes).length);
+        }
+        return map;
+    }, [confirmed, episodes]);
     const filtered = useMemo(() => {
         const word = keyword.trim();
         let rows = confirmed;
@@ -186,14 +224,10 @@ export default function EntryView({
         const sorted = [...rows];
         if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name, "ja"));
         else if (sort === "mentions") {
-            sorted.sort(
-                (a, b) =>
-                    (mentionsById.get(b.id)?.length ?? 0) -
-                    (mentionsById.get(a.id)?.length ?? 0),
-            );
+            sorted.sort((a, b) => (liveCounts.get(b.id) ?? 0) - (liveCounts.get(a.id) ?? 0));
         }
         return sorted;
-    }, [confirmed, keyword, typeFilter, sourceFilter, typeField, sort, mentionsById]);
+    }, [confirmed, keyword, typeFilter, sourceFilter, typeField, sort, liveCounts]);
 
     const pageCount = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
     const current = Math.min(pageIndex, pageCount - 1);
@@ -201,10 +235,8 @@ export default function EntryView({
 
     const selected = confirmed.find((entry) => entry.id === selectedId) ?? null;
     const fromBody = confirmed.filter((entry) => entry.candidate_source).length;
-    const missingImages = page.image_style
-        ? confirmed.filter((entry) => !entry.image_url && entry.name).length
-        : 0;
-    const linkedCount = confirmed.filter((entry) => mentionsById.has(entry.id)).length;
+    const linkedCount = Array.from(liveCounts.values()).filter((n) => n > 0).length;
+    const liveTotal = Array.from(liveCounts.values()).reduce((sum, n) => sum + n, 0);
     const relationTotal = relations.filter(
         (relation) =>
             confirmed.some((entry) => entry.id === relation.from_entry_id) ||
@@ -232,38 +264,22 @@ export default function EntryView({
                 </button>
             </header>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            {/*
+              * 数字のまとめ。
+              *
+              * ★ 3 つを 1 枚の帯に、区切り線で分けて並べる。
+              *   大きな札 3 枚は場所を取りすぎ、1 行の文にすると数字と説明が混ざって読みにくかった。
+              *   見出し → 数字 → 補足、の順に縦に置き、どの数字が何かを目で拾えるようにする。
+              */}
+            <div className="flex divide-x divide-line overflow-hidden rounded-lg border border-line bg-surface">
                 <Stat
-                    label={`登録済みの${page.label}`}
+                    label="登録"
                     value={confirmed.length}
-                    unit="件"
-                    detail={`本文から ${fromBody}件 ／ 手で追加 ${confirmed.length - fromBody}件`}
+                    note={`本文から${fromBody}・手で${confirmed.length - fromBody}`}
                 />
-                <Stat
-                    label="関係の総数"
-                    value={relationTotal}
-                    unit="件"
-                    detail="所属・対立・協力など"
-                />
-                <Stat
-                    label="本文に登場"
-                    value={linkedCount}
-                    unit="件"
-                    detail={`のべ登場 ${mentions.length}回`}
-                />
+                <Stat label="関係" value={relationTotal} note="関係図の線" />
+                <Stat label="本文に登場" value={linkedCount} note={`のべ${liveTotal}回`} />
             </div>
-
-            {/* 図案がまだ無いものへの案内 */}
-            {page.image_style && canGenerateImage && missingImages > 0 && (
-                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-forest-line bg-forest-tint/40 px-4 py-3">
-                    <p className="min-w-0 flex-1 text-xs leading-relaxed text-ink">
-                        図案のない{page.label}が{missingImages}件あります。
-                        {page.image_style === "map"
-                            ? "地図は名前から作れます。違っていれば作り直せます。"
-                            : "項目を選ぶと、右側の「図案を作る」から作れます。"}
-                    </p>
-                </div>
-            )}
 
             <div className="overflow-hidden rounded-lg border border-line bg-surface">
                 {/*
@@ -413,8 +429,11 @@ export default function EntryView({
                     <div
                         className={[
                             "min-w-0 border-line lg:border-r",
-                            // 開いているときは一覧を縦に伸ばし、選び直しやすくする
-                            selected ? "thin-scroll max-h-[70vh] overflow-y-auto" : "",
+                            /*
+                             * ★ 高さの上限は付けない。
+                             *   前は開いているとき 70vh で切っていたので、一覧の下が途中で切れて見えていた。
+                             */
+                            "",
                         ].join(" ")}
                     >
                         {shown.length === 0 ? (
@@ -475,15 +494,7 @@ export default function EntryView({
                                     </li>
                                 ))}
 
-                                <li className={mode === "grid" ? "" : "mt-1"}>
-                                    <button
-                                        type="button"
-                                        onClick={() => onCreate()}
-                                        className="flex h-full w-full items-center justify-center gap-2 rounded-lg border border-dashed border-line px-4 py-4 text-sm text-muted hover:border-forest-line hover:text-forest"
-                                    >
-                                        ＋ {page.label}を新規追加
-                                    </button>
-                                </li>
+                                {/* ★ 下の「＋新規追加」は外した。右上の「＋追加」と同じことをしていた */}
                             </ul>
                         )}
 
@@ -526,39 +537,61 @@ export default function EntryView({
                     </div>
 
                     {selected && (
-                        <div className="min-w-0 p-4">
+                        <div ref={detailRef} className="min-w-0 scroll-mt-3 p-4">
+                            <EntryDetail
+                                key={selected.id}
+                                page={page}
+                                pages={pages}
+                                entry={selected}
+                                allEntries={allEntries}
+                                episodes={episodes}
+                                relations={relations}
+                                mentions={mentions}
+                                canGenerateImage={canGenerateImage}
+                                imageQuota={imageQuota}
+                                onGenerateImage={(hint, era) => onGenerateImage(selected, hint, era)}
+                                onJump={onJump}
+                                onPick={onPick}
+                                onChange={(patch) => onUpdate(selected.id, patch)}
+                                onSelectEntry={setSelectedId}
+                                onClose={() => setSelectedId(null)}
+                            />
+
                             {/*
-                             * 同じ人にまとめる。
-                             *
-                             * 別名は本文の読み取りでも見ているので、
-                             * ここでまとめておけば、以後その呼び名が
-                             * 本文に出ても同じ人として数えられる。
-                             * 二度と同じことを訊かれない。
-                             */}
-                            <div className="mb-3 rounded-lg border border-line bg-canvas p-3">
+                              * 同じ人にまとめる。
+                              * ★ 詳細の下に置く。
+                              *   前は詳細のいちばん上に大きな押し具で出ていた。使う回数は少ないので、読む邪魔にならない所へ。
+                              * ★ ただし、字だけの小さな印では何ができるのか分からなかった。
+                              *   「どんなときに使うか」「押すとどうなるか」を一言添え、押し具も枠付きにする。
+                              */}
+                            <div className="mt-4 rounded-lg border border-dashed border-line bg-canvas/60 p-3">
                                 {!isUniting ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setIsUniting(true);
-                                            setUniteQuery("");
-                                        }}
-                                        /*
-                                         * 字だけでは押せるものだと分からず、
-                                         * 「まとめる方法がない」と言われていた。
-                                         * 枠を付けて押し具に見せる。
-                                         */
-                                        className="w-full rounded-md border border-forest-line bg-surface px-3 py-2 text-[12px] font-medium text-forest hover:bg-forest-tint"
-                                    >
-                                        ＋ 別の呼び名を「{selected.name}」と同じ
-                                        {page.label === "人物" ? "人" : "もの"}
-                                        にまとめる
-                                    </button>
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[12.5px] font-medium text-ink">
+                                                同じ{page.label === "人物" ? "人" : "もの"}が、別の名前で登録されていませんか？
+                                            </p>
+                                            <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+                                                あだ名や名字だけの呼び方が、別の{page.label}として並んでいるときに使います。
+                                                まとめると、名前は「{selected.name}」のまま、もう一方は呼び名として残ります。
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsUniting(true);
+                                                setUniteQuery("");
+                                            }}
+                                            className="shrink-0 self-start rounded-md border border-forest-line bg-surface px-3 py-1.5 text-[12px] text-forest hover:bg-forest-tint sm:self-center"
+                                        >
+                                            まとめる相手を選ぶ
+                                        </button>
+                                    </div>
                                 ) : (
                                     <div>
                                         <div className="flex items-center justify-between gap-2">
                                             <p className="text-[12px] font-medium text-ink">
-                                                {selected.name} と同じにするもの
+                                                「{selected.name}」にまとめる相手を選んでください
                                             </p>
                                             <button
                                                 type="button"
@@ -651,7 +684,7 @@ export default function EntryView({
                                 )}
 
                                 {/* いま何と同じ扱いになっているか */}
-                                {selected.aliases.length > 0 && (
+                                {isUniting && selected.aliases.length > 0 && (
                                     <p className="mt-2 flex flex-wrap items-center gap-1">
                                         <span className="text-[10px] text-faint">
                                             同じ扱い：
@@ -667,25 +700,6 @@ export default function EntryView({
                                     </p>
                                 )}
                             </div>
-
-                            <EntryDetail
-                                key={selected.id}
-                                page={page}
-                                pages={pages}
-                                entry={selected}
-                                allEntries={allEntries}
-                                episodes={episodes}
-                                relations={relations}
-                                mentions={mentions}
-                                canGenerateImage={canGenerateImage}
-                                imageQuota={imageQuota}
-                                onGenerateImage={(hint, era) => onGenerateImage(selected, hint, era)}
-                                onJump={onJump}
-                                onPick={onPick}
-                                onChange={(patch) => onUpdate(selected.id, patch)}
-                                onSelectEntry={setSelectedId}
-                                onClose={() => setSelectedId(null)}
-                            />
                         </div>
                     )}
                 </div>
@@ -838,29 +852,6 @@ function Thumb({
     );
 }
 
-function Stat({
-    label,
-    value,
-    unit,
-    detail,
-}: {
-    label: string;
-    value: number;
-    unit: string;
-    detail: string;
-}) {
-    return (
-        <div className="rounded-lg border border-line bg-surface px-4 py-3">
-            <p className="text-xs text-muted">{label}</p>
-            <p className="mt-0.5 text-xl text-ink">
-                {formatNumber(value)}
-                <span className="ml-1 text-xs text-muted">{unit}</span>
-            </p>
-            <p className="mt-0.5 text-[11px] text-faint">{detail}</p>
-        </div>
-    );
-}
-
 function Pager({
     label,
     disabled,
@@ -879,5 +870,23 @@ function Pager({
         >
             {label}
         </button>
+    );
+}
+
+/**
+ * 数字のまとめの 1 つぶん。見出し・数字・補足。
+ * ★ 見出しを数字の上に、はっきりした字で置く。数字は大きく、色を付けて目に入りやすく。
+ *   補足は薄くしすぎず、携帯でも切らずに折り返す。
+ */
+function Stat({ label, value, note }: { label: string; value: number; note: string }) {
+    return (
+        <div className="min-w-0 flex-1 px-3 py-3 sm:px-5">
+            <p className="text-[12px] font-medium text-muted">{label}</p>
+            <p className="mt-1 flex items-baseline gap-0.5 leading-none">
+                <span className="text-[26px] font-semibold tabular-nums text-forest">{formatNumber(value)}</span>
+                <span className="text-[12px] text-muted">件</span>
+            </p>
+            <p className="mt-1.5 text-[11px] leading-snug text-muted">{note}</p>
+        </div>
     );
 }

@@ -154,9 +154,41 @@ export default function EntryDetail({
                             本文から追加
                         </span>
                     )}
-                    <h3 className="mt-0.5 truncate text-base font-medium text-ink">
-                        {entry.name || "（名前未設定）"}
-                    </h3>
+                    {/*
+                      * ★ 「主要」と「編集」は、名前の横に置く。
+                      *   前は詳細のいちばん下にあり、長い詳細を送り切らないと押せなかった。
+                      */}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h3 className="min-w-0 truncate text-base font-medium text-ink">
+                            {entry.name || "（名前未設定）"}
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => onChange({ is_major: !entry.is_major })}
+                            aria-pressed={entry.is_major}
+                            title={entry.is_major ? "主要から外す" : "主要にする"}
+                            className={[
+                                "shrink-0 rounded-full border px-2.5 py-0.5 text-[11px]",
+                                entry.is_major
+                                    ? "border-forest bg-forest text-white"
+                                    : "border-line text-muted hover:border-forest-line hover:text-forest",
+                            ].join(" ")}
+                        >
+                            {entry.is_major ? "★ 主要" : "☆ 主要"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsEditing((editing) => !editing)}
+                            className={[
+                                "shrink-0 rounded-md px-3 py-1 text-[12px]",
+                                isEditing
+                                    ? "bg-forest text-white hover:bg-forest-dark"
+                                    : "border border-forest-line text-forest hover:bg-forest-tint",
+                            ].join(" ")}
+                        >
+                            {isEditing ? "編集を終える" : "編集"}
+                        </button>
+                    </div>
                     <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted">
                         {entry.summary || "説明はまだありません"}
                     </p>
@@ -260,8 +292,11 @@ export default function EntryDetail({
                             );
                         })()}
 
-                        <div className="grid gap-3 lg:grid-cols-2">
-                        {/* 関係している項目 */}
+                        {/*
+                          * 関係している項目。
+                          * ★ 幅いっぱいに取り、中を 2 列に並べる。前は幅の半分だけで、右が空いていた。
+                          */}
+                        <div>
                         <Card
                             title={`関係している項目（${related.length}）`}
                             icon={<ResourceIcon builtinKey="relation" size={14} />}
@@ -269,7 +304,7 @@ export default function EntryDetail({
                             {related.length === 0 ? (
                                 <p className="text-xs text-faint">まだありません。</p>
                             ) : (
-                                <ul className="space-y-1.5">
+                                <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
                                     {related.slice(0, 10).map(({ relation, other }) => (
                                         <li key={relation.id}>
                                             <button
@@ -349,7 +384,7 @@ export default function EntryDetail({
                                                         }}
                                                         className="block w-full truncate rounded px-2 py-1.5 text-left text-[12px] text-ink hover:bg-surface"
                                                     >
-                                                        第{ep.ep_number}話　{ep.title || "無題"}
+                                                        {formatEpisodeLabel(ep)}
                                                     </button>
                                                 ))}
                                             </div>
@@ -425,34 +460,18 @@ export default function EntryDetail({
                 )}
             </div>
 
-            {/* 操作 */}
-            <div className="flex gap-2 border-t border-line px-6 py-3">
-                <button
-                    type="button"
-                    onClick={() => setIsEditing((editing) => !editing)}
-                    className={[
-                        "flex-1 rounded-md px-3 py-2 text-sm",
-                        isEditing
-                            ? "bg-forest text-white hover:bg-forest-dark"
-                            : "border border-line text-ink hover:border-forest-line hover:text-forest",
-                    ].join(" ")}
-                >
-                    {isEditing ? "編集を終える" : "編集"}
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onChange({ is_major: !entry.is_major })}
-                    aria-pressed={entry.is_major}
-                    className={[
-                        "rounded-md border px-3 py-2 text-sm",
-                        entry.is_major
-                            ? "border-forest bg-forest-tint text-forest"
-                            : "border-line text-muted hover:text-ink",
-                    ].join(" ")}
-                >
-                    主要
-                </button>
-            </div>
+            {/* 編集中だけ、終える押し具を下にも置く。長い入力欄を書き終えた所で押せるように */}
+            {isEditing && (
+                <div className="border-t border-line px-6 py-3">
+                    <button
+                        type="button"
+                        onClick={() => setIsEditing(false)}
+                        className="w-full rounded-md bg-forest px-3 py-2 text-sm text-white hover:bg-forest-dark"
+                    >
+                        編集を終える
+                    </button>
+                </div>
+            )}
         </aside>
     );
 }

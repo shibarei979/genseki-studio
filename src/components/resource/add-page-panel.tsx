@@ -183,7 +183,7 @@ export default function AddPagePanel({ pages, onAddBuiltin, onCreateCustom }: Pr
                     {/* 入力欄 */}
                     <div>
                         <p className="text-xs text-muted">
-                            フィールドを追加
+                            入力欄を追加
                             <span className="ml-1 text-faint">（ドラッグで並べ替え）</span>
                         </p>
 
@@ -267,7 +267,7 @@ export default function AddPagePanel({ pages, onAddBuiltin, onCreateCustom }: Pr
                             disabled={!fieldLabel.trim()}
                             className="mt-2 w-full rounded-md border border-dashed border-line px-3 py-2 text-xs text-muted hover:border-forest-line hover:text-forest disabled:opacity-40"
                         >
-                            ＋ フィールドを追加
+                            ＋ 入力欄を追加
                         </button>
                     </div>
 

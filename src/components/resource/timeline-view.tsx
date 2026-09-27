@@ -15,7 +15,8 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import DeleteButton from "@/components/common/delete-button";
 import CandidateStrip from "@/components/resource/candidate-strip";
@@ -25,7 +26,7 @@ import { useAutoMerge } from "@/components/resource/use-auto-merge";
 import ResourceIcon from "@/components/resource/resource-icons";
 import type { DuplicateGroup } from "@/lib/resource/dedupe";
 import type { Episode, ResourceEntry, ResourcePage, TimelineMode } from "@/types";
-import { TIMELINE_MODE_LABEL, TIMELINE_MODE_PLACEHOLDER } from "@/types";
+import { formatEpisodeLabel, TIMELINE_MODE_LABEL, TIMELINE_MODE_PLACEHOLDER } from "@/types";
 
 const IMPORTANCE = ["高", "中", "低"] as const;
 
@@ -201,6 +202,374 @@ export default function TimelineView({
         return describeGap(before.value, now.value, mode);
     }
 
+    /*
+     * ★ 話ごとにまとめる。
+     *
+     *   話が増えると出来事も増え、いちばん新しい出来事まで長くスクロールしないと届かなかった。
+     *   出来事を、結んだ話（いちばん前の話）ごとに束ねて、束ごとにたためるようにする。
+     *   話と結んでいない出来事は、最後の「話と結んでいない」束へ。
+     *
+     *   最初は、いちばん新しい束だけを開いておく。
+     */
+    const episodeOrder = useMemo(
+        () => new Map(episodes.map((episode, index) => [episode.id, index])),
+        [episodes],
+    );
+    const groups = useMemo(() => {
+        const map = new Map<string, { key: string; label: string; order: number; rows: { event: ResourceEntry; index: number }[] }>();
+        shown.forEach((event, index) => {
+            const linked = Array.isArray(event.values.episodes) ? event.values.episodes.map(String) : [];
+            const known = linked.filter((id) => episodeOrder.has(id));
+            const firstId = known.sort((a, b) => (episodeOrder.get(a) ?? 0) - (episodeOrder.get(b) ?? 0))[0];
+            const key = firstId ?? "none";
+            if (!map.has(key)) {
+                const episode = firstId ? episodeById.get(firstId) : undefined;
+                map.set(key, {
+                    key,
+                    label: episode ? formatEpisodeLabel(episode) : "話と結んでいない出来事",
+                    order: firstId ? (episodeOrder.get(firstId) ?? 0) : Number.MAX_SAFE_INTEGER,
+                    rows: [],
+                });
+            }
+            map.get(key)!.rows.push({ event, index });
+        });
+        return Array.from(map.values()).sort((a, b) => a.order - b.order);
+    }, [shown, episodeOrder, episodeById]);
+
+    /* 話と結んだ出来事が 1 つも無ければ、束ねても意味がない */
+    const canGroup = groups.some((group) => group.key !== "none");
+    const [isGrouped, setIsGrouped] = useState(true);
+    const grouped = canGroup && isGrouped;
+
+    /* 開いている束。最初は、話と結んだ束のうちいちばん新しいものだけ */
+    const [openGroups, setOpenGroups] = useState<Set<string> | null>(null);
+    useEffect(() => {
+        if (openGroups !== null || groups.length === 0) return;
+        const linked = groups.filter((group) => group.key !== "none");
+        const newest = linked[linked.length - 1] ?? groups[groups.length - 1];
+        setOpenGroups(new Set(groups.length <= 3 ? groups.map((group) => group.key) : [newest.key]));
+    }, [groups, openGroups]);
+    const allOpen = groups.every((group) => openGroups?.has(group.key) ?? true);
+    const isGroupOpen = (key: string) => openGroups?.has(key) ?? true;
+    function toggleGroup(key: string) {
+        setOpenGroups((current) => {
+            const next = new Set(current ?? []);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+    }
+
+    /*
+     * ひと続きで並べるとき、出来事が多ければ前のほうをたたむ。
+     * いちばん新しいところがすぐ見えるように、後ろの 15 件だけ出す。
+     */
+    const FLAT_TAIL = 15;
+    const [showAllFlat, setShowAllFlat] = useState(false);
+    const flatHidden = !grouped && !showAllFlat ? Math.max(0, shown.length - FLAT_TAIL) : 0;
+
+    /* いちばん新しい出来事へ。束をたたんでいれば開いてから飛ぶ */
+    function jumpToLatest() {
+        const target = grouped
+            ? (groups.filter((group) => group.key !== "none").pop() ?? groups[groups.length - 1])
+            : null;
+        if (target) {
+            setOpenGroups((current) => new Set([...Array.from(current ?? []), target.key]));
+        }
+        const lastEvent = target ? target.rows[target.rows.length - 1].event : shown[shown.length - 1];
+        if (!lastEvent) return;
+        window.setTimeout(() => {
+            document
+                .getElementById(`tl-${lastEvent.id}`)
+                ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 60);
+    }
+
+    function renderEvent(event: ResourceEntry, index: number, isLastInList: boolean, groupKey?: string) {
+        const isOpen = openId === event.id;
+        const importance = String(event.values.importance ?? "");
+        const people = Array.isArray(event.values.people)
+            ? event.values.people
+            : [];
+        const linkedEpisodes = Array.isArray(event.values.episodes)
+            ? event.values.episodes
+            : [];
+        /* 話ごとに束ねているときは、束の見出しと同じ話の札は出さない。二重になる */
+        const episodeChips = linkedEpisodes.filter((id) => String(id) !== groupKey);
+
+        return (
+            <li key={event.id} id={`tl-${event.id}`} className="group relative flex scroll-mt-4 gap-2 sm:gap-4">
+                {/* 時間の欄 */}
+                {mode !== "order" && (
+                    <div className="w-14 shrink-0 pt-3 text-right sm:w-24">
+                        <input
+                            type="text"
+                            defaultValue={String(event.values.when ?? "")}
+                            onBlur={(e) =>
+                                onUpdate(event.id, {
+                                    values: {
+                                        ...event.values,
+                                        when: e.target.value,
+                                    },
+                                })
+                            }
+                            placeholder={TIMELINE_MODE_PLACEHOLDER[mode]}
+                            aria-label="いつ"
+                            title={
+                                readTime(
+                                    String(event.values.when ?? ""),
+                                    mode,
+                                ).value === null &&
+                                String(event.values.when ?? "").trim()
+                                    ? "この書き方では順番を読み取れません"
+                                    : undefined
+                            }
+                            /*
+                             * 読み取れた「いつ」は濃く、
+                             * 読めなかったものは薄く出す。
+                             * 並べ替えに効いているかが目で分かる。
+                             */
+                            className={[
+                                "w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-right text-xs outline-none hover:border-line focus:border-forest",
+                                readTime(
+                                    String(event.values.when ?? ""),
+                                    mode,
+                                ).value === null
+                                    ? "text-faint"
+                                    : "text-forest",
+                            ].join(" ")}
+                        />
+                    </div>
+                )}
+
+                {/* 線と点 */}
+                <div className="flex w-4 shrink-0 flex-col items-center">
+                    <span
+                        className={[
+                            "mt-4 h-3 w-3 shrink-0 rounded-full border-2",
+                            importance === "高"
+                                ? "border-[#c0705e] bg-[#c0705e]"
+                                : importance === "中"
+                                  ? "border-forest bg-forest"
+                                  : importance === "低"
+                                    ? "border-forest-line bg-forest-tint"
+                                    : "border-[var(--color-line)] bg-surface",
+                        ].join(" ")}
+                    />
+                    {!isLastInList && (
+                        <span className="w-px flex-1 bg-[var(--color-line)]" />
+                    )}
+                </div>
+
+                {/* 中身 */}
+                <div className="min-w-0 flex-1 pb-3">
+                    {/*
+                     * ひとつ前との間。
+                     * 「3日あいた」と分かると、物語の速さが見える。
+                     */}
+                    {gapBefore(index) && (
+                        <p className="mb-1.5 flex items-center gap-2 text-[10px] text-faint">
+                            <span className="h-px w-4 bg-line" />
+                            {gapBefore(index)}あいだが空く
+                        </p>
+                    )}
+
+                    {/*
+                      * ★ 中身が無いうちは、低く組む。
+                      *   前は空の「何が起きたか」が 3 行ぶんの高さで並び、
+                      *   出来事が 3 つでも画面がすかすかに見えた。
+                      *   書き始めると（押すと）広がる。
+                      */}
+                    <div className="rounded-lg border border-line bg-surface px-3 py-2 hover:border-forest-line sm:px-4 sm:py-2.5">
+                        {/* 携帯では、重要度・紐づけを下の行へ。横に並べると題名と本文が細くなる */}
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
+                            <div className="min-w-0 flex-1">
+                                <input
+                                    type="text"
+                                    defaultValue={event.name}
+                                    onBlur={(e) =>
+                                        onUpdate(event.id, {
+                                            name: e.target.value,
+                                        })
+                                    }
+                                    placeholder="出来事の名前"
+                                    aria-label="出来事の名前"
+                                    className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-[14px] font-medium text-ink outline-none hover:border-line focus:border-forest"
+                                />
+                                <textarea
+                                    defaultValue={String(
+                                        event.values.detail ?? "",
+                                    )}
+                                    onBlur={(e) =>
+                                        onUpdate(event.id, {
+                                            values: {
+                                                ...event.values,
+                                                detail: e.target.value,
+                                            },
+                                        })
+                                    }
+                                    rows={String(event.values.detail ?? "").trim() ? 3 : 1}
+                                    onFocus={(e) => {
+                                        if (e.currentTarget.rows < 3) e.currentTarget.rows = 3;
+                                    }}
+                                    placeholder="何が起きたか"
+                                    aria-label="内容"
+                                    /*
+                                     * 内容を主役にする。
+                                     * 名前だけ並べても、年表にならない。
+                                     */
+                                    className="mt-1 w-full resize-y rounded border border-transparent bg-transparent px-1 py-0.5 text-[12.5px] leading-relaxed text-ink outline-none hover:border-line focus:border-forest"
+                                />
+                            </div>
+
+                            <div className="flex shrink-0 items-center justify-end gap-2">
+                                <select
+                                    value={importance}
+                                    onChange={(e) =>
+                                        onUpdate(event.id, {
+                                            values: {
+                                                ...event.values,
+                                                importance: e.target.value,
+                                            },
+                                            /*
+                                             * 重要度と「大事な出来事」の印を
+                                             * 揃える。別々に持つと、
+                                             * どちらを見ればよいのか分からない。
+                                             */
+                                            is_major:
+                                                e.target.value === "高" ||
+                                                e.target.value === "中",
+                                        })
+                                    }
+                                    aria-label="重要度"
+                                    className={[
+                                        "rounded-full border px-2 py-0.5 text-[10px] outline-none",
+                                        IMPORTANCE_STYLE[importance] ??
+                                            IMPORTANCE_STYLE["低"],
+                                    ].join(" ")}
+                                >
+                                    <option value="">重要度</option>
+                                    {IMPORTANCE.map((level) => (
+                                        <option key={level} value={level}>
+                                            {level}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setOpenId(isOpen ? null : event.id)
+                                    }
+                                    className="text-[10px] text-faint hover:text-ink"
+                                >
+                                    {isOpen ? "閉じる" : "紐づけ"}
+                                </button>
+                                <DeleteButton
+                                    label={event.name || "この出来事"}
+                                    onDelete={() => onDelete(event)}
+                                    isFloating
+                                    size="small"
+                                />
+                            </div>
+                        </div>
+
+                        {/* 紐づいているもの */}
+                        {!isOpen &&
+                            (people.length > 0 || episodeChips.length > 0) && (
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                    {people.map((id) => (
+                                        <span
+                                            key={String(id)}
+                                            className="rounded bg-canvas px-1.5 py-0.5 text-[10px] text-muted"
+                                        >
+                                            {entryById.get(String(id))?.name ??
+                                                "?"}
+                                        </span>
+                                    ))}
+                                    {episodeChips.map((id) => {
+                                        const episode = episodeById.get(
+                                            String(id),
+                                        );
+                                        if (!episode) return null;
+                                        return (
+                                            /*
+                                             * 押すとその話へ飛ぶ。
+                                             * 出来事から本文へ戻れる。
+                                             */
+                                            <button
+                                                key={String(id)}
+                                                type="button"
+                                                onClick={() =>
+                                                    onOpenEpisode?.(
+                                                        String(id),
+                                                    )
+                                                }
+                                                title="この話を開く"
+                                                className="rounded bg-forest-tint px-1.5 py-0.5 text-[10px] text-forest hover:underline"
+                                            >
+                                                {episode.title || `${episode.ep_number}話`}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                        {isOpen && (
+                            <div className="mt-3 space-y-3 border-t border-line pt-3">
+                                <Picker
+                                    label="関わる人・もの"
+                                    options={allEntries
+                                        .filter(
+                                            (row) =>
+                                                row.page_id !== event.page_id &&
+                                                row.candidate_status === "none",
+                                        )
+                                        .map((row) => ({
+                                            id: row.id,
+                                            label: row.name || "（名前未設定）",
+                                        }))}
+                                    selected={people.map(String)}
+                                    onChange={(next) =>
+                                        onUpdate(event.id, {
+                                            values: {
+                                                ...event.values,
+                                                people: next,
+                                            },
+                                        })
+                                    }
+                                />
+                                <Picker
+                                    label="関連エピソード"
+                                    options={episodes.map((episode) => ({
+                                        id: episode.id,
+                                        label: episode.title || `${episode.ep_number}話`,
+                                    }))}
+                                    selected={linkedEpisodes.map(String)}
+                                    onChange={(next) =>
+                                        onUpdate(event.id, {
+                                            values: {
+                                                ...event.values,
+                                                episodes: next,
+                                            },
+                                        })
+                                    }
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 次の出来事までの間隔 */}
+                    {mode !== "order" && !isLastInList && (
+                        <p className="mt-2 hidden pl-1 text-[11px] text-faint sm:block">
+                            ↓ {String(shown[index + 1].values.when ?? "次の出来事")}
+                            まで
+                        </p>
+                    )}
+                </div>
+            </li>
+        );
+    }
+
     return (
         <div className="space-y-4">
             <header className="flex flex-wrap items-start justify-between gap-3">
@@ -224,10 +593,21 @@ export default function TimelineView({
                 </button>
             </header>
 
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-                {/* 時間の表し方 */}
-                <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2.5">
-                    <span className="mr-1 text-xs text-muted">時間の表し方</span>
+            {/*
+              * 時間の表し方と、まとめ。
+              *
+              * ★ 1 本の帯にまとめる。
+              *   前は右に「全体サマリー」の箱を別に置いていた。
+              *   出来事が少ないうちは「0件 ― ―」だけの箱になり、画面がすかすかに見えた。
+              *   まとめは、出来事があるときだけ帯の右に一言で出す。
+              */}
+            {/*
+              * ★ 携帯では、選ぶものを 1 行に並べて横にすべらせる。
+              *   折り返すと 2〜3 行に広がり、画面の上半分が押し具で埋まっていた。
+              */}
+            <div className="flex flex-col gap-y-2 rounded-lg border border-line bg-surface px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+                <ScrollRow edge="3" fade="surface">
+                    <span className="mr-1 shrink-0 text-xs text-muted">時間の表し方</span>
                     {(Object.keys(TIMELINE_MODE_LABEL) as TimelineMode[]).map((key) => (
                         <button
                             key={key}
@@ -235,7 +615,7 @@ export default function TimelineView({
                             onClick={() => onChangeMode(key)}
                             aria-pressed={mode === key}
                             className={[
-                                "rounded-full border px-3 py-1 text-xs",
+                                "shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-xs",
                                 mode === key
                                     ? "border-forest bg-forest-tint text-forest"
                                     : "border-line text-muted hover:bg-canvas",
@@ -244,34 +624,22 @@ export default function TimelineView({
                             {TIMELINE_MODE_LABEL[key]}
                         </button>
                     ))}
-                </div>
+                </ScrollRow>
 
-                {/* まとめ */}
-                <div className="rounded-lg border border-forest-line bg-forest-tint/40 px-4 py-3">
-                    <p className="text-xs text-forest">全体サマリー</p>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                        <div>
-                            <p className="text-muted">登録済み</p>
-                            <p className="text-base text-ink">
-                                {events.length}
-                                <span className="ml-0.5 text-[10px] text-muted">件</span>
-                            </p>
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-muted">最初</p>
-                            <p className="truncate text-ink">{first?.name || "—"}</p>
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-muted">最後</p>
-                            <p className="truncate text-ink">{last?.name || "—"}</p>
-                        </div>
-                    </div>
-                    {mode !== "order" && first && last && (
-                        <p className="mt-2 text-xs text-muted">
-                            {String(first.values.when ?? "—")} 〜 {String(last.values.when ?? "—")}
-                        </p>
-                    )}
-                </div>
+                {events.length > 0 && (
+                    <p className="min-w-0 truncate text-[12px] text-muted sm:ml-auto">
+                        <strong className="font-semibold text-ink">{events.length}</strong>件
+                        {first && last && first !== last && (
+                            <span className="ml-2">
+                                <span className="text-ink">{first.name}</span>
+                                {mode !== "order" && first.values.when ? `（${String(first.values.when)}）` : ""}
+                                <span className="mx-1 text-faint">→</span>
+                                <span className="text-ink">{last.name}</span>
+                                {mode !== "order" && last.values.when ? `（${String(last.values.when)}）` : ""}
+                            </span>
+                        )}
+                    </p>
+                )}
             </div>
 
             {pending.length > 0 && (
@@ -310,15 +678,15 @@ export default function TimelineView({
              * その人物の筋だけを追える。
              */}
             {events.length > 0 && peopleInEvents.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="mr-1 text-[11px] text-faint">誰の</span>
+                <ScrollRow edge="4" fade="canvas">
+                    <span className="mr-1 shrink-0 text-[11px] text-faint">誰の</span>
 
                     <button
                         type="button"
                         onClick={() => setPersonFilter(null)}
                         aria-pressed={personFilter === null}
                         className={[
-                            "rounded-full border px-3 py-1 text-xs",
+                            "shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-xs",
                             personFilter === null
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line text-muted hover:bg-canvas",
@@ -336,7 +704,7 @@ export default function TimelineView({
                             }
                             aria-pressed={personFilter === id}
                             className={[
-                                "rounded-full border px-3 py-1 text-xs",
+                                "shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-xs",
                                 personFilter === id
                                     ? "border-forest bg-forest-tint text-forest"
                                     : "border-line text-muted hover:bg-canvas",
@@ -345,18 +713,18 @@ export default function TimelineView({
                             {name} {count}
                         </button>
                     ))}
-                </div>
+                </ScrollRow>
             )}
 
             {/* 重要度の絞り込み */}
             {events.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
+                <ScrollRow edge="4" fade="canvas">
                     <button
                         type="button"
                         onClick={() => setImportanceFilter("all")}
                         aria-pressed={importanceFilter === "all"}
                         className={[
-                            "rounded-full border px-3 py-1 text-xs",
+                            "shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-xs",
                             importanceFilter === "all"
                                 ? "border-forest bg-forest-tint text-forest"
                                 : "border-line text-muted hover:bg-canvas",
@@ -375,7 +743,7 @@ export default function TimelineView({
                                 onClick={() => setImportanceFilter(level)}
                                 aria-pressed={importanceFilter === level}
                                 className={[
-                                    "rounded-full border px-3 py-1 text-xs",
+                                    "shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-xs",
                                     importanceFilter === level
                                         ? "border-forest bg-forest-tint text-forest"
                                         : "border-line text-muted hover:bg-canvas",
@@ -385,7 +753,7 @@ export default function TimelineView({
                             </button>
                         );
                     })}
-                </div>
+                </ScrollRow>
             )}
 
             {/* 絞り込みで何も出ないとき */}
@@ -407,6 +775,61 @@ export default function TimelineView({
                 </div>
             )}
 
+            {/*
+              * 並べ方と、いちばん新しい出来事へ飛ぶ押し具。
+              * 出来事が多くなっても、最新まですぐ届くように。
+              */}
+            {shown.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                    {canGroup && (
+                        <div className="inline-flex shrink-0 rounded-md border border-line bg-surface p-0.5 text-[12px]">
+                            {[
+                                { value: true, label: "話ごとにまとめる" },
+                                { value: false, label: "ひと続き" },
+                            ].map((option) => (
+                                <button
+                                    key={option.label}
+                                    type="button"
+                                    onClick={() => setIsGrouped(option.value)}
+                                    aria-pressed={isGrouped === option.value}
+                                    className={[
+                                        "whitespace-nowrap rounded px-2.5 py-1",
+                                        isGrouped === option.value
+                                            ? "bg-forest-tint text-forest"
+                                            : "text-muted hover:text-ink",
+                                    ].join(" ")}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {grouped && groups.length > 1 && (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setOpenGroups(
+                                    allOpen ? new Set() : new Set(groups.map((group) => group.key)),
+                                )
+                            }
+                            className="shrink-0 whitespace-nowrap text-[12px] text-muted hover:text-forest"
+                        >
+                            {allOpen ? "すべてたたむ" : "すべて開く"}
+                        </button>
+                    )}
+                    {shown.length > 5 && (
+                        <button
+                            type="button"
+                            onClick={jumpToLatest}
+                            className="ml-auto shrink-0 whitespace-nowrap rounded-md border border-forest-line bg-surface px-3 py-1 text-[12px] text-forest hover:bg-forest-tint"
+                        >
+                            <span className="sm:hidden">最新へ ↓</span>
+                            <span className="hidden sm:inline">いちばん新しい出来事へ ↓</span>
+                        </button>
+                    )}
+                </div>
+            )}
+
             {events.length === 0 ? (
                 <EntryStartersPanel
                     builtinKey={page.builtin_key}
@@ -416,280 +839,87 @@ export default function TimelineView({
                     onCreateEmpty={() => onCreate()}
                 />
             ) : shown.length > 0 ? (
-                <ol className="rounded-lg border border-line bg-surface px-5 py-5">
-                    {shown.map((event, index) => {
-                        const isOpen = openId === event.id;
-                        const importance = String(event.values.importance ?? "");
-                        const people = Array.isArray(event.values.people)
-                            ? event.values.people
-                            : [];
-                        const linkedEpisodes = Array.isArray(event.values.episodes)
-                            ? event.values.episodes
-                            : [];
-
-                        return (
-                            <li key={event.id} className="group relative flex gap-4">
-                                {/* 時間の欄 */}
-                                {mode !== "order" && (
-                                    <div className="w-24 shrink-0 pt-3 text-right">
-                                        <input
-                                            type="text"
-                                            defaultValue={String(event.values.when ?? "")}
-                                            onBlur={(e) =>
-                                                onUpdate(event.id, {
-                                                    values: {
-                                                        ...event.values,
-                                                        when: e.target.value,
-                                                    },
-                                                })
-                                            }
-                                            placeholder={TIMELINE_MODE_PLACEHOLDER[mode]}
-                                            aria-label="いつ"
-                                            title={
-                                                readTime(
-                                                    String(event.values.when ?? ""),
-                                                    mode,
-                                                ).value === null &&
-                                                String(event.values.when ?? "").trim()
-                                                    ? "この書き方では順番を読み取れません"
-                                                    : undefined
-                                            }
-                                            /*
-                                             * 読み取れた「いつ」は濃く、
-                                             * 読めなかったものは薄く出す。
-                                             * 並べ替えに効いているかが目で分かる。
-                                             */
+                grouped ? (
+                    <div className="space-y-2">
+                        {groups.map((group) => {
+                            const isOpen = isGroupOpen(group.key);
+                            const major = group.rows.filter(
+                                ({ event }) => String(event.values.importance ?? "") === "高",
+                            ).length;
+                            return (
+                                <section
+                                    key={group.key}
+                                    className="overflow-hidden rounded-lg border border-line bg-surface"
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleGroup(group.key)}
+                                        aria-expanded={isOpen}
+                                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-canvas sm:px-4"
+                                    >
+                                        <span
+                                            aria-hidden
                                             className={[
-                                                "w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-right text-xs outline-none hover:border-line focus:border-forest",
-                                                readTime(
-                                                    String(event.values.when ?? ""),
-                                                    mode,
-                                                ).value === null
-                                                    ? "text-faint"
-                                                    : "text-forest",
+                                                "inline-block w-3 shrink-0 text-[10px] text-faint transition-transform",
+                                                isOpen ? "rotate-90" : "",
                                             ].join(" ")}
-                                        />
-                                    </div>
-                                )}
-
-                                {/* 線と点 */}
-                                <div className="flex w-4 shrink-0 flex-col items-center">
-                                    <span
-                                        className={[
-                                            "mt-4 h-3 w-3 shrink-0 rounded-full border-2",
-                                            importance === "高"
-                                                ? "border-[#c0705e] bg-[#c0705e]"
-                                                : importance === "中"
-                                                  ? "border-forest bg-forest"
-                                                  : importance === "低"
-                                                    ? "border-forest-line bg-forest-tint"
-                                                    : "border-[var(--color-line)] bg-surface",
-                                        ].join(" ")}
-                                    />
-                                    {index < shown.length - 1 && (
-                                        <span className="w-px flex-1 bg-[var(--color-line)]" />
-                                    )}
-                                </div>
-
-                                {/* 中身 */}
-                                <div className="min-w-0 flex-1 pb-5">
-                                    {/*
-                                     * ひとつ前との間。
-                                     * 「3日あいた」と分かると、物語の速さが見える。
-                                     */}
-                                    {gapBefore(index) && (
-                                        <p className="mb-1.5 flex items-center gap-2 text-[10px] text-faint">
-                                            <span className="h-px w-4 bg-line" />
-                                            {gapBefore(index)}あいだが空く
-                                        </p>
-                                    )}
-
-                                    <div className="rounded-lg border border-line bg-surface px-4 py-3.5 hover:border-forest-line">
-                                        <div className="flex items-start gap-3">
-                                            <div className="min-w-0 flex-1">
-                                                <input
-                                                    type="text"
-                                                    defaultValue={event.name}
-                                                    onBlur={(e) =>
-                                                        onUpdate(event.id, {
-                                                            name: e.target.value,
-                                                        })
-                                                    }
-                                                    placeholder="出来事の名前"
-                                                    aria-label="出来事の名前"
-                                                    className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-[14px] font-medium text-ink outline-none hover:border-line focus:border-forest"
-                                                />
-                                                <textarea
-                                                    defaultValue={String(
-                                                        event.values.detail ?? "",
-                                                    )}
-                                                    onBlur={(e) =>
-                                                        onUpdate(event.id, {
-                                                            values: {
-                                                                ...event.values,
-                                                                detail: e.target.value,
-                                                            },
-                                                        })
-                                                    }
-                                                    rows={3}
-                                                    placeholder="何が起きたか"
-                                                    aria-label="内容"
-                                                    /*
-                                                     * 内容を主役にする。
-                                                     * 名前だけ並べても、年表にならない。
-                                                     */
-                                                    className="mt-1 w-full resize-y rounded border border-transparent bg-transparent px-1 py-0.5 text-[12.5px] leading-relaxed text-ink outline-none hover:border-line focus:border-forest"
-                                                />
-                                            </div>
-
-                                            <div className="flex shrink-0 flex-col items-end gap-1.5">
-                                                <select
-                                                    value={importance}
-                                                    onChange={(e) =>
-                                                        onUpdate(event.id, {
-                                                            values: {
-                                                                ...event.values,
-                                                                importance: e.target.value,
-                                                            },
-                                                            /*
-                                                             * 重要度と「大事な出来事」の印を
-                                                             * 揃える。別々に持つと、
-                                                             * どちらを見ればよいのか分からない。
-                                                             */
-                                                            is_major:
-                                                                e.target.value === "高" ||
-                                                                e.target.value === "中",
-                                                        })
-                                                    }
-                                                    aria-label="重要度"
-                                                    className={[
-                                                        "rounded-full border px-2 py-0.5 text-[10px] outline-none",
-                                                        IMPORTANCE_STYLE[importance] ??
-                                                            IMPORTANCE_STYLE["低"],
-                                                    ].join(" ")}
-                                                >
-                                                    <option value="">重要度</option>
-                                                    {IMPORTANCE.map((level) => (
-                                                        <option key={level} value={level}>
-                                                            {level}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setOpenId(isOpen ? null : event.id)
-                                                    }
-                                                    className="text-[10px] text-faint hover:text-ink"
-                                                >
-                                                    {isOpen ? "閉じる" : "紐づけ"}
-                                                </button>
-                                                <DeleteButton
-                                                    label={event.name || "この出来事"}
-                                                    onDelete={() => onDelete(event)}
-                                                    isFloating
-                                                    size="small"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* 紐づいているもの */}
-                                        {!isOpen &&
-                                            (people.length > 0 || linkedEpisodes.length > 0) && (
-                                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                                    {people.map((id) => (
-                                                        <span
-                                                            key={String(id)}
-                                                            className="rounded bg-canvas px-1.5 py-0.5 text-[10px] text-muted"
-                                                        >
-                                                            {entryById.get(String(id))?.name ??
-                                                                "?"}
-                                                        </span>
-                                                    ))}
-                                                    {linkedEpisodes.map((id) => {
-                                                        const episode = episodeById.get(
-                                                            String(id),
-                                                        );
-                                                        if (!episode) return null;
-                                                        return (
-                                                            /*
-                                                             * 押すとその話へ飛ぶ。
-                                                             * 出来事から本文へ戻れる。
-                                                             */
-                                                            <button
-                                                                key={String(id)}
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    onOpenEpisode?.(
-                                                                        String(id),
-                                                                    )
-                                                                }
-                                                                title="この話を開く"
-                                                                className="rounded bg-forest-tint px-1.5 py-0.5 text-[10px] text-forest hover:underline"
-                                                            >
-                                                                {episode.title || `${episode.ep_number}話`}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-
-                                        {isOpen && (
-                                            <div className="mt-3 space-y-3 border-t border-line pt-3">
-                                                <Picker
-                                                    label="関わる人・もの"
-                                                    options={allEntries
-                                                        .filter(
-                                                            (row) =>
-                                                                row.page_id !== event.page_id &&
-                                                                row.candidate_status === "none",
-                                                        )
-                                                        .map((row) => ({
-                                                            id: row.id,
-                                                            label: row.name || "（名前未設定）",
-                                                        }))}
-                                                    selected={people.map(String)}
-                                                    onChange={(next) =>
-                                                        onUpdate(event.id, {
-                                                            values: {
-                                                                ...event.values,
-                                                                people: next,
-                                                            },
-                                                        })
-                                                    }
-                                                />
-                                                <Picker
-                                                    label="関連エピソード"
-                                                    options={episodes.map((episode) => ({
-                                                        id: episode.id,
-                                                        label: episode.title || `${episode.ep_number}話`,
-                                                    }))}
-                                                    selected={linkedEpisodes.map(String)}
-                                                    onChange={(next) =>
-                                                        onUpdate(event.id, {
-                                                            values: {
-                                                                ...event.values,
-                                                                episodes: next,
-                                                            },
-                                                        })
-                                                    }
-                                                />
-                                            </div>
+                                        >
+                                            ▶
+                                        </span>
+                                        <span
+                                            className={[
+                                                "min-w-0 truncate text-[13px] font-medium",
+                                                group.key === "none" ? "text-muted" : "text-ink",
+                                            ].join(" ")}
+                                        >
+                                            {group.label}
+                                        </span>
+                                        <span className="shrink-0 rounded-full bg-canvas px-2 py-0.5 text-[10.5px] text-muted">
+                                            {group.rows.length}件
+                                        </span>
+                                        {major > 0 && (
+                                            <span className="shrink-0 rounded-full border border-[#c0705e] bg-[#fbeeea] px-1.5 py-0.5 text-[10px] text-[#a5503c]">
+                                                重要度高 {major}
+                                            </span>
                                         )}
-                                    </div>
-
-                                    {/* 次の出来事までの間隔 */}
-                                    {mode !== "order" && index < shown.length - 1 && (
-                                        <p className="mt-2 pl-1 text-[11px] text-faint">
-                                            ↓ {String(shown[index + 1].values.when ?? "次の出来事")}
-                                            まで
-                                        </p>
+                                        {/* たたんでいるときは、中の出来事の名前を薄く並べる */}
+                                        {!isOpen && (
+                                            <span className="ml-1 hidden min-w-0 flex-1 truncate text-[11px] text-faint sm:block">
+                                                {group.rows.map(({ event }) => event.name || "（名前なし）").join("　・")}
+                                            </span>
+                                        )}
+                                    </button>
+                                    {isOpen && (
+                                        <ol className="border-t border-line px-3 pb-2 pt-3 sm:px-5">
+                                            {group.rows.map(({ event, index }, at) =>
+                                                renderEvent(event, index, at === group.rows.length - 1, group.key),
+                                            )}
+                                        </ol>
                                     )}
-                                </div>
-                            </li>
-                        );
-                    })}
-                </ol>
+                                </section>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-line bg-surface px-3 py-4 sm:px-5 sm:py-5">
+                        {flatHidden > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setShowAllFlat(true)}
+                                className="mb-3 w-full rounded-md border border-dashed border-line py-2 text-[12px] text-muted hover:border-forest-line hover:text-forest"
+                            >
+                                前の出来事 {flatHidden}件を見る
+                            </button>
+                        )}
+                        <ol>
+                            {shown.map((event, index) =>
+                                index < flatHidden
+                                    ? null
+                                    : renderEvent(event, index, index === shown.length - 1),
+                            )}
+                        </ol>
+                    </div>
+                )
             ) : null}
 
             {mode === "order" && shown.length > 1 && (
@@ -752,6 +982,89 @@ function Picker({
                     );
                 })}
             </ul>
+        </div>
+    );
+}
+
+/**
+ * 携帯で横にすべらせる 1 行。
+ *
+ * ★ 続きが隠れているときは、端に矢印を出す。
+ *   矢印が無いと、横に続きがあることに気づけない。
+ *   押すと、その向きへ少し送る。端まで来たら、その側の矢印は消える。
+ *   パソコンでは折り返して全部見えるので、矢印は出さない。
+ */
+function ScrollRow({
+    children,
+    edge,
+    fade,
+}: {
+    children: ReactNode;
+    /** 枠の内側の余白（3 = 12px、4 = 16px）。行を画面の端まで伸ばすのに使う */
+    edge: "3" | "4";
+    /** 矢印の下地の色。置き場所の地の色に合わせる */
+    fade: "surface" | "canvas";
+}) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [canLeft, setCanLeft] = useState(false);
+    const [canRight, setCanRight] = useState(false);
+
+    useEffect(() => {
+        const box = ref.current;
+        if (!box) return;
+        const update = () => {
+            setCanLeft(box.scrollLeft > 2);
+            setCanRight(box.scrollLeft + box.clientWidth < box.scrollWidth - 2);
+        };
+        update();
+        box.addEventListener("scroll", update, { passive: true });
+        window.addEventListener("resize", update);
+        return () => {
+            box.removeEventListener("scroll", update);
+            window.removeEventListener("resize", update);
+        };
+    }, [children]);
+
+    const move = (direction: 1 | -1) => {
+        const box = ref.current;
+        if (!box) return;
+        box.scrollBy({ left: direction * box.clientWidth * 0.7, behavior: "smooth" });
+    };
+
+    const color = fade === "surface" ? "var(--color-surface, #fff)" : "var(--color-canvas, #f5f4f1)";
+    const arrow = (side: "left" | "right") => (
+        <button
+            type="button"
+            aria-label={side === "left" ? "前を見る" : "続きを見る"}
+            onClick={() => move(side === "left" ? -1 : 1)}
+            className={[
+                "absolute top-1/2 z-10 flex h-8 w-9 -translate-y-1/2 items-center sm:hidden",
+                side === "left" ? "left-0 justify-start pl-0.5" : "right-0 justify-end pr-0.5",
+                edge === "3" ? (side === "left" ? "-ml-3" : "-mr-3") : side === "left" ? "-ml-4" : "-mr-4",
+            ].join(" ")}
+            style={{
+                background: `linear-gradient(to ${side === "left" ? "right" : "left"}, ${color} 55%, transparent)`,
+            }}
+        >
+            <span className="flex h-6 w-6 items-center justify-center rounded-full border border-line bg-surface text-[13px] leading-none text-muted shadow-sm">
+                {side === "left" ? "‹" : "›"}
+            </span>
+        </button>
+    );
+
+    return (
+        <div className="relative min-w-0">
+            {canLeft && arrow("left")}
+            <div
+                ref={ref}
+                className={[
+                    "thin-scroll flex items-center gap-1.5 overflow-x-auto sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0",
+                    edge === "3" ? "-mx-3 px-3" : "-mx-4 px-4",
+                ].join(" ")}
+            >
+                {children}
+            </div>
+            {canRight && arrow("right")}
         </div>
     );
 }
