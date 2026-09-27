@@ -1577,6 +1577,8 @@ export default function ResourceClient({ workId }: Props) {
                                 />
                             ) : (
                                 <EntryView
+                                    workId={workId}
+                                    genre={work?.genre ?? null}
                                     page={currentPage}
                                     pages={pages}
                                     initialEntryId={jumpEntryId}

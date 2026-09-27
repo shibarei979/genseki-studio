@@ -30,6 +30,7 @@ import MergePanel from "@/components/resource/merge-panel";
 import EntryStartersPanel from "@/components/resource/entry-starters-panel";
 import { useAutoMerge } from "@/components/resource/use-auto-merge";
 import EntryDetail from "@/components/resource/entry-detail";
+import EntryBoard from "@/components/resource/entry-board";
 import ResourceIcon from "@/components/resource/resource-icons";
 import type { DuplicateGroup } from "@/lib/resource/dedupe";
 import { formatNumber } from "@/lib/utils/text";
@@ -49,6 +50,9 @@ const PER_PAGE = 12;
 type ViewMode = "cards" | "grid";
 
 interface Props {
+    /** 作品。格子の板の雰囲気（ジャンル）と、選び直した雰囲気を覚えるのに使う */
+    workId?: string;
+    genre?: string | null;
     page: ResourcePage;
     pages: ResourcePage[];
     entries: ResourceEntry[];
@@ -82,6 +86,8 @@ interface Props {
 }
 
 export default function EntryView({
+    workId = "",
+    genre = null,
     page,
     pages,
     entries,
@@ -222,6 +228,61 @@ export default function EntryView({
         }
         return map;
     }, [confirmed, episodes]);
+
+    /*
+     * その人らしい台詞をひとつ（格子の札に添える）。
+     *
+     * ★ 話し手で拾う。名前が「」のすぐ前にある台詞だけ。
+     *   「エバは笑った。「また星を見てたの？」」→ エバの台詞。
+     *   その行に名前が出ているだけで拾うと、ほかの人の台詞が札に出てしまった。
+     * ★ 短すぎず長すぎないものを、前から探す。格子のときだけ数える。
+     */
+    const speechById = useMemo(() => {
+        const map = new Map<string, string>();
+        if (mode !== "grid") return map;
+
+        /* 呼び名 → 誰。長い名前から当てる（「リオ・アルセイン」を「リオ」より先に） */
+        const callers: { word: string; id: string }[] = [];
+        for (const entry of confirmed) {
+            for (const word of [entry.name, ...(entry.aliases ?? [])]) {
+                if (word && word.trim()) callers.push({ word: word.trim(), id: entry.id });
+            }
+        }
+        callers.sort((a, b) => b.word.length - a.word.length);
+        if (callers.length === 0) return map;
+
+        const fits = (line: string) => line.length >= 4 && line.length <= 28;
+        for (const episode of episodes) {
+            const text = episode.body ?? "";
+            for (const hit of Array.from(text.matchAll(/「([^」\n]{2,40})」/g))) {
+                const at = hit.index ?? 0;
+                /* 「 の前 16 字（別の台詞と行はまたがない）で、いちばん近くに出てくる名前が話し手 */
+                const lineStart = text.lastIndexOf("\n", at - 1) + 1;
+                const lastClose = text.lastIndexOf("」", at - 1);
+                const from = Math.max(lineStart, lastClose + 1, at - 16);
+                const before = text.slice(from, at);
+                let speaker: string | null = null;
+                let nearest = -1;
+                for (const caller of callers) {
+                    const found = before.lastIndexOf(caller.word);
+                    if (found === -1) continue;
+                    const end = found + caller.word.length;
+                    if (end > nearest) {
+                        nearest = end;
+                        speaker = caller.id;
+                    }
+                }
+                if (!speaker) continue;
+                const line = hit[1].trim();
+                const current = map.get(speaker);
+                if (!current || (!fits(current) && fits(line))) map.set(speaker, line);
+            }
+        }
+        for (const [id, line] of Array.from(map.entries())) {
+            if (line.length > 32) map.set(id, `${line.slice(0, 32)}…`);
+        }
+        return map;
+    }, [mode, confirmed, episodes]);
     const filtered = useMemo(() => {
         const word = keyword.trim();
         let rows = confirmed;
@@ -681,23 +742,22 @@ export default function EntryView({
                                  * ★ 格子。絵を中心に、名前をその下に。
                                  *   選んでも並びは崩さず、詳細は横から出る板に出す。
                                  */
-                                <ul className="grid grid-cols-2 gap-2 p-3 min-[520px]:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-4 xl:grid-cols-5">
-                                    {shown.map((entry) => (
-                                        <li key={entry.id}>
-                                            <GalleryCard
-                                                entry={entry}
-                                                isWide={page.image_style === "map"}
-                                                isSelected={entry.id === selectedId}
-                                                relationCount={relationCountById.get(entry.id) ?? 0}
-                                                bodyCount={liveCounts.get(entry.id) ?? 0}
-                                                typeValue={
-                                                    typeField ? String(entry.values[typeField.key] ?? "") : ""
-                                                }
-                                                onSelect={() => setSelectedId(entry.id)}
-                                            />
-                                        </li>
-                                    ))}
-                                </ul>
+                                <EntryBoard
+                                    title={page.label}
+                                    entries={shown}
+                                    workId={workId || page.work_id}
+                                    genre={genre}
+                                    isWide={page.image_style === "map"}
+                                    selectedId={selectedId}
+                                    relationCountById={relationCountById}
+                                    bodyCountById={liveCounts}
+                                    speechById={speechById}
+                                    labelOf={(entry) =>
+                                        (typeField ? String(entry.values[typeField.key] ?? "") : "") ||
+                                        String(entry.values.role ?? "")
+                                    }
+                                    onSelect={setSelectedId}
+                                />
                             ) : (
                             <ul
                                 className={[
@@ -928,73 +988,6 @@ function EntryCard({
                 />
             </div>
         </div>
-    );
-}
-
-/**
- * 格子の 1 枚（Pro）。
- * ★ 絵が主役。正方形の絵を上に大きく、名前をその下の真ん中に。
- *   札（主要・種類）と数は小さく添えるだけにして、絵の邪魔をしない。
- *   地図のように横長の絵を持つページは、横長のまま。
- * ★ 絵の無い人は、頭文字を控えめに。大きな字で埋めると、並んだとき重たく見えた。
- */
-function GalleryCard({
-    entry,
-    isWide,
-    isSelected,
-    relationCount,
-    bodyCount,
-    typeValue,
-    onSelect,
-}: {
-    entry: ResourceEntry;
-    isWide: boolean;
-    isSelected: boolean;
-    relationCount: number;
-    bodyCount: number;
-    typeValue: string;
-    onSelect: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onSelect}
-            className={[
-                "flex h-full w-full flex-col overflow-hidden rounded-lg border bg-surface text-left transition-colors",
-                isSelected
-                    ? "border-forest ring-2 ring-forest/25"
-                    : "border-line hover:border-forest-line",
-            ].join(" ")}
-        >
-            <span className={["relative block w-full border-b border-line", isWide ? "aspect-[3/2]" : "aspect-square"].join(" ")}>
-                <EntryImage
-                    src={entry.image_url}
-                    fallback={Array.from(entry.name)[0] ?? "?"}
-                    className="h-full w-full object-cover !text-[28px] sm:!text-[32px]"
-                />
-                {entry.is_major && (
-                    <span className="absolute left-1.5 top-1.5 rounded bg-forest px-1.5 py-px text-[10px] text-white">
-                        主要
-                    </span>
-                )}
-            </span>
-            <span className="flex flex-1 flex-col items-center px-2 pb-2.5 pt-2 text-center">
-                <span className="w-full truncate text-[13px] font-medium text-ink sm:text-[14px]">
-                    {entry.name || "（名前未設定）"}
-                </span>
-                {typeValue && (
-                    <span className="mt-0.5 max-w-full truncate text-[10.5px] text-muted">{typeValue}</span>
-                )}
-                <span className="mt-auto flex items-center gap-2 pt-1.5 text-[10.5px] text-faint">
-                    <span>
-                        関係 <span className="tabular-nums text-ink">{relationCount}</span>
-                    </span>
-                    <span>
-                        本文 <span className="tabular-nums text-ink">{bodyCount}</span>回
-                    </span>
-                </span>
-            </span>
-        </button>
     );
 }
 
