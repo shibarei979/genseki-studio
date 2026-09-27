@@ -23,7 +23,8 @@ import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
  *
  * ★ 会員は外れる。
  *
- *   特典の「上限を広げる」に
+ *   最新（latest）は、会員なら特典の設定に関わらず無制限。
+ *   全文（full）は、特典の「上限を広げる」に
  *   ref = scan_full / scan_latest を入れる。
  *   数が 0 なら無制限、数字が入っていればその数まで。
  *
@@ -37,10 +38,13 @@ import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
 
 export type ScanKind = "full" | "latest";
 
-/** 会員でない人の上限。1 か月あたり */
+/**
+ * 会員でない人の上限。1 か月あたり。
+ * ★ 最新は 15 回。会員は無制限（limitFor）。
+ */
 export const BASE_LIMIT: Record<ScanKind, number> = {
     full: 3,
-    latest: 30,
+    latest: 15,
 };
 
 /** 特典で上限を書き換えるときの合言葉 */
@@ -88,6 +92,9 @@ export async function limitFor(
     const live = await liveSubscriptionOf(userId);
 
     if (!live) return BASE_LIMIT[kind];
+
+    /* ★ 会員の「最新」は、いつでも無制限 */
+    if (kind === "latest") return 0;
 
     const perk = live.perks.find(
         (one) => one.kind === "limit" && one.ref === PERK_REF[kind],
