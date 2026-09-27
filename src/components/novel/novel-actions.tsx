@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import ShareButtons from '@/components/common/share-buttons'
+import { appConfig } from '@/config'
 import LoginPromptModal, { SAVED_MESSAGE } from '@/components/login-prompt-modal'
 import { hasGuestBookmark, moveGuestBookmarks, toggleGuestBookmark } from '@/lib/guest-bookmarks'
 
@@ -222,11 +224,11 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
     window.dispatchEvent(new CustomEvent('open-obi-editor'))
   }
 
-  function handleXShare() {
-    const url = `${window.location.origin}/novel/${novelId}`
-    const text = `「${novelTitle||'作品'}」\n#原石航路 #ライトノベル\n`
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer')
-  }
+  /*
+   * シェア。
+   * ★ 押したときに window.open で開くのをやめ、ふつうのリンクにした（ShareButtons）。
+   *   Firefox などで「押しても反応しない」ことがあったため。
+   */
 
   const btn = (active: boolean, colorVar: string, activeBgFallback: string) => ({
     display:'inline-flex' as const, alignItems:'center' as const, gap:5,
@@ -282,15 +284,10 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
         </button>
 
         {allowShares && (
-        <button onClick={handleXShare}
-          style={{display:'inline-flex',alignItems:'center',gap:5,padding:'11px 14px',borderRadius:20,
-            border:'1.5px solid #e2e8f0',background:'var(--color-bg-card)',color:'#374151',
-            fontSize:13,fontWeight:500,cursor:'pointer',transition:'all .15s'}}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
-          シェア
-        </button>
+          <ShareButtons
+            text={`「${novelTitle||'作品'}」\n#原石航路 #ライトノベル\n`}
+            url={`${appConfig.siteUrl}/novel/${novelId}`}
+          />
         )}
       </div>
 

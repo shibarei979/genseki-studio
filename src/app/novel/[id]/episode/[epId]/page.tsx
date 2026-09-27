@@ -1,4 +1,5 @@
 import { looksLikeBot } from '@/lib/utils/bot'
+import ShareButtons from '@/components/common/share-buttons'
 import EpisodeNav from '@/components/novel/episode/episode-nav'
 import { nameSource } from '@/lib/utils/view-source'
 import { createClient } from '@/lib/supabase/server'
@@ -402,12 +403,7 @@ export default async function EpisodePage({ params }: Props) {
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginBottom:16,flexWrap:'wrap'}}>
             <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
             {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
-            <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`「${novel.title}」\n「${episode.title}」\n#原石航路 #ライトノベル\n`)}&url=${encodeURIComponent(`${appConfig.siteUrl}/novel/${params.id}/episode/${params.epId}`)}`}
-              target="_blank" rel="noopener noreferrer"
-              style={{display:'inline-flex',alignItems:'center',gap:6,padding:'10px 20px',borderRadius:20,border:'1.5px solid #e2e8f0',background:'var(--color-bg-card)',color:'#374151',fontSize:13,fontWeight:500,textDecoration:'none'}}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              シェア
-            </a>
+            <ShareButtons text={`「${novel.title}」\n「${episode.title}」\n#原石航路 #ライトノベル\n`} url={`${appConfig.siteUrl}/novel/${params.id}/episode/${params.epId}`} size="sm"/>
           </div>
           <ValidReadTracker episodeId={params.epId} enabled={!!user && user.id !== novel.author_id}/>
           <div style={{textAlign:'center',marginBottom:16}}>
@@ -487,12 +483,7 @@ export default async function EpisodePage({ params }: Props) {
         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:14,flexWrap:'wrap'}}>
           <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
           {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
-          <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`「${novel.title}」\n「${episode.title}」\n#原石航路 #ライトノベル\n`)}&url=${encodeURIComponent(`${appConfig.siteUrl}/novel/${params.id}/episode/${params.epId}`)}`}
-            target="_blank" rel="noopener noreferrer"
-            style={{display:'inline-flex',alignItems:'center',gap:5,padding:'8px 14px',borderRadius:20,border:'1.5px solid #e2e8f0',background:'var(--color-bg-card)',color:'#374151',fontSize:12,fontWeight:500,textDecoration:'none'}}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            シェア
-          </a>
+          <ShareButtons text={`「${novel.title}」\n「${episode.title}」\n#原石航路 #ライトノベル\n`} url={`${appConfig.siteUrl}/novel/${params.id}/episode/${params.epId}`} size="sm"/>
         </div>
 
         <div style={{textAlign:'center',marginBottom:14}}>
