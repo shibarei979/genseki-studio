@@ -439,8 +439,9 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
 
 
   function fmtDate(d: string) {
-    const dt = new Date(d)
-    return `${dt.getFullYear()}/${dt.getMonth()+1}/${dt.getDate()}`
+    /* 日本時間で出す。この頁はサーバー（世界標準時）で組み立てるので、9 時間足して読む */
+    const dt = new Date(new Date(d).getTime() + 9 * 60 * 60 * 1000)
+    return `${dt.getUTCFullYear()}/${dt.getUTCMonth()+1}/${dt.getUTCDate()}`
   }
 
   const readCount  = readEpisodeIds.size

@@ -291,7 +291,8 @@ export default async function EpisodePage({ params, searchParams }: Props) {
     const sessionId = jar.get('gk-session')?.value ?? null
     const isBot = looksLikeBot(ua)
     // 1日1人1話1PV制限：同じユーザーが同じ日に同じ話を見ていたらカウントしない
-    const todayStart = new Date(); todayStart.setHours(0,0,0,0)
+    /* 「同じ日」は日本時間の 0 時で区切る（サーバーの時計は世界標準時で、そのままだと朝 9 時が境目になる） */
+    const todayStart = new Date(Math.floor((Date.now() + 9 * 3600000) / 86400000) * 86400000 - 9 * 3600000)
     if (user) {
       const { data: existingPv } = await supabase
         .from('page_views')
@@ -320,8 +321,9 @@ export default async function EpisodePage({ params, searchParams }: Props) {
   const author = authorData as any
 
   function fmtDate(d: string) {
-    const dt = new Date(d)
-    return `${dt.getFullYear()}/${dt.getMonth()+1}/${dt.getDate()}`
+    /* 日本時間で出す。この頁はサーバー（世界標準時）で組み立てるので、9 時間足して読む */
+    const dt = new Date(new Date(d).getTime() + 9 * 60 * 60 * 1000)
+    return `${dt.getUTCFullYear()}/${dt.getUTCMonth()+1}/${dt.getUTCDate()}`
   }
 
   const navBtn = {fontSize:12,color:'var(--color-brand)',border:'1px solid var(--color-brand-border)',padding:'6px 14px',borderRadius:16,background:'var(--color-bg-card)',textDecoration:'none'} as const

@@ -136,8 +136,9 @@ export default async function AuthorPage({ params }: Props) {
   }
 
   const isMe = user?.id === params.id
-  const joinDate = new Date(author.created_at)
-  const joinStr = `${joinDate.getFullYear()}年${joinDate.getMonth() + 1}月`
+  /* 日本時間で読む（サーバーの時計は世界標準時） */
+  const joinDate = new Date(new Date(author.created_at).getTime() + 9 * 60 * 60 * 1000)
+  const joinStr = `${joinDate.getUTCFullYear()}年${joinDate.getUTCMonth() + 1}月`
   const totalLikes = Object.values(likeMap).reduce((a, b) => a + b, 0)
 
   const NovelList = () => (

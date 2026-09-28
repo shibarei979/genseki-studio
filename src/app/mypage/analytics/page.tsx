@@ -13,6 +13,17 @@ import type { ProStats } from '@/lib/analytics/pro-stats'
 export const dynamic = 'force-dynamic'
 
 /*
+ * ★ 日と時は日本時間で数える。
+ *   この頁はサーバー（Vercel）で数える。サーバーの時計は世界標準時なので、
+ *   そのままだと「今日」が朝 9 時に切り替わり、時間ごとの棒も 9 時間ずれていた。
+ *   9 時間足してから、世界標準時として読む。
+ */
+const JST_MS = 9 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
+/** 日本時間の "2026-09-28" */
+const jstDayKey = (t: number) => new Date(t + JST_MS).toISOString().slice(0, 10)
+
+/*
  * ★ ?novel=<作品の id> で開くと、その作品を最初に出す。
  *   作品の管理画面の「アクセス解析」から来たときに使う。
  *   付いていなければ、いちばん新しい作品を出す（AnalyticsCharts の側で決める）。
@@ -167,8 +178,8 @@ export default async function AnalyticsPage({
       }
     })
 
-    const now = new Date()
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    /* 日本時間の今日の 0 時（を世界標準時の数で） */
+    const todayStart = Math.floor((Date.now() + JST_MS) / DAY_MS) * DAY_MS - JST_MS
     const yesterdayStart = todayStart - 24 * 60 * 60 * 1000
     const weekStart = todayStart - 6 * 24 * 60 * 60 * 1000
     const monthStart = todayStart - 29 * 24 * 60 * 60 * 1000
@@ -189,19 +200,19 @@ export default async function AnalyticsPage({
       if (who) st.uniqueUsers.add(who)
       const dt = new Date(pv.viewed_at)
       const t = dt.getTime()
-      const hour = dt.getHours()
+      const hour = new Date(t + JST_MS).getUTCHours()
       if (t >= todayStart) { st.viewsToday++; st.hourlyToday[hour]++ }
       else if (t >= yesterdayStart) { st.viewsYesterday++; st.hourlyYesterday[hour]++ }
       if (t >= weekStart) st.viewsWeek++
       if (t >= monthStart) st.viewsMonth++
-      const day = (pv.viewed_at || '').slice(0, 10)
+      const day = Number.isNaN(t) ? '' : jstDayKey(t)
       // 分類：未ログイン(a) / スマホ(m) / PC(d)
       const seg = !pv.user_id ? 'a' : (pv.device === 'mobile' ? 'm' : 'd')
       if (t >= weekStart) { if (!st.daily7[day]) st.daily7[day] = { v: 0, m: 0, d: 0, a: 0 }; st.daily7[day].v++; st.daily7[day][seg]++ }
       if (t >= monthStart) { if (!st.daily30[day]) st.daily30[day] = { v: 0, m: 0, d: 0, a: 0 }; st.daily30[day].v++; st.daily30[day][seg]++ }
       /* 期間で切らずに、日ごとも全部数える。1 年の図で使う */
       if (day) { if (!st.dailyAll[day]) st.dailyAll[day] = { v: 0, m: 0, d: 0, a: 0 }; st.dailyAll[day].v++; st.dailyAll[day][seg]++ }
-      const month = (pv.viewed_at || '').slice(0, 7)
+      const month = day.slice(0, 7)
       if (month) { if (!st.monthly[month]) st.monthly[month] = { v: 0, m: 0, d: 0, a: 0 }; st.monthly[month].v++; st.monthly[month][seg]++ }
     })
 
@@ -341,8 +352,7 @@ export default async function AnalyticsPage({
     // 直近7日の日別配列
     const daily7: { date: string; views: number; m: number; d: number; a: number }[] = []
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
-      const key = d.toISOString().slice(0, 10)
+      const key = jstDayKey(Date.now() - i * DAY_MS)
       const o7 = st.daily7[key] || { v: 0, m: 0, d: 0, a: 0 }
       daily7.push({ date: key.slice(5), views: o7.v, m: o7.m, d: o7.d, a: o7.a })
     }
@@ -351,8 +361,7 @@ export default async function AnalyticsPage({
      */
     const daily30: { date: string; views: number; m: number; d: number; a: number }[] = []
     for (let i = 29; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
-      const key = d.toISOString().slice(0, 10)
+      const key = jstDayKey(Date.now() - i * DAY_MS)
       const o = st.daily30[key] || { v: 0, m: 0, d: 0, a: 0 }
       daily30.push({ date: key.slice(5), views: o.v, m: o.m, d: o.d, a: o.a })
     }
@@ -371,13 +380,12 @@ export default async function AnalyticsPage({
       let v = 0, m = 0, d = 0, a = 0
 
       for (let k = 0; k < SPAN; k++) {
-        const day = new Date(start.getTime() + k * 24 * 60 * 60 * 1000)
-          .toISOString().slice(0, 10)
+        const day = jstDayKey(start.getTime() + k * DAY_MS)
         const o = st.dailyAll[day]
         if (!o) continue
         v += o.v; m += o.m; d += o.d; a += o.a
       }
-      yearly30.push({ date: end.toISOString().slice(5, 10), views: v, m, d, a })
+      yearly30.push({ date: jstDayKey(end.getTime()).slice(5, 10), views: v, m, d, a })
     }
 
     /*

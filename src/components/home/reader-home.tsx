@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import { ROOT_ADMIN_EMAIL } from '@/types'
 import Link from 'next/link'
+import { jstDay } from '@/lib/utils/jst'
 
 import { getCachedRecommendScores, buildRecommendation } from '@/lib/recommend'
 import WorkPopupFlag from '@/components/home/work-popup-flag'
@@ -87,8 +88,9 @@ function padWithPlaceholders(books: HomeBook[], count: number, kind: string): Ho
 }
 
 function formatMonthDay(dateText: string): string {
-  const d = new Date(dateText)
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+  /* 日本時間で読む。ホームはサーバー（世界標準時）で組み立てるので 9 時間足す */
+  const d = new Date(new Date(dateText).getTime() + 9 * 60 * 60 * 1000)
+  return `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}`
 }
 
 interface NovelRow {
@@ -923,12 +925,13 @@ export default async function ReaderHome() {
     .order('published_at', { ascending: false })
     .limit(NOTICE_COUNT)
 
-  const today = new Date().toISOString().slice(0, 10)
+  /* 日本時間の今日。お知らせは、日本の 0 時になったら出す（前は朝 9 時まで出なかった） */
+  const today = jstDay()
 
   const sidebarNotices = [
     ...(adminNoticeRows || [])
       /* 表に出す日が来たものだけ */
-      .filter((a: any) => String(a.published_at).slice(0, 10) <= today)
+      .filter((a: any) => !!a.published_at && jstDay(a.published_at) <= today)
       .map((a: any) => ({
         id: `adm-${a.id}`,
         href: '/notices',
