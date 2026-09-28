@@ -50,7 +50,7 @@ export default async function AnalyticsPage({
   if (novelIds.length > 0) {
     const { data: episodes } = await supabase
       .from('episodes')
-      .select('id, novel_id, title, ep_number, published, is_published, created_at, publish_at')
+      .select('id, novel_id, title, ep_number, published, is_published, created_at, publish_at, posted_at')
       .in('novel_id', novelIds)
       .order('ep_number', { ascending: true })
     allEpisodes = episodes || []
@@ -307,7 +307,12 @@ export default async function AnalyticsPage({
       novelIds.forEach((id: string) => {
         const eps = allEpisodes
           .filter((e: any) => e.novel_id === id && e.is_published === true)
-          .map((e: any) => ({ id: e.id, title: e.title, publishedAt: e.publish_at || e.created_at }))
+          /*
+           * ★ 公開した日時は posted_at（読めるようになった日時）を先に見る。
+           *   すぐ公開した話は publish_at が空になる。作った日（created_at）で代えると、
+           *   下書きで置いてから出した話は「公開から 24 時間」がずれて 0 に近く出る。
+           */
+          .map((e: any) => ({ id: e.id, title: e.title, publishedAt: e.posted_at || e.publish_at || e.created_at }))
         proMap[id] = buildProStats(eps, viewsByNovel[id] || [], progressByNovel[id] || [])
       })
     }
