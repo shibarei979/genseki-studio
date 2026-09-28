@@ -43,7 +43,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
          */
         { path: "/ranking", changeFrequency: "daily", priority: 0.9 },
         { path: "/recommend", changeFrequency: "daily", priority: 0.8 },
-        { path: "/works", changeFrequency: "daily", priority: 0.7 },
+        /*
+         * ★ /works は載せない。入っている人の「自分の作品」の頁で、
+         *   見回りには空の頁に見える（中身の薄い頁として数えられる）。
+         */
         { path: "/operator", changeFrequency: "monthly", priority: 0.4 },
         { path: "/guide", changeFrequency: "monthly", priority: 0.5 },
         { path: "/faq", changeFrequency: "monthly", priority: 0.4 },
