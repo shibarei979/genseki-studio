@@ -1,6 +1,10 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 
+import AnalyticsPro from '@/components/mypage/analytics/analytics-pro'
+import { mergeProStats } from '@/lib/analytics/pro-stats'
+import type { ProStats } from '@/lib/analytics/pro-stats'
+
 interface EpisodeRow {
   ep_number: number
   title: string
@@ -40,6 +44,8 @@ interface NovelStat {
   monthlyTop: { month: string; views: number; m?: number; d?: number; a?: number }[]
   episodeRows: EpisodeRow[]
   commentList: { body: string; author: string; created_at: string; episode_title: string; rating?: number | null }[]
+  /** 詳しい分析（Pro）。入っていない人は null。すべての作品では、合計できるものだけ */
+  pro?: (Partial<ProStats> & Pick<ProStats, 'sources' | 'heat'>) | null
 }
 
 /**
@@ -168,6 +174,10 @@ function buildAll(novels: NovelStat[]): NovelStat {
     monthlyTop,
     episodeRows,
     commentList,
+    /* 作品をまたげるもの（どこから来たか・曜日と時間帯）だけ合わせる */
+    pro: novels.some(n => n.pro)
+      ? mergeProStats(novels.map(n => n.pro).filter((one): one is ProStats => Boolean(one && (one as ProStats).progress)))
+      : null,
   }
 }
 
@@ -181,8 +191,11 @@ export default function AnalyticsCharts({
   novels,
   deviceStats,
   initialId,
+  isPro = false,
 }: {
   novels: NovelStat[]
+  /** 詳しい分析（Pro）が使えるか */
+  isPro?: boolean
   /** 最初に出す作品。作品の管理画面から来たとき */
   initialId?: string
   /** 端末ごとの数。右の柱の末尾に添える */
@@ -547,6 +560,15 @@ export default function AnalyticsCharts({
         )}
         </div>
       </div>
+
+      {/* 詳しい分析（Pro）。入っていない人には見本だけ */}
+      <AnalyticsPro
+        isPro={isPro}
+        isAll={selected.id === ALL_ID}
+        novelTitle={selected.title}
+        pro={selected.pro ?? null}
+        episodeViews={selected.episodeRows.map(ep => ({ title: ep.title, views: ep.views }))}
+      />
 
       {/* 話別データ（全幅） */}
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginTop:16}}>

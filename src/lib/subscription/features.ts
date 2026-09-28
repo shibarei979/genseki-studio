@@ -21,6 +21,7 @@ import { isOperator, liveSubscriptionOf } from "@/lib/subscription/plans";
  *   fonts         読む・書くで 30 書体（無料は 4 書体）
  *   ai_check      AI 誤字脱字・表記揺れチェックと語彙集（数＝月の回数。ai-check-quota.ts）
  *   image_monthly 資料の画像づくりの月の上限（数を入れる。image-quota.ts）
+ *   analytics_pro ダッシュボードの詳しい分析（読了率・読み続けた率・流入元・時間帯など）
  *
  *   広告なしだけは合言葉でなく、特典の種類「広告を出さない」で見る。
  *
@@ -43,6 +44,8 @@ export interface MemberFeatures {
     aiCheck: boolean;
     /** 30 書体 */
     fonts: boolean;
+    /** ダッシュボードの詳しい分析 */
+    analyticsPro: boolean;
     /** 版の履歴を 1 話につき何版まで残すか */
     versionKeep: number;
     /** 運営として通っているか。画面に出すためのもの */
@@ -59,6 +62,7 @@ const NONE: MemberFeatures = {
     noAds: false,
     aiCheck: false,
     fonts: false,
+    analyticsPro: false,
     versionKeep: VERSION_KEEP_BASE,
     operator: false,
 };
@@ -69,6 +73,7 @@ const ALL: MemberFeatures = {
     noAds: true,
     aiCheck: true,
     fonts: true,
+    analyticsPro: true,
     versionKeep: VERSION_KEEP_PRO,
     operator: true,
 };
@@ -97,6 +102,7 @@ export async function memberFeatures(): Promise<MemberFeatures> {
         noAds: live.perks.some((perk) => perk.kind === "no_ads"),
         aiCheck: has("ai_check"),
         fonts: has("fonts"),
+        analyticsPro: has("analytics_pro"),
         versionKeep: has("version_keep") ? VERSION_KEEP_PRO : VERSION_KEEP_BASE,
         operator: false,
     };

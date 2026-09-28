@@ -5,6 +5,10 @@ import Link from 'next/link'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import AnalyticsCharts from '@/components/mypage/analytics/analytics-charts'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { memberFeatures } from '@/lib/subscription/features'
+import { buildProStats } from '@/lib/analytics/pro-stats'
+import type { ProStats } from '@/lib/analytics/pro-stats'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,11 +39,18 @@ export default async function AnalyticsPage({
   let allEpisodes: any[] = []
   const statsMap: Record<string, any> = {}
 
+  /*
+   * ★ 詳しい分析（Pro）。
+   *   入っている人のときだけ数える。数えるのに手間がかかるので、使わない人のぶんは読まない。
+   */
+  const { analyticsPro: isPro } = await memberFeatures()
+  const proMap: Record<string, ProStats> = {}
+
   let deviceStats = { mobilePv: 0, desktopPv: 0, mobileUsers: 0, desktopUsers: 0 }
   if (novelIds.length > 0) {
     const { data: episodes } = await supabase
       .from('episodes')
-      .select('id, novel_id, title, ep_number, published, is_published, created_at')
+      .select('id, novel_id, title, ep_number, published, is_published, created_at, publish_at')
       .in('novel_id', novelIds)
       .order('ep_number', { ascending: true })
     allEpisodes = episodes || []
@@ -70,7 +81,7 @@ export default async function AnalyticsPage({
       epIds.length > 0
         ? readAll((from, to) =>
             supabase.from('page_views')
-              .select('episode_id, user_id, visitor_id, viewed_at, device')
+              .select('episode_id, user_id, visitor_id, viewed_at, device, source')
               .eq('is_author', false)
               /*
                * ★ 見回りの機械も外す。
@@ -256,6 +267,50 @@ export default async function AnalyticsPage({
         statsMap[nId].episodeLikes[el.episode_id] = (statsMap[nId].episodeLikes[el.episode_id] || 0) + 1
       }
     })
+
+    /*
+     * ============================================================
+     * 詳しい分析（Pro）
+     *
+     * ★ どこまで読まれたかは read_progress。読者側からは読めない表なので、
+     *   自分の作品に絞ったうえで、管理の鍵で読む。
+     * ★ 作者自身の読書と、見回りの機械は外す（閲覧の数え方とそろえる）。
+     * ============================================================
+     */
+    if (isPro) {
+      let progressRows: any[] = []
+      try {
+        const admin = createAdminClient()
+        progressRows = await readAll((from, to) =>
+          admin.from('read_progress')
+            .select('novel_id, episode_id, session_key, max_pct, read_seconds, reached_end')
+            .in('novel_id', novelIds)
+            .eq('is_author', false)
+            .or('is_bot.is.null,is_bot.eq.false')
+            /* ★ 並びを決めて読む。1 回の読書と話の組で、行は 1 つに決まる */
+            .order('session_key', { ascending: true })
+            .order('episode_id', { ascending: true })
+            .range(from, to),
+        )
+      } catch {
+        progressRows = []
+      }
+
+      const viewsByNovel: Record<string, any[]> = {}
+      ;(pageViews || []).forEach((pv: any) => {
+        const nId = epToNovel[pv.episode_id]
+        if (nId) (viewsByNovel[nId] ||= []).push(pv)
+      })
+      const progressByNovel: Record<string, any[]> = {}
+      progressRows.forEach((row: any) => { (progressByNovel[row.novel_id] ||= []).push(row) })
+
+      novelIds.forEach((id: string) => {
+        const eps = allEpisodes
+          .filter((e: any) => e.novel_id === id && e.is_published === true)
+          .map((e: any) => ({ id: e.id, title: e.title, publishedAt: e.publish_at || e.created_at }))
+        proMap[id] = buildProStats(eps, viewsByNovel[id] || [], progressByNovel[id] || [])
+      })
+    }
   }
 
   const novelStats = (novels || []).map((n: any) => {
@@ -381,6 +436,7 @@ export default async function AnalyticsPage({
       monthlyTop,
       episodeRows,
       commentList: st.commentList,
+      pro: proMap[n.id] ?? null,
     }
   })
 
@@ -404,7 +460,7 @@ export default async function AnalyticsPage({
         {novelStats.length === 0 ? (
           <div style={{textAlign:'center',padding:'60px 20px',color:'var(--color-text-muted)'}}>まだ作品がありません</div>
         ) : (
-          <AnalyticsCharts novels={novelStats} deviceStats={deviceStats} initialId={searchParams?.novel} />
+          <AnalyticsCharts novels={novelStats} deviceStats={deviceStats} initialId={searchParams?.novel} isPro={isPro} />
         )}
       </div>
       <Footer />

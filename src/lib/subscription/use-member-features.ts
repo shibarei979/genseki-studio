@@ -28,6 +28,7 @@ export interface MemberFeatures {
     noAds: boolean;
     aiCheck: boolean;
     fonts: boolean;
+    analyticsPro: boolean;
     versionKeep: number;
     operator: boolean;
 }
@@ -38,6 +39,7 @@ const NONE: MemberFeatures = {
     noAds: false,
     aiCheck: false,
     fonts: false,
+    analyticsPro: false,
     versionKeep: 30,
     operator: false,
 };
@@ -54,6 +56,7 @@ function ask(): Promise<MemberFeatures> {
                 noAds: data?.noAds === true,
                 aiCheck: data?.aiCheck === true,
                 fonts: data?.fonts === true,
+                analyticsPro: data?.analyticsPro === true,
                 versionKeep:
                     typeof data?.versionKeep === "number" && data.versionKeep > 0
                         ? data.versionKeep
