@@ -15,6 +15,7 @@ import type { MetadataRoute } from "next";
 
 import { appConfig } from "@/config";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readAll } from "@/lib/utils/read-all";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const base = appConfig.siteUrl;
@@ -86,13 +87,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
          */
         const ids = (data ?? []).map((row) => row.id);
         const live = new Set<string>();
+        /*
+         * ★ 公開中の話も、1 話ずつ地図に載せる。
+         *
+         *   前は作品の入口（あらすじの頁）だけを載せていた。
+         *   本文はその先にあるので、検索や広告の審査の見回りが
+         *   本文までたどり着かず、「中身の少ないサイト」に見えていた。
+         *   読み物のサイトの中身は本文なので、本文の頁を直に渡す。
+         *
+         * ★ 分けて取る。1 度に 1000 行までしか返らないため。
+         *   前はここで 1000 話を超えると、載るはずの作品が落ちていた。
+         */
+        let eps: { id: string; novel_id: string; posted_at: string | null; created_at: string | null }[] = [];
         if (ids.length > 0) {
-            const { data: eps } = await supabase
-                .from("episodes")
-                .select("novel_id")
-                .in("novel_id", ids)
-                .eq("is_published", true);
-            for (const row of eps ?? []) live.add(row.novel_id as string);
+            eps = await readAll((from, to) =>
+                supabase
+                    .from("episodes")
+                    .select("id, novel_id, posted_at, created_at")
+                    .in("novel_id", ids)
+                    .eq("is_published", true)
+                    .is("deleted_at", null)
+                    .order("id", { ascending: true })
+                    .range(from, to),
+            );
+            for (const row of eps) live.add(row.novel_id);
         }
 
         for (const novel of (data ?? []).filter((row) => live.has(row.id))) {
@@ -106,6 +124,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                     : now,
                 changeFrequency: "weekly",
                 priority: 0.7,
+            });
+        }
+
+        for (const ep of eps) {
+            if (!live.has(ep.novel_id)) continue;
+            const when = ep.posted_at || ep.created_at;
+            entries.push({
+                url: `${base}/novel/${ep.novel_id}/episode/${ep.id}`,
+                lastModified: when ? new Date(when) : now,
+                changeFrequency: "monthly",
+                priority: 0.6,
             });
         }
     } catch {
