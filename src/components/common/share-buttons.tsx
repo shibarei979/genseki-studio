@@ -32,10 +32,26 @@ interface Props {
     size?: "md" | "sm";
 }
 
+/** 住所に ?from= を付ける。付けられない住所はそのまま */
+function withFrom(url: string, from: string): string {
+    try {
+        const u = new URL(url);
+        u.searchParams.set("from", from);
+        return u.toString();
+    } catch {
+        return url;
+    }
+}
+
 export default function ShareButtons({ text, url, size = "md" }: Props) {
     const [copied, setCopied] = useState<"" | "ok" | "ng">("");
 
-    const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    /*
+     * ★ X に貼る住所には ?from=x を付ける。
+     *   X のアプリの中で開くと送り元が消え、「直接」来たように見える。
+     *   印があれば、X から来たと数えられる（ダッシュボードの「入り口」）。
+     */
+    const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(withFrom(url, "x"))}`;
 
     async function copy() {
         const value = `${text}${url}`;

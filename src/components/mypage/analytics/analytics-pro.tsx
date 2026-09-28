@@ -100,15 +100,17 @@ interface Props {
   pro: (Partial<ProStats> & Pick<ProStats, 'sources' | 'heat'>) | null
   /** 話ごとの閲覧数（書き出しに添える） */
   episodeViews: { title: string; views: number }[]
+  /** 上の余白を取らない（ダッシュボードの「Pro」に切り替えたとき、すぐ下に置くため） */
+  flush?: boolean
 }
 
-export default function AnalyticsPro({ isPro, isAll, novelTitle, pro, episodeViews }: Props) {
+export default function AnalyticsPro({ isPro, isAll, novelTitle, pro, episodeViews, flush = false }: Props) {
   const [tab, setTab] = useState<Tab>(isAll ? 'source' : 'read')
   useEffect(() => {
     if (isAll && (tab === 'read' || tab === 'flow')) setTab('source')
   }, [isAll, tab])
 
-  if (!isPro) return <Teaser />
+  if (!isPro) return <Teaser top={flush ? 0 : 28} />
   if (!pro) return null
   const full = !isAll && pro.progress ? (pro as ProStats) : null
 
@@ -116,7 +118,7 @@ export default function AnalyticsPro({ isPro, isAll, novelTitle, pro, episodeVie
     <section
       className="ana-root"
       style={{
-        marginTop: 28, borderRadius: 16, padding: '20px 20px 18px',
+        marginTop: flush ? 0 : 28, borderRadius: 16, padding: '20px 20px 18px',
         background: 'linear-gradient(180deg, #f3f8fd 0%, var(--color-bg-card) 220px)',
         border: '1px solid var(--color-brand-border)',
       }}
@@ -1085,7 +1087,7 @@ function IconDownload() { return <Svg><path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
  * Pro でない人へ。何が見られるかの見本
  * ============================================================ */
 
-function Teaser() {
+function Teaser({ top = 28 }: { top?: number }) {
   const items = [
     ['どこまで読まれたか', '最後まで読まれた割合と、どのあたりで閉じられたか'],
     ['読み続けてくれた率', '1話目の読者が、何話まで付いてきてくれたか'],
@@ -1095,7 +1097,7 @@ function Teaser() {
     ['投稿後の伸び', '公開から24時間・7日の閲覧数'],
   ]
   return (
-    <section style={{ marginTop: 28, ...card, background: 'linear-gradient(135deg, var(--color-bg-card), var(--color-brand-light))' }}>
+    <section style={{ marginTop: top, ...card, background: 'linear-gradient(135deg, var(--color-bg-card), var(--color-brand-light))' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)' }}>詳しい分析</span>
         <ProBadge />

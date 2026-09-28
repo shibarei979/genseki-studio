@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import AnalyticsPro from '@/components/mypage/analytics/analytics-pro'
+import ProBadge from '@/components/common/pro-badge'
 import { mergeProStats } from '@/lib/analytics/pro-stats'
 import type { ProStats } from '@/lib/analytics/pro-stats'
 
@@ -227,6 +228,11 @@ export default function AnalyticsCharts({
     ''
   const [selectedId, setSelectedId] = useState(firstId)
   const [range, setRange] = useState<'month'|'year'|'all'>('month')
+  /*
+   * ★ いちばん上で「通常」と「Pro」を切り替える。
+   *   詳しい分析（Pro）は、前はいちばん下までスクロールしないと見えなかった。
+   */
+  const [view, setView] = useState<'normal' | 'pro'>('normal')
 
   /* 別の作品の管理画面から来直したときも、その作品に合わせる */
   useEffect(() => {
@@ -251,6 +257,7 @@ export default function AnalyticsCharts({
   const [yearBack, setYearBack] = useState(0)
   const selected = options.find(n => n.id === selectedId) || options[0]
   if (!selected) return null
+  const isAllSelected = selected.id === ALL_ID
 
   /*
    * 見ている月の 1 日から末日まで。
@@ -319,6 +326,40 @@ export default function AnalyticsCharts({
         </div>
       </div>
 
+      {/* 通常 と Pro の切り替え */}
+      <div role="tablist" className="ana-views" style={{display:'flex',borderBottom:'1px solid var(--color-brand-border)',margin:'-4px 0 18px'}}>
+        {([
+          { key: 'normal', label: '通常', icon: <IconOverview /> },
+          { key: 'pro', label: '詳しい分析', icon: <IconPro /> },
+        ] as { key: 'normal' | 'pro'; label: string; icon: React.ReactNode }[]).map(one => {
+          const on = view === one.key
+          return (
+            <button key={one.key} type="button" role="tab" aria-selected={on}
+              onClick={() => setView(one.key)}
+              style={{
+                display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,padding:'11px 20px',fontSize:14,whiteSpace:'nowrap',
+                border:'none',background:'transparent',cursor:'pointer',
+                color:on?'var(--color-brand)':'var(--color-text-muted)',fontWeight:on?700:500,
+                borderBottom:on?'3px solid var(--color-brand)':'3px solid transparent',marginBottom:-1,
+              }}>
+              {one.icon}
+              <span>{one.label}</span>
+              {one.key === 'pro' && <ProBadge />}
+            </button>
+          )
+        })}
+      </div>
+
+      {view === 'pro' ? (
+        <AnalyticsPro
+          isPro={isPro}
+          isAll={isAllSelected}
+          novelTitle={selected.title}
+          pro={selected.pro ?? null}
+          episodeViews={selected.episodeRows.map(ep => ({ title: ep.title, views: ep.views }))}
+          flush
+        />
+      ) : (<>
       <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:16,alignItems:'start'}} className="ana-layout">
         {/* 左カラム：グラフ群 */}
         <div style={{display:'flex',flexDirection:'column',gap:16,minWidth:0}}>
@@ -561,15 +602,6 @@ export default function AnalyticsCharts({
         </div>
       </div>
 
-      {/* 詳しい分析（Pro）。入っていない人には見本だけ */}
-      <AnalyticsPro
-        isPro={isPro}
-        isAll={selected.id === ALL_ID}
-        novelTitle={selected.title}
-        pro={selected.pro ?? null}
-        episodeViews={selected.episodeRows.map(ep => ({ title: ep.title, views: ep.views }))}
-      />
-
       {/* 話別データ（全幅） */}
       <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginTop:16}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderBottom:'1px solid var(--color-brand-border)',background:'var(--color-bg)'}}>
@@ -637,9 +669,15 @@ export default function AnalyticsCharts({
         )}
       </div>
 
+      </>)}
+
       <style>{`
         @media (max-width: 900px) {
           .ana-layout { grid-template-columns: 1fr !important; }
+        }
+        /* 携帯：2 つを半分ずつの幅で並べる */
+        @media (max-width: 600px) {
+          .ana-views > button { flex: 1 1 0; padding: 10px 4px !important; min-width: 0; }
         }
       `}</style>
     </div>
@@ -814,5 +852,23 @@ export function DeviceDonut({
         ))}
       </div>
     </div>
+  )
+}
+
+/** 概要の絵（4 つの枠） */
+function IconOverview() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+    </svg>
+  )
+}
+
+/** Pro の絵（きらめき） */
+function IconPro() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>
+    </svg>
   )
 }

@@ -1,7 +1,7 @@
 import { looksLikeBot } from '@/lib/utils/bot'
 import ShareButtons from '@/components/common/share-buttons'
 import EpisodeNav from '@/components/novel/episode/episode-nav'
-import { nameSource } from '@/lib/utils/view-source'
+import { ENTRY_COOKIE, entryName, nameSource } from '@/lib/utils/view-source'
 import { createClient } from '@/lib/supabase/server'
 import { cookies, headers } from 'next/headers'
 export const dynamic = 'force-dynamic'
@@ -19,7 +19,11 @@ export async function generateMetadata({ params }: { params: { id: string; epId:
   const description = novel?.title
     ? `${novel.title} - ライトノベル投稿サイト「原石航路」`
     : 'ライトノベル投稿サイト「原石航路」'
-  return { title, description }
+  /*
+   * ★ 正規の住所を名乗る。シェアの住所に付く ?from=x などを、
+   *   検索が別の頁として数えないように（同じ本文が何枚もあるように見える）。
+   */
+  return { title, description, alternates: { canonical: `/novel/${params.id}/episode/${params.epId}` } }
 }
 
 import { notFound } from 'next/navigation'
@@ -40,9 +44,9 @@ import { QuoteProvider } from '@/components/novel/episode/quote-context'
 import { appConfig } from '@/config'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 
-interface Props { params: { id: string; epId: string } }
+interface Props { params: { id: string; epId: string }; searchParams?: { from?: string } }
 
-export default async function EpisodePage({ params }: Props) {
+export default async function EpisodePage({ params, searchParams }: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -261,7 +265,17 @@ export default async function EpisodePage({ params }: Props) {
      *   「X」「YouTube」など、来た先の名だけにする。
      *   住所ごと持つと、人を追える記録になってしまう。
      */
-    const source = nameSource(head.get('referer') || '', new URL(appConfig.siteUrl).host)
+    /*
+     * ★ 送り元が自分のサイトのとき（作品の頁から 1 話目を押した など）は、
+     *   サイトに入ってきたときの先（middleware が札に書いたもの）を使う。
+     *   こうしないと、X から来て作品の頁を経た人が「サイトの中」になる。
+     * ★ 住所に ?from=x が付いていれば、それを先に信じる。
+     *   X のアプリの中の窓は送り元を消すので、印が無いと「直接」に見える。
+     */
+    let source: string = entryName(searchParams?.from) ?? nameSource(head.get('referer') || '', new URL(appConfig.siteUrl).host)
+    if (source === 'site') {
+      source = entryName((await cookies()).get(ENTRY_COOKIE)?.value) ?? 'site'
+    }
 
     /*
      * ★ 誰が来たかではなく、何人が来たかを数えるための札。

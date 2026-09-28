@@ -15,6 +15,7 @@ import { appConfig } from "@/config";
 
 import { hasSupabase } from "@/config/env.client";
 import { updateSession } from "@/lib/supabase/middleware";
+import { ENTRY_COOKIE, entryName, nameSource } from "@/lib/utils/view-source";
 
 export async function middleware(request: NextRequest) {
     /*
@@ -90,6 +91,37 @@ export async function middleware(request: NextRequest) {
             sameSite: "lax",
             path: "/",
         });
+    }
+
+    /*
+     * ★ どこから入ってきたかを、札に書いておく（30 分）。
+     *
+     *   話の頁の閲覧は、作品の頁から 1 話目を押して来ることが多く、
+     *   そのときの送り元は自分のサイトになる。
+     *   入ってきた先（X・検索など）が分からなくなるので、ここで覚える。
+     *
+     * ★ 頁そのものを開いたときだけ見る。
+     *   サイトの中の移り変わり（画面の差し替え）は、送り元が自分のサイトなので
+     *   書き替えない。有効期限だけ延ばす。
+     */
+    const isDocument =
+        !isBackstage &&
+        request.method === "GET" &&
+        !request.headers.get("rsc") &&
+        (request.headers.get("sec-fetch-dest") ?? "document") === "document";
+    if (isDocument) {
+        const fromParam = entryName(request.nextUrl.searchParams.get("from"));
+        const byReferer = nameSource(request.headers.get("referer") ?? "", site.host);
+        const entry = fromParam ?? (byReferer === "site" ? null : byReferer);
+        const current = entryName(request.cookies.get(ENTRY_COOKIE)?.value);
+        const value = entry ?? current;
+        if (value) {
+            response.cookies.set(ENTRY_COOKIE, value, {
+                maxAge: 60 * 30,
+                sameSite: "lax",
+                path: "/",
+            });
+        }
     }
 
     return response;
