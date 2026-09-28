@@ -68,8 +68,16 @@ export default async function NovelManagePage({ params }: { params: { id: string
 
   const fmt = (s?: string | null) => {
     if (!s) return '—'
-    const d = new Date(s)
-    return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日 ${String(d.getHours()).padStart(2, '0')}時${String(d.getMinutes()).padStart(2, '0')}分`
+    /*
+     * ★ 日本時間で出す。
+     *   この頁はサーバー（Vercel）で組み立てる。サーバーの時計は世界標準時なので、
+     *   getHours() などをそのまま使うと 9 時間ずれていた（夜 9 時の投稿が「12時」と出る）。
+     *   9 時間足してから、世界標準時として読む。
+     */
+    const t = new Date(s).getTime()
+    if (Number.isNaN(t)) return '—'
+    const d = new Date(t + 9 * 60 * 60 * 1000)
+    return `${d.getUTCFullYear()}年${String(d.getUTCMonth() + 1).padStart(2, '0')}月${String(d.getUTCDate()).padStart(2, '0')}日 ${String(d.getUTCHours()).padStart(2, '0')}時${String(d.getUTCMinutes()).padStart(2, '0')}分`
   }
 
   const secStyle = { background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-border)', borderRadius: 12, marginBottom: 16, overflow: 'hidden' as const }
