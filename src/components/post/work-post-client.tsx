@@ -2590,14 +2590,13 @@ function PostForm({
                         </li>
                     </ul>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={publishNow}
-                            className="rounded-md bg-forest-dark px-6 py-2 text-sm font-medium text-white hover:opacity-90"
-                        >
-                            公開する
-                        </button>
+                    {/*
+                      * ★ ボタンは右下にそろえる（押した「この話を投稿する」の真下の並び）。
+                      *   前は左端に置いていて、右下 → 左下 と目と手が大きく動いていた。
+                      *   確かめの枠は押したボタンより下に出るので、二度押しで当たることはない。
+                      *   いちばん右が「公開する」、その左が「やめる」。
+                      */}
+                    <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
                         <button
                             type="button"
                             autoFocus
@@ -2605,6 +2604,13 @@ function PostForm({
                             className="rounded-md border border-line bg-surface px-5 py-2 text-sm text-muted hover:text-ink"
                         >
                             やめる
+                        </button>
+                        <button
+                            type="button"
+                            onClick={publishNow}
+                            className="rounded-md bg-forest-dark px-6 py-2 text-sm font-medium text-white hover:opacity-90"
+                        >
+                            公開する
                         </button>
                     </div>
                 </div>
