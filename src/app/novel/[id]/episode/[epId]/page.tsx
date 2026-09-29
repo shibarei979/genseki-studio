@@ -1,4 +1,4 @@
-import { looksLikeBot } from '@/lib/utils/bot'
+import { looksLikeBotRequest } from '@/lib/utils/bot'
 import ShareButtons from '@/components/common/share-buttons'
 import EpisodeNav from '@/components/novel/episode/episode-nav'
 import { ENTRY_COOKIE, entryName, nameSource } from '@/lib/utils/view-source'
@@ -289,7 +289,7 @@ export default async function EpisodePage({ params, searchParams }: Props) {
     const jar = await cookies()
     const visitorId = jar.get('gk-visitor')?.value ?? null
     const sessionId = jar.get('gk-session')?.value ?? null
-    const isBot = looksLikeBot(ua)
+    const isBot = looksLikeBotRequest(head)
     // 1日1人1話1PV制限：同じユーザーが同じ日に同じ話を見ていたらカウントしない
     /* 「同じ日」は日本時間の 0 時で区切る（サーバーの時計は世界標準時で、そのままだと朝 9 時が境目になる） */
     const todayStart = new Date(Math.floor((Date.now() + 9 * 3600000) / 86400000) * 86400000 - 9 * 3600000)

@@ -22,7 +22,7 @@ import { NextResponse } from "next/server";
 import { appConfig } from "@/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { looksLikeBot } from "@/lib/utils/bot";
+import { looksLikeBotRequest } from "@/lib/utils/bot";
 import { nameSource } from "@/lib/utils/view-source";
 
 /** 控える頁の種類 */
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
                 device: /mobile|android|iphone|ipad/i.test(ua)
                     ? "mobile"
                     : "desktop",
-                is_bot: looksLikeBot(ua),
+                is_bot: looksLikeBotRequest(head),
             });
 
         return NextResponse.json({ ok: true });

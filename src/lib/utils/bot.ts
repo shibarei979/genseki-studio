@@ -47,6 +47,51 @@ const BOT_WORDS = [
     "wget",
     "axios",
     "node-fetch",
+
+    /*
+     * ★ 「bot」と名乗らない見回り（2026-09 に足した）。
+     *
+     *   Google の広告の見回り（Mediapartners-Google）や
+     *   検査の道具（Google-InspectionTool）などは、名前に bot が入っていない。
+     *   サイトの地図に本文の頁を載せてから、こうした見回りが
+     *   本文を 1 話ずつ開くようになり、閲覧数が跳ねた。
+     */
+    "mediapartners-google",
+    "google-inspectiontool",
+    "googleother",
+    "google-extended",
+    "google-read-aloud",
+    "apis-google",
+    "feedfetcher",
+    "google-safety",
+    "chatgpt-user",
+    "claude-web",
+    "anthropic-ai",
+    "perplexity",
+    "ccbot",
+    "meta-externalagent",
+    "meta-externalfetcher",
+    "facebookcatalog",
+    "applebot",
+    "amazonbot",
+    "yeti",
+    "daum",
+    "scrapy",
+    "go-http-client",
+    "okhttp",
+    "java/",
+    "libwww",
+    "httpclient",
+    "python-urllib",
+    "aiohttp",
+    "httpx",
+    "phantomjs",
+    "puppeteer",
+    "playwright",
+    "selenium",
+    "lighthouse",
+    "ptst",
+    "preview",
 ];
 
 /**
@@ -60,4 +105,17 @@ export function looksLikeBot(userAgent: string): boolean {
 
     const lower = userAgent.toLowerCase();
     return BOT_WORDS.some((word) => lower.includes(word));
+}
+
+/**
+ * 要求の頭書き（headers）ごと見る。名乗りだけで見分けるより強い。
+ *
+ * ★ ふつうのブラウザは、必ず「読める言葉」（Accept-Language）を付けて来る。
+ *   パソコンでも携帯でも、X や LINE の中の窓でも付く。
+ *   付いていないのは、ほぼ機械。ブラウザのふりをした名乗りでも、ここで分かる。
+ */
+export function looksLikeBotRequest(head: { get(name: string): string | null }): boolean {
+    if (looksLikeBot(head.get("user-agent") ?? "")) return true;
+    if (!head.get("accept-language")) return true;
+    return false;
 }
