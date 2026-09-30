@@ -22,8 +22,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useSwipeClose } from "@/lib/swipe-close";
 
 /* ------------------------------------------------------------
  * 携帯かどうか
@@ -598,6 +599,11 @@ export function MobileToolsSheet({
         );
     };
 
+    /* 見出し（道具〜とじる）とつまみを下へなでると閉じる */
+    const sheetRef = useRef<HTMLDivElement>(null);
+    const headRef = useRef<HTMLDivElement>(null);
+    useSwipeClose(headRef, sheetRef, onClose, true);
+
     /*
      * ★ 体の直下に出す。
      *   書く欄の中（字の大きさを幅で決めるための入れ物）に置くと、
@@ -607,11 +613,13 @@ export function MobileToolsSheet({
     return createPortal(
         <div className="mw-sheet-wrap" role="dialog" aria-label="道具">
             <button type="button" className="mw-dim" onClick={onClose} aria-label="とじる" />
-            <div className="mw-sheet">
+            <div className="mw-sheet" ref={sheetRef}>
+                <div ref={headRef} className="mw-sheet-top">
                 <div className="mw-grab" />
                 <div className="mw-sheet-head">
                     <h3>道具</h3>
                     <button type="button" onClick={onClose}>とじる</button>
+                </div>
                 </div>
 
                 <div className="mw-jump">

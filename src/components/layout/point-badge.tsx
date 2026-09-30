@@ -152,7 +152,8 @@ export default function PointBadge() {
                 }
             }}
         >
-            <span className="ptb-coin" aria-hidden="true">P</span>
+            {/* ★ 「無料ポイント」と書く（P の印だけでは何の数か分からない） */}
+            <span className="ptb-l">無料ポイント</span>
             <span className="ptb-n">{points.toLocaleString()}</span>
         </Link>
     );

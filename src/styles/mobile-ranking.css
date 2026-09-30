@@ -460,3 +460,72 @@
     /* あらすじは 2 行 */
     .rk-summary { -webkit-line-clamp: 2 !important; }
 }
+
+/*
+ * ============================================================
+ * 携帯：絞り込みを開いたら、探すの条件と同じく下から出る窓にする
+ *
+ * ★ 前はその場で下へ伸びるだけで、作品の一覧が遠くへ押し出されていた。
+ * ★ 見出し（絞り込み〜閉じる）を下へなでても閉じる（rank-sheet-swipe.tsx）。
+ * ============================================================
+ */
+.rk-sheet-dim,
+.rk-sheet-head {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .rk-more-check:checked ~ .rk-sheet-dim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(20, 30, 40, .45);
+    }
+
+    .rk-more-check:checked ~ .ranking-filter {
+        position: fixed !important;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1001;
+        margin: 0 !important;
+        /* 上は必ず少し空ける（後ろの画面が見えて、窓だと分かる） */
+        max-height: calc(100vh - 88px);
+        max-height: calc(100dvh - 88px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border: none !important;
+        border-radius: 18px 18px 0 0 !important;
+        padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+        background: var(--color-bg-card, #fff) !important;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, .18);
+    }
+
+    .rk-more-check:checked ~ .ranking-filter .rk-sheet-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        margin: 0 -16px 12px;
+        padding: 16px 16px 10px;
+        background: var(--color-bg-card, #fff);
+        border-bottom: 1px solid var(--color-brand-border);
+        touch-action: none;
+    }
+    .rk-sheet-head b { font-size: 17px; color: var(--color-text); }
+    .rk-sheet-head label {
+        color: var(--color-brand);
+        font-size: 14px;
+        font-weight: 700;
+        padding: 6px 4px;
+        cursor: pointer;
+    }
+
+    /* 窓のときは「開く・閉じる」の札は要らない（見出しの「閉じる」で閉じる） */
+    .rk-more-check:checked ~ .ranking-filter .rk-more-label {
+        display: none;
+    }
+}

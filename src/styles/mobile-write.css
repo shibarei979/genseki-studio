@@ -765,3 +765,8 @@
         display: none !important;
     }
 }
+
+/* 道具：見出し（つまみ〜とじる）を下へなでて閉じる */
+@media (max-width: 1023px) {
+    .mw-sheet-top { touch-action: none; }
+}

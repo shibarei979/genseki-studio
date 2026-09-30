@@ -54,28 +54,11 @@ export default function MobileHeader() {
     }, []);
 
     /*
-     * 本文を書く画面だけ、出さない。
-     *
-     * ★ /workspace 全部を外してはいけない。
-     *   設定・資料・下読みも同じ道の下にあり、
-     *   丸ごと外すと、そこから戻る術が無くなる。
-     *
-     * 本文を書くのは /workspace/…/post だけ。
+     * ★ 書く画面・資料・設定・読者の目でも出す（上の段は、どの頁でも無くさない）。
+     *   ただし、その頁は自前の上の段（‹・話の題・投稿）を貼り付けているので、
+     *   サイトの上の段は貼り付けずに、送ると一緒に上へ流れる形にする（is-static）。
      */
-    if (/^\/workspace\/[^/]+\/post/.test(pathname)) return null;
-
-    /*
-     * ★ 本文を書く画面（/workspace/作品）でも出さない。
-     *   携帯の書く画面は、自前の上の段（‹・話の題・投稿）を持つ。
-     *   上に 2 段重なると、書く場所がそのぶん減る。
-     */
-    if (/^\/workspace\/[^/]+\/?$/.test(pathname)) return null;
-
-    /*
-     * 資料・設定・読者の目のページも、自前の上の段（‹・ページ名／作品名・投稿）を持つ。
-     * サイトの上の段も出すと 2 段になり、貼り付いた段どうしが重なる。
-     */
-    if (/^\/workspace\/[^/]+\/(resource|settings|preview)/.test(pathname)) return null;
+    const isWorkspace = pathname.startsWith("/workspace/");
 
     /*
      * 全画面で読む頁でも出さない。
@@ -93,7 +76,7 @@ export default function MobileHeader() {
     if (/\/read$/.test(pathname)) return null;
 
     return (
-        <header className="mh">
+        <header className={isWorkspace ? "mh is-static" : "mh"}>
             <Link href="/" className="mh_logo" aria-label="原石航路 ホームへ">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/logo.svg" alt="原石航路" />

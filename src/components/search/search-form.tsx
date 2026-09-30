@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useSwipeClose } from '@/lib/swipe-close'
 import { GENRES_SELECTABLE, GENRES_R18_ONLY } from '@/types'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -176,6 +177,10 @@ export default function SearchForm({
    * パソコンでは使わない。CSS 側で常に開いた形にしている。
    */
   const [spOpen, setSpOpen] = useState(false)
+  /* 携帯：条件の窓は、見出し（条件〜閉じる）を下へなでると閉じる */
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const sheetHeadRef = useRef<HTMLDivElement>(null)
+  useSwipeClose(sheetHeadRef, sheetRef, () => setSpOpen(false), spOpen)
 
   const [name,               setName]               = useState(defaultName)
   const [q,                  setQ]                  = useState(defaultQ)
@@ -429,10 +434,10 @@ export default function SearchForm({
     </div>
     {spOpen && <button type="button" className="sf-dim" aria-label="閉じる" onClick={()=>setSpOpen(false)}/>}
 
-    <div className={`sf-box${spOpen ? ' is-open' : ''}`} style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding: isMobile ? '16px' : '20px',marginBottom:16}}>
+    <div ref={sheetRef} className={`sf-box${spOpen ? ' is-open' : ''}`} style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding: isMobile ? '16px' : '20px',marginBottom:16}}>
 
       {/* 携帯の下から出る 1 枚の見出し。パソコンでは出さない */}
-      <div className="sf-sheet-head">
+      <div ref={sheetHeadRef} className="sf-sheet-head">
         <b>条件</b>
         <button type="button" onClick={()=>setSpOpen(false)}>閉じる</button>
       </div>

@@ -1,3 +1,4 @@
+import RankSheetSwipe from '@/components/ranking/rank-sheet-swipe'
 import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import { createClient as createSbClient } from '@supabase/supabase-js'
@@ -757,8 +758,19 @@ export default async function RankingPage({ searchParams }: Props) {
               * パソコンでは CSS 側で隠してあるので、出ない。
               */}
             <input type="checkbox" id="rk-more" className="rk-more-check" />
+            {/* 携帯：絞り込みを開いたときの暗幕。押すと閉じる（探すの条件と同じ形） */}
+            <label htmlFor="rk-more" className="rk-sheet-dim" aria-label="閉じる" />
+            <RankSheetSwipe />
 
             <div className="ranking-filter" style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'12px 16px',marginBottom:16}}>
+            {/*
+              * 携帯：下から出る窓の見出し。下へなでても閉じる。
+              * ★ div ではなく header にする（下の .rk-filter の何番目かの数え方をずらさないため）。
+              */}
+            <header className="rk-sheet-head">
+              <b>絞り込み</b>
+              <label htmlFor="rk-more">閉じる</label>
+            </header>
             {/* 期間 */}
             <div className="rk-filter" style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:14}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,minWidth:60,flexShrink:0,paddingTop:5,lineHeight:1.3}}>期間</div>

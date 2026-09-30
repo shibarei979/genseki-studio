@@ -132,7 +132,11 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
         return (
           <div key={m.id} style={{ marginBottom: 11 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text)' }}>{m.label}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-text)' }}>{m.label}</span>
+                {/* もらえるポイント */}
+                <span className="mc-pt"><span className="mc-coin" aria-hidden="true">P</span>10</span>
+              </span>
               <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{cur}/{m.target}</span>
             </div>
             <div style={{ height: 5, background: 'var(--color-bg)', borderRadius: 3, overflow: 'hidden' }}>

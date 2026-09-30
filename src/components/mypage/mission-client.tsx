@@ -322,7 +322,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
                   {/* もらえるポイント。もうもらったものは「受け取り済み」 */}
                   <span className={`mc-pt${paidIds.has(m.id) ? ' is-paid' : ''}`}>
                     <span className="mc-coin" aria-hidden="true">P</span>
-                    {paidIds.has(m.id) ? '10 受け取り済み' : '+10'}
+                    10{paidIds.has(m.id) ? ' 受取済' : ''}
                   </span>
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginBottom: 6 }}>{m.desc}</div>

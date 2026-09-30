@@ -260,3 +260,8 @@
     .sp-genre-band b { display: block; font-size: 22px; font-weight: 700; margin: 2px 0 3px; }
     .sp-genre-band span { font-size: 12px; opacity: .9; }
 }
+
+/* 条件の窓：見出しを下へなでて閉じる（search-form.tsx）。なでる所で頁を送らせない */
+@media (max-width: 1023px) {
+    .sf-box.is-open .sf-sheet-head { touch-action: none; }
+}
