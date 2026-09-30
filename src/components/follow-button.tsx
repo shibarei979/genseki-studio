@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
@@ -15,22 +15,35 @@ export default function FollowButton({ authorId, userId, initialFollowing, follo
   const [following, setFollowing] = useState(initialFollowing)
   const [loading,   setLoading]   = useState(false)
   const [hovered,   setHovered]   = useState(false)
+  /*
+   * ★ 押している最中は、次の押しを受けない（すぐ効く錠）。
+   *   loading は画面が描き直されるまで変わらないので、
+   *   素早く 2 回押すと両方とも通り、フォローの通知が 2 つ届いていた。
+   */
+  const busyRef = useRef(false)
 
   async function handleToggle() {
-    if (loading) return
+    if (busyRef.current) return
+    busyRef.current = true
     setLoading(true)
+    try {
     if (following) {
       await supabase.from('follows').delete()
         .eq('follower_id', userId).eq('following_id', authorId)
       setFollowing(false)
     } else {
-      await supabase.from('follows').insert({ follower_id: userId, following_id: authorId })
+      const { error } = await supabase.from('follows').insert({ follower_id: userId, following_id: authorId })
       setFollowing(true)
-      /* 相手に知らせる。誰がフォローしたかは受け口の側で組み立てる */
-      fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ follow_user_id: authorId }) }).catch(() => {})
+      /* 相手に知らせる。誰がフォローしたかは受け口の側で組み立てる（もうフォロー済みで弾かれたときは送らない） */
+      if (!error) {
+        fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ follow_user_id: authorId }) }).catch(() => {})
+      }
     }
-    setLoading(false)
+    } finally {
+      busyRef.current = false
+      setLoading(false)
+    }
   }
 
   return (

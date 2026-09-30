@@ -451,6 +451,11 @@ export async function POST(request: Request) {
             link: notice.link,
         });
 
+        /*
+         * ★ 同じ知らせが同時に 2 回来たとき、あとの方は表の決まり（follow_notify_once.sql）で弾かれる。
+         *   それは失敗ではないので、送らなかったことにして返す。
+         */
+        if (writeError && (writeError as { code?: string }).code === "23505") return none;
         if (writeError) throw writeError;
 
         return NextResponse.json({ sent: 1 });
