@@ -272,11 +272,28 @@ export async function POST(request: Request) {
          *   決まってから shop_items の id を指して配る。
          *   仮のものを配ると、あとで回収できない。
          */
+        /*
+         * ★ もうポイントを配ったミッション（いまの向きの分）。
+         *   クリアをやり直したときに、配れない「+10pt」を出さないため。
+         */
+        const { data: paidRows } = await admin
+            .from("free_point_events")
+            .select("reason_ref")
+            .eq("user_id", user.id)
+            .eq("kind", "earn")
+            .eq("reason", "mission");
+        const prefix = side ? `${side}:` : "";
+        const paid = ((paidRows ?? []) as { reason_ref: string | null }[])
+            .map((row) => row.reason_ref ?? "")
+            .filter((ref) => (prefix ? ref.startsWith(prefix) : ref.includes(":")))
+            .map((ref) => ref.slice(ref.indexOf(":") + 1));
+
         return NextResponse.json({
             earned,
             readerDone,
             writerDone,
             doneCount: done.length,
+            paid,
         });
     } catch (caught) {
         return NextResponse.json(

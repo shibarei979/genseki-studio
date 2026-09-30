@@ -19,6 +19,7 @@ import dynamic from 'next/dynamic'
 
 import Header from '@/components/layout/header'
 import MypageDashboard from '@/components/mypage/mypage-dashboard'
+import MissionCallout from '@/components/mypage/mission-callout'
 import ItemTree from '@/components/mypage/item-tree'
 
 /*
@@ -927,6 +928,16 @@ export default function MypageClient({
           <button onClick={()=>setShowBdModal(true)} style={{padding:'8px 16px',background:'var(--color-danger)',color:'#fff',border:'none',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0}}>設定する</button>
         </div>
       )}
+      {/*
+        * ミッションとログインスタンプの入り口。
+        * ★ いちばん上に置く。メニューの奥だと、たどり着けない人が多かった。
+        */}
+      <MissionCallout
+        stats={missionStatsNow}
+        claimedIds={claimedMissionIds}
+        isWriter={isWriterRole}
+        onOpen={() => { handleTabChange('mission'); window.scrollTo(0, 0) }}
+      />
       <div style={{display:'flex',alignItems:'flex-start',gap:24,marginBottom:20,flexWrap:'wrap',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding: isMobile ? '16px 14px' : '20px 22px'}}>
         <div style={{position:'relative',flexShrink:0,cursor:'pointer',width:88,height:88,marginTop:(profile as any).costume_url?34:0}} onClick={()=>iconInputRef.current?.click()}>
           {/*

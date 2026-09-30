@@ -6,7 +6,7 @@
  * EpisodeStamps — 話の終わりで押すスタンプ
  *
  *   押されたスタンプ（多い順・数つき）
- *   ［スタンプを押す］ → 持っているスタンプの一覧から選ぶ
+ *   持っているスタンプの一覧（最初から並べておく。押すと付く）
  *
  * ★ 押せるのは、アイテムツリーで交換したスタンプだけ。
  *   持っていない人には、どこで手に入るかを案内する。
@@ -59,7 +59,6 @@ export default function EpisodeStamps({ episodeId }: { episodeId: string }) {
     const [owned, setOwned] = useState<Owned[]>([]);
     const [loggedIn, setLoggedIn] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [isTrayOpen, setIsTrayOpen] = useState(false);
     const [busyId, setBusyId] = useState<string | null>(null);
     const [message, setMessage] = useState("");
 
@@ -161,14 +160,34 @@ export default function EpisodeStamps({ episodeId }: { episodeId: string }) {
 
             {loggedIn ? (
                 owned.length > 0 ? (
-                    <button
-                        type="button"
-                        className="eps-open"
-                        onClick={() => setIsTrayOpen((now) => !now)}
-                        aria-expanded={isTrayOpen}
-                    >
-                        {isTrayOpen ? "とじる" : "スタンプを押す"}
-                    </button>
+                    /*
+                     * ★ 持っているスタンプは、最初から並べておく。
+                     *   「スタンプを押す」を押してから出す作りだと、押せることに気づかれなかった。
+                     */
+                    <>
+                        <p className="eps-cap">スタンプを押す</p>
+                        <ul className="eps-tray">
+                            {owned.map((one) => {
+                                const isMine = stamps.some((s) => s.id === one.id && s.mine);
+                                return (
+                                    <li key={one.id}>
+                                        <button
+                                            type="button"
+                                            className={`eps-pick${isMine ? " is-mine" : ""}`}
+                                            onClick={() => void press(one)}
+                                            disabled={busyId === one.id}
+                                            title={isMine ? `「${one.name}」を外す` : `「${one.name}」を押す`}
+                                        >
+                                            {one.url && (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img src={one.url} alt={one.name} />
+                                            )}
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </>
                 ) : (
                     <p className="eps-note">
                         スタンプは
@@ -178,30 +197,6 @@ export default function EpisodeStamps({ episodeId }: { episodeId: string }) {
                 )
             ) : (
                 stamps.length > 0 && <p className="eps-note">ログインすると、スタンプを押せます。</p>
-            )}
-
-            {isTrayOpen && owned.length > 0 && (
-                <ul className="eps-tray">
-                    {owned.map((one) => {
-                        const isMine = stamps.some((s) => s.id === one.id && s.mine);
-                        return (
-                            <li key={one.id}>
-                                <button
-                                    type="button"
-                                    className={`eps-pick${isMine ? " is-mine" : ""}`}
-                                    onClick={() => void press(one)}
-                                    disabled={busyId === one.id}
-                                    title={isMine ? `「${one.name}」を外す` : `「${one.name}」を押す`}
-                                >
-                                    {one.url && (
-                                        /* eslint-disable-next-line @next/next/no-img-element */
-                                        <img src={one.url} alt={one.name} />
-                                    )}
-                                </button>
-                            </li>
-                        );
-                    })}
-                </ul>
             )}
 
             {message && <p className="eps-msg">{message}</p>}

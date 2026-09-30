@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import LoginCard from '@/components/mypage/login-card'
+import LoginStampButton from '@/components/mypage/login-stamp-button'
 
 export interface MissionStats {
   likeCount: number
@@ -127,6 +127,20 @@ export const WRITER_MISSIONS: Mission[] = WRITER_ONLY_MISSIONS
  */
 const claimedThisVisit = new Set<string>()
 
+/**
+ * マイページの入り口に出す数（達成しているのに、まだクリアを押していないもの）。
+ * この画面で押したものも数に入れる。
+ */
+export function missionProgress(stats: MissionStats, claimedIds: string[], isWriter: boolean) {
+  const list = isWriter
+    ? [...COMMON_MISSIONS, ...WRITER_ONLY_MISSIONS]
+    : [...COMMON_MISSIONS, ...READER_ONLY_MISSIONS]
+  const claimed = new Set([...claimedIds, ...Array.from(claimedThisVisit)])
+  const done = list.filter(m => claimed.has(m.id)).length
+  const claimable = list.filter(m => !claimed.has(m.id) && Math.min(m.target, m.cur(stats)) >= m.target).length
+  return { total: list.length, done, claimable }
+}
+
 export default function MissionClient({ user, stats, initialClaimedIds, isWriter }: Props) {
   /*
    * ★ 向きによって、出す一覧を変える。
@@ -145,6 +159,8 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
   const [vanishing, setVanishing] = useState('')
   /* もらったポイントの知らせ */
   const [earnedNote, setEarnedNote] = useState('')
+  /* もうポイントを配ったミッション。押しても +10pt は付かない */
+  const [paidIds, setPaidIds] = useState<Set<string>>(new Set())
 
   /*
    * ポイントを受け取る。
@@ -160,7 +176,8 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
         body: JSON.stringify({ side: isWriter ? 'writer' : 'reader' }),
       })
       if (!response.ok) return
-      const data = (await response.json()) as { earned?: number }
+      const data = (await response.json()) as { earned?: number; paid?: string[] }
+      if (data.paid) setPaidIds(new Set(data.paid))
       if (data.earned && data.earned > 0) {
         setEarnedNote(`無料ポイントを ${data.earned} pt もらいました`)
         window.setTimeout(() => setEarnedNote(''), 4000)
@@ -173,49 +190,14 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
   /*
    * ★ 開いたときにも頼む。
    *   ポイントが付く前に「クリア！」を押していた人の分も、ここで届く。
+   *
+   * ★ 達成していても、勝手にクリアにはしない。
+   *   「クリア！」を押すのが楽しみなので、押すのは本人。
    */
   useEffect(() => {
-    if (!user) return
-    let alive = true
-    void (async () => {
-      await autoClaimAchieved(() => alive)
-      await collectPoints()
-    })()
-    return () => {
-      alive = false
-    }
+    if (user) void collectPoints()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isWriter])
-
-  /*
-   * ★ もう達成しているミッションは、開いたときにクリアにしておく。
-   *
-   *   ミッションを新しく足したとき、前から条件を満たしている人にも
-   *   「クリア！」を 1 つずつ押させるのは手間なだけ。
-   *   達成しているのにクリアになっていないものを、まとめてクリアにする。
-   *   ポイントは、このあとの collectPoints でまとめて届く（サーバーが達成を確かめる）。
-   */
-  async function autoClaimAchieved(isAlive: () => boolean) {
-    const pending = MISSIONS.filter(
-      m => !claimed.has(m.id) && Math.min(m.target, m.cur(stats)) >= m.target,
-    ).map(m => m.id)
-    if (pending.length === 0) return
-    try {
-      const { data: { user: u } } = await supabase.auth.getUser()
-      if (!u) return
-      const done: string[] = []
-      for (const missionId of pending) {
-        const { error } = await supabase.from('user_missions').insert({ user_id: u.id, mission_id: missionId })
-        /* もう入っていた（別の画面で押した等）ときも、クリア済みとして扱う */
-        if (!error || error.code === '23505') done.push(missionId)
-      }
-      if (!isAlive() || done.length === 0) return
-      done.forEach(id => claimedThisVisit.add(id))
-      setClaimed(prev => new Set([...Array.from(prev), ...done]))
-    } catch {
-      /* クリアにできなくても、「クリア！」の押し具は残る */
-    }
-  }
 
   async function handleClaim(missionId: string) {
     setClaiming(missionId)
@@ -274,7 +256,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
       )}
 
       {/* 乗船印帳（毎日ログイン） */}
-      {user && <LoginCard />}
+      {user && <div style={{ marginBottom: 16 }}><LoginStampButton /></div>}
 
       {/* サマリーカード */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-border)', borderRadius: 14, padding: '20px 24px', marginBottom: 20, flexWrap: 'wrap' }}>
@@ -359,7 +341,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
                     border: 'none', borderRadius: 20, padding: '9px 20px', cursor: 'pointer',
                     boxShadow: '0 3px 10px color-mix(in srgb, var(--color-brand) 40%, transparent)',
                   }}>
-                  {claiming === m.id ? '...' : 'クリア！ +10pt'}
+                  {claiming === m.id ? '...' : paidIds.has(m.id) ? 'クリア！' : 'クリア！ +10pt'}
                 </button>
               ) : (
                 <span style={{ fontSize: 11, color: 'var(--color-text-faint)', flexShrink: 0, border: '1px solid var(--color-brand-border)', borderRadius: 14, padding: '5px 12px' }}>挑戦中</span>

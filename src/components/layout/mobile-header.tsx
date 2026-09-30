@@ -1,5 +1,6 @@
 "use client";
 
+import PointBadge from "@/components/layout/point-badge";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -99,6 +100,9 @@ export default function MobileHeader() {
             </Link>
 
             <div className="mh_right">
+                {/* いま持っている無料ポイント（押すとミッションへ） */}
+                <PointBadge />
+
                 {/*
                   * 執筆向き／読書向きの切り替え。
                   * パソコンと同じく、ベルの左に置く。

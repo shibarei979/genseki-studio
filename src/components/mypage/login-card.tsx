@@ -32,8 +32,8 @@ import { InkDefs, Seal, SquareSeal } from "@/components/points/login-seal";
 
 export const LOGIN_STAMP_EVENT = "gk-login-stamp";
 
-export default function LoginCard() {
-    const [state, setState] = useState<LoginCardState | null>(null);
+export default function LoginCard({ initial = null }: { initial?: LoginCardState | null } = {}) {
+    const [state, setState] = useState<LoginCardState | null>(initial);
 
     useEffect(() => {
         let alive = true;
@@ -74,18 +74,18 @@ export default function LoginCard() {
     const left = CARD_CELLS - state.filled;
 
     return (
-        <section className="lcard" aria-label="乗船印帳">
+        <section className="lcard" aria-label="ログインスタンプ">
             <InkDefs />
             <header className="lcard-h">
-                <b>乗船印帳</b>
-                <small>{state.book}冊目</small>
+                <b>ログインスタンプ</b>
+                <small>{state.book}枚目</small>
                 {state.streak > 0 && (
                     <span className="lcard-streak">
                         連続 <strong>{state.streak}</strong> 日
                     </span>
                 )}
                 <span className="lcard-cnt" style={{ color: ink }}>
-                    <strong>{state.filled}</strong> / {CARD_CELLS} 印
+                    <strong>{state.filled}</strong> / {CARD_CELLS}
                 </span>
             </header>
 
@@ -104,7 +104,7 @@ export default function LoginCard() {
                                     <div
                                         key={n}
                                         className={`lcard-cell${isToday ? " is-today" : ""}${isNext ? " is-next" : ""}`}
-                                        title={isDone ? `${n}日目　${MOTIF_NAME[motifOf(n)]}の印` : undefined}
+                                        title={isDone ? `${n}日目　${MOTIF_NAME[motifOf(n)]}のスタンプ` : undefined}
                                     >
                                         <span className="lcard-slot" />
                                         {isDone ? (
@@ -146,14 +146,14 @@ export default function LoginCard() {
             </div>
 
             <footer className="lcard-f">
-                <span>この印帳で {pointsInBook(state)} pt</span>
+                <span>このカードで {pointsInBook(state)} pt</span>
                 <span className="lcard-left">
                     {left > 0 ? (
                         <>
-                            満印まで あと <b style={{ color: ink }}>{left}</b>　満印で +{FULL_BONUS}
+                            全部うまるまで あと <b style={{ color: ink }}>{left}</b>　全部で +{FULL_BONUS}
                         </>
                     ) : (
-                        <>満印！ 次に来た日から {state.book + 1}冊目（印の色が変わります）</>
+                        <>全部うまりました！ 次に来た日から {state.book + 1}枚目（スタンプの色が変わります）</>
                     )}
                 </span>
             </footer>

@@ -134,60 +134,23 @@ export default function PointBadge() {
 
     return (
         <Link
-            href="/mypage"
-            aria-label={`無料ポイント ${points}`}
-            /*
-             * ★ 枠で囲う。
-             *
-             *   ただ字が並んでいるだけだと、
-             *   隣の切り替えと地続きに見えて、
-             *   どこからどこまでが何なのか分からない。
-             *
-             * ★ 右に間を空ける。
-             *   切り替えに近すぎて、押し間違える。
-             */
-            style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 5,
-                marginRight: 6,
-                padding: "3px 11px",
-                borderRadius: 999,
-                border: "1px solid var(--color-brand-border)",
-                background: "var(--color-brand-light)",
-                textDecoration: "none",
-                lineHeight: 1.2,
+            /* ポイントはミッションで貯まる。押すとミッションへ */
+            href="/mypage#mission"
+            aria-label={`無料ポイント ${points}　ミッションへ`}
+            className="ptb"
+            onClick={(event) => {
+                /*
+                 * ★ いまマイページにいるときは、札（#mission）だけ変える。
+                 *   頁の中の移動では hashchange が起きず、タブが切り替わらないため。
+                 */
+                if (window.location.pathname === "/mypage") {
+                    event.preventDefault();
+                    window.location.hash = "mission";
+                }
             }}
         >
-            <span
-                style={{
-                    fontSize: 9.5,
-                    letterSpacing: ".04em",
-                    color: "var(--color-text-muted)",
-                }}
-            >
-                無料
-            </span>
-
-            <span
-                style={{
-                    fontSize: 13.5,
-                    fontWeight: 700,
-                    color: "var(--color-brand)",
-                    fontVariantNumeric: "tabular-nums",
-                }}
-            >
-                {points.toLocaleString()}
-            </span>
-
-            <span
-                style={{
-                    fontSize: 9.5,
-                    color: "var(--color-text-muted)",
-                }}
-            >
-                pt
-            </span>
+            <span className="ptb-coin" aria-hidden="true">P</span>
+            <span className="ptb-n">{points.toLocaleString()}</span>
         </Link>
     );
 }

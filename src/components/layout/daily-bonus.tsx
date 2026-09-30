@@ -151,8 +151,8 @@ function StampPopup({ shown, onClose }: { shown: Shown; onClose: () => void }) {
 
     const parts: string[] = [`毎日 ${grant.daily}`];
     if (grant.row) parts.push(`宝 ${grant.row}`);
-    if (grant.full) parts.push(`満印 ${grant.full}`);
-    if (grant.gold) parts.push(`金の印 ${grant.gold}`);
+    if (grant.full) parts.push(`全部うまった ${grant.full}`);
+    if (grant.gold) parts.push(`金のスタンプ ${grant.gold}`);
 
     const next = today < CARD_CELLS ? today + 1 : 0;
     const toTreasure = ROW_CELLS - (today % ROW_CELLS);
@@ -163,15 +163,15 @@ function StampPopup({ shown, onClose }: { shown: Shown; onClose: () => void }) {
                 className="lpop"
                 role="dialog"
                 aria-modal="true"
-                aria-label="本日の乗船印"
+                aria-label="今日のスタンプ"
                 onClick={(event) => event.stopPropagation()}
             >
                 <InkDefs />
-                <h3>本日の乗船印</h3>
+                <h3>今日のスタンプ</h3>
                 <p className="lpop-d">
-                    {state.book > 1 ? `${state.book}冊目　` : ""}
-                    {today}日目　{MOTIF_NAME[motifOf(today)]}の印
-                    {todayGold && <span className="lpop-gold">金の印！</span>}
+                    {state.book > 1 ? `${state.book}枚目　` : ""}
+                    {today}日目　{MOTIF_NAME[motifOf(today)]}のスタンプ
+                    {todayGold && <span className="lpop-gold">金のスタンプ！</span>}
                 </p>
 
                 <div className="lpop-stage">
@@ -257,19 +257,19 @@ function StampPopup({ shown, onClose }: { shown: Shown; onClose: () => void }) {
                                 <Seal motif={motifOf(next)} day={next} color={ink} ghost />
                             </span>
                             <span>
-                                <b>明日は「{MOTIF_NAME[motifOf(next)]}」の印</b>
+                                <b>明日は「{MOTIF_NAME[motifOf(next)]}」のスタンプ</b>
                                 <small>
                                     {rowDoneToday
-                                        ? `次の行へ。7つそろうと、また「宝」の角印 +${ROW_BONUS}`
-                                        : `あと ${toTreasure} つで「宝」の角印 +${ROW_BONUS}`}
-                                    。金の印が出るかも
+                                        ? `次の行へ。7つそろうと、また「宝」のスタンプ +${ROW_BONUS}`
+                                        : `あと ${toTreasure} つで「宝」のスタンプ +${ROW_BONUS}`}
+                                    。金のスタンプが出るかも
                                 </small>
                             </span>
                         </>
                     ) : (
                         <span>
-                            <b>満印になりました</b>
-                            <small>次に来た日から {state.book + 1}冊目。印の色が変わります</small>
+                            <b>全部うまりました</b>
+                            <small>次に来た日から {state.book + 1}枚目。スタンプの色が変わります</small>
                         </span>
                     )}
                 </div>
