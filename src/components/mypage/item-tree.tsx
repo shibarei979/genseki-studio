@@ -610,6 +610,10 @@ export default function ItemTree() {
                     0%, 100% { filter: drop-shadow(0 0 5px rgba(217,164,65,.5)); }
                     50%      { filter: drop-shadow(0 0 15px rgba(217,164,65,.95)); }
                 }
+                /* 額の下の「交換する」は携帯だけ */
+                @media (min-width: 1024px) {
+                    .gtree-mbuy { display: none !important; }
+                }
                 @media (prefers-reduced-motion: reduce) {
                     .gtree-breathe { animation: none !important; }
                     .gtree-burst { display: none !important; }
@@ -859,6 +863,7 @@ export default function ItemTree() {
                             flex: '0 0 auto',
                             width: width * fit,
                             height: height * fit,
+                            position: 'relative',
                         }}
                     >
                     <div
@@ -1183,6 +1188,90 @@ export default function ItemTree() {
                             </div>
                         )}
                     </div>
+                    {/*
+                      * ★ 携帯だけ、押した額のすぐ下に「交換する」を出す。
+                      *   詳しい欄は木の下にあるので、そのままだと
+                      *   買うたびに下まで送らないといけない。
+                      *   詳しい欄は今まで通り下に出す。
+                      */}
+                    {picked &&
+                        !owned.includes(picked.id) &&
+                        picked.is_active &&
+                        (() => {
+                            const price = picked.free_price ?? 0
+                            const needsDone =
+                                !picked.requires_item_id ||
+                                owned.includes(picked.requires_item_id)
+                            const can = needsDone && price <= points
+                            const size = picked.goal ? 128 : NODE
+                            const left = Math.min(
+                                Math.max(picked.x * fit, 74),
+                                Math.max(74, width * fit - 74),
+                            )
+                            return (
+                                <button
+                                    type="button"
+                                    className="gtree-mbuy"
+                                    disabled={busy || !can}
+                                    onClick={() => void exchange(picked)}
+                                    style={{
+                                        position: 'absolute',
+                                        left,
+                                        top: (picked.y + size * 0.54 + 24) * fit,
+                                        transform: 'translateX(-50%)',
+                                        zIndex: 6,
+                                        whiteSpace: 'nowrap',
+                                        padding: '8px 16px',
+                                        borderRadius: 999,
+                                        border: can ? 'none' : '1px solid rgba(120,160,185,.4)',
+                                        background: can
+                                            ? 'linear-gradient(180deg, #d9a441, #c08c2f)'
+                                            : 'rgba(255,255,255,.96)',
+                                        color: can ? '#fff' : 'var(--color-text-muted)',
+                                        fontSize: 12.5,
+                                        fontWeight: 700,
+                                        boxShadow: '0 4px 12px rgba(40,70,95,.22)',
+                                        cursor: can ? 'pointer' : 'not-allowed',
+                                    }}
+                                >
+                                    {!needsDone
+                                        ? 'まだ交換できません'
+                                        : price > points
+                                          ? `あと ${(price - points).toLocaleString()} pt`
+                                          : busy
+                                            ? '交換中…'
+                                            : `${price.toLocaleString()} pt で交換する`}
+                                </button>
+                            )
+                        })()}
+                    {picked && message && (
+                        <p
+                            className="gtree-mbuy"
+                            style={{
+                                position: 'absolute',
+                                left: Math.min(
+                                    Math.max(picked.x * fit, 74),
+                                    Math.max(74, width * fit - 74),
+                                ),
+                                top:
+                                    (picked.y + (picked.goal ? 128 : NODE) * 0.54 + 24) * fit +
+                                    (owned.includes(picked.id) ? 0 : 40),
+                                transform: 'translateX(-50%)',
+                                zIndex: 6,
+                                width: 'max-content',
+                                maxWidth: 220,
+                                padding: '5px 12px',
+                                borderRadius: 8,
+                                background: 'rgba(19,47,77,.92)',
+                                color: '#f1e7cf',
+                                fontSize: 11.5,
+                                textAlign: 'center',
+                                pointerEvents: 'none',
+                            }}
+                        >
+                            {message}
+                        </p>
+                    )}
                     </div>
                 </div>
 

@@ -147,7 +147,8 @@ const TABS: { id: Tab; label: string; hideInFocus?: boolean; writerOnly?: boolea
   { id:'works',     label:'作品管理', writerOnly: true },
   /* 読者から届いた誤字の指摘。作者と報告者と運営だけが読める */
   { id:'typos',     label:'誤字報告', writerOnly: true },
-  { id:'series',    label:'シリーズ' },
+  /* シリーズは作品をまとめるもの。書く人だけに出す（読む向きには要らない） */
+  { id:'series',    label:'シリーズ', writerOnly: true },
   { id:'bookmarks', label:'保存済み' },
   { id:'history',   label:'閲覧履歴' },
   /* ミッションは数を競うもの。集中したい人には出さない */
@@ -641,6 +642,9 @@ export default function MypageClient({
   const published  = myNovels.filter(n => n.published)
   const drafts     = myNovels.filter(n => !n.published)
   const initial    = profile.display_name.slice(0,1)
+  /* 飾っている称号（profiles.titles）。作者ページ・マイページに出す */
+  const myTitles: { id: string; name: string; url: string | null }[] =
+    Array.isArray((profile as any).titles) ? (profile as any).titles : []
   const userNumber = (profile as any).user_number ? '#' + String((profile as any).user_number).padStart(4,'0') : null
 
   function fmtDate(s: string) {
@@ -1036,6 +1040,14 @@ export default function MypageClient({
               </>
             )}
           </div>
+          {/* 飾っている称号（作者ページと同じもの） */}
+          {myTitles.length > 0 && (
+            <div className="ttl-row" style={{marginBottom:6}}>
+              {myTitles.map(t => t.url
+                ? <img key={t.id} src={t.url} alt={t.name} title={t.name}/>
+                : <span key={t.id} style={{fontSize:12}}>{t.name}</span>)}
+            </div>
+          )}
           {userNumber && <div style={{fontSize:12,color:'var(--color-text-faint)',marginBottom:4}}>{userNumber}</div>}
           <div style={{fontSize:12.5,color:'var(--color-text-muted)',marginBottom:12}}>{profile.email}</div>
           {/*
@@ -2267,6 +2279,7 @@ export default function MypageClient({
                   ]}
                   myNovelIds={myNovels.map(n => n.id)}
                   bio={profile.bio || ''}
+                  titles={myTitles}
                   onIconClick={() => iconInputRef.current?.click()}
                   actions={<>
                     <button type="button" onClick={()=>{setNameInput(profile.display_name);setBioInput(profile.bio||'');setNameError('');setShowBioModal(true)}}>プロフィールを編集</button>

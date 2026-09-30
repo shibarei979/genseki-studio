@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import LoginStampButton from '@/components/mypage/login-stamp-button'
+import MissionClearPopup from '@/components/mypage/mission-clear-popup'
 
 export interface MissionStats {
   likeCount: number
@@ -161,6 +162,8 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
   const [earnedNote, setEarnedNote] = useState('')
   /* もうポイントを配ったミッション。押しても +10pt は付かない */
   const [paidIds, setPaidIds] = useState<Set<string>>(new Set())
+  /* クリアしたときの小窓（紙吹雪つき） */
+  const [cleared, setCleared] = useState<{ label: string; earned: number } | null>(null)
 
   /*
    * ポイントを受け取る。
@@ -168,22 +171,26 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
    * ★ 配るかどうかはサーバーが決める（達成しているか・クリア！を押したか・もう配ったか）。
    *   ここでは頼むだけ。
    */
-  async function collectPoints() {
+  async function collectPoints(): Promise<number> {
     try {
       const response = await fetch('/api/points/missions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ side: isWriter ? 'writer' : 'reader' }),
       })
-      if (!response.ok) return
+      if (!response.ok) return 0
       const data = (await response.json()) as { earned?: number; paid?: string[] }
       if (data.paid) setPaidIds(new Set(data.paid))
       if (data.earned && data.earned > 0) {
         setEarnedNote(`無料ポイントを ${data.earned} pt もらいました`)
         window.setTimeout(() => setEarnedNote(''), 4000)
       }
+      /* もらったことを、頭の帯のポイントにもすぐ伝える */
+      if (data.earned && data.earned > 0) window.dispatchEvent(new Event('gk-points-changed'))
+      return data.earned ?? 0
     } catch {
       /* 受け取れなくても、次に開いたときにまた頼む */
+      return 0
     }
   }
 
@@ -212,7 +219,11 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
           setVanishing('')
         }, 450)
         claimedThisVisit.add(missionId)
-        void collectPoints()
+        const label = MISSIONS.find(m => m.id === missionId)?.label ?? ''
+        void collectPoints().then((earned) => {
+          setEarnedNote('')
+          setCleared({ label, earned })
+        })
         return
       }
     }
@@ -244,6 +255,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
 
   return (
     <div>
+      {cleared && <MissionClearPopup label={cleared.label} earned={cleared.earned} onClose={() => setCleared(null)} />}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '-0.01em', lineHeight: 1.3 }}>ミッション</h1>
         <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 10, lineHeight: 1.7 }}>読んで、応援して、書いて。1つクリアするごとに無料ポイントを10pt、全部そろうとさらに300ptもらえます。ポイントはアイテムツリーで交換できます。</p>

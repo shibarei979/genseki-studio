@@ -260,3 +260,26 @@
 .mc-pt.is-paid { background: transparent; border-color: var(--color-brand-border, #dfe3e0); color: var(--color-text-faint, #9aa3a0); font-weight: 600; }
 .mc-coin { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; font: 900 8.5px/1 sans-serif; color: #7a5410; background: radial-gradient(circle at 35% 30%, #fff3c4, #e9b949 55%, #b8862a); box-shadow: inset 0 0 0 1px #c8962e; }
 .mc-pt.is-paid .mc-coin { filter: grayscale(1); opacity: .6; }
+
+/* ---------- ミッションクリアの小窓（紙吹雪）---------- */
+.mcl-dim { position: fixed; inset: 0; z-index: 1400; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 30, 45, .5); animation: lpop-fade .2s ease-out both; }
+.mcl-confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
+.mcl-confetti i { position: absolute; top: -20px; display: block; opacity: 0; animation-name: mcl-fall; animation-timing-function: cubic-bezier(.25, .6, .5, 1); animation-fill-mode: both; }
+@keyframes mcl-fall {
+    0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+    85% { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx), 105vh) rotate(var(--spin)); }
+}
+.mcl { position: relative; z-index: 2; width: min(320px, 100%); padding: 26px 20px 20px; border-radius: 22px; background: var(--color-bg-card, #fff); text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.3); animation: mcl-pop .45s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes mcl-pop { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
+.mcl-badge { width: 64px; height: 64px; margin: 0 auto 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, #e0a93a, #b8862a); box-shadow: 0 0 0 6px rgba(233, 185, 73, .2); }
+.mcl h3 { margin: 0; font-size: 21px; font-weight: 900; color: var(--color-brand, #1f4e6b); letter-spacing: .04em; }
+.mcl-name { margin: 6px 0 0; font-size: 14px; font-weight: 700; color: var(--color-text, #28323a); }
+.mcl-pt { margin: 14px 0 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 28px; font-weight: 900; color: #c08c2f; }
+.mcl-pt small { font-size: 12px; font-weight: 700; color: #8a6212; }
+.mcl-coin { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font: 900 14px/1 sans-serif; color: #7a5410; background: radial-gradient(circle at 35% 30%, #fff3c4, #e9b949 55%, #b8862a); box-shadow: inset 0 0 0 1.5px #c8962e; }
+.mcl-close { margin-top: 18px; padding: 10px 34px; border: none; border-radius: 999px; font-size: 14px; font-weight: 800; color: #fff; cursor: pointer; background: linear-gradient(135deg, #1f4e6b, #4a7fa5); }
+@media (prefers-reduced-motion: reduce) {
+    .mcl-confetti { display: none; }
+    .mcl, .mcl-dim { animation: none; }
+}

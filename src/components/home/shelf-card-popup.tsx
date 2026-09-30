@@ -143,7 +143,7 @@ export default function ShelfCardPopup() {
                               ...now,
                               summary: (data.summary as string) ?? '',
                               genre: (data.genre as string) ?? '',
-                              tags: ((data.tags as string[]) ?? []).slice(0, 3),
+                              tags: Array.from(new Set((data.tags as string[]) ?? [])).slice(0, 3),
                           }
                         : now,
                 )

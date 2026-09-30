@@ -90,6 +90,7 @@ export default function MobileMypageTop({
     myNovelIds,
     onPick,
     bio = "",
+    titles = [],
     onIconClick,
     actions,
     extras,
@@ -111,6 +112,8 @@ export default function MobileMypageTop({
     onPick: (id: string) => void;
     /** 自己紹介（あれば名前の下に出す） */
     bio?: string;
+    /** 飾っている称号 */
+    titles?: { id: string; name: string; url: string | null }[];
     /** アイコンを押したとき（画像を替える） */
     onIconClick?: () => void;
     /** プロフィールを編集・衣装・公開ページの押し具 */
@@ -188,6 +191,18 @@ export default function MobileMypageTop({
                     </button>
                 </div>
 
+                {titles.length > 0 && (
+                    <div className="ttl-row mmp-ttl">
+                        {titles.map((one) =>
+                            one.url ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img key={one.id} src={one.url} alt={one.name} title={one.name} />
+                            ) : (
+                                <span key={one.id}>{one.name}</span>
+                            ),
+                        )}
+                    </div>
+                )}
                 {bio && <p className="mmp-bio">{bio}</p>}
                 {actions && <div className="mmp-actions">{actions}</div>}
 

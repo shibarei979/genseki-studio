@@ -46,6 +46,11 @@
          * env() が効かない端末では 0 になり、そのぶんだけ低くなる。
          */
         padding-bottom: env(safe-area-inset-bottom, 0);
+        /*
+         * ★ 下に少し余白を足す（下の線や画面の角に、文字が食い込んで見えた）。
+         *   iPhone の横線の分がある端末ではその分＋4px、無い端末でも 8px。
+         */
+        padding-bottom: calc(max(4px, env(safe-area-inset-bottom, 0px)) + 4px);
 
         /*
          * ★ 左右の端も空ける。

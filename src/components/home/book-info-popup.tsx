@@ -101,17 +101,46 @@ export default function BookInfoPopup() {
             }
             title.style.fontSize = `${size}px`;
 
+            /*
+             * ★ 実際に描いて確かめる。
+             *   見当の計算は「全角の字が正方形」として数えるので、
+             *   ～ や数字・英字が混ざると、iPhone（Safari）では列が 1 つ多くなり、
+             *   はみ出した列が著者名に重なっていた。
+             *   題名の字が実際に占める範囲（Range）を測り、著者名や枠にかかるあいだ 1 px ずつ小さくする。
+             */
+            const boxRect = box.getBoundingClientRect();
+            const collides = () => {
+                const range = document.createRange();
+                range.selectNodeContents(title);
+                const text = range.getBoundingClientRect();
+                if (text.width === 0) return false;
+                const a = author?.getBoundingClientRect();
+                /* 縦書きは右から左。著者名は題名の左にある */
+                const hitsAuthor = a && a.width > 0 ? text.left < a.right + 4 && text.right > a.left : false;
+                const outOfBox = text.left < boxRect.left - 1 || text.bottom > boxRect.bottom + 1;
+                return hitsAuthor || outOfBox;
+            };
+            while (size > MIN && collides()) {
+                size -= 1;
+                title.style.fontSize = `${size}px`;
+            }
+
             /* いちばん小さくしても入らないときは、入る所まで */
             const columns = Math.max(1, Math.floor(width / (size * lineHeight)));
             const perColumn = Math.max(1, Math.floor(height / size));
             const room = Math.max(6, columns * perColumn);
 
-            const next = chars.length > room ? `${chars.slice(0, room - 1).join("")}…` : full;
-            if (title.textContent !== next) {
-                mine = true;
+            let keep = chars.length > room ? room - 1 : chars.length;
+            let next = keep < chars.length ? `${chars.slice(0, keep).join("")}…` : full;
+            mine = true;
+            if (title.textContent !== next) title.textContent = next;
+            /* それでも重なるときは、1 字ずつ減らす（描いて確かめる） */
+            while (keep > 6 && collides()) {
+                keep -= 1;
+                next = `${chars.slice(0, keep).join("")}…`;
                 title.textContent = next;
-                mine = false;
             }
+            mine = false;
         }
 
         const watcher = new MutationObserver(() => {
@@ -128,9 +157,28 @@ export default function BookInfoPopup() {
         window.addEventListener("resize", fit);
         fit();
 
+        /*
+         * ★ 同じタグを 2 つ出さない。
+         *   ジャンルとタグに同じ言葉（コメディ など）があると、2 つ並んでいた。
+         */
+        const tagList = root.querySelector<HTMLElement>(".bi_tags");
+        const dedupe = () => {
+            if (!tagList) return;
+            const seen = new Set<string>();
+            Array.from(tagList.children).forEach((li) => {
+                const text = (li.textContent ?? "").trim();
+                if (seen.has(text)) li.remove();
+                else seen.add(text);
+            });
+        };
+        const tagWatcher = new MutationObserver(dedupe);
+        if (tagList) tagWatcher.observe(tagList, { childList: true });
+        dedupe();
+
         return () => {
             watcher.disconnect();
             opening.disconnect();
+            tagWatcher.disconnect();
             window.removeEventListener("resize", fit);
         };
     }, []);

@@ -188,3 +188,34 @@
         height: calc(100dvh - 54px) !important;
     }
 }
+
+/*
+ * ============================================================
+ * 上の段に「無料ポイント」が入ったぶん、ほかを少し詰める
+ *
+ * ★ 右端のアイコン（マイページ）が画面の外へ押し出されていた。
+ *   ロゴを少し小さくし、狭いときはロゴのほうが縮むようにする。
+ * ============================================================
+ */
+@media (max-width: 1023px) {
+    .mh {
+        gap: 8px;
+        padding: 0 10px;
+    }
+    .mh_logo {
+        flex-shrink: 1;
+        min-width: 0;
+    }
+    .mh_logo img {
+        height: 40px;
+        max-width: 100%;
+        object-fit: contain;
+        object-position: left center;
+    }
+    .mh .mode-toggle {
+        width: 76px;
+    }
+    .mh_right {
+        gap: 5px;
+    }
+}
