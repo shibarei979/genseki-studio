@@ -23,6 +23,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 /* ------------------------------------------------------------
  * 携帯かどうか
@@ -203,11 +204,13 @@ export function MobileEditorHeader({
  *
  * 話・［入れかえ 1］・続きを書く・［入れかえ 2］・道具
  * ------------------------------------------------------------ */
-export type BarSlot = "read" | "mentions" | "proofread" | "history" | "replace" | "focus";
+export type BarSlot = "read" | "resource" | "mentions" | "proofread" | "history" | "replace" | "focus";
 
 export const SLOT_LABEL: Record<BarSlot, { label: string; icon: IconName }> = {
     read: { label: "通し読み", icon: "book" },
-    mentions: { label: "資料", icon: "note" },
+    /* ★ 「資料」は作品の資料の頁をひらく。前は「この話に出る資料」の窓が開き、別の物に見えていた */
+    resource: { label: "資料", icon: "note" },
+    mentions: { label: "話の資料", icon: "note" },
     proofread: { label: "誤字脱字", icon: "spark" },
     history: { label: "履歴", icon: "clock" },
     replace: { label: "置き換え", icon: "swap" },
@@ -215,7 +218,7 @@ export const SLOT_LABEL: Record<BarSlot, { label: string; icon: IconName }> = {
 };
 
 const SLOT_KEY = "gk-write-bar";
-const DEFAULT_SLOTS: [BarSlot, BarSlot] = ["read", "mentions"];
+const DEFAULT_SLOTS: [BarSlot, BarSlot] = ["read", "resource"];
 
 /**
  * 下の段の入れかえ 2 か所。
@@ -595,7 +598,13 @@ export function MobileToolsSheet({
         );
     };
 
-    return (
+    /*
+     * ★ 体の直下に出す。
+     *   書く欄の中（字の大きさを幅で決めるための入れ物）に置くと、
+     *   画面いっぱいに広がらず、右にずれて見えていた。
+     */
+    if (typeof document === "undefined") return null;
+    return createPortal(
         <div className="mw-sheet-wrap" role="dialog" aria-label="道具">
             <button type="button" className="mw-dim" onClick={onClose} aria-label="とじる" />
             <div className="mw-sheet">
@@ -618,6 +627,7 @@ export function MobileToolsSheet({
                         {tile("read", "前の話から続けて")}
                         {tile("proofread", "誤字・表記の揺れ", true)}
                         {tile("history", "前の版に戻す")}
+                        {tile("resource", "作品の資料をひらく")}
                         {tile("mentions", "この話に出る資料")}
                     </div>
                 </div>
@@ -665,6 +675,7 @@ export function MobileToolsSheet({
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }

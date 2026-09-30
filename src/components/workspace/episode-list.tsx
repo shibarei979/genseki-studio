@@ -368,7 +368,8 @@ export default function EpisodeList({
                 }}
                 onDrop={() => handleDrop(episode.id)}
                 className={[
-                    "group relative mb-1 flex items-center gap-2 rounded-md px-2 py-2",
+                    /* ep-row：指で使う端末の決まり（mobile-write.css） */
+                    "ep-row group relative mb-1 flex items-center gap-2 rounded-md px-2 py-2",
                     /* 移す先を選んでいる間は、ほかを目立たせない */
                     isSelected ? "bg-forest-tint" : "hover:bg-canvas",
                     isOver

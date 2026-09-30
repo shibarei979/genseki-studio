@@ -319,6 +319,11 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: ci.color, background: ci.bg, padding: '1px 8px', borderRadius: 10 }}>{ci.label}</span>
                   <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text)' }}>{m.label}</span>
+                  {/* もらえるポイント。もうもらったものは「受け取り済み」 */}
+                  <span className={`mc-pt${paidIds.has(m.id) ? ' is-paid' : ''}`}>
+                    <span className="mc-coin" aria-hidden="true">P</span>
+                    {paidIds.has(m.id) ? '10 受け取り済み' : '+10'}
+                  </span>
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginBottom: 6 }}>{m.desc}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

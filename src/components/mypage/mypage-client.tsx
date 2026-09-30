@@ -1008,7 +1008,6 @@ export default function MypageClient({
       {!isMobile && (
         <>
       {birthdateNote}
-      {missionCallout}
       <div style={{display:'flex',alignItems:'flex-start',gap:24,marginBottom:20,flexWrap:'wrap',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding: isMobile ? '16px 14px' : '20px 22px'}}>
         <div style={{position:'relative',flexShrink:0,cursor:'pointer',width:88,height:88,marginTop:(profile as any).costume_url?34:0}} onClick={()=>iconInputRef.current?.click()}>
           {iconUrl
@@ -1089,6 +1088,8 @@ export default function MypageClient({
           </div>
         </div>
       </div>
+      {/* ミッションとログインスタンプはプロフィールの下 */}
+      {missionCallout}
       {newNotices}
       <div style={{marginTop:20}}>
         <MypageDashboard

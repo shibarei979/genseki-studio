@@ -654,6 +654,7 @@ export default function EpisodeEditor({
 
     function runSlot(slot: BarSlot) {
         if (slot === "read") onOpenRead();
+        else if (slot === "resource") router.push(`/workspace/${episode.work_id}/resource`);
         else if (slot === "mentions") onOpenMentions();
         else if (slot === "proofread") onOpenProofread();
         else if (slot === "history") onOpenHistory();
