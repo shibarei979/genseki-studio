@@ -441,7 +441,21 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
      * 画面の向きを変えたときも数え直す。
      * 横にしたときに、縦のままの高さで出ていた。
      */
-    const fit = () => setContainerHeight(window.innerHeight - 140)
+    /*
+     * ★ 幅が変わったとき（向きを変えたとき）だけ数え直す。
+     *
+     *   携帯で上下に動かすと、下のアドレスの帯が出たり隠れたりして、
+     *   そのたびに画面の高さが少し変わる（resize が起きる）。
+     *   高さで列の長さが決まるので、そのたびに字が組み直され、
+     *   読んでいた所が横へ飛んでいた。
+     */
+    let lastWidth = 0
+    const fit = () => {
+      const width = window.innerWidth
+      if (width === lastWidth) return
+      lastWidth = width
+      setContainerHeight(window.innerHeight - 140)
+    }
     fit()
     window.addEventListener('resize', fit)
     window.addEventListener('orientationchange', fit)
@@ -492,7 +506,10 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
       return
     }
 
-    reportReadProgress(((room - box.scrollLeft) / room) * 100)
+    const pct = ((room - box.scrollLeft) / room) * 100
+    reportReadProgress(pct)
+    /* 下の帯の進み具合の線にも伝える（縦書きは頁が縦に動かないため） */
+    window.dispatchEvent(new CustomEvent('gk-read-progress', { detail: pct / 100 }))
   }
 
   function handleSettingsChange(s: Settings) {

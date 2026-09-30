@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { CARD_CELLS, GOLD_INK, inkOf, motifOf, type LoginCardState } from "@/lib/login-card";
 import { InkDefs, Seal } from "@/components/points/login-seal";
@@ -84,7 +85,7 @@ export default function LoginStampButton() {
                 </span>
             </button>
 
-            {isOpen && (
+            {isOpen && createPortal(
                 <div className="lpop-dim" onClick={() => setIsOpen(false)}>
                     <div
                         className="lsb-modal"
@@ -98,7 +99,9 @@ export default function LoginStampButton() {
                             とじる
                         </button>
                     </div>
-                </div>
+                </div>,
+                /* ★ 体の直下に出す。祖先に transform 等があると、画面いっぱいに広がらないため */
+                document.body,
             )}
         </>
     );

@@ -89,6 +89,10 @@ export default function MobileMypageTop({
     menu,
     myNovelIds,
     onPick,
+    bio = "",
+    onIconClick,
+    actions,
+    extras,
 }: {
     name: string;
     handle: string | null;
@@ -105,6 +109,14 @@ export default function MobileMypageTop({
     /** 誤字報告を数えるための、自分の作品の id */
     myNovelIds: string[];
     onPick: (id: string) => void;
+    /** 自己紹介（あれば名前の下に出す） */
+    bio?: string;
+    /** アイコンを押したとき（画像を替える） */
+    onIconClick?: () => void;
+    /** プロフィールを編集・衣装・公開ページの押し具 */
+    actions?: React.ReactNode;
+    /** 数字の下に出すもの（生年月日の促し・ミッション・新着通知） */
+    extras?: React.ReactNode;
 }) {
     /*
      * 誤字報告の数。
@@ -149,7 +161,12 @@ export default function MobileMypageTop({
         <div className="mmp">
             <section className="mmp-sea">
                 <div className="mmp-me">
-                    <span style={{ position: "relative", width: 58, height: 58, flexShrink: 0, marginTop: costumeUrl ? 20 : 0 }}>
+                    <span
+                        style={{ position: "relative", width: 58, height: 58, flexShrink: 0, marginTop: costumeUrl ? 20 : 0, cursor: onIconClick ? "pointer" : undefined }}
+                        onClick={onIconClick}
+                        role={onIconClick ? "button" : undefined}
+                        aria-label={onIconClick ? "アイコンを変える" : undefined}
+                    >
                     {iconUrl ? (
                         <img src={iconUrl} alt="" className="mmp-av" />
                     ) : (
@@ -170,6 +187,9 @@ export default function MobileMypageTop({
                         </svg>
                     </button>
                 </div>
+
+                {bio && <p className="mmp-bio">{bio}</p>}
+                {actions && <div className="mmp-actions">{actions}</div>}
 
                 {/* 航路。着いた港は金、まだの港は白い輪。船はいまいる所 */}
                 <div className="mmp-route" aria-hidden="true">
@@ -221,6 +241,7 @@ export default function MobileMypageTop({
             </div>
 
             <div className="mmp-body">
+                {extras}
                 {typoCount > 0 && (
                     <button type="button" className="mmp-alert" onClick={() => onPick("typos")}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">

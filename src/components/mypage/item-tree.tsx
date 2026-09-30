@@ -359,6 +359,8 @@ export default function ItemTree() {
                 setMessage(data.error ?? 'うまくいきませんでした。')
             } else {
                 setMessage('手に入れました。')
+                /* 頭の帯・マイページのポイントもすぐ減らす */
+                window.dispatchEvent(new Event('gk-points-changed'))
                 setBurstId(item.id)
                 window.setTimeout(() => setBurstId(null), 1500)
                 await reload()

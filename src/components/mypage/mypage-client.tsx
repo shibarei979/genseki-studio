@@ -20,6 +20,7 @@ import dynamic from 'next/dynamic'
 import Header from '@/components/layout/header'
 import MypageDashboard from '@/components/mypage/mypage-dashboard'
 import MissionCallout from '@/components/mypage/mission-callout'
+import DressUpButton from '@/components/mypage/dress-up-button'
 import ItemTree from '@/components/mypage/item-tree'
 
 /*
@@ -910,8 +911,9 @@ export default function MypageClient({
   }
 
   // ===== マイページタブ =====
-  const MypageTab = () => (
-    <div>
+  /* 生年月日の促し・ミッションの入り口・新着通知は、携帯では上の海の帯の下へまとめる */
+  const birthdateNote = (
+    <>
       {!profile.birthdate && (
         /*
          * 未設定の促し。
@@ -928,6 +930,10 @@ export default function MypageClient({
           <button onClick={()=>setShowBdModal(true)} style={{padding:'8px 16px',background:'var(--color-danger)',color:'#fff',border:'none',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0}}>設定する</button>
         </div>
       )}
+    </>
+  )
+  const missionCallout = (
+    <>
       {/*
         * ミッションとログインスタンプの入り口。
         * ★ いちばん上に置く。メニューの奥だと、たどり着けない人が多かった。
@@ -938,8 +944,40 @@ export default function MypageClient({
         isWriter={isWriterRole}
         onOpen={() => { handleTabChange('mission'); window.scrollTo(0, 0) }}
       />
-      <div style={{display:'flex',alignItems:'flex-start',gap:24,marginBottom:20,flexWrap:'wrap',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding: isMobile ? '16px 14px' : '20px 22px'}}>
-        <div style={{position:'relative',flexShrink:0,cursor:'pointer',width:88,height:88,marginTop:(profile as any).costume_url?34:0}} onClick={()=>iconInputRef.current?.click()}>
+    </>
+  )
+  const newNotices = (
+    <>
+      {(unreadFeedbackNow > 0 || unreadRankingNow > 0) && (
+        <div style={{marginBottom:20,border:'1px solid #fecaca',borderRadius:10,overflow:'hidden'}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#dc2626',background:'#fef2f2',padding:'6px 14px'}}>新着通知</div>
+          {unreadFeedbackNow > 0 && (
+            <Link href="/mypage/comments" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'11px 14px',textDecoration:'none',borderTop:'1px solid #fee2e2'}}>
+              <span style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>新しい感想が届いています（{unreadFeedbackNow}）</span>
+              <span style={{fontSize:12,color:'#dc2626'}}>→</span>
+            </Link>
+          )}
+          {/*
+           * ランキング通知。
+           *
+           * 100作品を超えたら開始する。
+           * それまでは、通知が来ても出さない。
+           * RANKING_NOTIFY_ENABLED を true にするだけで有効になる。
+           */}
+          {false && unreadRankingNow > 0 && (
+            <Link href="/mypage/ranking-history" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'11px 14px',textDecoration:'none',borderTop:'1px solid #fee2e2'}}>
+              <span style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>ランクインしました！（{unreadRankingNow}）</span>
+              <span style={{fontSize:12,color:'#dc2626'}}>→</span>
+            </Link>
+          )}
+        </div>
+      )}
+
+    </>
+  )
+  /* アイコンの画像を選ぶ・切り抜く（パソコンでも携帯でも使う） */
+  const iconPicker = (
+    <>
           {/*
            * 選んだら、そのまま上げずに切り抜きへ。
            * 丸の中でどこを見せるかを決めてもらう。
@@ -958,6 +996,21 @@ export default function MypageClient({
               }}
             />
           )}
+    </>
+  )
+  const MypageTab = () => (
+    <div>
+      {iconPicker}
+      {/*
+        * ★ 携帯は、上の海の帯にまとめた（名前・自己紹介・押し具・ミッション）。
+        *   最近の投稿作品から下は、メニューから開けるので出さない。
+        */}
+      {!isMobile && (
+        <>
+      {birthdateNote}
+      {missionCallout}
+      <div style={{display:'flex',alignItems:'flex-start',gap:24,marginBottom:20,flexWrap:'wrap',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding: isMobile ? '16px 14px' : '20px 22px'}}>
+        <div style={{position:'relative',flexShrink:0,cursor:'pointer',width:88,height:88,marginTop:(profile as any).costume_url?34:0}} onClick={()=>iconInputRef.current?.click()}>
           {iconUrl
             ? <img src={iconUrl} alt={profile.display_name} style={{width:88,height:88,borderRadius:'50%',objectFit:'cover',border:'3px solid var(--color-brand)'}}/>
             : <div style={{width:88,height:88,borderRadius:'50%',background:'var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:34,fontWeight:700,color:'var(--color-text-inverse)'}}>{initial}</div>
@@ -1030,35 +1083,13 @@ export default function MypageClient({
              * 別々の押し具にすると、どちらを押せばよいか一瞬迷う。
              */}
             <button onClick={()=>{setNameInput(profile.display_name);setBioInput(profile.bio||'');setNameError('');setShowBioModal(true)}} style={{fontSize:12.5,border:'1px solid var(--color-brand-border)',padding:'8px 16px',borderRadius:8,background:'var(--color-bg-card)',color:'var(--color-text-muted)',cursor:'pointer'}}>プロフィールを編集</button>
+            {/* アイコン衣装と称号（3つまで）を選ぶ */}
+            <DressUpButton iconUrl={iconUrl || null} initial={initial} style={{fontSize:12.5,border:'1px solid #ecd9a6',padding:'8px 16px',borderRadius:8,background:'#fdf6e3',color:'#8a6212',fontWeight:700,cursor:'pointer'}}/>
             <Link href={`/author/${profile.user_id}`} style={{fontSize:12.5,padding:'8px 16px',borderRadius:8,background:'var(--color-brand)',color:'var(--color-text-inverse)',textDecoration:'none',fontWeight:700}}>公開ページを見る →</Link>
           </div>
         </div>
       </div>
-      {(unreadFeedbackNow > 0 || unreadRankingNow > 0) && (
-        <div style={{marginBottom:20,border:'1px solid #fecaca',borderRadius:10,overflow:'hidden'}}>
-          <div style={{fontSize:11,fontWeight:700,color:'#dc2626',background:'#fef2f2',padding:'6px 14px'}}>新着通知</div>
-          {unreadFeedbackNow > 0 && (
-            <Link href="/mypage/comments" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'11px 14px',textDecoration:'none',borderTop:'1px solid #fee2e2'}}>
-              <span style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>新しい感想が届いています（{unreadFeedbackNow}）</span>
-              <span style={{fontSize:12,color:'#dc2626'}}>→</span>
-            </Link>
-          )}
-          {/*
-           * ランキング通知。
-           *
-           * 100作品を超えたら開始する。
-           * それまでは、通知が来ても出さない。
-           * RANKING_NOTIFY_ENABLED を true にするだけで有効になる。
-           */}
-          {false && unreadRankingNow > 0 && (
-            <Link href="/mypage/ranking-history" style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'11px 14px',textDecoration:'none',borderTop:'1px solid #fee2e2'}}>
-              <span style={{fontSize:13,fontWeight:700,color:'#dc2626'}}>ランクインしました！（{unreadRankingNow}）</span>
-              <span style={{fontSize:12,color:'#dc2626'}}>→</span>
-            </Link>
-          )}
-        </div>
-      )}
-
+      {newNotices}
       <div style={{marginTop:20}}>
         <MypageDashboard
           novels={myNovels}
@@ -1078,6 +1109,8 @@ export default function MypageClient({
           onTabChange={(t:string)=>handleTabChange(t as Tab)}
         />
       </div>
+        </>
+      )}
     </div>
   )
 
@@ -2232,6 +2265,14 @@ export default function MypageClient({
                     }),
                   ]}
                   myNovelIds={myNovels.map(n => n.id)}
+                  bio={profile.bio || ''}
+                  onIconClick={() => iconInputRef.current?.click()}
+                  actions={<>
+                    <button type="button" onClick={()=>{setNameInput(profile.display_name);setBioInput(profile.bio||'');setNameError('');setShowBioModal(true)}}>プロフィールを編集</button>
+                    <DressUpButton iconUrl={iconUrl || null} initial={initial} className="is-gold"/>
+                    <Link href={`/author/${profile.user_id}`} className="is-main">公開ページ →</Link>
+                  </>}
+                  extras={<>{birthdateNote}{missionCallout}{newNotices}</>}
                   /* 開いた先は頭から見せる（メニューを押した高さのままだと、中身の頭が切れる） */
                   onPick={(id) => { handleTabChange(id as Tab); window.scrollTo(0, 0) }}
                 />

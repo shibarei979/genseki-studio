@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -67,6 +67,8 @@ export default function ModeToggle({
     userId: string | null;
 }) {
     const [isBusy, setIsBusy] = useState(false);
+    /* 玉を滑らせているあいだに、もう一度押されても受けない */
+    const pressed = useRef(false);
     const [now, setNow] = useState(mode === "read" ? "read" : "write");
 
     /*
@@ -135,9 +137,20 @@ export default function ModeToggle({
     const isRead = now === "read";
 
     async function toggle() {
-        if (isBusy) return;
+        if (isBusy || pressed.current) return;
+        pressed.current = true;
 
         const next = isRead ? "write" : "read";
+
+        /*
+         * ★ 携帯では、先に色の玉を滑らせてから覆う。
+         *   すぐ覆うと、押した側に切り替わる動きが見えず、
+         *   パソコンの入り切りのような滑らかさが無かった。
+         */
+        if (window.matchMedia("(max-width: 1023px)").matches) {
+            setNow(next);
+            await new Promise((done) => window.setTimeout(done, 260));
+        }
 
         setIsBusy(true);
 
@@ -265,6 +278,8 @@ export default function ModeToggle({
                     inset: 0,
                     zIndex: 9999,
                     background: 'var(--color-canvas, #f4f5f3)',
+                    /* ふわっと覆う（いきなり真っ白にしない） */
+                    animation: 'mode-toggle-cover .18s ease-out both',
                 }}
             />
         )}

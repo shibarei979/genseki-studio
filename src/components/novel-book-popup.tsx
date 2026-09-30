@@ -82,7 +82,8 @@ export default function NovelBookPopup({
             excerpt: '',
             comment: '',
             likes: String(novel.like_count ?? 0),
-            tags: [novel.genre, ...(novel.tags ?? [])].filter(Boolean),
+            /* ★ ジャンルと同じタグは 1 つにする（「コメディ」が 2 つ並んでいた） */
+            tags: Array.from(new Set([novel.genre, ...(novel.tags ?? [])].filter(Boolean))),
         })
     }
 

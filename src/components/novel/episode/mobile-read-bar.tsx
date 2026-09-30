@@ -36,11 +36,13 @@ export default function MobileReadBar({
 
     useEffect(() => {
         let last = window.scrollY;
+        /* 縦書きで読んでいる（進み具合は本文から届く） */
+        let vertical = false;
 
         function onScroll() {
             const now = window.scrollY;
             const max = document.documentElement.scrollHeight - window.innerHeight;
-            setProgress(max > 0 ? Math.min(1, Math.max(0, now / max)) : 1);
+            if (!vertical) setProgress(max > 0 ? Math.min(1, Math.max(0, now / max)) : 1);
 
             /*
              * 下へ送っている → 隠す。上へ戻した → 出す。
@@ -54,7 +56,23 @@ export default function MobileReadBar({
 
         onScroll();
         window.addEventListener("scroll", onScroll, { passive: true });
-        return () => window.removeEventListener("scroll", onScroll);
+
+        /*
+         * ★ 縦書きは本文の入れ物が横に動くだけで、頁は動かない。
+         *   本文の側から進み具合を受け取って、線に出す。
+         */
+        function onVertical(event: Event) {
+            const value = Number((event as CustomEvent<number>).detail);
+            if (!Number.isFinite(value)) return;
+            vertical = true;
+            setProgress(Math.min(1, Math.max(0, value)));
+        }
+        window.addEventListener("gk-read-progress", onVertical);
+
+        return () => {
+            window.removeEventListener("scroll", onScroll);
+            window.removeEventListener("gk-read-progress", onVertical);
+        };
     }, []);
 
     return (

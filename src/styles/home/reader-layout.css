@@ -745,9 +745,19 @@
  */
 .reader-home .bi_v {
     display: flex;
-    flex-direction: row-reverse;
+    /*
+     * ★ 縦書きのまま並べる（column ＝ 右から左へ列が進む向き）。
+     *
+     *   前は横の並び（row-reverse）で、題名の幅を横書きの物差しで測らせていた。
+     *   iPhone（Safari）はこの測り方を間違え、長い題名が 3 列になると
+     *   枠からはみ出して、著者名が題名の上に重なっていた。
+     *   縦書きの並びにすれば、題名の列数どおりに幅が取られる。
+     */
+    flex-direction: column;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: flex-start;
+    align-content: normal;
     gap: 18px;
 }
 

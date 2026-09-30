@@ -95,6 +95,17 @@
      * ★ 板（.book-shelf-board）は今のまま、本の下に敷く。
      * ------------------------------------------------------------
      */
+    /*
+     * コンテストの絵。
+     * ★ 幅を画面の幅で決める。
+     *   前は額の幅に対する割合（72%）で、額は絵の幅で決まるので、
+     *   絵が額の左に寄って、右に空きができていた。
+     */
+    .reader-home .fs_contest-img,
+    .reader-home .fs_contest > .fs_contest-img {
+        width: min(300px, 70vw) !important;
+    }
+
     .reader-home .fs_row {
         zoom: .68;
         flex-wrap: nowrap;

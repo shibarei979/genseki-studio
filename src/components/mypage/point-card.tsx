@@ -133,10 +133,12 @@ export default function PointCard() {
         /* 毎日ログインのハンコを押したら、読み直す */
         const onStamp = () => void load()
         window.addEventListener('gk-login-stamp', onStamp)
+        window.addEventListener('gk-points-changed', onStamp)
 
         return () => {
             alive = false
             window.removeEventListener('gk-login-stamp', onStamp)
+            window.removeEventListener('gk-points-changed', onStamp)
         }
     }, [isOperator])
 

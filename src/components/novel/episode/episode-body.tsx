@@ -977,7 +977,9 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
           marks={marks}
           onMark={handleMark}
           onOpenMark={setAskingMark}
-          illusts={illusts} illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword} authorName={authorName}/>
+          illusts={illusts} illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword} authorName={authorName}
+          /* ★ 作者のすすめる向きを、携帯にも渡す（前は渡しておらず、推奨の印が出なかった） */
+          recommendedMode={recommendedMode}/>
         {askingMark && (
           <div
             onClick={()=>setAskingMark(null)}

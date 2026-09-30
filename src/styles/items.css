@@ -227,3 +227,34 @@
 }
 .eps-cap + .eps-tray { margin-top: 6px; }
 .lsb-modal .lcard-h b { letter-spacing: .06em; }
+
+/* ---------- 衣装・称号を選ぶ小窓 ---------- */
+.dru {
+    width: min(520px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow: auto;
+    padding: 16px 16px 18px; border-radius: 18px; background: var(--color-bg-card, #fff); color: var(--color-text, #28323a);
+    box-shadow: 0 20px 50px rgba(0,0,0,.3); text-align: center; animation: lpop-rise .25s ease-out both;
+}
+.dru-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.dru-h b { font-size: 17px; }
+.dru-h button { width: 34px; height: 34px; border: none; background: none; font-size: 22px; color: var(--color-text-muted, #6b7580); cursor: pointer; }
+.dru-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px 0 12px; border-radius: 14px; background: var(--color-brand-light, #eef3f6); }
+.dru-av { position: relative; width: 72px; height: 72px; }
+.dru-av img:first-child, .dru-av-none { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; display: flex; align-items: center; justify-content: center; background: var(--color-brand, #1f4e6b); color: #fff; font-size: 26px; font-weight: 700; }
+.dru-ttl { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; min-height: 30px; }
+.dru-ttl img { height: 30px; width: auto; }
+.dru-ttl em { font-style: normal; font-size: 12px; padding: 4px 8px; border-radius: 6px; background: #fff; }
+.dru-sec { margin: 16px 0 8px; font-size: 13px; font-weight: 700; text-align: left; }
+.dru-note { font-size: 12.5px; color: var(--color-text-muted, #6b7580); text-align: left; }
+.dru-note a { color: var(--color-brand, #1f4e6b); text-decoration: underline; }
+.dru-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+.dru-pick { width: 100%; aspect-ratio: 1; padding: 4px; border-radius: 12px; border: 2px solid var(--color-brand-border, #dfe3e0); background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.dru-pick img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.dru-pick.is-on { border-color: var(--color-brand, #1f4e6b); box-shadow: 0 0 0 3px rgba(31,78,107,.15); }
+.dru-none { font-size: 12px; color: var(--color-text-muted, #6b7580); }
+.dru-titles { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.dru-title { position: relative; height: 44px; padding: 4px 8px; border-radius: 10px; border: 2px solid var(--color-brand-border, #dfe3e0); background: #fff; cursor: pointer; }
+.dru-title img { height: 100%; width: auto; display: block; }
+.dru-title.is-on { border-color: #c8961e; background: #fdf6e3; }
+.dru-mark { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #c8961e; color: #fff; font-size: 11px; font-weight: 800; line-height: 20px; }
+.dru-msg { margin-top: 10px; font-size: 12.5px; color: var(--color-danger, #c0392b); }
+.lsb-modal .lcard-h b { font-size: 17px; letter-spacing: .02em; }

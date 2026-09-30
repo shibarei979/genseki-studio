@@ -127,3 +127,19 @@
 [data-theme="dark"] .mmp-sea { background: #1b3b50; }
 [data-theme="dark"] .mmp-port em { background: #1b3b50; }
 [data-theme="dark"] .mmp-wave path { fill: #2a4f66; }
+
+/* ---------- 自己紹介と押し具（前は下のプロフィールの枠にあったもの）---------- */
+.mmp-bio {
+    margin: 10px 0 0; font-size: 12.5px; line-height: 1.7; opacity: .9;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+.mmp-actions { display: flex; gap: 6px; margin-top: 12px; }
+.mmp-actions > * {
+    flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center;
+    height: 36px; padding: 0 6px; border-radius: 10px; white-space: nowrap;
+    font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.1); color: #fff;
+}
+.mmp-actions > .is-gold { border-color: #f3d27a; color: #f3d27a; }
+.mmp-actions > .is-main { background: #fff; border-color: #fff; color: #24506b; }
+.mmp-body > .mco { margin-bottom: 12px; }

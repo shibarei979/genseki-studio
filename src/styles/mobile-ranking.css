@@ -432,29 +432,13 @@
 
 /*
  * ============================================================
- * 携帯：期間の切り替えを上に大きく／1〜3 位に金・銀・銅の色
+ * 携帯：期間の切り替えを上に大きく
  *
- * ★ 順位の色は --color-rank-gold などで指定されていたが、
- *   その色の中身がどこにも決まっていなかった。そのため色が出ていなかった。
- *   携帯の中でだけ決める（パソコンの見た目は変えない）。
+ * ★ 1〜3 位の金・銀・銅は外した（もとのデザインに無いもの）。
  * ============================================================
  */
-.rk-medal { display: none; }
 
 @media (max-width: 1023px) {
-    :root {
-        --color-rank-gold: #c8961e;
-        --color-rank-silver: #8c96a0;
-        --color-rank-bronze: #b0673a;
-    }
-
-    .rk-medal {
-        display: block; margin-top: 1px;
-        font-size: 10px; font-weight: 700; line-height: 1;
-        color: var(--color-text-muted);
-    }
-    .rk-top { background: linear-gradient(90deg, rgba(243, 210, 122, .14), transparent 70%); }
-
     /* 期間：見出しを消して、5〜6 つを同じ幅で並べた 1 本の帯にする */
     .ranking-filter .rk-filter:nth-of-type(1) > div:first-child { display: none !important; }
     .ranking-filter .rk-filter:nth-of-type(1) .ss-row {
