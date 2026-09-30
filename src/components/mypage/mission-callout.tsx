@@ -16,6 +16,8 @@
  */
 
 import { missionProgress, type MissionStats } from "@/components/mypage/mission-client";
+import InviteButton from "@/components/mypage/invite-button";
+import PlanButton from "@/components/mypage/plan-button";
 import LoginStampButton from "@/components/mypage/login-stamp-button";
 
 export default function MissionCallout({
@@ -56,6 +58,8 @@ export default function MissionCallout({
                 <span className="mco-go" aria-hidden="true">›</span>
             </button>
             <LoginStampButton />
+            <InviteButton />
+            <PlanButton />
         </div>
     );
 }

@@ -292,6 +292,7 @@ export function MobileBottomBar({
     onList,
     onSlot,
     onTools,
+    onSettings,
 }: {
     slots: [BarSlot, BarSlot];
     onList: () => void;
@@ -299,6 +300,8 @@ export function MobileBottomBar({
     /** 使っていない（「続きを書く」を外したため）。呼ぶ側を変えずに済むよう残す */
     onWrite?: () => void;
     onTools: () => void;
+    /** 作品の設定の頁へ */
+    onSettings?: () => void;
 }) {
     return (
         <nav className="mw-bar" aria-label="執筆の道具">
@@ -314,6 +317,12 @@ export function MobileBottomBar({
                 <MwIcon name={SLOT_LABEL[slots[1]].icon} size={24} />
                 {SLOT_LABEL[slots[1]].label}
             </button>
+            {/* ★ 作品の設定（題名・あらすじ・表紙など）へ。資料の横に置く */}
+            {onSettings && (
+                <button type="button" className="mw-bar-item" onClick={onSettings}>
+                    <MwIcon name="gear" size={24} />設定
+                </button>
+            )}
             <button type="button" className="mw-bar-item" onClick={onTools}>
                 <MwIcon name="grid" size={24} />道具
             </button>

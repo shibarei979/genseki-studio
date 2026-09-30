@@ -1317,6 +1317,7 @@ export default function EpisodeEditor({
                     onSlot={runSlot}
                     onWrite={writeOn}
                     onTools={() => setIsSheetOpen(true)}
+                    onSettings={() => router.push(`/workspace/${episode.work_id}/settings`)}
                 />
             )}
 

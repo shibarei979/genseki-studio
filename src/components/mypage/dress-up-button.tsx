@@ -117,6 +117,8 @@ export default function DressUpButton({
                 return false;
             }
             setChanged(true);
+            /* マイページの称号の段にも、すぐ出す */
+            window.dispatchEvent(new Event("gk-titles-changed"));
             return true;
         } catch {
             setMessage("繋がりませんでした。");

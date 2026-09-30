@@ -283,3 +283,88 @@
     .mcl-confetti { display: none; }
     .mcl, .mcl-dim { animation: none; }
 }
+
+/* ============================================================
+ * サブスク・友だち招待の札と小窓（マイページのミッションの横）
+ * ============================================================ */
+.sub-b { border-color: #cbd9e6; background: #eef4fa; color: #1b3a52; }
+.sub-ic, .inv-ic { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
+.sub-ic { background: linear-gradient(135deg, #1f4e6b, #4a7fa5); }
+.sub-b .lsb-t small { color: #5d7488; }
+.sub-n { font-family: inherit; font-size: 12px; font-weight: 800; color: #1f4e6b; }
+.inv-b { border-color: #f0c9b8; background: #fff3ec; color: #5a2a14; }
+.inv-ic { background: linear-gradient(135deg, #d9643a, #ec9a5c); }
+.inv-b .lsb-t small { color: #a0573a; font-weight: 700; }
+.inv-b .inv-n { color: #d9643a; }
+
+.sub-modal, .inv-modal {
+    position: relative; width: min(460px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+    padding: 20px 20px 18px; border-radius: 18px; background: #fff; text-align: center;
+    box-shadow: 0 18px 50px rgba(10, 30, 45, .3); animation: lpop-rise .3s ease-out both;
+}
+.sub-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sub-h b { font-size: 18px; font-weight: 800; color: #1b3a52; }
+.sub-h button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #dfe3e0; background: #fff; font-size: 16px; color: #6b7570; }
+.sub-note { font-size: 12.5px; line-height: 1.8; color: #55605a; text-align: left; padding: 10px 12px; border-radius: 10px; background: #f4f7fa; }
+.sub-note strong { color: #1f4e6b; }
+.sub-have { margin: 8px 0 12px; font-size: 12px; color: #7d867f; text-align: right; }
+.sub-have strong { font-size: 16px; color: #1b3a52; }
+.sub-plans { display: flex; flex-direction: column; gap: 10px; list-style: none; padding: 0; margin: 0; text-align: left; }
+.sub-plan { padding: 14px; border-radius: 14px; border: 1px solid #cbd9e6; background: #fbfdff; }
+.sub-plan-t { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sub-plan-t b { font-size: 15.5px; color: #1b3a52; }
+.sub-plan-t > span { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; color: #8a6212; }
+.sub-plan-d { margin-top: 4px; font-size: 12px; color: #55605a; line-height: 1.7; }
+.sub-perks { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.sub-perks li { position: relative; padding-left: 18px; font-size: 12.5px; color: #33403a; }
+.sub-perks li::before { content: ""; position: absolute; left: 3px; top: 5px; width: 9px; height: 5px; border-left: 2px solid #35a45d; border-bottom: 2px solid #35a45d; transform: rotate(-45deg); }
+.sub-go { display: block; width: 100%; margin-top: 12px; padding: 11px; border: none; border-radius: 11px; font-size: 14px; font-weight: 800; color: #fff; background: linear-gradient(180deg, #d9a441, #c08c2f); cursor: pointer; }
+.sub-go:disabled { background: #e6e9ec; color: #7d867f; cursor: not-allowed; }
+.sub-now { padding: 14px; border-radius: 14px; border: 1px solid #cbd9e6; background: #fbfdff; text-align: left; }
+.sub-now-t { display: flex; align-items: center; gap: 8px; }
+.sub-now-t b { font-size: 15.5px; color: #1b3a52; }
+.sub-chip { padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #2f7a4d; background: #e3f4ea; }
+.sub-end { margin-top: 10px; font-size: 12.5px; line-height: 1.8; color: #55605a; }
+.sub-quiet { padding: 9px 16px; border-radius: 10px; border: 1px solid #dfe3e0; background: #fff; font-size: 13px; font-weight: 700; color: #6b7570; cursor: pointer; }
+.sub-wide { display: block; width: 100%; margin-top: 12px; }
+.sub-confirm { margin-top: 12px; padding: 12px; border-radius: 10px; background: #fff5f3; border: 1px solid #f2cfc7; }
+.sub-confirm p { font-size: 12.5px; line-height: 1.8; color: #6b3a2f; }
+.sub-confirm div { display: flex; gap: 8px; margin-top: 10px; }
+.sub-confirm div button { flex: 1; }
+.sub-stop { padding: 9px 16px; border-radius: 10px; border: none; background: #c9483a; color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; }
+.sub-msg { margin-top: 10px; font-size: 12.5px; font-weight: 700; color: #1f4e6b; }
+
+.inv-camp { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #fff; background: linear-gradient(135deg, #d9643a, #ec9a5c); }
+.inv-t { margin: 10px 0 12px; font-size: 19px; font-weight: 900; color: #3b1d0e; line-height: 1.45; }
+.inv-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.inv-steps li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: #fff7f1; font-size: 13px; color: #4a2c1c; }
+.inv-steps b { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; background: #d9643a; }
+.inv-get { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 12px 0; font-size: 13px; color: #6b3a1c; }
+.inv-get strong { font-size: 17px; color: #d9643a; }
+.inv-link { display: flex; gap: 6px; }
+.inv-link input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid #e3d3c8; background: #fffaf6; font-size: 13px; color: #3b1d0e; }
+.inv-link button { flex-shrink: 0; padding: 0 16px; border: none; border-radius: 10px; font-size: 13px; font-weight: 800; color: #fff; background: #3b2a20; cursor: pointer; }
+.inv-share { display: flex; gap: 6px; margin-top: 8px; }
+.inv-share a, .inv-share button { flex: 1; display: flex; align-items: center; justify-content: center; height: 40px; border-radius: 10px; border: none; font-size: 13px; font-weight: 800; color: #fff; text-decoration: none; cursor: pointer; }
+.inv-x { background: #111; }
+.inv-line { background: #06c755; }
+.inv-more { background: #6b7570; }
+.inv-share [aria-disabled="true"] { pointer-events: none; opacity: .4; }
+.inv-count { margin-top: 14px; text-align: left; }
+.inv-count p { font-size: 12.5px; color: #4a2c1c; }
+.inv-count p strong { font-size: 17px; color: #d9643a; }
+.inv-count p span { display: block; font-size: 11px; color: #9a8577; }
+.inv-bar { display: block; height: 6px; margin-top: 6px; border-radius: 3px; background: #f3e3d8; overflow: hidden; }
+.inv-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #d9643a, #ec9a5c); }
+.inv-full { margin-top: 6px; font-size: 12px; font-weight: 700; color: #2f7a4d; }
+.inv-small { margin-top: 12px; font-size: 10.5px; line-height: 1.8; color: #9a8577; text-align: left; }
+/* ★ 札が 3 つになったので、ミッションは 1 段まるごと、下に 3 つの札を等しく並べる（半端に折り返さないように） */
+@media (min-width: 641px) {
+    .mco > .mco-main { flex-basis: 100%; }
+    .mco > .lsb { flex: 1 1 0; }
+}
+.inv-code { margin: -4px 0 10px; font-size: 12px; color: #9a8577; }
+.inv-code b { font-size: 15px; letter-spacing: .12em; color: #3b1d0e; }
+.inv-enter { margin-top: 14px; padding: 12px; border-radius: 12px; border: 1px dashed #e3c3b0; background: #fffaf6; text-align: left; }
+.inv-enter > p { font-size: 12px; font-weight: 700; color: #6b3a1c; margin-bottom: 8px; }
+.inv-enter-msg { margin-top: 6px; font-size: 12px; color: #2f7a4d; }

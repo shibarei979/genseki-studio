@@ -78,6 +78,34 @@ export interface Subscription {
 /** 生きている契約とみなす状態 */
 const LIVE: SubscriptionStatus[] = ["trial", "active", "past_due"];
 
+/**
+ * ★ いまは無料ポイントで払う（pay.jp を繋ぐまで）。
+ *   800pt で 1 か月。1 か月たつと自動で終わる（続けて引かない）。
+ *   続けたい人は、終わったあとにもう一度入る。
+ */
+export const POINT_PRICE = 800;
+/** ポイントで払った契約の印（subscriptions.note） */
+export const PAID_BY_POINTS = "points";
+
+/**
+ * 期間の終わりを過ぎた契約を 1 つ片づける。
+ *
+ *   やめる予約・ポイント払い → 終わりにする
+ *   それ以外（運営が手で始めたもの）→ ここでは触らない（運営の「期間を進める」で進む）
+ */
+export async function settleSubscription(row: Subscription): Promise<void> {
+    if (!LIVE.includes(row.status)) return;
+    if (new Date(row.current_end).getTime() > Date.now()) return;
+    if (!row.cancel_at_period_end && row.note !== PAID_BY_POINTS) return;
+
+    const admin = createAdminClient();
+    await admin
+        .from("subscriptions")
+        .update({ status: "canceled", ended_at: row.current_end })
+        .eq("id", row.id)
+        .eq("current_end", row.current_end);
+}
+
 /** 次の期間の終わりを出す */
 function nextEnd(from: Date, interval: "month" | "year"): Date {
     const to = new Date(from);
@@ -139,7 +167,24 @@ export async function liveSubscriptionOf(
 
     if (!data) return null;
 
-    const row = data as Subscription;
+    let row = data as Subscription;
+
+    /*
+     * ★ 期間の終わりを過ぎていたら、その場で片づける（毎日動く仕掛けが無くても回るように）。
+     */
+    if (new Date(row.current_end).getTime() <= Date.now()) {
+        await settleSubscription(row);
+        const { data: again } = await admin
+            .from("subscriptions")
+            .select("*")
+            .eq("id", row.id)
+            .maybeSingle();
+        if (!again) return null;
+        row = again as Subscription;
+        if (!LIVE.includes(row.status) || new Date(row.current_end).getTime() <= Date.now()) {
+            return null;
+        }
+    }
 
     const { data: plan } = await admin
         .from("plans")
@@ -325,6 +370,8 @@ export async function startSubscription(options: {
     userId: string;
     planId: string;
     note?: string;
+    /** お試し期間を付けない（ポイントで先に払ったとき） */
+    skipTrial?: boolean;
 }): Promise<{ id?: string; error?: string }> {
     const admin = createAdminClient();
 
@@ -347,7 +394,7 @@ export async function startSubscription(options: {
 
     const now = new Date();
 
-    const trial = (plan as Plan).trial_days;
+    const trial = options.skipTrial ? 0 : (plan as Plan).trial_days;
 
     const end =
         trial > 0
@@ -438,6 +485,13 @@ export async function advancePeriods(): Promise<{
     let ended = 0;
 
     for (const row of (data ?? []) as Subscription[]) {
+        /* ポイント払いは 1 か月で終わり（続けて引かない） */
+        if (row.note === PAID_BY_POINTS) {
+            await settleSubscription(row);
+            ended += 1;
+            continue;
+        }
+
         if (row.cancel_at_period_end) {
             await admin
                 .from("subscriptions")

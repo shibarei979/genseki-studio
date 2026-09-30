@@ -13,6 +13,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { rewardInviteIfReady } from "@/lib/invite";
 
 export async function POST(request: Request) {
     const supabase = await createClient();
@@ -64,6 +65,9 @@ export async function POST(request: Request) {
             scroll_pct: body.scroll_pct ?? null,
         })
         .eq("id", found.id);
+
+    /* 招待で来た人が 1 話読み終えたら、二人に招待のポイントを配る（配れなくても読んだ記録は変わらない） */
+    if (user) await rewardInviteIfReady(user.id).catch(() => false);
 
     return NextResponse.json({ ok: true });
 }

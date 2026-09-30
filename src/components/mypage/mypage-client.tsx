@@ -643,8 +643,31 @@ export default function MypageClient({
   const drafts     = myNovels.filter(n => !n.published)
   const initial    = profile.display_name.slice(0,1)
   /* 飾っている称号（profiles.titles）。作者ページ・マイページに出す */
-  const myTitles: { id: string; name: string; url: string | null }[] =
-    Array.isArray((profile as any).titles) ? (profile as any).titles : []
+  /*
+   * ★ 頁を開いたときの値のままだと、アイテムツリーで飾っても（同じ頁の別タブ）
+   *   マイページに戻ったときに出なかった。
+   *   開いたあとにも読み直し、飾った／外した合図（gk-titles-changed）でも読み直す。
+   * ★ 名前の無い古い形（id だけ）は出さない（空の札が並ぶだけになる）。
+   */
+  const cleanTitles = (raw: unknown): { id: string; name: string; url: string | null }[] =>
+    Array.isArray(raw)
+      ? raw.filter((t): t is { id: string; name: string; url: string | null } =>
+          !!t && typeof t === 'object' && typeof (t as any).id === 'string' && (!!(t as any).url || !!(t as any).name))
+      : []
+  const [myTitles, setMyTitles] = useState(() => cleanTitles((profile as any).titles))
+  useEffect(() => {
+    let alive = true
+    const load = () => {
+      fetch('/api/points/equip', { cache: 'no-store' })
+        .then(r => r.json())
+        .then((d: { titles?: unknown }) => { if (alive && d && 'titles' in d) setMyTitles(cleanTitles(d.titles)) })
+        .catch(() => {})
+    }
+    load()
+    window.addEventListener('gk-titles-changed', load)
+    return () => { alive = false; window.removeEventListener('gk-titles-changed', load) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const userNumber = (profile as any).user_number ? '#' + String((profile as any).user_number).padStart(4,'0') : null
 
   function fmtDate(s: string) {

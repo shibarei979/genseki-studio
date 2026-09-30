@@ -61,6 +61,7 @@ import "@/styles/mobile-p9.css";
 import "@/styles/mobile-home2.css";
 import MobileTabBar from "@/components/layout/mobile-tab-bar";
 import DailyBonus from "@/components/layout/daily-bonus";
+import InviteCatcher from "@/components/common/invite-catcher";
 import ErrorWatch from "@/components/layout/error-watch";
 import MobileHeader from "@/components/layout/mobile-header";
 
@@ -322,6 +323,8 @@ if (location.hostname === 'gensekikoro.com' || location.hostname === 'www.gensek
                 <MobileTabBar />
                 {/* 毎日ログインのポイント。その日はじめて開いたときに受け取る */}
                 <DailyBonus />
+                {/* 招待リンク（?invite=）で来た人を覚えて、登録したら控えてもらう */}
+                <InviteCatcher />
 
                 {/*
                  * 見開きの器。

@@ -161,6 +161,14 @@ export async function POST(request: Request) {
         });
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+        /* 作者に知らせる。うまくいかなくても、スタンプは押せたことにする */
+        await tellAuthor(admin, {
+            actorId: user.id,
+            novelId: episode.novel_id as string,
+            episodeId: body.episodeId,
+            stampName: item.name,
+        }).catch(() => {});
+
         return NextResponse.json({ ok: true, pressed: true });
     } catch (caught) {
         return NextResponse.json(
@@ -168,4 +176,61 @@ export async function POST(request: Request) {
             { status: 500 },
         );
     }
+}
+
+/**
+ * スタンプを押されたことを、その作品の作者に知らせる。
+ *
+ * ★ 種類は「いいね」と同じ扱い（type: like）。
+ *   設定で「いいねの知らせ」を切っている人には送らない。
+ * ★ 自分の作品に自分で押したときは送らない。
+ * ★ 押す・外すを繰り返しても、同じ知らせは 1 回だけ。
+ */
+async function tellAuthor(
+    admin: ReturnType<typeof createAdminClient>,
+    one: { actorId: string; novelId: string; episodeId: string; stampName: string },
+) {
+    const { data: novel } = await admin
+        .from("novels")
+        .select("author_id, title")
+        .eq("id", one.novelId)
+        .maybeSingle();
+    const authorId = (novel?.author_id as string | null) ?? null;
+    if (!authorId || authorId === one.actorId) return;
+
+    const { data: want } = await admin
+        .from("profiles")
+        .select("notify_like")
+        .eq("user_id", authorId)
+        .maybeSingle();
+    if (want && (want as { notify_like?: boolean }).notify_like === false) return;
+
+    const [{ data: actor }, { data: ep }] = await Promise.all([
+        admin.from("profiles").select("display_name").eq("user_id", one.actorId).maybeSingle(),
+        admin.from("episodes").select("title, ep_number").eq("id", one.episodeId).maybeSingle(),
+    ]);
+    const name = (actor?.display_name as string | undefined) || "名無し";
+    const epLabel =
+        (ep?.title as string | undefined)?.trim() ||
+        (typeof ep?.ep_number === "number" ? `第${ep.ep_number}話` : "話");
+    const title = (novel?.title as string | undefined) ?? "作品";
+
+    const message = `${name}さんが『${title}』の「${epLabel}」にスタンプ「${one.stampName}」を押しました`;
+    const link = `/novel/${one.novelId}/episode/${one.episodeId}`;
+
+    const { data: already } = await admin
+        .from("notifications")
+        .select("id")
+        .eq("user_id", authorId)
+        .eq("link", link)
+        .eq("message", message)
+        .limit(1);
+    if (already && already.length > 0) return;
+
+    await admin.from("notifications").insert({
+        user_id: authorId,
+        type: "like",
+        message,
+        link,
+    });
 }

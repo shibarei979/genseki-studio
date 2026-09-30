@@ -331,6 +331,8 @@ export default function ItemTree() {
             } else {
                 const on = !titleIds.includes(item.id)
                 setTitleIds((list) => (on ? [...list, item.id] : list.filter((id) => id !== item.id)))
+                /* マイページの称号の段にも、すぐ出す */
+                window.dispatchEvent(new Event('gk-titles-changed'))
                 setMessage(on ? '作者ページに飾りました。' : '外しました。')
             }
         } catch {
