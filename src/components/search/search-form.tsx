@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSwipeClose } from '@/lib/swipe-close'
+import { MOODS } from '@/lib/search-moods'
 import { GENRES_SELECTABLE, GENRES_R18_ONLY } from '@/types'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -27,28 +28,7 @@ const GENRES_BASE = GENRES_SELECTABLE.filter(
   g => !GENRES_R18_ONLY.includes(g) && g !== 'BL' && g !== 'GL',
 )
 
-const MOODS = [
-  { emoji: '💘', label: '胸きゅんしたい',      tags: ['恋愛','ときめき','胸キュン','片思い','ラブコメ'] },
-  { emoji: '😢', label: '切ない物語が読みたい',  tags: ['切ない','悲恋','別れ','涙','感動'] },
-  { emoji: '😂', label: '笑いたい',            tags: ['ギャグ','コメディ','ほのぼの','笑える'] },
-  { emoji: '😱', label: 'ぞくっとしたい',       tags: ['ホラー','ミステリー','謎解き','サスペンス','怖い'] },
-  { emoji: '🔥', label: '熱い展開が読みたい',   tags: ['バトル','熱い','友情','成長','無双'] },
-  { emoji: '🌿', label: '癒されたい',           tags: ['ほのぼの','スローライフ','日常','癒し','ふわふわ'] },
-  { emoji: '🧠', label: '考察したい',           tags: ['謎解き','伏線','考察','ミステリー','哲学'] },
-  { emoji: '🌙', label: '余韻に浸りたい',       tags: ['余韻','文学','詩的','感動','純文学'] },
-  { emoji: '⏱️', label: '短時間で読みたい',     tags: ['短編','読み切り','1話完結'] },
-  { emoji: '📖', label: '一気読みしたい',       tags: ['続きが気になる','完結','長編','怒涛'] },
-  { emoji: '✨', label: '異世界に行きたい',     tags: ['異世界','転生','ファンタジー','冒険'] },
-  { emoji: '💪', label: '主人公に憧れたい',     tags: ['最強','チート','成長','主人公'] },
-  { emoji: '👑', label: '悪役令嬢が読みたい',   tags: ['悪役令嬢','転落','婚約破棄','ざまぁ','令嬢'] },
-  { emoji: '⚔️', label: 'ダンジョン・冒険したい', tags: ['ダンジョン','冒険','探索','魔物','パーティ'] },
-  { emoji: '🌸', label: '学園ものが読みたい',   tags: ['学園','青春','部活','恋愛','高校'] },
-  { emoji: '🧙', label: '魔法世界に浸りたい',   tags: ['魔法','魔法使い','魔法学校','精霊','詠唱'] },
-  { emoji: '💼', label: '内政・経営に燃えたい', tags: ['内政','経営','チート','無双','領主'] },
-  { emoji: '🕵️', label: '謎を解きたい',        tags: ['ミステリー','謎解き','推理','サスペンス','犯人'] },
-  { emoji: '😭', label: '号泣したい',           tags: ['感動','泣ける','切ない','死別','再会'] },
-  { emoji: '🌊', label: 'どっぷり世界観に浸りたい', tags: ['世界観','設定','ファンタジー','SF','独自'] },
-]
+/* 気分の札の中身は lib/search-moods.ts（探す側と同じものを使う） */
 
 const KEYWORD_CATEGORIES = [
   { label: '作品傾向', items: ['ギャグ','シリアス','ほのぼの','ダーク','感動','スローライフ','復讐','ループ','群像劇','バトル','冒険','成長物語','友情','ヒューマンドラマ','謎解き','サスペンス'] },
@@ -79,6 +59,8 @@ const SORT_OPTIONS = [
 interface Props {
   defaultQ?: string; defaultExclude?: string; defaultGenre?: string
   defaultType?: string; defaultSerial?: string; defaultTag?: string
+  /** 選んでいた気分（名前をカンマでつないだもの） */
+  defaultMood?: string
   defaultSort?: string; ageVerified?: boolean; defaultDiscover?: boolean
   defaultAuthor?: string; defaultLikeMin?: string; defaultLikeMax?: string
   defaultCharMin?: string; defaultCharMax?: string; defaultPtMin?: string; defaultPtMax?: string
@@ -146,7 +128,7 @@ function HistoryBox({
 
 export default function SearchForm({
   defaultQ='', defaultExclude='', defaultGenre='', defaultType='',
-  defaultSerial='', defaultTag='', defaultSort='new', ageVerified=false, defaultDiscover=false,
+  defaultSerial='', defaultTag='', defaultMood='', defaultSort='new', ageVerified=false, defaultDiscover=false,
   defaultAuthor='', defaultLikeMin='', defaultLikeMax='',
   defaultCharMin='', defaultCharMax='', defaultPtMin='', defaultPtMax='',
   defaultContest='', contests=[], defaultName=''
@@ -209,7 +191,7 @@ export default function SearchForm({
   const [authorHistory,      setAuthorHistory]      = useState<string[]>([])
   const [showAuthorHistory,  setShowAuthorHistory]  = useState(false)
   const [showMoods,          setShowMoods]          = useState(false)
-  const [activeMoods,        setActiveMoods]        = useState<string[]>([])
+  const [activeMoods,        setActiveMoods]        = useState<string[]>(defaultMood ? defaultMood.split(',').filter(Boolean) : [])
   const [isMobile,           setIsMobile]           = useState(false)
   /* 携帯：気分の札を押したら、そのまま探し直す（状態が書き変わってから走らせる） */
   const [runSearch,          setRunSearch]          = useState(false)
@@ -235,8 +217,6 @@ export default function SearchForm({
     } catch {}
   }, [])
 
-  // 気分タグは裏でのみ使用（タグ欄には表示しない）
-  const moodTags = activeMoods.flatMap(label => MOODS.find(m => m.label === label)?.tags.slice(0,3) || [])
 
   function handleMoodSelect(mood: typeof MOODS[0]) {
     if (activeMoods.includes(mood.label)) {
@@ -260,8 +240,9 @@ export default function SearchForm({
     if (charMax)         params.set('charMax', charMax)
     if (ptMin)           params.set('ptMin',   ptMin)
     if (ptMax)           params.set('ptMax',   ptMax)
-    const allTags = Array.from(new Set([...tags, ...moodTags]))
-    if (allTags.length > 0) params.set('tag', allTags.join(','))
+    if (tags.length > 0) params.set('tag', tags.join(','))
+    /* 気分は別の印で送る（どれか 1 つでも当たれば出す探し方にするため） */
+    if (activeMoods.length > 0) params.set('mood', activeMoods.join(','))
     if (discoverMode)    params.set('sort',    'discover')
     else if (sort)       params.set('sort',    sort)
     if (q.trim()) {
@@ -333,24 +314,16 @@ export default function SearchForm({
    *   もう一度押すと外す。探したあとも、タグに入っているかで点いて見える。
    */
   function moodIsOn(mood: typeof MOODS[0]) {
-    const t = mood.tags.slice(0, 3)
-    return t.every(x => tags.includes(x))
+    return activeMoods.includes(mood.label)
   }
   function toggleQuickMood(mood: typeof MOODS[0]) {
-    const t = mood.tags.slice(0, 3)
-    if (moodIsOn(mood)) {
-      /* ほかの点いている札と同じ言葉（恋愛・謎解き など）は残す。消すとその札まで消える */
-      const keep = MOODS.filter(m => m !== mood && moodIsOn(m)).flatMap(m => m.tags.slice(0, 3))
-      setTags(tags.filter(x => !t.includes(x) || keep.includes(x)))
-    } else {
-      setTags(Array.from(new Set([...tags, ...t])))
-    }
+    handleMoodSelect(mood)
     setRunSearch(true)
   }
 
   /* 携帯の「条件」に出す数。いま効いている絞り込みの数 */
   const condCount = [q, exclude, genre, type, serial, contestId, charMin || charMax, ptMin || ptMax, author]
-    .filter(Boolean).length + (tags.length > 0 ? 1 : 0)
+    .filter(Boolean).length + (tags.length > 0 ? 1 : 0) + (activeMoods.length > 0 ? 1 : 0)
 
   function openSheet() {
     setShowDetail(true)
@@ -623,7 +596,7 @@ export default function SearchForm({
       {showMoods && (
         <div style={{marginBottom:12,padding:'12px 14px',border:'1px solid var(--color-brand-border)',borderRadius:8,background:'var(--color-bg)',display:'flex',flexWrap:'wrap',gap:6}}>
           {MOODS.map(mood => (
-            <button key={mood.label} type="button" onClick={()=>handleMoodSelect(mood)}
+            <button key={mood.label} type="button" onClick={()=>toggleQuickMood(mood)}
               style={{padding:'5px 12px',borderRadius:16,fontSize:12,cursor:'pointer',
                 whiteSpace:'nowrap' as const,
                 border:`1.5px solid ${activeMoods.includes(mood.label)?'var(--color-brand)':'var(--color-brand-border)'}`,

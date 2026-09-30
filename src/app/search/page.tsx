@@ -1,3 +1,4 @@
+import { moodWords } from '@/lib/search-moods'
 import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import { ROOT_ADMIN_EMAIL } from '@/types'
@@ -21,7 +22,7 @@ const BROWSE_SIZE = 100
 interface Props {
   searchParams: {
     q?: string; exclude?: string; genre?: string; type?: string
-    serial?: string; tag?: string; sort?: string; page?: string
+    serial?: string; tag?: string; mood?: string; sort?: string; page?: string
     author?: string; contest?: string; name?: string
     charMin?: string; charMax?: string; ptMin?: string; ptMax?: string
   }
@@ -46,6 +47,9 @@ export default async function SearchPage({ searchParams }: Props) {
   const page     = Number(searchParams.page || 1)
   const offset   = (page - 1) * PAGE_SIZE
   const tags     = tagParam ? tagParam.split(',').filter(Boolean) : []
+  /* 気分で探す。選んだ気分の言葉のどれか 1 つに当たれば出す */
+  const moodParam = searchParams.mood || ''
+  const moodTags = moodWords(moodParam ? moodParam.split(',').filter(Boolean) : [])
   const authorQ  = searchParams.author  || ''
   /*
    * 題名と作者名をまとめて探す枠。
@@ -67,7 +71,7 @@ export default async function SearchPage({ searchParams }: Props) {
   const ptMin = Number(searchParams.ptMin) || 0
   const ptMax = Number(searchParams.ptMax) || 0
   const hasMetaFilter = !!(charMin || charMax || ptMin || ptMax)
-  const hasSearch = !!(q || nameQ || exclude || genre || type || serial || tags.length > 0 || authorQ || contestId || hasMetaFilter)
+  const hasSearch = !!(q || nameQ || exclude || genre || type || serial || tags.length > 0 || moodTags.length > 0 || authorQ || contestId || hasMetaFilter)
 
   const isAgeVerified = profile?.age_verified || false
 
@@ -259,6 +263,21 @@ export default async function SearchPage({ searchParams }: Props) {
       for (const tag of tags) {
         query = (query as any).contains('tags', [tag])
       }
+    }
+    /*
+     * ★ 気分：タグ・ジャンル・あらすじ・キャッチコピーのどこかに、気分の言葉が 1 つでもあれば出す。
+     *   （前はタグとして全部そろう作品だけで、ほとんど何も出なかった）
+     */
+    if (moodTags.length > 0) {
+      const safe = moodTags.map((w) => w.replace(/[",(){}*]/g, '')).filter(Boolean)
+      const quoted = safe.map((w) => `"${w}"`).join(',')
+      const ors = [
+        `tags.ov.{${quoted}}`,
+        `genre.in.(${quoted})`,
+        ...safe.map((w) => `summary.ilike.*${w}*`),
+        ...safe.map((w) => `catchcopy.ilike.*${w}*`),
+      ]
+      query = (query as any).or(ors.join(','))
     }
 
     /*
@@ -613,7 +632,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <SearchForm
             defaultName={nameQ}
             defaultQ={q} defaultExclude={exclude} defaultGenre={genre}
-            defaultType={type} defaultSerial={serial} defaultTag={tagParam}
+            defaultType={type} defaultSerial={serial} defaultTag={tagParam} defaultMood={moodParam}
             defaultSort={sort} ageVerified={isAgeVerified}
             defaultContest={contestId} contests={searchContests || []}
             defaultCharMin={searchParams.charMin || ''} defaultCharMax={searchParams.charMax || ''}
