@@ -3313,7 +3313,8 @@ export default function RelationGraph({
               *   左上から始まると、いちばん見たい真ん中が
               *   毎回外れている。
               */}
-            <div className="flex min-h-0 flex-1 gap-3">
+            {/* ★ rg-row / rg-side：携帯では組の欄を図の下に回す（mobile-resource.css） */}
+            <div className="rg-row flex min-h-0 flex-1 gap-3">
             <div
                 ref={panRef}
                 className="thin-scroll min-h-0 flex-1 overflow-auto"
@@ -3704,49 +3705,9 @@ export default function RelationGraph({
                      *
                      * ★ 二つの範囲の隅が近いときは、後の見出しを右へずらす。
                      */
-                    const titleFont = Math.round(NAME_SIZE * 1.15);
-                    const titleH = Math.round(titleFont * 1.2);
-                    const inset = Math.round(NODE_RADIUS * 0.35);
-                    const placed: { x1: number; y1: number; x2: number; y2: number }[] = [];
-                    const titles = new Map<string, { x: number; y: number; w: number }>();
-
-                    for (const box of groupBoxes) {
-                        /* 札の幅。点と両端の余白のぶんも入れる */
-                        const w = Math.round(
-                            Array.from(box.name || "組").length * titleFont + titleFont * 2.45,
-                        );
-                        let x = box.x1 + inset * 2;
-                        const y = box.y1 - titleH / 2;
-
-                        for (let tries = 0; tries < 12; tries += 1) {
-                            const hit = placed.find(
-                                (one) =>
-                                    x < one.x2 + 6 &&
-                                    x + w > one.x1 - 6 &&
-                                    y < one.y2 &&
-                                    y + titleH > one.y1,
-                            );
-                            if (!hit) break;
-                            x = hit.x2 + titleFont * 0.6;
-                        }
-
-                        placed.push({ x1: x, y1: y, x2: x + w, y2: y + titleH });
-                        titles.set(box.key, { x, y, w });
-                    }
-
+                    /* 名札は、線の上に重ねるため後で描く（下の「組の名札」） */
                     return groupBoxes.map((box) => {
                         const ink = groupColors.get(box.key) ?? "#5566a8";
-                        const title = titles.get(box.key)!;
-                        /*
-                         * ★ 名札は白い札に黒い字。組の色は、横の点と囲みの縁だけ。
-                         *   色の字は、薄い色だと読めなかった。
-                         */
-                        const tagH = Math.round(titleFont * 1.5);
-                        const dot = Math.round(titleFont * 0.3);
-                        const tagW = title.w;
-                        const tagX = title.x;
-                        const tagY = box.y1 - tagH / 2;
-
                         return (
                             <g key={`box-${box.key}`} pointerEvents="none">
                                 <rect
@@ -3763,32 +3724,6 @@ export default function RelationGraph({
                                     strokeDasharray={box.levels > 0 ? "5 4" : undefined}
                                     vectorEffect="non-scaling-stroke"
                                 />
-                                <rect
-                                    x={tagX}
-                                    y={tagY}
-                                    width={tagW}
-                                    height={tagH}
-                                    rx={tagH / 2}
-                                    fill="#ffffff"
-                                    stroke={ink}
-                                    strokeWidth={1.5}
-                                    vectorEffect="non-scaling-stroke"
-                                />
-                                <circle
-                                    cx={tagX + titleFont * 0.6 + dot}
-                                    cy={tagY + tagH / 2}
-                                    r={dot}
-                                    fill={ink}
-                                />
-                                <text
-                                    x={tagX + titleFont * 0.6 + dot * 2 + titleFont * 0.35}
-                                    y={tagY + tagH / 2 + titleFont * 0.36}
-                                    fontSize={titleFont}
-                                    fontWeight="700"
-                                    fill={INK}
-                                >
-                                    {box.name}
-                                </text>
                             </g>
                         );
                     });
@@ -4349,6 +4284,106 @@ export default function RelationGraph({
                         </g>
                     ))}
 
+                {/*
+                  * 組の名札。
+                  *
+                  * ★ 線を描いたあとに重ねる。
+                  *   囲みと一緒に下に描いていたので、線が名札の上を通って字が読めなかった。
+                  *   囲み（薄い色の範囲）は下のまま、名札だけ上に出す。
+                  */}
+                {(() => {
+                    const titleFont = Math.round(NAME_SIZE * 1.15);
+                    const titleH = Math.round(titleFont * 1.2);
+                    const inset = Math.round(NODE_RADIUS * 0.35);
+                    const placed: { x1: number; y1: number; x2: number; y2: number }[] = [];
+                    /*
+                     * ★ 人の丸と名前にも重ねない。
+                     *   狭い画面では囲みの上の辺が人の名前のすぐ下に来て、名札が名前に被っていた。
+                     *   ぶつかるときは、名札を右へずらす。
+                     */
+                    const people = shownNodes
+                        .map((node) => positions.get(node.id))
+                        .filter((at): at is { x: number; y: number } => !!at)
+                        .map((at) => ({
+                            x1: at.x - NODE_RADIUS * 1.7,
+                            y1: at.y - NODE_RADIUS,
+                            x2: at.x + NODE_RADIUS * 1.7,
+                            y2: at.y + NAME_DROP + NAME_SIZE * 1.4,
+                        }));
+
+                    return groupBoxes.map((box) => {
+                        const w = Math.round(
+                            Array.from(box.name || "組").length * titleFont + titleFont * 2.45,
+                        );
+                        let x = box.x1 + inset * 2;
+                        const y = box.y1 - titleH / 2;
+                        const hitAt = (at: number) =>
+                            [...placed, ...people].find(
+                                (one) =>
+                                    at < one.x2 + 6 &&
+                                    at + w > one.x1 - 6 &&
+                                    y < one.y2 &&
+                                    y + titleH > one.y1,
+                            );
+                        const start = x;
+                        for (let tries = 0; tries < 12; tries += 1) {
+                            const hit = hitAt(x);
+                            if (!hit) break;
+                            x = hit.x2 + titleFont * 0.6;
+                        }
+                        /* 右へ逃げて囲みの外まで出てしまうときは、左へ逃がす */
+                        if (x + w > box.x2 && hitAt(x)) {
+                            x = start;
+                            for (let tries = 0; tries < 12; tries += 1) {
+                                const hit = hitAt(x);
+                                if (!hit) break;
+                                x = hit.x1 - w - titleFont * 0.6;
+                            }
+                        }
+                        placed.push({ x1: x, y1: y, x2: x + w, y2: y + titleH });
+
+                        const ink = groupColors.get(box.key) ?? "#5566a8";
+                        /*
+                         * ★ 名札は白い札に黒い字。組の色は、横の点と囲みの縁だけ。
+                         *   色の字は、薄い色だと読めなかった。
+                         */
+                        const tagH = Math.round(titleFont * 1.5);
+                        const dot = Math.round(titleFont * 0.3);
+                        const tagY = box.y1 - tagH / 2;
+
+                        return (
+                            <g key={`tag-${box.key}`} pointerEvents="none">
+                                <rect
+                                    x={x}
+                                    y={tagY}
+                                    width={w}
+                                    height={tagH}
+                                    rx={tagH / 2}
+                                    fill="#ffffff"
+                                    stroke={ink}
+                                    strokeWidth={1.5}
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                                <circle
+                                    cx={x + titleFont * 0.6 + dot}
+                                    cy={tagY + tagH / 2}
+                                    r={dot}
+                                    fill={ink}
+                                />
+                                <text
+                                    x={x + titleFont * 0.6 + dot * 2 + titleFont * 0.35}
+                                    y={tagY + tagH / 2 + titleFont * 0.36}
+                                    fontSize={titleFont}
+                                    fontWeight="700"
+                                    fill={INK}
+                                >
+                                    {box.name}
+                                </text>
+                            </g>
+                        );
+                    });
+                })()}
+
                 {shownNodes.map((node) => {
                     const position = positions.get(node.id);
                     if (!position) return null;
@@ -4685,6 +4720,11 @@ export default function RelationGraph({
                                 fontSize={NAME_SIZE}
                                 fontWeight="500"
                                 fill="var(--color-ink)"
+                                /* ★ 線が名前の上を通っても読めるよう、白く縁取る（全体表示と同じ） */
+                                paintOrder="stroke"
+                                stroke="#ffffff"
+                                strokeWidth={NAME_SIZE * 0.3}
+                                strokeLinejoin="round"
                             >
                                 {node.name.length > 8
                                     ? `${node.name.slice(0, 8)}…`
@@ -4703,7 +4743,7 @@ export default function RelationGraph({
 
             {sidePanel && (
                 <aside
-                    className="thin-scroll shrink-0 overflow-y-auto border-l border-line pl-3"
+                    className="rg-side thin-scroll shrink-0 overflow-y-auto border-l border-line pl-3"
                     style={{ width: "min(380px, 45%)" }}
                 >
                     {sidePanel}

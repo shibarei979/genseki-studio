@@ -375,3 +375,21 @@
 @media (max-width: 1023px) {
     [data-theme="dark"] .wp-actions { background: rgba(20, 26, 30, .96); }
 }
+
+/*
+ * ★ 関係図の「組の欄」は、携帯では図の下に出す。
+ *   横に並べると図が半分の幅になり、線と文字が重なって読めなかった。
+ */
+@media (max-width: 1023px) {
+    .rg-row {
+        flex-direction: column;
+    }
+    .rg-row > .rg-side {
+        width: 100% !important;
+        max-height: 46%;
+        border-left: 0;
+        padding-left: 0;
+        border-top: 1px solid var(--color-line, #dcdfda);
+        padding-top: 10px;
+    }
+}

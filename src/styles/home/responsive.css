@@ -1,4 +1,9 @@
 /* scoped */
+/*
+ * ★ 下の header の決まりは、見本（home_10）のヘッダー（.main_nav を持つもの）だけに効かせる。
+ *   素の header に書いてあったため、資料の見出し・ランキングの窓・ログインスタンプなど
+ *   サイト中の <header> が、携帯で高さ 110px・左右 18px の余白になっていた（関係図の上の大きな空き）。
+ */
 /* デザイン home_10: style/responsive.css
    組み込み時の変更: 画像パスを /home/img/ へ書換 */
 
@@ -14,23 +19,23 @@
 ==================================================*/
 
 @media (max-width: 1500px) {
-    header {
+    header:has(.main_nav) {
         padding: 0 48px;
     }
 
-    header h1 {
+    header:has(.main_nav) h1 {
         width: 250px;
     }
 
     /* 中央寄せの絶対配置はこの幅からロゴ・チップと重なるため解除 */
-    header ul.main_nav>li:nth-child(1),
-    header ul.main_nav>li:nth-child(2) {
+    header:has(.main_nav) ul.main_nav>li:nth-child(1),
+    header:has(.main_nav) ul.main_nav>li:nth-child(2) {
         position: static;
         width: auto;
         right: auto;
     }
 
-    header ul.main_nav>li:last-child {
+    header:has(.main_nav) ul.main_nav>li:last-child {
         margin-left: 10px;
     }
 }
@@ -50,21 +55,21 @@
 ==================================================*/
 
 @media (max-width: 1150px) {
-    header {
+    header:has(.main_nav) {
         padding: 0 28px;
     }
 
-    header h1 {
+    header:has(.main_nav) h1 {
         width: 200px;
     }
 
-    header ul.main_nav {
+    header:has(.main_nav) ul.main_nav {
         gap: 12px;
     }
 
     /* テキストリンクはハンバーガーメニュー側に集約 */
-    header ul.main_nav>li:nth-child(1),
-    header ul.main_nav>li:nth-child(2) {
+    header:has(.main_nav) ul.main_nav>li:nth-child(1),
+    header:has(.main_nav) ul.main_nav>li:nth-child(2) {
         display: none;
     }
 
@@ -110,26 +115,26 @@
 ==================================================*/
 
 @media (max-width: 800px) {
-    header {
+    header:has(.main_nav) {
         height: 110px;
         padding: 0 18px;
     }
 
-    header h1 {
+    header:has(.main_nav) h1 {
         width: 165px;
     }
 
-    header .main_nav>li.nav_signup>a {
+    header:has(.main_nav) .main_nav>li.nav_signup>a {
         padding: 8px 16px;
         font-size: 14px;
     }
 
-    header .main_nav>li.nav_login>a {
+    header:has(.main_nav) .main_nav>li.nav_login>a {
         padding: 0 8px;
         font-size: 14px;
     }
 
-    header .nav_avatar {
+    header:has(.main_nav) .nav_avatar {
         width: 44px;
         height: 44px;
         margin-left: 10px;
@@ -192,11 +197,11 @@
 ==================================================*/
 
 @media (max-width: 560px) {
-    header h1 {
+    header:has(.main_nav) h1 {
         width: 140px;
     }
 
-    header .sub_nav>ul {
+    header:has(.main_nav) .sub_nav>ul {
         min-width: 0;
         width: 100%;
     }

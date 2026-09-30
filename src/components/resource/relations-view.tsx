@@ -145,7 +145,12 @@ export default function RelationsView({
     useEffect(() => {
         if (canEditGroups && !openedOnce.current) {
             openedOnce.current = true;
-            setEditingGroups(true);
+            /*
+             * ★ 携帯でははじめから開かない。
+             *   狭い画面で横に並べると図が半分の幅になり、線と文字が重なって読めなかった。
+             *   開いたときは、図の下に出す（mobile-resource.css の .rg-side）。
+             */
+            if (window.matchMedia("(min-width: 1024px)").matches) setEditingGroups(true);
         }
     }, [canEditGroups]);
 

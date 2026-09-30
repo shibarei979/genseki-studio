@@ -734,6 +734,12 @@
     overflow: visible;
     margin-left: 0;
     max-height: 100%;
+    /*
+     * ★ iPhone（Safari）だけ、book_info.css が題名の幅を 2 列ぶん（2.8em）に止めている。
+     *   ここでは全部出すので、その止めも外す。
+     *   外さないと、3 列目から先が枠の外（左）へはみ出し、著者名に重なっていた。
+     */
+    max-block-size: none;
 }
 
 /*

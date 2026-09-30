@@ -166,7 +166,8 @@ export default function BookInfoPopup() {
             if (!tagList) return;
             const seen = new Set<string>();
             Array.from(tagList.children).forEach((li) => {
-                const text = (li.textContent ?? "").trim();
+                /* ★ 見た目が同じでも、字の持ち方（濁点が別の字 など）が違うことがあるので、そろえてから比べる */
+                const text = (li.textContent ?? "").normalize("NFKC").replace(/\s+/g, "").toLowerCase();
                 if (seen.has(text)) li.remove();
                 else seen.add(text);
             });

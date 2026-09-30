@@ -42,6 +42,7 @@ import {
     stepBack,
     stepFwd,
     useBarSlots,
+    useNoFocusZoom,
     useIsMobile,
     useKeyboard,
     type BarSlot,
@@ -177,6 +178,7 @@ export default function EpisodeEditor({
      */
     const isMobile = useIsMobile();
     const keyboard = useKeyboard();
+    useNoFocusZoom(isMobile);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [slots, setSlots] = useBarSlots();
     /*

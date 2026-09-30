@@ -113,6 +113,34 @@ export function useKeyboard(): { isOpen: boolean; inset: number } {
 }
 
 /* ------------------------------------------------------------
+ * 書くときに、画面が勝手に大きくならないようにする（iPhone）
+ *
+ * ★ iPhone は、16px より小さい字の欄を押すと、画面を拡大する。
+ *   携帯の横書きは 1 行 24 字にしているので、字は 14px ほど。
+ *   押すたびに拡大され、右が切れ、キーボードの上の段もずれて被っていた。
+ *
+ * ★ この画面にいるあいだだけ、拡大の上限を 1 倍にする。
+ *   iPhone は、これでも指で広げる拡大はできる（押したときの自動拡大だけ止まる）。
+ *   離れたら元に戻す。iPhone 以外では何もしない。
+ * ------------------------------------------------------------ */
+export function useNoFocusZoom(active: boolean) {
+    useEffect(() => {
+        if (!active) return;
+        const ua = navigator.userAgent;
+        const isIOS = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+        if (!isIOS) return;
+        const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+        if (!meta) return;
+        const before = meta.getAttribute("content") ?? "";
+        if (/maximum-scale/.test(before)) return;
+        meta.setAttribute("content", `${before}${before ? ", " : ""}maximum-scale=1`);
+        return () => {
+            meta.setAttribute("content", before);
+        };
+    }, [active]);
+}
+
+/* ------------------------------------------------------------
  * 絵
  * ------------------------------------------------------------ */
 type IconName =
@@ -263,13 +291,13 @@ export function MobileBottomBar({
     slots,
     onList,
     onSlot,
-    onWrite,
     onTools,
 }: {
     slots: [BarSlot, BarSlot];
     onList: () => void;
     onSlot: (slot: BarSlot) => void;
-    onWrite: () => void;
+    /** 使っていない（「続きを書く」を外したため）。呼ぶ側を変えずに済むよう残す */
+    onWrite?: () => void;
     onTools: () => void;
 }) {
     return (
@@ -281,10 +309,7 @@ export function MobileBottomBar({
                 <MwIcon name={SLOT_LABEL[slots[0]].icon} size={24} />
                 {SLOT_LABEL[slots[0]].label}
             </button>
-            <button type="button" className="mw-bar-go" onClick={onWrite}>
-                <span className="mw-bar-go-pill"><MwIcon name="pen" size={22} /></span>
-                続きを書く
-            </button>
+            {/* ★ 「続きを書く」は外した（本文を押せば書ける。下の段を広く使う） */}
             <button type="button" className="mw-bar-item" onClick={() => onSlot(slots[1])}>
                 <MwIcon name={SLOT_LABEL[slots[1]].icon} size={24} />
                 {SLOT_LABEL[slots[1]].label}
