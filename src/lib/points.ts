@@ -82,6 +82,51 @@ export async function grantFreePoints(options: {
     const expires = new Date();
     expires.setDate(expires.getDate() + LIFE_DAYS);
 
+    /*
+     * ★ 一度きりのものは、先に履歴（印）を書く。
+     *
+     *   上の「確かめる」だけだと、同時に 2 回呼ばれたとき
+     *   両方とも「まだ」と見て、二度配ってしまう。
+     *   表の決まり（items_tree6.sql の free_point_events_once）で
+     *   2 つ目の印が弾かれたら、配らない。
+     */
+    if (once && sourceRef) {
+        const { data: mark, error: markError } = await admin
+            .from("free_point_events")
+            .insert({
+                user_id: userId,
+                kind: "earn",
+                amount,
+                reason: source,
+                reason_ref: sourceRef,
+            })
+            .select("id")
+            .single();
+
+        if (markError || !mark) {
+            if (markError?.code === "23505") {
+                return { granted: false, reason: "もう配ってあります" };
+            }
+            return { granted: false, reason: markError?.message ?? "配れません" };
+        }
+
+        const { error: lotError } = await admin.from("free_point_lots").insert({
+            user_id: userId,
+            amount,
+            source,
+            source_ref: sourceRef,
+            expires_at: expires.toISOString(),
+        });
+
+        if (lotError) {
+            /* 配れなかったら印も消す。印だけ残ると、二度ともらえない */
+            await admin.from("free_point_events").delete().eq("id", mark.id);
+            return { granted: false, reason: lotError.message };
+        }
+
+        return { granted: true };
+    }
+
     const { error } = await admin.from("free_point_lots").insert({
         user_id: userId,
         amount,
@@ -147,6 +192,9 @@ export async function spendFreePoints(options: {
 
     let left = amount;
 
+    /* ここまでに引いた束。途中でやめたときに戻す */
+    const taken: { id: string; take: number }[] = [];
+
     for (const row of rows) {
         if (left <= 0) break;
 
@@ -155,13 +203,41 @@ export async function spendFreePoints(options: {
 
         const take = Math.min(rest, left);
 
-        const { error } = await admin
+        /*
+         * ★ 読んだときの used のままのときだけ書く。
+         *
+         *   同時に 2 つの交換が走ると、両方が同じ used を読んで
+         *   同じ数を書き、1 回ぶんしか減らないのに品物が 2 つ入ってしまう。
+         *   ほかの払いが先に書いていたら、ここは 0 行になるのでやめる。
+         */
+        const { data: hit, error } = await admin
             .from("free_point_lots")
             .update({ used: Number(row.used) + take })
-            .eq("id", row.id);
+            .eq("id", row.id)
+            .eq("used", row.used)
+            .select("id");
 
-        if (error) return { spent: false, reason: error.message };
+        if (error || !hit || hit.length === 0) {
+            for (const done of taken) {
+                const { data: now } = await admin
+                    .from("free_point_lots")
+                    .select("used")
+                    .eq("id", done.id)
+                    .maybeSingle();
+                if (now) {
+                    await admin
+                        .from("free_point_lots")
+                        .update({ used: Math.max(0, Number(now.used) - done.take) })
+                        .eq("id", done.id);
+                }
+            }
+            return {
+                spent: false,
+                reason: error?.message ?? "ほかの交換と重なりました。もう一度お試しください",
+            };
+        }
 
+        taken.push({ id: row.id, take });
         left -= take;
     }
 
@@ -189,15 +265,27 @@ export async function giveItem(options: {
 }): Promise<{ given: boolean; reason?: string }> {
     const admin = createAdminClient();
 
-    const { error } = await admin.from("user_items").upsert(
-        {
-            user_id: options.userId,
-            item_id: options.itemId,
-            paid_free: options.paidFree ?? 0,
-        },
-        { onConflict: "user_id,item_id", ignoreDuplicates: true },
-    );
+    const { data, error } = await admin
+        .from("user_items")
+        .upsert(
+            {
+                user_id: options.userId,
+                item_id: options.itemId,
+                paid_free: options.paidFree ?? 0,
+            },
+            { onConflict: "user_id,item_id", ignoreDuplicates: true },
+        )
+        .select("item_id");
 
     if (error) return { given: false, reason: error.message };
+
+    /*
+     * ★ 何も入らなかった ＝ もう持っていた。
+     *   同じ品物の交換が 2 つ同時に走ると、2 つ目はここに来る。
+     *   「渡せた」と返すと、ポイントだけ二重に引かれる（呼んだ側が戻す）。
+     */
+    if (!data || data.length === 0) {
+        return { given: false, reason: "もう持っています" };
+    }
     return { given: true };
 }

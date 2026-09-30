@@ -392,6 +392,45 @@ export default function CommunityClient() {
                             ))}
                         </div>
 
+                        {/*
+                         * テーマの札（携帯だけ）。
+                         *
+                         * ★ 携帯では左の柱が出ないので、
+                         *   「テーマで探す」が丸ごと見えなくなっていた。
+                         *   同じ札を 2 段目に横に流して出す。
+                         *   中身と押したときの動きは、柱のものと同じ。
+                         *
+                         *   パソコンでは mobile-p7.css で隠す。
+                         *   柱と二重にならないようにするため。
+                         */}
+                        {topics.length > 0 &&
+                            view !== "rooms" &&
+                            view !== "notices" && (
+                                <div className="cmx-topics" role="group" aria-label="テーマで探す">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTopic(null)}
+                                        aria-pressed={topic === null}
+                                        className={topic === null ? "is-on" : undefined}
+                                    >
+                                        すべて
+                                        <span className="cmx-topics-count">{total}</span>
+                                    </button>
+                                    {topics.map((row) => (
+                                        <button
+                                            key={row.key}
+                                            type="button"
+                                            onClick={() => setTopic(row.key)}
+                                            aria-pressed={topic === row.key}
+                                            className={topic === row.key ? "is-on" : undefined}
+                                        >
+                                            {row.label}
+                                            <span className="cmx-topics-count">{row.count}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
                         {view === "rooms" ? (
                             <RoomsPanel
                                 openRooms={openRooms}
@@ -691,8 +730,24 @@ export default function CommunityClient() {
               *   view が「タイムライン」のときだけ出す。
               *   執筆室やお知らせでは、投稿する先が違う。
               */}
+            {/*
+              * ★ 押したら、いまある書き込み欄を開いて、すぐ打てるようにする。
+              *   欄を開くのは #compose（:target）のまま。
+              *   打つ所へ指を伸ばし直さなくて済むように、入力欄に合わせる。
+              */}
             {view === "timeline" && (
-                <a href="#compose" className="cm-fab">
+                <a
+                    href="#compose"
+                    className="cm-fab"
+                    aria-label="書き込む"
+                    onClick={() => {
+                        window.setTimeout(() => {
+                            document
+                                .querySelector<HTMLTextAreaElement>("#compose textarea")
+                                ?.focus();
+                        }, 60);
+                    }}
+                >
                     <span className="cm-fab-icon" aria-hidden="true">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="1.8"
@@ -701,7 +756,7 @@ export default function CommunityClient() {
                             <path d="M4 20c2.5-2.5 5-4.5 8-6" />
                         </svg>
                     </span>
-                    <span className="cm-fab-label">投稿する</span>
+                    <span className="cm-fab-label">書き込む</span>
                 </a>
             )}
         </div>

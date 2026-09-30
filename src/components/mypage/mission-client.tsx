@@ -1,6 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import LoginCard from '@/components/mypage/login-card'
 
 export interface MissionStats {
   likeCount: number
@@ -117,6 +118,15 @@ export const WRITER_ONLY_MISSIONS: Mission[] = [
 export const READER_MISSIONS: Mission[] = [...COMMON_MISSIONS, ...READER_ONLY_MISSIONS]
 export const WRITER_MISSIONS: Mission[] = WRITER_ONLY_MISSIONS
 
+/*
+ * この画面で「クリア！」を押したもの。
+ *
+ * ★ マイページは描き直しのたびにこの画面を作り直すので、
+ *   押したばかりのものが「クリア！」に戻って見えることがあった。
+ *   開いているあいだは、ここに覚えておく。
+ */
+const claimedThisVisit = new Set<string>()
+
 export default function MissionClient({ user, stats, initialClaimedIds, isWriter }: Props) {
   /*
    * ★ 向きによって、出す一覧を変える。
@@ -130,9 +140,82 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
     ? [...COMMON_MISSIONS, ...WRITER_ONLY_MISSIONS]
     : [...COMMON_MISSIONS, ...READER_ONLY_MISSIONS]
   const supabase = createClient()
-  const [claimed, setClaimed] = useState(new Set(initialClaimedIds))
+  const [claimed, setClaimed] = useState(new Set([...initialClaimedIds, ...Array.from(claimedThisVisit)]))
   const [claiming, setClaiming] = useState('')
   const [vanishing, setVanishing] = useState('')
+  /* もらったポイントの知らせ */
+  const [earnedNote, setEarnedNote] = useState('')
+
+  /*
+   * ポイントを受け取る。
+   *
+   * ★ 配るかどうかはサーバーが決める（達成しているか・クリア！を押したか・もう配ったか）。
+   *   ここでは頼むだけ。
+   */
+  async function collectPoints() {
+    try {
+      const response = await fetch('/api/points/missions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ side: isWriter ? 'writer' : 'reader' }),
+      })
+      if (!response.ok) return
+      const data = (await response.json()) as { earned?: number }
+      if (data.earned && data.earned > 0) {
+        setEarnedNote(`無料ポイントを ${data.earned} pt もらいました`)
+        window.setTimeout(() => setEarnedNote(''), 4000)
+      }
+    } catch {
+      /* 受け取れなくても、次に開いたときにまた頼む */
+    }
+  }
+
+  /*
+   * ★ 開いたときにも頼む。
+   *   ポイントが付く前に「クリア！」を押していた人の分も、ここで届く。
+   */
+  useEffect(() => {
+    if (!user) return
+    let alive = true
+    void (async () => {
+      await autoClaimAchieved(() => alive)
+      await collectPoints()
+    })()
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isWriter])
+
+  /*
+   * ★ もう達成しているミッションは、開いたときにクリアにしておく。
+   *
+   *   ミッションを新しく足したとき、前から条件を満たしている人にも
+   *   「クリア！」を 1 つずつ押させるのは手間なだけ。
+   *   達成しているのにクリアになっていないものを、まとめてクリアにする。
+   *   ポイントは、このあとの collectPoints でまとめて届く（サーバーが達成を確かめる）。
+   */
+  async function autoClaimAchieved(isAlive: () => boolean) {
+    const pending = MISSIONS.filter(
+      m => !claimed.has(m.id) && Math.min(m.target, m.cur(stats)) >= m.target,
+    ).map(m => m.id)
+    if (pending.length === 0) return
+    try {
+      const { data: { user: u } } = await supabase.auth.getUser()
+      if (!u) return
+      const done: string[] = []
+      for (const missionId of pending) {
+        const { error } = await supabase.from('user_missions').insert({ user_id: u.id, mission_id: missionId })
+        /* もう入っていた（別の画面で押した等）ときも、クリア済みとして扱う */
+        if (!error || error.code === '23505') done.push(missionId)
+      }
+      if (!isAlive() || done.length === 0) return
+      done.forEach(id => claimedThisVisit.add(id))
+      setClaimed(prev => new Set([...Array.from(prev), ...done]))
+    } catch {
+      /* クリアにできなくても、「クリア！」の押し具は残る */
+    }
+  }
 
   async function handleClaim(missionId: string) {
     setClaiming(missionId)
@@ -146,6 +229,8 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
           setClaimed(prev => new Set(Array.from(prev).concat(missionId)))
           setVanishing('')
         }, 450)
+        claimedThisVisit.add(missionId)
+        void collectPoints()
         return
       }
     }
@@ -179,8 +264,17 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
     <div>
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '-0.01em', lineHeight: 1.3 }}>ミッション</h1>
-        <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 10, lineHeight: 1.7 }}>読んで、応援して、書いて。挑戦するとバッジや報酬がもらえます。</p>
+        <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 10, lineHeight: 1.7 }}>読んで、応援して、書いて。1つクリアするごとに無料ポイントを10pt、全部そろうとさらに300ptもらえます。ポイントはアイテムツリーで交換できます。</p>
       </div>
+
+      {earnedNote && (
+        <div role="status" style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 12, background: '#fdf6e7', border: '1px solid #f0dca8', color: '#8a6212', fontSize: 13.5, fontWeight: 700 }}>
+          {earnedNote}
+        </div>
+      )}
+
+      {/* 乗船印帳（毎日ログイン） */}
+      {user && <LoginCard />}
 
       {/* サマリーカード */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-border)', borderRadius: 14, padding: '20px 24px', marginBottom: 20, flexWrap: 'wrap' }}>
@@ -265,7 +359,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
                     border: 'none', borderRadius: 20, padding: '9px 20px', cursor: 'pointer',
                     boxShadow: '0 3px 10px color-mix(in srgb, var(--color-brand) 40%, transparent)',
                   }}>
-                  {claiming === m.id ? '...' : 'クリア！'}
+                  {claiming === m.id ? '...' : 'クリア！ +10pt'}
                 </button>
               ) : (
                 <span style={{ fontSize: 11, color: 'var(--color-text-faint)', flexShrink: 0, border: '1px solid var(--color-brand-border)', borderRadius: 14, padding: '5px 12px' }}>挑戦中</span>

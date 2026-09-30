@@ -91,13 +91,14 @@ export default function ChapterAccordion({
     const isReadEp = readSet.has(ep.id)
     return (
       <Link href={`/novel/${novelId}/episode/${ep.id}`} style={{textDecoration:'none',display:'block'}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderBottom:'1px solid var(--color-brand-light)',background: isReadEp ? '#e5e7eb' : 'var(--color-bg-card)'}}>
+        {/* 携帯では 2 行（mobile-read.css の nvr）。題が切れないように */}
+        <div className="nvr" style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderBottom:'1px solid var(--color-brand-light)',background: isReadEp ? '#e5e7eb' : 'var(--color-bg-card)'}}>
           {/* 挿絵は読む画面の本文の前にだけ出す。目次には出さない */}
-          <div style={{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:5}}>
+          <div className="nvr-t" style={{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:5}}>
             {isReadEp && <span style={{fontSize:10,color:'#10b981',fontWeight:700,flexShrink:0}}>✓</span>}
             <span style={{fontSize:13,fontWeight:500,color: isReadEp ? '#4b5563' : 'var(--color-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.title}</span>
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+          <div className="nvr-m" style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
             {epLikeCounts[ep.id] > 0 && <span style={{fontSize:10,color:'var(--color-text-muted)'}}>♡ {fmtNum(epLikeCounts[ep.id])}</span>}
             {epCommentCounts[ep.id] > 0 && <span style={{fontSize:10,color:'var(--color-text-muted)'}}>💬 {fmtNum(epCommentCounts[ep.id])}</span>}
             {/* 投稿した日。1日以上あけて直していれば、改稿の日も出す */}

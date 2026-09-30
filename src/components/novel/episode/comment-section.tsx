@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { visibleById, visibleElement } from '@/lib/visible-element'
+import CostumeOverlay from '@/components/common/costume-overlay'
 import { createClient } from '@/lib/supabase/client'
 import { useLoginRequired } from '@/hooks/use-login-required'
 import Link from 'next/link'
@@ -180,7 +182,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
     const finder = window.setInterval(() => {
       tries += 1
 
-      const found = document.getElementById(hash.slice(1))
+      const found = visibleById(hash.slice(1))
       if (!found) {
         if (tries >= 10) window.clearInterval(finder)
         return
@@ -200,8 +202,29 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
     }
   }, [comments])
 
+  /*
+   * コメントした人がつけているアイコン衣装。
+   * ★ 人の顔ぶれが変わったときだけ読み直す。
+   */
+  const [costumes, setCostumes] = useState<Record<string, string>>({})
+  const costumeKey = Array.from(new Set(comments.flatMap(c => [c.user_id, ...(c.replies || []).map(r => r.user_id)]))).sort().join(',')
   useEffect(() => {
-    if (!userId) return guard('感想を書く', () => {})()
+    if (!costumeKey) return
+    let alive = true
+    fetch(`/api/points/costumes?ids=${encodeURIComponent(costumeKey)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (alive && d?.costumes) setCostumes(d.costumes) })
+      .catch(() => { /* 衣装が読めなくても、コメントは読める */ })
+    return () => { alive = false }
+  }, [costumeKey])
+
+  useEffect(() => {
+    /*
+     * ★ 入っていない人は、読みに行かずに終わる。
+     *   前は guard を呼んでいたので、開いただけで
+     *   「ログインが必要です」の窓が出ていた。
+     */
+    if (!userId) return
     /*
      * どれに いいね を付けているか。
      *
@@ -536,8 +559,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                  *   その本文が画面に無かった。
                  */
                 if (next) {
-                  document
-                    .querySelector('[data-sentence="0"]')
+                  visibleElement('[data-sentence="0"]')
                     ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
                 }
               }}
@@ -610,6 +632,8 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
           /* 通知から、この感想へ直に来られるようにする目印 */
           <div key={c.id} id={`comment-${c.id}`} style={{ scrollMarginTop: 80, padding: '14px 16px', margin: '0 12px 10px', border: `1px solid ${c.is_pinned ? 'var(--color-brand)' : 'var(--color-brand-border)'}`, borderRadius: 12, background: c.is_pinned ? 'var(--color-brand-light)' : 'var(--color-bg-card)' }}>
             <div style={{ display: 'flex', gap: 10 }}>
+              {/* アイコン。衣装をつけていれば上に重ねる（その分だけ上を空ける） */}
+              <span style={{ position: 'relative', width: 36, height: 36, flexShrink: 0, marginTop: costumes[c.user_id] ? 14 : 0 }}>
               {c.icon_url ? (
                 <img src={c.icon_url} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
               ) : (
@@ -617,6 +641,8 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                   {(c.display_name || '?')[0]}
                 </div>
               )}
+              <CostumeOverlay url={costumes[c.user_id]} size={36} />
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
                   <Link href={`/author/${c.user_id}`} style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text)', textDecoration: 'none' }}>{c.display_name}</Link>
@@ -694,6 +720,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                     {c.replies.map(r => (
                       /* 返信にも目印。通知はここへ飛ぶことがある */
                       <div key={r.id} id={`comment-${r.id}`} style={{ scrollMarginTop: 80, display: 'flex', gap: 8 }}>
+                        <span style={{ position: 'relative', width: 28, height: 28, flexShrink: 0, marginTop: costumes[r.user_id] ? 11 : 0 }}>
                         {r.icon_url ? (
                           <img src={r.icon_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                         ) : (
@@ -701,6 +728,8 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                             {(r.display_name || '?')[0]}
                           </div>
                         )}
+                        <CostumeOverlay url={costumes[r.user_id]} size={28} />
+                        </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
                             <Link href={`/author/${r.user_id}`} style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text)', textDecoration: 'none' }}>{r.display_name}</Link>

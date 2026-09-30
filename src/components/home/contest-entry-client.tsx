@@ -244,7 +244,8 @@ export default function ContestEntryClient({
     }
 
     return (
-        <div className="min-h-screen bg-white pb-20">
+        /* m9-entry: 携帯だけの見た目（styles/mobile-p9.css） */
+        <div className="m9-entry min-h-screen bg-white pb-20">
             <Header
                 breadcrumbs={[
                     { label: "コンテスト", href: "/contest" },
@@ -370,7 +371,7 @@ export default function ContestEntryClient({
                                         <li key={work.id}>
                                             <label
                                                 className={[
-                                                    "flex cursor-pointer items-center gap-4 rounded-xl border px-4 py-3.5",
+                                                    "m9-pick flex cursor-pointer items-center gap-4 rounded-xl border px-4 py-3.5",
                                                     canPick
                                                         ? "hover:bg-[#f7fafc]"
                                                         : "cursor-not-allowed opacity-55",
@@ -396,7 +397,7 @@ export default function ContestEntryClient({
                                                 />
 
                                                 <span
-                                                    className="flex h-14 w-11 shrink-0 items-center justify-center rounded"
+                                                    className="m9-pick-tile flex h-14 w-11 shrink-0 items-center justify-center rounded"
                                                     style={{ background: tile.bg }}
                                                 >
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -409,7 +410,7 @@ export default function ContestEntryClient({
 
                                                 <span className="min-w-0 flex-1">
                                                     <span
-                                                        className="block truncate text-[14px]"
+                                                        className="m9-pick-title block truncate text-[14px]"
                                                         style={{ color: C.navy }}
                                                     >
                                                         {work.title ||
@@ -417,7 +418,7 @@ export default function ContestEntryClient({
                                                     </span>
 
                                                     <span
-                                                        className="mt-0.5 block text-[11px]"
+                                                        className="m9-pick-meta mt-0.5 block text-[11px]"
                                                         style={{ color: C.dim }}
                                                     >
                                                         {formatNumber(readable)}
@@ -476,7 +477,7 @@ export default function ContestEntryClient({
                     </div>
 
                     {contest.terms && (
-                        <label className="mt-4 flex cursor-pointer items-start gap-2.5">
+                        <label className="m9-agree mt-4 flex cursor-pointer items-start gap-2.5">
                             <input
                                 type="checkbox"
                                 name="agree-terms"
@@ -507,8 +508,13 @@ export default function ContestEntryClient({
                     </p>
                 )}
 
-                {/* 出す */}
-                <div className="mt-8 flex flex-wrap items-center gap-3">
+                {/*
+                 * 出す。
+                 *
+                 * ★ 携帯では画面の下に留める（m9-entry-bar）。
+                 *   作品を選んだあと、下まで送らずに押せる。
+                 */}
+                <div className="m9-entry-bar mt-8 flex flex-wrap items-center gap-3">
                     <button
                         type="button"
                         onClick={() => void submit()}
@@ -518,7 +524,7 @@ export default function ContestEntryClient({
                             (Boolean(contest.terms) && !isAgreed) ||
                             (rest !== null && rest === 0)
                         }
-                        className="rounded-lg px-8 py-3 text-[13px] font-medium text-white disabled:opacity-40"
+                        className="m9-entry-go rounded-lg px-8 py-3 text-[13px] font-medium text-white disabled:opacity-40"
                         style={{ background: C.teal }}
                     >
                         {isSending ? "送っています…" : "この作品で応募する"}
@@ -526,7 +532,7 @@ export default function ContestEntryClient({
 
                     <Link
                         href={`/contest/${contestId}`}
-                        className="text-[12px]"
+                        className="m9-entry-quit text-[12px]"
                         style={{ color: C.dim }}
                     >
                         やめる

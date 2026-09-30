@@ -113,7 +113,8 @@ export default async function ProjectPage({
                 ]}
             />
 
-            <div className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-6">
+            {/* m9-pjd: 携帯だけの見た目（styles/mobile-p9.css） */}
+            <div className="m9-pjd mx-auto w-full max-w-3xl px-5 py-8 sm:px-6">
                 {/* 企画そのもの */}
                 <section className="overflow-hidden rounded-xl border border-line bg-surface">
                     {project.banner_url && (

@@ -1,0 +1,499 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯：作品の設定・読者の目・作品管理・ダッシュボード・Pro・感想・ランキングの記録
+ *
+ * ★ 1024px 未満でだけ効く。パソコンの見た目は変えない。
+ *   携帯だけの部品（p8-set-chips・p8-sp-only・p8-rh-sp）は、
+ *   ふだんは出さず、携帯のときだけ出す。
+ * ★ 元の部品はインライン style が多いので、上書きに !important を使う。
+ * ============================================================
+ */
+
+.p8-set-chips,
+.p8-sp-only,
+.p8-rh-sp {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .p8-pc-only {
+        display: none !important;
+    }
+    .p8-sp-only {
+        display: inline;
+    }
+
+    /* ------------------------------------------------------------
+     * 作品の設定：項目を横に流す札
+     * ------------------------------------------------------------ */
+    .p8-set-chips {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        /* 画面の端まで流す。p-4 の余白ぶん外へ出す */
+        margin: -4px -16px 0;
+        padding: 2px 16px 4px;
+    }
+    .p8-set-chips::-webkit-scrollbar {
+        display: none;
+    }
+    .p8-set-chips button {
+        flex-shrink: 0;
+        height: 36px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--color-line, #dcdfda);
+        background: var(--color-surface, #fff);
+        color: var(--color-muted, #5b6560);
+        font-size: 13px;
+        white-space: nowrap;
+    }
+    .p8-set-chips button.is-on {
+        border-color: var(--color-forest, #1f4e6b);
+        background: var(--color-forest-tint, #e6eef4);
+        color: var(--color-forest, #1f4e6b);
+        font-weight: 700;
+    }
+
+    /* 作品の設定（表示）：プレビューを上に、選ぶものは大きく */
+    .p8-disp-grid {
+        gap: 20px !important;
+        padding: 16px !important;
+    }
+    .p8-disp-preview {
+        order: -1;
+    }
+    .p8-disp-pcbox {
+        height: 340px !important;
+    }
+    .p8-disp-grid button[aria-pressed] {
+        min-height: 36px;
+        padding-left: 14px;
+        padding-right: 14px;
+        font-size: 13px;
+    }
+
+    /* ------------------------------------------------------------
+     * 作品管理（作品ごとの数字）
+     * ------------------------------------------------------------ */
+    .p8-nm-acts {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px !important;
+    }
+    .p8-nm-acts > a {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 6px !important;
+        border-radius: 12px !important;
+        font-size: 13.5px !important;
+        white-space: nowrap;
+    }
+
+    /* 数字は 2 列の札 */
+    .p8-nm-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        background: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+    }
+    .p8-nm-stats > div:first-child {
+        grid-column: 1 / -1;
+        padding: 4px 2px 0 !important;
+        border: none !important;
+        font-size: 13px !important;
+    }
+    .p8-nm-stats > div:not(:first-child) {
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+        padding: 10px 12px !important;
+        border: 1px solid var(--color-brand-border) !important;
+        border-radius: 10px;
+        background: var(--color-bg-card);
+    }
+    .p8-nm-stats > div:not(:first-child) > span:first-child {
+        width: auto !important;
+        font-size: 11px !important;
+    }
+    .p8-nm-stats > div:not(:first-child) > span:last-child {
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+    .p8-nm-stats > .p8-nm-wide {
+        grid-column: 1 / -1;
+    }
+    .p8-nm-stats > .p8-nm-wide > span:last-child {
+        font-size: 13px;
+    }
+    /* 作品設定の行：見出しの幅を詰める */
+    .p8-nm-rows > div:not(:first-child) > span:first-child {
+        width: 84px !important;
+    }
+    .p8-nm-rows > div:not(:first-child) {
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+
+    /* ------------------------------------------------------------
+     * ダッシュボード
+     * ------------------------------------------------------------ */
+    .p8-ana-sel {
+        display: block !important;
+        min-width: 0 !important;
+        width: 100%;
+    }
+    .p8-ana-sel select {
+        min-height: 46px;
+        text-overflow: ellipsis;
+    }
+    /* 棒の間を詰めて、棒に幅を回す */
+    .p8-ana-bars {
+        gap: 1px !important;
+    }
+    /* エピソード別：数字の欄を細くする（見出しと中身で同じ幅） */
+    .p8-ana-ep > div {
+        gap: 6px !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    .p8-ana-ep > div > span:first-child {
+        min-width: 0 !important;
+    }
+    .p8-ana-ep > div > span:not(:first-child) {
+        width: 44px !important;
+    }
+    .p8-ana-ep > div > span:last-child {
+        width: 52px !important;
+    }
+
+    /* ------------------------------------------------------------
+     * 詳しい分析（Pro）
+     *
+     * 600px 以下の形は analytics-pro.tsx の中にある。
+     * ここではその上の幅（601〜1023px）で、詰まる所だけ直す。
+     * （600px 以下では、あちらの決まりが後に読まれるので勝つ）
+     * ------------------------------------------------------------ */
+    .ana-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+    .ana-tabs {
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .ana-tabs::-webkit-scrollbar {
+        display: none;
+    }
+    .ana-root p {
+        line-height: 1.8 !important;
+    }
+
+    /* ------------------------------------------------------------
+     * 感想・コメント
+     * ------------------------------------------------------------ */
+    .p8-fb-tabs > a {
+        flex: 1 1 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 6px !important;
+        border-radius: 12px !important;
+        font-size: 13px !important;
+        white-space: nowrap;
+    }
+
+    /* 返信と既読：本文の下に、同じ幅の大きなボタンで並べる */
+    .p8-fb-acts {
+        flex-wrap: wrap;
+        margin-top: 12px !important;
+    }
+    .p8-fb-acts > * {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    .p8-fb-none {
+        display: none;
+    }
+    .p8-fb-reply {
+        margin-top: 0 !important;
+    }
+    .p8-fb-reply.is-open,
+    .p8-fb-reply.is-done {
+        flex-basis: 100%;
+    }
+    .p8-fb-reply-btn,
+    .p8-fb-read {
+        width: 100%;
+        min-height: 42px;
+        border-radius: 10px !important;
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+    }
+    .p8-fb-reply-btn {
+        background: var(--color-brand) !important;
+        color: var(--color-text-inverse, #fff) !important;
+    }
+    .p8-fb-read {
+        background: var(--color-bg-card) !important;
+    }
+    .p8-fb-done {
+        text-align: center;
+        font-size: 12px !important;
+    }
+    .p8-fb-reply-row > button {
+        flex: 1 1 0;
+        min-height: 40px;
+        font-size: 13px !important;
+    }
+
+    /* ------------------------------------------------------------
+     * ランキングの記録
+     * ------------------------------------------------------------ */
+    .p8-rh-pc {
+        display: none;
+    }
+    .p8-rh-sp {
+        display: block;
+    }
+
+    /* 上のまとめ */
+    .p8-rh-sum {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-brand-border);
+        border-radius: 12px;
+        margin-bottom: 10px;
+    }
+    .p8-rh-sum > div {
+        padding: 10px 6px;
+        text-align: center;
+    }
+    .p8-rh-sum > div + div {
+        border-left: 1px solid var(--color-brand-light);
+    }
+    .p8-rh-sum small {
+        display: block;
+        font-size: 10.5px;
+        color: var(--color-text-muted);
+    }
+    .p8-rh-sum b {
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-size: 24px;
+        line-height: 1.3;
+        color: var(--color-text);
+    }
+    .p8-rh-sum > div:first-child b {
+        color: #b8860b;
+    }
+    .p8-rh-sum i {
+        font-style: normal;
+        font-size: 11px;
+        margin-left: 1px;
+        color: var(--color-text-muted);
+    }
+
+    /* 順位の動き */
+    .p8-rh-spark {
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-brand-border);
+        border-radius: 12px;
+        padding: 10px 12px 8px;
+        margin-bottom: 14px;
+    }
+    .p8-rh-spark-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+    .p8-rh-spark-head b {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12.5px;
+        color: var(--color-text);
+    }
+    .p8-rh-spark-head small {
+        flex-shrink: 0;
+        font-size: 10.5px;
+        color: var(--color-text-faint);
+    }
+    .p8-rh-spark-plot {
+        position: relative;
+        padding-left: 28px;
+    }
+    .p8-rh-spark svg {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+    .p8-rh-spark .grid {
+        stroke: var(--color-brand-light);
+        stroke-width: 1;
+    }
+    .p8-rh-spark .path {
+        stroke: var(--color-brand);
+        stroke-width: 2;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+    }
+    .p8-rh-spark .dot {
+        fill: #d4a017;
+        stroke: #fff;
+        stroke-width: 1.5;
+    }
+    .p8-rh-spark-axis {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        font-size: 9.5px;
+        color: var(--color-text-faint);
+    }
+
+    /* 日ごとのまとまり */
+    .p8-rh-day {
+        margin-bottom: 14px;
+    }
+    .p8-rh-day > h2 {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--color-text-muted);
+        margin: 0 2px 7px;
+    }
+    .p8-rh-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-brand-border);
+        border-radius: 12px;
+        padding: 11px 12px;
+        margin-bottom: 8px;
+    }
+    .p8-rh-card.is-new {
+        border-color: var(--color-brand);
+        background: var(--color-brand-light);
+    }
+
+    /* メダル：1〜3位は金・銀・銅 */
+    .p8-rh-medal {
+        flex-shrink: 0;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        background: var(--color-bg-card);
+        border: 1.5px solid var(--color-brand-border);
+        color: var(--color-text);
+    }
+    .p8-rh-medal b {
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-size: 19px;
+    }
+    .p8-rh-medal small {
+        font-size: 9px;
+        margin-top: 1px;
+    }
+    .p8-rh-medal.gold {
+        background: radial-gradient(circle at 35% 30%, #f3d77e, #b8860b 70%);
+        border-color: #c8961e;
+        color: #fff;
+        text-shadow: 0 1px 1px rgba(0,0,0,.25);
+    }
+    .p8-rh-medal.silver {
+        background: radial-gradient(circle at 35% 30%, #d9dee3, #7d8791 70%);
+        border-color: #6f7984;
+        color: #fff;
+        text-shadow: 0 1px 1px rgba(0,0,0,.3);
+    }
+    .p8-rh-medal.bronze {
+        background: radial-gradient(circle at 35% 30%, #e2a77a, #96532b 70%);
+        border-color: #9a5a33;
+        color: #fff;
+        text-shadow: 0 1px 1px rgba(0,0,0,.25);
+    }
+    .p8-rh-medal.gold b,
+    .p8-rh-medal.silver b,
+    .p8-rh-medal.bronze b {
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    }
+
+    .p8-rh-body {
+        flex: 1;
+        min-width: 0;
+    }
+    .p8-rh-title {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--color-text);
+        text-decoration: none;
+    }
+    .p8-rh-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 4px;
+    }
+    .p8-rh-tags span {
+        font-size: 10px;
+        padding: 1px 7px;
+        border-radius: 4px;
+        background: var(--color-bg);
+        border: 1px solid var(--color-brand-border);
+        color: var(--color-text-muted);
+    }
+    .p8-rh-tags span.new {
+        font-weight: 700;
+        color: #dc2626;
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+    .p8-rh-time {
+        margin-top: 3px;
+        font-size: 11px;
+        color: var(--color-text-faint);
+    }
+    .p8-rh-read {
+        flex-shrink: 0;
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 10px;
+        border: 1px solid var(--color-brand-border);
+        background: var(--color-bg-card);
+        color: var(--color-brand);
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .p8-rh-done {
+        flex-shrink: 0;
+        font-size: 11px;
+        color: var(--color-text-faint);
+        padding: 0 4px;
+    }
+}

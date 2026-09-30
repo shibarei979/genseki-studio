@@ -307,6 +307,24 @@ export default function RelationsView({
     const pageById = new Map(pages.map((page) => [page.id, page]));
     const canCreate = fromId && toId && fromId !== toId && label.trim();
 
+    /*
+     * 携帯：関係を足す小窓（下から出る）。
+     *
+     * ★ 名前を打たなくていい形にする。
+     *   人の丸を 2 つ押して、関係の名前を 1 つ押し、「結ぶ」。
+     *   中身（fromId・toId・label・線の形）は、パソコンの欄と同じものを使う。
+     */
+    const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+
+    async function createNow() {
+        if (!canCreate) return;
+        await onCreate(fromId, toId, label.trim(), styleToSave);
+        const back = showBack ? backLabel.trim() : "";
+        if (back) await onCreate(toId, fromId, back, styleToSave);
+        setLabel("");
+        setBackLabel("");
+    }
+
     const selected = relations.find((relation) => relation.id === selectedRelationId) ?? null;
     const from = selected ? entryById.get(selected.from_entry_id) : null;
     const to = selected ? entryById.get(selected.to_entry_id) : null;
@@ -386,7 +404,26 @@ export default function RelationsView({
                       *   代わりに、中身を 1 行に収める。
                       *   見本の札は、欄に触れたときだけ出す。
                       */}
-                    <div className="rounded-lg border border-line bg-surface px-3 py-2">
+                    {/*
+                      * 携帯：図と一覧の切り替えだけ。足す欄は下の「関係を足す」から。
+                      */}
+                    <div className="mwr-mob mwr-rel-top">
+                        <div className="mwr-seg">
+                            {(["graph", "list"] as const).map((key) => (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setMode(key)}
+                                    aria-pressed={mode === key}
+                                    className={mode === key ? "is-on" : ""}
+                                >
+                                    {key === "graph" ? "図" : "一覧"}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mwr-desk rounded-lg border border-line bg-surface px-3 py-2">
                         <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs text-muted">関係を追加</span>
                             <EntrySelect
@@ -1066,6 +1103,120 @@ export default function RelationsView({
                         </div>
                     )}
                 </>
+            )}
+            {/* ---------- 携帯：関係を足す ---------- */}
+            {/* ★ 数えるのは、選べる項目（本文から拾った候補は選べない） */}
+            {pickable.length >= 2 && !isAddSheetOpen && (
+                <button
+                    type="button"
+                    className="mwr-mob mwr-rel-add"
+                    onClick={() => setIsAddSheetOpen(true)}
+                >
+                    ＋ 関係を足す
+                </button>
+            )}
+
+            {isAddSheetOpen && (
+                <div className="mwr-sheet-wrap" role="dialog" aria-label="関係を足す">
+                    <button
+                        type="button"
+                        className="mwr-dim"
+                        aria-label="とじる"
+                        onClick={() => setIsAddSheetOpen(false)}
+                    />
+                    <div className="mwr-sheet">
+                        <div className="mwr-grab" />
+                        <div className="mwr-sheet-head">
+                            <h3>関係を足す</h3>
+                            <button type="button" onClick={() => setIsAddSheetOpen(false)}>
+                                やめる
+                            </button>
+                        </div>
+
+                        <div className="mwr-fl">
+                            <div className="mwr-l">だれから</div>
+                            <div className="mwr-pick">
+                                {pickable.map((entry) => (
+                                    <button
+                                        key={entry.id}
+                                        type="button"
+                                        className={fromId === entry.id ? "is-on" : ""}
+                                        onClick={() => {
+                                            setFromId(entry.id);
+                                            if (toId === entry.id) setToId("");
+                                        }}
+                                    >
+                                        <i>{entry.name.slice(0, 1)}</i>
+                                        <span>{entry.name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="mwr-fl">
+                            <div className="mwr-l">だれへ</div>
+                            <div className="mwr-pick">
+                                {pickable
+                                    .filter((entry) => entry.id !== fromId)
+                                    .map((entry) => (
+                                        <button
+                                            key={entry.id}
+                                            type="button"
+                                            className={toId === entry.id ? "is-on" : ""}
+                                            onClick={() => setToId(entry.id)}
+                                        >
+                                            <i>{entry.name.slice(0, 1)}</i>
+                                            <span>{entry.name}</span>
+                                        </button>
+                                    ))}
+                            </div>
+                        </div>
+
+                        <div className="mwr-fl">
+                            <div className="mwr-l">どんな関係</div>
+                            <div className="mwr-relc">
+                                {PRESETS.map((preset) => (
+                                    <button
+                                        key={preset}
+                                        type="button"
+                                        className={label === preset ? "is-on" : ""}
+                                        onClick={() => setLabel(preset)}
+                                    >
+                                        {preset}
+                                    </button>
+                                ))}
+                            </div>
+                            <input
+                                type="text"
+                                value={label}
+                                onChange={(e) => setLabel(e.target.value)}
+                                placeholder="ほかの関係は、ここに書く"
+                                aria-label="関係の名前"
+                                className="mwr-in"
+                            />
+                        </div>
+
+                        {fromId && toId && (
+                            <div className="mwr-preview">
+                                <b>{entryById.get(fromId)?.name}</b>
+                                <span>― {label.trim() || "？"} →</span>
+                                <b>{entryById.get(toId)?.name}</b>
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            className="mwr-big"
+                            disabled={!canCreate}
+                            onClick={async () => {
+                                await createNow();
+                                setIsAddSheetOpen(false);
+                            }}
+                        >
+                            結ぶ
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

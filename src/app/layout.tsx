@@ -28,6 +28,11 @@ import "@/styles/mobile-header.css";
 import "@/styles/mobile-novel.css";
 import "@/styles/mobile-tab-bar.css";
 import "@/styles/mobile-workspace.css";
+import "@/styles/mobile-write.css";
+import "@/styles/mobile-resource.css";
+import "@/styles/mobile-read.css";
+import "@/styles/mobile-mypage.css";
+import "@/styles/mobile-find.css";
 /* 携帯の「作品を探す」 */
 import "@/styles/mobile-search.css";
 /* 携帯の「ランキング」 */
@@ -45,7 +50,17 @@ import "@/styles/home/reading_list.css";
 import "@/styles/home/book_info.css";
 import "@/styles/home/responsive.css";
 import "@/styles/home/reader-layout.css";
+/*
+ * 携帯だけの見た目（1024px 未満でだけ効く）。
+ * ほかの指定を上書きするものがあるので、いちばん後ろで読む。
+ */
+import "@/styles/items.css";
+import "@/styles/mobile-p7.css";
+import "@/styles/mobile-p8.css";
+import "@/styles/mobile-p9.css";
+import "@/styles/mobile-home2.css";
 import MobileTabBar from "@/components/layout/mobile-tab-bar";
+import DailyBonus from "@/components/layout/daily-bonus";
 import ErrorWatch from "@/components/layout/error-watch";
 import MobileHeader from "@/components/layout/mobile-header";
 
@@ -59,7 +74,8 @@ const notoSans = Noto_Sans_JP({
 
 const notoSerif = Noto_Serif_JP({
     subsets: ["latin"],
-    weight: ["400", "500"],
+    /* 300 は携帯のホームの見出し（細い字）で使う */
+    weight: ["300", "400", "500"],
     variable: "--font-serif",
     display: "swap",
 });
@@ -304,6 +320,8 @@ if (location.hostname === 'gensekikoro.com' || location.hostname === 'www.gensek
                   * パソコンの見た目には影響しない。
                   */}
                 <MobileTabBar />
+                {/* 毎日ログインのポイント。その日はじめて開いたときに受け取る */}
+                <DailyBonus />
 
                 {/*
                  * 見開きの器。

@@ -297,7 +297,8 @@ export default function ProjectForm() {
                 type="button"
                 onClick={() => void handleSubmit()}
                 disabled={!canSubmit}
-                className="w-full rounded-lg bg-forest py-3 text-[14px] font-medium text-white hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-40"
+                /* m9-pf-go: 携帯では画面の下に留める（styles/mobile-p9.css） */
+                className="m9-pf-go w-full rounded-lg bg-forest py-3 text-[14px] font-medium text-white hover:bg-forest-dark disabled:cursor-not-allowed disabled:opacity-40"
             >
                 {isSaving ? "立てています…" : "この企画を立てる"}
             </button>

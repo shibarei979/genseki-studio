@@ -10,6 +10,8 @@ import { READER_MISSIONS, WRITER_MISSIONS } from '@/components/mypage/mission-cl
 import IconCropper from '@/components/mypage/icon-cropper'
 import { useRouter } from 'next/navigation'
 import TypoReportsTab from '@/components/mypage/typo-reports-tab'
+import MobileMypageTop, { MobileMypageBack } from '@/components/mypage/mobile-mypage-top'
+import CostumeOverlay from '@/components/common/costume-overlay'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { ROOT_ADMIN_EMAIL } from '@/types'
@@ -124,7 +126,11 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
  *
  *   品物が揃ったら、ここから外す。
  */
-const ADMIN_ONLY: Tab[] = ['items']
+/*
+ * ★ アイテムは、みんなに開けた（スタンプ・アイコン衣装・称号がそろったため）。
+ *   また運営だけに戻すときは、ここに 'items' を足す。
+ */
+const ADMIN_ONLY: Tab[] = []
 
 const TABS: { id: Tab; label: string; hideInFocus?: boolean; writerOnly?: boolean }[] = [
   { id:'mypage',    label:'マイページ' },
@@ -254,6 +260,12 @@ export default function MypageClient({
       const hash = window.location.hash.replace('#', '') as Tab
       const valid: Tab[] = ['mypage','works','typos','bookmarks','history','tweet','mission','items','settings','series']
       if (valid.includes(hash)) setActiveTab(hash)
+      /*
+       * ★ 印が無くなったとき（#works から「戻る」で /mypage に戻った）は、マイページに戻す。
+       *   前は何もせず、住所は戻っても画面は作品管理のままだった。
+       *   携帯はメニューから開くので、戻る操作で戻れないと閉じ込められる。
+       */
+      else if (window.location.hash.replace('#', '') === '') setActiveTab('mypage')
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
@@ -540,11 +552,10 @@ export default function MypageClient({
   const [handleSaving, setHandleSaving] = useState(false)
   const [handleError, setHandleError] = useState('')
 
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768)
-    check(); window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
+  /*
+   * ★ ここでも狭さを決めていた（768px 以下）。上の 1023px の決め方とぶつかり、
+   *   769〜1023px では最後に動いた方で見た目が入れ替わっていた。1 つにまとめた。
+   */
 
   const perPage    = isMobile ? 12 : 24
   const totalPages = Math.ceil(ALL_BADGES.length / perPage)
@@ -917,7 +928,7 @@ export default function MypageClient({
         </div>
       )}
       <div style={{display:'flex',alignItems:'flex-start',gap:24,marginBottom:20,flexWrap:'wrap',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:14,padding: isMobile ? '16px 14px' : '20px 22px'}}>
-        <div style={{position:'relative',flexShrink:0,cursor:'pointer'}} onClick={()=>iconInputRef.current?.click()}>
+        <div style={{position:'relative',flexShrink:0,cursor:'pointer',width:88,height:88,marginTop:(profile as any).costume_url?34:0}} onClick={()=>iconInputRef.current?.click()}>
           {/*
            * 選んだら、そのまま上げずに切り抜きへ。
            * 丸の中でどこを見せるかを決めてもらう。
@@ -940,7 +951,9 @@ export default function MypageClient({
             ? <img src={iconUrl} alt={profile.display_name} style={{width:88,height:88,borderRadius:'50%',objectFit:'cover',border:'3px solid var(--color-brand)'}}/>
             : <div style={{width:88,height:88,borderRadius:'50%',background:'var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:34,fontWeight:700,color:'var(--color-text-inverse)'}}>{initial}</div>
           }
-          <div style={{position:'absolute',bottom:2,right:2,width:22,height:22,background:'var(--color-bg-card)',borderRadius:'50%',border:'2px solid var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11}}>{iconUploading?'⟳':'📷'}</div>
+          {/* つけているアイコン衣装 */}
+          <CostumeOverlay url={(profile as any).costume_url} size={88}/>
+          <div style={{position:'absolute',bottom:2,right:2,zIndex:2,width:22,height:22,background:'var(--color-bg-card)',borderRadius:'50%',border:'2px solid var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11}}>{iconUploading?'⟳':'📷'}</div>
         </div>
         <div style={{flex:'1 1 200px',minWidth:'min(180px, 100%)'}}>
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
@@ -2167,17 +2180,57 @@ export default function MypageClient({
       <div style={{width:'100%',padding:'0'}}>
         {isMobile ? (
           <>
-            <div style={{background:'var(--color-bg-card)',borderBottom:'1px solid var(--color-brand-border)',overflowX:'auto',scrollbarWidth:'none' as any,position:'sticky',top:54,zIndex:10}}>
-              <div style={{display:'flex',minWidth:'max-content'}}>
-                {visibleTabs.map(tab => (
-                  <button key={tab.id} onClick={()=>handleTabChange(tab.id as Tab)}
-                    style={{padding:'10px 14px',fontSize:12,fontWeight:activeTab===tab.id?700:400,color:activeTab===tab.id?'var(--color-brand)':'var(--color-text-muted)',background:'none',border:'none',cursor:'pointer',borderBottom:activeTab===tab.id?'2px solid var(--color-brand)':'2px solid transparent',whiteSpace:'nowrap' as const}}>
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/*
+              * ★ 携帯は、横に流れるタブをやめた。
+              *   マイページを開くと、海の帯と 3 列のメニューで全部が見渡せる。
+              *   ほかを開いているときは、上に「‹ マイページ」の段を出す。
+              */}
             <div style={{padding:'14px 14px 80px'}}>
+              {activeTab==='mypage' && (
+                <MobileMypageTop
+                  name={profile.display_name}
+                  handle={handle || null}
+                  iconUrl={iconUrl || null}
+                  costumeUrl={(profile as any).costume_url ?? null}
+                  workCount={published.length}
+                  isReaderMode={isReaderMode}
+                  /*
+                   * ★ 読んだ話・保存した本の数は、あとから届く（/api/mypage/extra）。
+                   *   届くまでは 0 と出さず「—」にする。0 からあとで跳ねると、
+                   *   数が消えたように見える。
+                   */
+                  routeValue={isReaderMode
+                    ? (extra?.missionStats ? (missionStatsNow?.readCount ?? 0) : null)
+                    : Object.values(novelViewMap).reduce((a,b)=>a+(Number(b)||0),0)}
+                  stats={isReaderMode ? [
+                    { value: extra?.missionStats ? (missionStatsNow?.readCount ?? 0) : null, label:'読んだ話' },
+                    { value: extra?.missionStats ? (missionStatsNow?.bookmarkCount ?? myBookmarks.length) : null, label:'保存した本' },
+                    { value: followingCount, label:'フォロー中' },
+                  ] : [
+                    { value: Object.values(novelViewMap).reduce((a,b)=>a+(Number(b)||0),0), label:'合計PV' },
+                    { value: Object.values(novelLikeMap).reduce((a,b)=>a+(Number(b)||0),0), label:'いいね' },
+                    { value: followerCount, label:'フォロワー' },
+                  ]}
+                  menu={[
+                    ...visibleTabs.filter(t => t.id !== 'mypage').flatMap(t => {
+                      const one = { id:t.id, label:t.label, icon:TAB_ICONS[t.id] }
+                      /* 分析は作品管理・誤字報告の次に置く（書く向きだけ） */
+                      return t.id === 'typos'
+                        ? [one, { id:'analytics', label:'分析', href:'/mypage/analytics', icon:<><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/></> }]
+                        : [one]
+                    }),
+                  ]}
+                  myNovelIds={myNovels.map(n => n.id)}
+                  /* 開いた先は頭から見せる（メニューを押した高さのままだと、中身の頭が切れる） */
+                  onPick={(id) => { handleTabChange(id as Tab); window.scrollTo(0, 0) }}
+                />
+              )}
+              {activeTab!=='mypage' && (
+                <MobileMypageBack
+                  label={visibleTabs.find(t => t.id === activeTab)?.label ?? ''}
+                  onBack={() => { handleTabChange('mypage'); window.scrollTo(0, 0) }}
+                />
+              )}
               {activeTab==='mypage' && <MypageTab/>}
               {activeTab==='works' && <WorksTab/>}
               {activeTab==='typos' && <TypoReportsTab/>}
@@ -2190,7 +2243,7 @@ export default function MypageClient({
                 *   #items と打てば、誰でも開けてしまう。
                 *   出す所でも確かめる。
                 */}
-              {activeTab==='items' && isAdmin && <ItemTree/>}
+              {activeTab==='items' && visibleTabs.some(t => t.id === 'items') && <ItemTree/>}
               {activeTab==='settings' && <SettingsTab/>}
               {activeTab==='series' && (
                 <div>
@@ -2271,7 +2324,7 @@ export default function MypageClient({
                 *   #items と打てば、誰でも開けてしまう。
                 *   出す所でも確かめる。
                 */}
-              {activeTab==='items' && isAdmin && <ItemTree/>}
+              {activeTab==='items' && visibleTabs.some(t => t.id === 'items') && <ItemTree/>}
               {activeTab==='settings' && <SettingsTab/>}
               {activeTab==='series' && (
                 <div>
@@ -2647,7 +2700,7 @@ export default function MypageClient({
       )}
 
       {toast && (
-        <div style={{position:'fixed',bottom:isMobile?80:24,right:24,background:'var(--color-brand)',color:'var(--color-text-inverse)',padding:'12px 20px',borderRadius:12,fontSize:13,fontWeight:600,zIndex:999,boxShadow:'0 4px 16px color-mix(in srgb, var(--color-brand) 35%, transparent)'}}>
+        <div style={{position:'fixed',bottom:isMobile?'calc(var(--mtb-h, 64px) + 16px)':24,right:24,background:'var(--color-brand)',color:'var(--color-text-inverse)',padding:'12px 20px',borderRadius:12,fontSize:13,fontWeight:600,zIndex:999,boxShadow:'0 4px 16px color-mix(in srgb, var(--color-brand) 35%, transparent)'}}>
           {toast}
         </div>
       )}

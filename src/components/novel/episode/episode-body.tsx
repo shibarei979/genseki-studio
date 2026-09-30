@@ -1,5 +1,6 @@
 'use client'
 import ShioriMark, { SHIORI_COLORS } from '@/components/common/shiori-mark'
+import { visibleElement } from '@/lib/visible-element'
 import { useEpisodeMarks } from '@/hooks/use-episode-marks'
 import { illustBox } from '@/config/illust-size'
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
@@ -1006,7 +1007,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
                 <button type="button"
                   onClick={()=>{
                     /* その文まで動かす */
-                    document.querySelector(`[data-sentence="${askingMark.sentence}"]`)
+                    visibleElement(`[data-sentence="${askingMark.sentence}"]`)
                       ?.scrollIntoView({ behavior:'smooth', block:'center' })
                     setAskingMark(null)
                   }}
@@ -1157,7 +1158,7 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
                 <button type="button"
                   onClick={()=>{
                     /* その文まで動かす */
-                    document.querySelector(`[data-sentence="${askingMark.sentence}"]`)
+                    visibleElement(`[data-sentence="${askingMark.sentence}"]`)
                       ?.scrollIntoView({ behavior:'smooth', block:'center' })
                     setAskingMark(null)
                   }}

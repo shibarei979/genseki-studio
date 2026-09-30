@@ -1,0 +1,710 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯の「コミュニティー・執筆室・お知らせ・メッセージ」
+ *
+ * ★ 1024px 未満でだけ効く。パソコンには影響しない。
+ *   携帯だけの新しい部品は、ここで既定を display:none にし、
+ *   @media の中でだけ出す。
+ *
+ * ★ mobile-community.css（前からある携帯対応）の続き。
+ *   あちらと同じことは書かない。上書きするのは
+ *   右下の「書き込む」の見た目と位置だけ。
+ *
+ * 中身と仕組みはそのまま。並び・大きさ・置き場所だけを変える。
+ * ============================================================
+ */
+
+/* パソコンでは出さない（携帯だけの部品） */
+.cmx-topics,
+.rm-mbar,
+.rm-info-backdrop,
+.rm-info-head,
+.rm-info-rules,
+.rm-act-short {
+    display: none;
+}
+
+/*
+ * ============================================================
+ * 1. コミュニティー（タイムライン）
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    /*
+     * テーマの札。
+     *
+     * 上の並び（タイムライン／執筆室／…）の下、2 段目に横に流す。
+     * 左の柱が出ない携帯でも、テーマで絞れるようにする。
+     * 折り返さずに横へ送る。何段にもなると、書き込みが下へ押し出される。
+     */
+    .cmx-topics {
+        display: flex;
+        gap: 6px;
+        margin: -6px -20px 12px;
+        padding: 2px 20px 4px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cmx-topics::-webkit-scrollbar {
+        display: none;
+    }
+
+    .cmx-topics > button {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 34px;
+        padding: 0 14px;
+        border: 1px solid var(--color-line);
+        border-radius: 999px;
+        background: var(--color-surface);
+        color: var(--color-muted);
+        font-size: 12.5px;
+        font-weight: 600;
+        white-space: nowrap;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* いま選んでいる札。地を塗って、ひと目で分かるようにする */
+    .cmx-topics > button.is-on {
+        border-color: var(--color-forest-dark);
+        background: var(--color-forest-dark);
+        color: #fff;
+    }
+
+    .cmx-topics-count {
+        font-size: 11px;
+        font-weight: 500;
+        opacity: .7;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /*
+     * 右下の「書き込む」。
+     *
+     * ★ 仕組みは mobile-community.css の .cm-fab のまま。
+     *   見本に合わせて、丸く・濃い色にし、
+     *   下の帯の高さ（--mtb-h）を測った値で帯のすぐ上に置く。
+     *   58px の決め打ちだと、文字を大きくした端末で帯に重なる。
+     */
+    .cm-fab {
+        width: 56px;
+        height: 56px;
+        right: 16px;
+        bottom: calc(var(--mtb-h, 58px) + 16px);
+        background: var(--color-forest-dark);
+        box-shadow: 0 6px 16px -4px rgba(15, 35, 50, .45);
+    }
+
+    /* 名前は読み上げにだけ使う。丸の中は絵だけにする */
+    .cm-fab-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .cm-fab-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    /*
+     * 書き込み欄を開いたとき、上の帯に隠れないようにする。
+     * #compose へ飛ぶと、欄のてっぺんが画面の上端に付く。
+     */
+    .tw-compose {
+        scroll-margin-top: 72px;
+    }
+}
+
+/*
+ * ============================================================
+ * 2. 執筆室（部屋の一覧）
+ *
+ * 説明は短く、「部屋を立てる」と鍵部屋コードを上に大きく。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    .rp-hero-in {
+        padding: 16px !important;
+    }
+
+    .rp-hero h2 {
+        font-size: 16px !important;
+    }
+
+    .rp-hero h2 svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    /* 説明は 1 文目だけ。2 文目は携帯では畳む */
+    .rp-hero-desc {
+        margin-top: 6px !important;
+        font-size: 12px !important;
+        line-height: 1.7 !important;
+    }
+
+    .rp-hero-more {
+        display: none;
+    }
+
+    /* 「部屋を立てる」を横いっぱい近くまで大きく。使い方は脇に小さく */
+    .rp-hero-actions {
+        margin-top: 12px !important;
+        flex-wrap: nowrap !important;
+    }
+
+    .rp-hero-actions > * {
+        min-height: 48px;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    .rp-new {
+        flex: 1 1 auto;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+    }
+
+    .rp-hero-actions > button {
+        flex: 0 0 auto;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+
+    /*
+     * 鍵部屋コード。
+     *
+     * 入力欄と押し具を横一列にして、すぐ押せる所に置く。
+     * 説明と桁の点は携帯では畳む。欄の中の「123 456」で打つものは分かる。
+     */
+    .rp-code .rce {
+        padding: 12px 14px !important;
+    }
+
+    .rp-code .rce h2 {
+        font-size: 12px !important;
+    }
+
+    .rp-code .rce-desc,
+    .rp-code .rce-dots,
+    .rp-code .rce-foot {
+        display: none !important;
+    }
+
+    .rp-code .rce-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px !important;
+    }
+
+    .rp-code .rce-input {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 48px;
+        padding: 0 10px !important;
+        font-size: 18px !important;
+        letter-spacing: .22em !important;
+    }
+
+    .rp-code .rce-go {
+        flex: 0 0 auto;
+        width: auto !important;
+        min-width: 84px;
+        height: 48px;
+        margin-top: 0 !important;
+        padding: 0 14px !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        white-space: nowrap;
+    }
+
+    /*
+     * 部屋のカード。形はそのまま、「入る」を押し具らしく大きくする。
+     * カード全体が押せるのは同じ。どこを押せばよいか目で分かるようにする。
+     */
+    .rp-card-foot {
+        padding-top: 10px !important;
+    }
+
+    .rp-enter {
+        min-height: 40px;
+        padding: 0 16px;
+        border-radius: 10px;
+        background: var(--color-forest-dark);
+        color: #fff !important;
+        font-size: 13px;
+        font-weight: 700;
+    }
+}
+
+/*
+ * ============================================================
+ * 3. 執筆室（部屋の中）
+ *
+ * 仕組み（歩く・座る・名札・色）はそのまま。並びだけを変える。
+ *
+ *   いちばん上 … 部屋の名前と在室の数、右に「i」
+ *   その下     … 部屋の絵
+ *   その下     … 操作ボタン（横一列）
+ *   その下     … チャット（入力欄は画面の下に留める）
+ *
+ * 左の柱（自分・部屋・在室の人・接続）は「i」で出し入れする。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    .rm-wrap {
+        padding: 0 12px 88px !important;
+    }
+
+    /* 見出し */
+    .rm-mbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 52px;
+        margin: 0 -12px;
+        padding: 0 12px 0 16px;
+        border-bottom: 1px solid var(--color-line);
+        background: var(--color-surface);
+    }
+
+    .rm-mbar-title {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .rm-mbar-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--color-ink);
+    }
+
+    .rm-mbar-count {
+        flex: 0 0 auto;
+        font-size: 12px;
+        color: var(--color-muted);
+    }
+
+    .rm-mbar-info {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--color-line);
+        border-radius: 10px;
+        background: var(--color-surface);
+        color: var(--color-forest-dark);
+        font-family: Georgia, serif;
+        font-size: 17px;
+        font-weight: 700;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .rm-mbar-info[aria-expanded="true"] {
+        border-color: var(--color-forest-dark);
+        background: var(--color-forest-tint);
+    }
+
+    /* 縦に積む。部屋の絵 → 操作 → チャット の順にする */
+    .rm-grid {
+        display: flex !important;
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .rm-main {
+        order: 1;
+        gap: 10px !important;
+    }
+
+    .rm-side {
+        order: 2;
+        /* パソコン用に決めた高さを外す。中身の高さに任せる */
+        height: auto !important;
+    }
+
+    /* 右の柱のルールは、情報の中に移す */
+    .rm-side-rules {
+        display: none;
+    }
+
+    /*
+     * 部屋の情報（左の柱）。
+     *
+     * ふだんは畳む。「i」を押すと下から出す。
+     * 中身は左の柱そのもの。新しい情報は足さない。
+     */
+    .rm-info {
+        display: none !important;
+    }
+
+    .rm-info.is-open {
+        display: flex !important;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--mtb-h, 58px);
+        z-index: 58;
+        max-height: calc(100dvh - var(--mtb-h, 58px) - 64px);
+        overflow-y: auto;
+        padding: 0 12px 16px;
+        border-radius: 16px 16px 0 0;
+        background: var(--color-page, var(--color-canvas));
+        box-shadow: 0 -8px 24px rgba(15, 23, 42, .18);
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .rm-info-head {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 -12px;
+        padding: 12px 16px;
+        background: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--color-ink);
+    }
+
+    .rm-info-head > button {
+        min-height: 36px;
+        padding: 0 14px;
+        border: 1px solid var(--color-line);
+        border-radius: 999px;
+        background: var(--color-surface);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--color-muted);
+    }
+
+    .rm-info-rules {
+        display: block;
+    }
+
+    .rm-info-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 57;
+        background: rgba(0, 0, 0, .35);
+    }
+
+    /*
+     * 操作ボタン。横一列で大きく。
+     * 名前は短いもの（マイク・集中・タイマー…）に替える。
+     * 入りきらない端末では横へ送る。
+     */
+    .rm-actions {
+        flex-wrap: nowrap !important;
+        justify-content: stretch !important;
+        gap: 4px !important;
+        padding: 8px !important;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .rm-actions::-webkit-scrollbar {
+        display: none;
+    }
+
+    .rm-act {
+        flex: 1 0 0;
+        min-width: 54px !important;
+        min-height: 64px;
+        padding: 8px 2px !important;
+        gap: 3px !important;
+    }
+
+    .rm-act-label {
+        display: none;
+    }
+
+    .rm-act-short {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .rm-act-note {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 9.5px !important;
+        line-height: 1.2;
+    }
+
+    /*
+     * チャット。
+     * 一覧は中の高さを決めて、その中で送る。新しい発言が見える。
+     * 入力欄は画面の下（下の帯のすぐ上）に留める。
+     */
+    .rcc-list {
+        flex: none !important;
+        min-height: 120px;
+        max-height: 42vh;
+    }
+
+    .rcc-send {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--mtb-h, 58px);
+        z-index: 50;
+        padding: 8px 12px !important;
+        background: var(--color-surface);
+        box-shadow: 0 -2px 8px rgba(15, 23, 42, .06);
+    }
+
+    .rcc-input {
+        height: 44px;
+        border-radius: 999px !important;
+        font-size: 16px !important; /* 16px 未満だと iPhone が勝手に拡大する */
+    }
+
+    .rcc-btn {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 999px !important;
+    }
+}
+
+/*
+ * ============================================================
+ * 4. 執筆室（部屋を立てる）
+ *
+ * 入力はそのまま。人数は大きな − ＋、公開のしかたは 2 つ並び、
+ * 「内容を確認する」は画面の下に留める。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    .rc-page {
+        padding: 12px 12px 96px !important;
+    }
+
+    /* 段（設定 → 確認 → 完了）を携帯でも出す */
+    .rc-steps {
+        display: flex !important;
+    }
+
+    /* 公開のしかた。2 つ並びのカード */
+    .rc-vis {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .rc-vis > label {
+        min-height: 72px;
+        padding: 12px !important;
+    }
+
+    /* 人数。大きな − ＋ */
+    .rc-count {
+        border-radius: 12px !important;
+    }
+
+    .rc-step {
+        width: 52px;
+        height: 52px;
+        padding: 0 !important;
+        font-size: 22px !important;
+    }
+
+    .rc-count-num {
+        min-width: 64px;
+        justify-content: center;
+        padding: 0 8px !important;
+        border-left: 1px solid var(--color-line);
+        border-right: 1px solid var(--color-line);
+        align-self: stretch;
+        align-items: center !important;
+    }
+
+    .rc-count-num > span:first-child {
+        font-size: 20px !important;
+    }
+
+    /* 下の操作を画面の下（下の帯のすぐ上）に留める */
+    .rc-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--mtb-h, 58px);
+        z-index: 50;
+        flex-wrap: nowrap !important;
+        padding: 10px 12px !important;
+        background: var(--color-surface);
+        box-shadow: 0 -2px 8px rgba(15, 23, 42, .06);
+    }
+
+    .rc-actions > * {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    /* いちばん押してほしいもの（最後の押し具）を広く */
+    .rc-actions > :last-child {
+        flex: 1 1 auto;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+    }
+}
+
+/*
+ * ============================================================
+ * 5. お知らせ
+ *
+ * 左右の余白を詰め、絵はカードの下に横いっぱい。
+ * 種類の色と左の色線はそのまま。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    .nt-main {
+        padding: 16px 12px !important;
+    }
+
+    /*
+     * 左の色線・文・絵を格子に置く。
+     * 色線は文と絵の両方の高さに伸ばす。
+     */
+    .nt-card {
+        display: grid !important;
+        grid-template-columns: 4px minmax(0, 1fr);
+        column-gap: 12px !important;
+        row-gap: 10px;
+        padding: 14px !important;
+    }
+
+    .nt-line {
+        grid-column: 1;
+    }
+
+    /*
+     * 絵があるときだけ 2 段に伸ばす。
+     * 絵が無いのに 2 段にすると、空の段と隙間（10px）がカードの下に残る。
+     */
+    .nt-card:has(.nt-img) .nt-line {
+        grid-row: 1 / span 2;
+    }
+
+    .nt-text {
+        grid-column: 2;
+    }
+
+    .nt-img {
+        grid-column: 2;
+        width: 100% !important;
+        height: auto;
+    }
+}
+
+/*
+ * ============================================================
+ * 6. メッセージ（運営からのお知らせ）
+ *
+ * 形はそのまま。1 行を指で押しやすい高さに、返信の欄と押し具を大きく。
+ * 自分の返信は右寄せ・色つき（from_user_id があるもの）。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    .msg-main {
+        padding: 16px 12px !important;
+    }
+
+    .msg-row {
+        min-height: 56px;
+        padding: 12px 14px !important;
+    }
+
+    .msg-row .truncate {
+        font-size: 14px !important;
+    }
+
+    .msg-body {
+        padding: 14px !important;
+    }
+
+    .msg-reply {
+        max-width: 88%;
+        margin-right: 0 !important;
+    }
+
+    /* 自分の返信は右へ寄せる。運営のものは左 */
+    .msg-reply.is-mine {
+        margin-left: auto !important;
+        margin-right: 0 !important;
+        border: 1px solid var(--color-forest-line);
+    }
+
+    .msg-reply:not(.is-mine) {
+        margin-left: 0 !important;
+        margin-right: auto !important;
+    }
+
+    .msg-input {
+        min-height: 96px;
+        padding: 10px 12px !important;
+        font-size: 16px !important; /* 16px 未満だと iPhone が勝手に拡大する */
+    }
+
+    .msg-form-actions {
+        justify-content: flex-end;
+        gap: 8px !important;
+    }
+
+    .msg-cancel,
+    .msg-send {
+        min-height: 44px;
+        padding: 0 18px !important;
+        font-size: 13px !important;
+    }
+
+    .msg-send {
+        min-width: 112px;
+        font-weight: 700 !important;
+    }
+
+    /* 「返信する」（欄を開く）も押し具らしく */
+    .msg-open-reply {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid var(--color-forest-line);
+        border-radius: 10px;
+        font-size: 13px !important;
+        font-weight: 700;
+    }
+}

@@ -263,10 +263,11 @@ Google等の外部認証サービスその他外部サービスとの連携を�
   ]
 
   return (
-    <div className="page-with-footer" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
+    /* m9-doc: 文字だけのページの携帯の見た目（styles/mobile-p9.css） */
+    <div className="page-with-footer m9-doc" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
       <Header />
 
-      <div style={{maxWidth:860,margin:'0 auto',padding:'40px 24px 60px'}}>
+      <div className="m9-doc-body" style={{maxWidth:860,margin:'0 auto',padding:'40px 24px 60px'}}>
         {/* タイトル */}
         <div style={{marginBottom:32,paddingBottom:20,borderBottom:'2px solid var(--color-brand-border)'}}>
           <h1 style={{fontSize:28,fontWeight:700,color:'var(--color-text)',marginBottom:8}}>プライバシーポリシー</h1>
@@ -278,9 +279,22 @@ Google等の外部認証サービスその他外部サービスとの連携を�
         </div>
 
         {/* 目次 */}
-        <div style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'20px 24px',marginBottom:32}}>
-          <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:12}}>目次</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 24px'}}>
+        {/*
+          * 携帯では目次をたためるようにする。
+          *
+          * 項目が多く、開いたままだと本文まで遠い。
+          * 見出しを押すと開く。パソコンでは今までどおり開いたまま。
+          * 開け閉めは見えない印（m9-toc-check）で覚える。
+          */}
+        <div className="m9-toc" style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'20px 24px',marginBottom:32}}>
+          <input type="checkbox" id="m9-toc-check" className="m9-toc-check" aria-hidden="true" tabIndex={-1}/>
+          <div className="m9-toc-head" style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:12}}>
+            目次
+            <label htmlFor="m9-toc-check" className="m9-toc-btn">
+              目次（全{sections.length}項目）
+            </label>
+          </div>
+          <div className="m9-toc-list" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 24px'}}>
             {sections.map(s => (
               <a key={s.num} href={`#section-${s.num}`}
                 style={{fontSize:12,color:'var(--color-brand)',textDecoration:'none',padding:'3px 0',borderBottom:'1px solid var(--color-brand-light)'}}>

@@ -206,6 +206,8 @@ export default function SearchForm({
   const [showMoods,          setShowMoods]          = useState(false)
   const [activeMoods,        setActiveMoods]        = useState<string[]>([])
   const [isMobile,           setIsMobile]           = useState(false)
+  /* 携帯：気分の札を押したら、そのまま探し直す（状態が書き変わってから走らせる） */
+  const [runSearch,          setRunSearch]          = useState(false)
   const MAX_HISTORY = 10
 
   useEffect(() => {
@@ -298,7 +300,56 @@ export default function SearchForm({
     const view = search.get('view')
     if (view) params.set('view', view)
 
+    /* 携帯：探したら下の 1 枚を閉じる。同じ頁のままなので、開いたままだと結果が隠れる */
+    setSpOpen(false)
     router.push(`/search?${params.toString()}`)
+  }
+
+  /* 携帯：下の 1 枚を開いているあいだ、後ろの頁が動かないようにする */
+  useEffect(() => {
+    if (!spOpen) return
+    if (!window.matchMedia('(max-width: 1023px)').matches) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [spOpen])
+
+  useEffect(() => {
+    if (!runSearch) return
+    setRunSearch(false)
+    handleSearch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runSearch])
+
+  /*
+   * 携帯の気分の札。
+   *
+   * ★ 札を押すと、その気分の言葉（先頭 3 つ）をタグに足して探し直す。
+   *   もう一度押すと外す。探したあとも、タグに入っているかで点いて見える。
+   */
+  function moodIsOn(mood: typeof MOODS[0]) {
+    const t = mood.tags.slice(0, 3)
+    return t.every(x => tags.includes(x))
+  }
+  function toggleQuickMood(mood: typeof MOODS[0]) {
+    const t = mood.tags.slice(0, 3)
+    if (moodIsOn(mood)) {
+      /* ほかの点いている札と同じ言葉（恋愛・謎解き など）は残す。消すとその札まで消える */
+      const keep = MOODS.filter(m => m !== mood && moodIsOn(m)).flatMap(m => m.tags.slice(0, 3))
+      setTags(tags.filter(x => !t.includes(x) || keep.includes(x)))
+    } else {
+      setTags(Array.from(new Set([...tags, ...t])))
+    }
+    setRunSearch(true)
+  }
+
+  /* 携帯の「条件」に出す数。いま効いている絞り込みの数 */
+  const condCount = [q, exclude, genre, type, serial, contestId, charMin || charMax, ptMin || ptMax, author]
+    .filter(Boolean).length + (tags.length > 0 ? 1 : 0)
+
+  function openSheet() {
+    setShowDetail(true)
+    setSpOpen(true)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -354,7 +405,37 @@ export default function SearchForm({
       </button>
     </div>
 
+    {/*
+      * 携帯だけ：上の検索欄と、気分の札。
+      *
+      * ★ 題名・作者名の欄を大きく置き、右の「条件」で細かい条件を下から出す。
+      * ★ パソコンでは出さない（CSS で隠す）。
+      */}
+    <div className="sf-mrow">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input value={name} onChange={e=>setName(e.target.value)} onKeyDown={handleKeyDown}
+        placeholder="タイトル・作者名" enterKeyHint="search" aria-label="タイトル・作者名で探す"/>
+      <button type="button" className="sf-cond" onClick={openSheet}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        条件{condCount > 0 && <span>{condCount}</span>}
+      </button>
+    </div>
+    <div className="sf-moods-m">
+      {MOODS.map(mood => (
+        <button key={mood.label} type="button" onClick={()=>toggleQuickMood(mood)} className={moodIsOn(mood) ? 'is-on' : ''}>
+          {mood.label}
+        </button>
+      ))}
+    </div>
+    {spOpen && <button type="button" className="sf-dim" aria-label="閉じる" onClick={()=>setSpOpen(false)}/>}
+
     <div className={`sf-box${spOpen ? ' is-open' : ''}`} style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding: isMobile ? '16px' : '20px',marginBottom:16}}>
+
+      {/* 携帯の下から出る 1 枚の見出し。パソコンでは出さない */}
+      <div className="sf-sheet-head">
+        <b>条件</b>
+        <button type="button" onClick={()=>setSpOpen(false)}>閉じる</button>
+      </div>
 
       {/*
         * 題名・作者名。
@@ -363,7 +444,7 @@ export default function SearchForm({
         * 下のキーワードはあらすじまで見に行くので、
         * 題名だけを狙いたいときに邪魔になる。
         */}
-      <div style={{marginBottom:12}}>
+      <div className="sf-name" style={{marginBottom:12}}>
         <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:4}}>タイトル・作者名</div>
         <input value={name} onChange={e=>setName(e.target.value)} onKeyDown={handleKeyDown}
           placeholder="作品のタイトル、または作者名で検索" style={inp}/>
@@ -504,8 +585,8 @@ export default function SearchForm({
         </div>
       </div>
 
-      {/* S5: コンパクトなトグルボタン横並び */}
-      <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+      {/* S5: コンパクトなトグルボタン横並び（携帯では、気分は上の札・詳細は開いたままなので出さない） */}
+      <div className="sf-toggles" style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
         <button type="button" onClick={()=>setShowMoods(!showMoods)}
           style={{
             display:'flex',alignItems:'center',gap:5,
@@ -671,7 +752,7 @@ export default function SearchForm({
       )}
 
       {/* S4: 並び順（豊富に） */}
-      <div style={{
+      <div className="sf-foot" style={{
         display:'flex',
         flexDirection: isMobile ? 'column' : 'row',
         gap: isMobile ? 10 : 0,

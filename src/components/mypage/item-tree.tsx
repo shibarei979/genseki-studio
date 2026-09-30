@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { GoalPlate } from './goal-plate'
+import CostumeOverlay from '@/components/common/costume-overlay'
 
 /**
  * ============================================================
@@ -57,6 +58,12 @@ interface Placed extends Item {
     x: number
     y: number
     state: 'owned' | 'ready' | 'poor' | 'locked' | 'coming'
+    /**
+     * いちばん奥の品物か（大きな額・奥の札で出す）。
+     * ★ 前は「Lv.5 なら奥」と決め打ちだった。
+     *   ツリーを下へ伸ばしても、いちばん下の段が奥になるようにする。
+     */
+    goal: boolean
 }
 
 const TIER_LABEL: Record<number, { title: string; note: string }> = {
@@ -64,11 +71,16 @@ const TIER_LABEL: Record<number, { title: string; note: string }> = {
     2: { title: 'Lv.2', note: '自分らしく飾る' },
     3: { title: 'Lv.3', note: 'もっとつながる' },
     4: { title: 'Lv.4', note: '特別な品へ' },
-    5: { title: 'Lv.5', note: 'まだ見ぬ景色へ' },
+    5: { title: 'Lv.5', note: '遠い海へ' },
+    6: { title: 'Lv.6', note: '伝説の品へ' },
 }
+
+/** いちばん奥の段に付ける言葉。何段目でも、奥はこれ */
+const GOAL_NOTE = 'まだ見ぬ景色へ'
 
 const KIND_LABEL: Record<string, string> = {
     stamp: 'スタンプ',
+    costume: 'アイコン衣装',
     frame: 'フレーム',
     background: '背景',
     badge: '称号',
@@ -80,6 +92,7 @@ const KIND_LABEL: Record<string, string> = {
 
 const KIND_COLOR: Record<string, string> = {
     stamp: '#d99a3c',
+    costume: '#4f86c0',
     frame: '#4f86c0',
     background: '#4f9c82',
     badge: '#bf8244',
@@ -187,6 +200,13 @@ export default function ItemTree() {
     const [pickedId, setPickedId] = useState<string | null>(null)
 
     /*
+     * いまつけている衣装と、飾っている称号。
+     * ★ 交換したあと、ここから「つける」「飾る」ができる。
+     */
+    const [costumeId, setCostumeId] = useState<string | null>(null)
+    const [titleIds, setTitleIds] = useState<string[]>([])
+
+    /*
      * 種類で絞る。
      *
      * ★ 絞っても、木の形は崩さない。
@@ -254,16 +274,70 @@ export default function ItemTree() {
             setItems(data.items ?? [])
             setOwned(data.owned ?? [])
             setPoints(data.free ?? 0)
+
+            const equip = await fetch('/api/points/equip')
+            if (equip.ok) {
+                const worn = (await equip.json()) as {
+                    costumeId?: string | null
+                    titles?: { id: string }[]
+                }
+                setCostumeId(worn.costumeId ?? null)
+                setTitleIds((worn.titles ?? []).map((one) => one.id))
+            }
         } catch {
             /* 読めなくても、ほかの画面は動く */
+        } finally {
+            /* 読めなかったときも「読み込み中」のままにしない */
+            setIsLoading(false)
         }
-
-        setIsLoading(false)
     }, [])
 
     useEffect(() => {
         void reload()
     }, [reload])
+
+    /** 衣装をつける・外す／称号を飾る・外す */
+    async function wear(item: Item) {
+        setBusy(true)
+        setMessage('')
+        try {
+            let body: Record<string, unknown>
+            if (item.kind === 'costume') {
+                body = { costumeId: costumeId === item.id ? null : item.id }
+            } else {
+                const next = titleIds.includes(item.id)
+                    ? titleIds.filter((id) => id !== item.id)
+                    : [...titleIds, item.id]
+                if (next.length > 3) {
+                    setMessage('称号は3つまで飾れます。どれかを外してください。')
+                    setBusy(false)
+                    return
+                }
+                body = { titleIds: next }
+            }
+
+            const response = await fetch('/api/points/equip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            })
+            const data = (await response.json()) as { error?: string }
+            if (!response.ok || data.error) {
+                setMessage(data.error ?? 'うまくいきませんでした。')
+            } else if (item.kind === 'costume') {
+                const on = costumeId !== item.id
+                setCostumeId(on ? item.id : null)
+                setMessage(on ? 'アイコンにつけました。' : '外しました。')
+            } else {
+                const on = !titleIds.includes(item.id)
+                setTitleIds((list) => (on ? [...list, item.id] : list.filter((id) => id !== item.id)))
+                setMessage(on ? '作者ページに飾りました。' : '外しました。')
+            }
+        } catch {
+            setMessage('繋がりませんでした。')
+        }
+        setBusy(false)
+    }
 
     async function exchange(item: Item) {
         setBusy(true)
@@ -335,30 +409,29 @@ export default function ItemTree() {
         const slot = new Map<number, number>()
         const spot = new Map<string, { x: number; y: number }>()
 
+        /*
+         * ★ 葉（その先が無い品物）は、段に関係なく左から 1 列ずつ並べる。
+         *
+         *   前は段ごとに左から詰めていたので、深い段の葉が
+         *   親から離れた左端に落ち、線が交差していた。
+         *   列を通しで数えれば、どの枝も自分の親の真下に来る。
+         */
+        let column = 0
+
         const walk = (item: Item): number => {
             const kids = childrenOf.get(item.id) ?? []
             const y = PAD_TOP + (item.tier - 1) * GAP_Y
 
             if (kids.length === 0) {
-                const at = slot.get(item.tier) ?? 0
-                slot.set(item.tier, at + 1)
-
-                const x = PAD_X + at * GAP_X
+                const x = PAD_X + column * GAP_X
+                column += 1
+                slot.set(item.tier, Math.max(slot.get(item.tier) ?? 0, column))
                 spot.set(item.id, { x, y })
                 return x
             }
 
             const xs = kids.map((kid) => walk(kid))
-            const mid = (Math.min(...xs) + Math.max(...xs)) / 2
-
-            const at = slot.get(item.tier) ?? 0
-            const least = PAD_X + at * GAP_X
-            const x = Math.max(mid, least)
-
-            slot.set(
-                item.tier,
-                Math.max(at + 1, Math.round((x - PAD_X) / GAP_X) + 1),
-            )
+            const x = (Math.min(...xs) + Math.max(...xs)) / 2
 
             spot.set(item.id, { x, y })
             return x
@@ -405,10 +478,18 @@ export default function ItemTree() {
             spot.set(lone.id, { x: Math.max(parent.x, PAD_X), y: here.y })
         }
 
+        /* いちばん下の段（Lv.5 以上で、ひとつだけ置いた段）が奥 */
+        const deepest = Math.max(...items.map((item) => item.tier))
+        const goalTier =
+            deepest >= 5 && items.filter((item) => item.tier === deepest).length === 1
+                ? deepest
+                : Infinity
+
         const list: Placed[] = items.map((item) => ({
             ...item,
             ...spot.get(item.id)!,
             state: stateOf(item),
+            goal: item.tier >= goalTier,
         }))
 
         return {
@@ -657,8 +738,8 @@ export default function ItemTree() {
                     marginBottom: 10,
                 }}
             >
-                集めたポイントで、スタンプやプロフィールの飾りと交換できます。
-                中身はこれから増やしていきます。
+                ミッションや毎日のログインで集めたポイントで交換できます。
+                スタンプは話の終わりで押せ、アイコン衣装はアイコンに、称号は作者ページに飾れます。
             </p>
 
             <div
@@ -672,8 +753,8 @@ export default function ItemTree() {
                 {([
                     ['all', 'すべて'],
                     ['stamp', 'スタンプ'],
-                    ['frame', 'フレーム'],
-                    ['background', '背景'],
+                    ['costume', 'アイコン衣装'],
+                    ['badge', '称号'],
                     ['other', 'その他'],
                 ] as const).map(([key, label]) => (
                     <button
@@ -787,10 +868,15 @@ export default function ItemTree() {
                             transformOrigin: 'top left',
                         }}
                     >
-                        {Object.entries(TIER_LABEL).map(([tier, label]) => {
-                            const level = Number(tier)
-                            if (!placed.some((one) => one.tier === level))
-                                return null
+                        {Array.from(new Set(placed.map((one) => one.tier)))
+                            .sort((a, b) => a - b)
+                            .map((level) => {
+                            const tier = String(level)
+                            const isGoalRow = placed.some((one) => one.tier === level && one.goal)
+                            const label = {
+                                title: TIER_LABEL[level]?.title ?? `Lv.${level}`,
+                                note: isGoalRow ? GOAL_NOTE : (TIER_LABEL[level]?.note ?? ''),
+                            }
 
                             return (
                                 <div
@@ -951,7 +1037,7 @@ export default function ItemTree() {
                                              *   王冠に隠してしまう。
                                              */
                                             item.y -
-                                                (item.tier >= 5 &&
+                                                (item.goal &&
                                                 item.is_secret &&
                                                 item.state !== 'owned'
                                                     ? 34
@@ -1019,7 +1105,7 @@ export default function ItemTree() {
                                 filter === 'all' ||
                                 item.kind === filter ||
                                 (filter === 'other' &&
-                                    !['stamp', 'frame', 'background'].includes(
+                                    !['stamp', 'costume', 'badge'].includes(
                                         item.kind,
                                     ))
 
@@ -1056,7 +1142,7 @@ export default function ItemTree() {
                                     left: hovered.x,
                                     top:
                                         hovered.y -
-                                        (hovered.tier >= 5 ? 86 : NODE / 2) -
+                                        (hovered.goal ? 86 : NODE / 2) -
                                         12,
                                     transform: 'translate(-50%, -100%)',
                                     /*
@@ -1126,6 +1212,12 @@ export default function ItemTree() {
                                 setMessage('')
                             }}
                             onExchange={() => void exchange(picked)}
+                            wearing={
+                                picked.kind === 'costume'
+                                    ? costumeId === picked.id
+                                    : titleIds.includes(picked.id)
+                            }
+                            onWear={() => void wear(picked)}
                         />
                     ) : (
                         <div
@@ -1412,7 +1504,7 @@ function ringOf(item: Placed, hidden: boolean): string {
     if (item.state === 'owned') return RING.owned
     if (hidden) return RING.secret
     if (item.state === 'locked') return RING.locked
-    if (item.tier >= 5) return RING.goal
+    if (item.goal) return RING.goal
     return RING[item.state] ?? RING.poor
 }
 
@@ -1438,7 +1530,7 @@ function Node({
     const hidden = item.is_secret && item.state !== 'owned'
 
     /* いちばん奥の品物は、大きく */
-    const isGoal = item.tier >= 5
+    const isGoal = item.goal
     const size = isGoal ? 128 : NODE
 
     const art = item.asset_url ?? STAND_IN
@@ -1567,7 +1659,8 @@ function Node({
                             left: '50%',
                             top: '50%',
                             transform: 'translate(-50%, -50%)',
-                            width: `${ART * 100}%`,
+                            /* 称号は横長の札なので、額の幅いっぱいまで使う */
+                            width: `${(item.kind === 'badge' ? 0.9 : ART) * 100}%`,
                             height: `${ART * 100}%`,
                             objectFit: 'contain',
                             opacity: item.state === 'coming' ? 0.55 : 1,
@@ -1658,6 +1751,8 @@ function Detail({
     onClose,
     onJump,
     onExchange,
+    wearing = false,
+    onWear,
 }: {
     item: Placed
     /** 木に並んでいる全部。仲間と、前提を引くのに要る */
@@ -1670,6 +1765,9 @@ function Detail({
     /** 仲間を押したとき、そちらへ移る */
     onJump: (id: string) => void
     onExchange: () => void
+    /** いまつけている（飾っている）か。衣装と称号だけ */
+    wearing?: boolean
+    onWear?: () => void
 }) {
     const owned = ownedIds.includes(item.id)
     const hidden = item.is_secret && !owned
@@ -1954,7 +2052,38 @@ function Detail({
                     >
                         交換済みです
                     </p>
-                ) : !item.is_active ? (
+                ) : null}
+
+                {/*
+                 * 交換した衣装・称号は、ここでつける（飾る）。
+                 * ★ もう一度押すと外れる。
+                 */}
+                {owned && onWear && (item.kind === 'costume' || item.kind === 'badge') && (
+                    <button
+                        type="button"
+                        onClick={onWear}
+                        disabled={busy}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            marginTop: 8,
+                            padding: '10px 12px',
+                            borderRadius: 9,
+                            border: wearing ? '1px solid rgba(120,160,185,.5)' : 'none',
+                            background: wearing ? '#fff' : 'var(--color-brand)',
+                            color: wearing ? 'var(--color-text-muted)' : '#fff',
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        {item.kind === 'costume'
+                            ? wearing ? 'アイコンから外す' : 'アイコンにつける'
+                            : wearing ? '作者ページから外す' : '作者ページに飾る'}
+                    </button>
+                )}
+
+                {owned ? null : !item.is_active ? (
                     <p
                         style={{
                             marginTop: 12,
@@ -2211,7 +2340,32 @@ function Usage({
                     </span>
                 </div>
 
-                <p style={note}>感想やコメントに、貼って送れます。</p>
+                <p style={note}>話の終わりで、作品に押して気持ちを届けられます。</p>
+            </div>
+        )
+    }
+
+    if (kind === 'costume') {
+        return (
+            <div style={box}>
+                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 30 }}>
+                    <span style={{ position: 'relative', width: 64, height: 64 }}>
+                        <span
+                            style={{
+                                display: 'block',
+                                width: 64,
+                                height: 64,
+                                borderRadius: '50%',
+                                background: 'rgba(120,160,185,.3)',
+                                border: '2px solid #fff',
+                                boxSizing: 'border-box',
+                            }}
+                        />
+                        <CostumeOverlay url={art} size={64} />
+                    </span>
+                </div>
+
+                <p style={note}>アイコンの上に重なります。コメント欄や作者ページでも見えます。</p>
             </div>
         )
     }
@@ -2311,6 +2465,16 @@ function Usage({
                         ? '本棚の後ろに敷かれます。'
                         : 'ページの後ろに敷かれます。'}
                 </p>
+            </div>
+        )
+    }
+
+    if (kind === 'badge' && item.asset_url) {
+        return (
+            <div style={box}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={art} alt={item.name} style={{ display: 'block', height: 44, width: 'auto', maxWidth: '100%', margin: '0 auto' }} />
+                <p style={note}>作者ページの名前の下に飾れます（3つまで）。</p>
             </div>
         )
     }

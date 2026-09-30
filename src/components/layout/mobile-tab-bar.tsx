@@ -173,6 +173,20 @@ export default function MobileTabBar() {
     if (/\/read$/.test(pathname)) return null
 
     /*
+     * ★ 本文を書く画面（/workspace/作品）では出さない。
+     *   書く画面は、書くための下の段（話・通し読み・続きを書く・資料・道具）を持つ。
+     *   設定・資料・投稿へは、その「道具」と右上の「投稿」から行ける。
+     */
+    if (/^\/workspace\/[^/]+\/?$/.test(pathname)) return null
+
+    /*
+     * ★ 話を読む画面では出さない。
+     *   代わりに「前の話・目次・次の話」の帯（mobile-read-bar.tsx）を出す。
+     *   帯が 2 本重なると、本文を読む場所がそのぶん減る。
+     */
+    if (/^\/novel\/[^/]+\/episode\/[^/]+\/?$/.test(pathname)) return null
+
+    /*
      * 作品を書いているあいだは、その作品の中の行き先にする。
      *
      * ★ プレビューだけ別の頁で開く。

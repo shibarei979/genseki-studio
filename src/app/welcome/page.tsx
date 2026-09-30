@@ -84,7 +84,8 @@ export default function HomeSelectPage() {
   }
 
   return (
-    <div style={{
+    /* m9-wel: 携帯だけの見た目（styles/mobile-p9.css） */
+    <div className="m9-wel" style={{
       minHeight: '100vh',
       background: 'linear-gradient(165deg, #fbfdff 0%, #eef6fc 55%, #e3f0fa 100%)',
       display: 'flex',
@@ -124,18 +125,25 @@ export default function HomeSelectPage() {
           <img src="/reader.png" alt="" className="role-illust role-illust-right"/>
 
           {/* ロゴ */}
-          <img src="/logo.svg" alt="原石航路"
+          <img src="/logo.svg" alt="原石航路" className="m9-wel-logo"
             style={{ height: 'clamp(74px, 9vw, 108px)', objectFit: 'contain', marginBottom: 22, zIndex: 1, filter: 'drop-shadow(0 3px 10px rgba(31,78,107,0.16))' }}/>
 
-          <h1 style={{ fontSize: 'clamp(24px, 3.4vw, 34px)', fontWeight: 800, color: '#333', marginBottom: 12, textAlign: 'center', letterSpacing: '0.05em', zIndex: 1 }}>
+          <h1 className="m9-wel-h" style={{ fontSize: 'clamp(24px, 3.4vw, 34px)', fontWeight: 800, color: '#333', marginBottom: 12, textAlign: 'center', letterSpacing: '0.05em', zIndex: 1 }}>
+            {/*
+              * 携帯だけ、見出しの両端に小さく置く絵。
+              * 左右の大きな絵は狭い画面では出ないので、
+              * 代わりに目印ていどに添える。パソコンでは出さない。
+              */}
+            <img src="/writer.png" alt="" aria-hidden="true" className="m9-wel-char m9-wel-char-l"/>
             ようこそ、原石航路へ
+            <img src="/reader.png" alt="" aria-hidden="true" className="m9-wel-char m9-wel-char-r"/>
           </h1>
-          <p style={{ fontSize: 16, color: '#666', marginBottom: 40, textAlign: 'center', zIndex: 1 }}>
+          <p className="m9-wel-sub" style={{ fontSize: 16, color: '#666', marginBottom: 40, textAlign: 'center', zIndex: 1 }}>
             あなたはどちら？
           </p>
 
           {/* 2枚のカード */}
-          <div style={{ display: 'flex', gap: 28, alignItems: 'stretch', zIndex: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div className="m9-wel-cards" style={{ display: 'flex', gap: 28, alignItems: 'stretch', zIndex: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
             {/* 書く人 */}
             <button onClick={() => handleSelectRole('writer')} disabled={loading} className="role-card"
               style={{ width: 260, background: '#fff', border: '1px solid #cfe0ea', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' }}>
@@ -173,7 +181,7 @@ export default function HomeSelectPage() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 40, fontSize: 13, color: '#888', zIndex: 1 }}>
+          <div className="m9-wel-note" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 40, fontSize: 13, color: '#888', zIndex: 1 }}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={WRITE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
             </svg>
@@ -184,16 +192,16 @@ export default function HomeSelectPage() {
 
       {step === 'ai' && role === 'reader' && (
         <>
-          <img src="/logo.svg" alt="原石航路"
+          <img src="/logo.svg" alt="原石航路" className="m9-wel-logo"
             style={{ height: 'clamp(62px, 7vw, 86px)', objectFit: 'contain', marginBottom: 20, zIndex: 1, filter: 'drop-shadow(0 3px 10px rgba(31,78,107,0.16))' }}/>
           <h1 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 800, color: '#333', marginBottom: 12, textAlign: 'center', letterSpacing: '0.04em' }}>
             <span style={{ color: WRITE }}>AI作品</span>を表示しますか？
           </h1>
-          <p style={{ fontSize: 14.5, color: '#666', marginBottom: 40, textAlign: 'center', lineHeight: 1.9 }}>
+          <p className="m9-wel-sub" style={{ fontSize: 14.5, color: '#666', marginBottom: 40, textAlign: 'center', lineHeight: 1.9 }}>
             AIが全面的に生成した作品の表示を選べます
           </p>
 
-          <div style={{ display: 'flex', gap: 24, alignItems: 'stretch', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div className="m9-wel-cards is-ai" style={{ display: 'flex', gap: 24, alignItems: 'stretch', flexWrap: 'wrap', justifyContent: 'center' }}>
             <button onClick={() => handleReaderAi(true)} disabled={loading} className="role-card"
               style={{ width: 250, background: '#fff', border: '1px solid #cfe0ea', borderRadius: 18, overflow: 'hidden', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '32px 22px 24px', flex: 1 }}>
@@ -233,16 +241,16 @@ export default function HomeSelectPage() {
 
       {step === 'ai' && role === 'writer' && (
         <>
-          <img src="/logo.svg" alt="原石航路"
+          <img src="/logo.svg" alt="原石航路" className="m9-wel-logo"
             style={{ height: 'clamp(62px, 7vw, 86px)', objectFit: 'contain', marginBottom: 20, zIndex: 1, filter: 'drop-shadow(0 3px 10px rgba(31,78,107,0.16))' }}/>
           <h1 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 800, color: '#333', marginBottom: 12, textAlign: 'center', letterSpacing: '0.04em' }}>
             執筆で<span style={{ color: WRITE }}>AI</span>を使いますか？
           </h1>
-          <p style={{ fontSize: 14.5, color: '#666', marginBottom: 40, textAlign: 'center', lineHeight: 1.9 }}>
+          <p className="m9-wel-sub" style={{ fontSize: 14.5, color: '#666', marginBottom: 40, textAlign: 'center', lineHeight: 1.9 }}>
             投稿時のデフォルト設定になります。作品ごとに変更できます
           </p>
 
-          <div style={{ display: 'flex', gap: 20, alignItems: 'stretch', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div className="m9-wel-cards is-ai" style={{ display: 'flex', gap: 20, alignItems: 'stretch', flexWrap: 'wrap', justifyContent: 'center' }}>
             {([
               { v: 'none',   label: 'AI未使用',   desc: 'AIを使わずに\n自分の言葉で執筆する', color: READ, border: '#DDEEEB', ring: '#A8D8D2',
                 icon: <><path d="M20 3c-7 1-12 6-14 12l-3 6 6-3c6-2 11-7 12-14z"/><path d="M14 8c-3 2-6 5-8 9"/></> },

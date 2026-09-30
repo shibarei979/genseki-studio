@@ -304,7 +304,8 @@ export default function AnalyticsCharts({
       {/* 作品選択（ドロップダウン） */}
       <div style={{marginBottom:20}}>
         <div style={{fontSize:12,color:'var(--color-text-muted)',fontWeight:600,marginBottom:8}}>作品を選択</div>
-        <div style={{position:'relative',display:'inline-block',minWidth:260,maxWidth:'100%'}}>
+        {/* 携帯では横いっぱいに広げる（p8-ana-sel）。最小 260px のままだと題が切れる */}
+        <div className="p8-ana-sel" style={{position:'relative',display:'inline-block',minWidth:260,maxWidth:'100%'}}>
           <select value={selectedId} onChange={e=>pick(e.target.value)}
             style={{
               width:'100%',appearance:'none',WebkitAppearance:'none',
@@ -611,7 +612,8 @@ export default function AnalyticsCharts({
         {selected.episodeRows.length === 0 ? (
           <div style={{padding:'30px',textAlign:'center',color:'var(--color-text-faint)',fontSize:12}}>公開中の話がありません</div>
         ) : (
-          <div>
+          /* 携帯では数字の欄を細くして、横にはみ出さないようにする（p8-ana-ep） */
+          <div className="p8-ana-ep">
             {/* 見出し。数字だけ並ぶと、何の数か分からない */}
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 18px',borderBottom:'1px solid var(--color-brand-light)',fontSize:11,color:'var(--color-text-muted)'}}>
               <span style={{flex:1,minWidth:120}}>エピソード</span>
@@ -769,7 +771,8 @@ function DayChart({ data }: { data: { date: string; views: number; m?: number; d
               ))}
             </div>
 
-            <div style={{position:'relative',display:'flex',alignItems:'flex-end',gap:data.length > 14 ? 3 : 8,height:'100%'}}>
+            {/* 携帯では棒の間を詰めて、棒に幅を回す（p8-ana-bars） */}
+            <div className="p8-ana-bars" style={{position:'relative',display:'flex',alignItems:'flex-end',gap:data.length > 14 ? 3 : 8,height:'100%'}}>
               {data.map((d, i) => {
                 const mm = d.m || 0, dd = d.d || 0, aa = d.a || 0
                 const legacy = Math.max(0, d.views - mm - dd - aa)
@@ -791,7 +794,7 @@ function DayChart({ data }: { data: { date: string; views: number; m?: number; d
             </div>
           </div>
 
-          <div style={{display:'flex',gap:data.length > 14 ? 3 : 8,marginTop:6}}>
+          <div className="p8-ana-bars" style={{display:'flex',gap:data.length > 14 ? 3 : 8,marginTop:6}}>
             {data.map((d, i) => (
               <div key={i} style={{flex:1,textAlign:'center',fontSize:9,color:'var(--color-text-faint)',whiteSpace:'nowrap',overflow:'hidden'}}>
                 {i % labelStep === 0 ? d.date : ''}

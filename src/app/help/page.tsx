@@ -61,10 +61,11 @@ const helpCategories = [
 export default function HelpPage() {
 
   return (
-    <div className="page-with-footer" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
+    /* m9-doc: 文字だけのページの携帯の見た目（styles/mobile-p9.css） */
+    <div className="page-with-footer m9-doc" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
       <Header />
 
-      <div style={{background:'var(--color-bg)',borderBottom:'1px solid var(--color-brand-border)',overflowX:'auto'}}>
+      <div className="m9-doc-tabs" style={{background:'var(--color-bg)',borderBottom:'1px solid var(--color-brand-border)',overflowX:'auto'}}>
         <div style={{maxWidth:860,margin:'0 auto',padding:'0 24px',display:'flex'}}>
           {navLinks.map(n => (
             <Link key={n.href} href={n.href}
@@ -76,14 +77,14 @@ export default function HelpPage() {
         </div>
       </div>
 
-      <div style={{maxWidth:860,margin:'0 auto',padding:'40px 24px 60px'}}>
+      <div className="m9-doc-body" style={{maxWidth:860,margin:'0 auto',padding:'40px 24px 60px'}}>
         <div style={{marginBottom:28}}>
           <h1 style={{fontSize:24,fontWeight:700,color:'var(--color-text)',marginBottom:4}}>ヘルプ・FAQ</h1>
           <p style={{fontSize:13,color:'var(--color-text-muted)'}}>困ったときはこちらをご確認ください</p>
         </div>
 
         {/* クイックリンク */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:28}}>
+        <div className="m9-doc-quick" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:28}}>
           {helpCategories.map((cat,i) => (
             <a key={i} href={`#cat-${i}`}
               style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:10,padding:'14px',textDecoration:'none',display:'flex',alignItems:'center',gap:8}}>

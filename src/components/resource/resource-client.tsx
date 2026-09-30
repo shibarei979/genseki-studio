@@ -20,7 +20,8 @@ import AddPagePanel from "@/components/resource/add-page-panel";
 import EntryView from "@/components/resource/entry-view";
 import NotesView from "@/components/resource/notes-view";
 import ResourceIcon from "@/components/resource/resource-icons";
-import ResourceTop from "@/components/resource/resource-top";
+import MobileWorkHeader from "@/components/workspace/mobile-work-header";
+import ResourceTop, { accentOf } from "@/components/resource/resource-top";
 import DeleteButton from "@/components/common/delete-button";
 import PlotView from "@/components/resource/plot-view";
 import { createClient } from "@/lib/supabase/client";
@@ -1095,13 +1096,52 @@ export default function ResourceClient({ workId }: Props) {
                 ]}
             />
 
-            {/* 狭い画面では縦に積む。理由は設定画面と同じ */}
-            <div className="flex flex-col gap-4 p-4 lg:flex-row">
-                <aside className="w-full shrink-0 lg:w-56">
-                    <WorkspaceNav workId={workId} current="resource" />
+            {/*
+              * 携帯の上の段（‹・資料／作品名・投稿）。パソコンでは出さない。
+              */}
+            <MobileWorkHeader
+                workId={workId}
+                page="資料"
+                title={work.title}
+                unposted={episodes.filter((ep) => ep.is_published === false).length}
+            />
 
-                    <div className="mt-4 rounded-lg border border-line bg-surface">
-                        <div className="border-b border-line px-4 py-4">
+            {/*
+              * 携帯：いまのページの帯（その資料の色・名前・数）。
+              * どの資料のページにいるのかが、色でも分かる。
+              */}
+            {currentPage && (
+                <div
+                    className="mwr-band"
+                    style={{ background: accentOf(currentPage).tint }}
+                >
+                    <span
+                        className="mwr-band-ic"
+                        style={{ borderColor: accentOf(currentPage).line, color: accentOf(currentPage).ink }}
+                    >
+                        <ResourceIcon builtinKey={currentPage.builtin_key} size={18} />
+                    </span>
+                    <b>{currentPage.label}</b>
+                    <small>
+                        {currentPage.kind === "plot"
+                            ? `${stages.length}段`
+                            : currentPage.kind === "relations"
+                              ? `${relations.length}本`
+                              : `${countByPage(currentPage.id)}件`}
+                    </small>
+                </div>
+            )}
+
+            {/* 狭い画面では縦に積む。理由は設定画面と同じ */}
+            <div className={`flex flex-col gap-4 p-4 lg:flex-row${currentPage ? " mwr-has-jump" : ""}`}>
+                <aside className="w-full shrink-0 lg:w-56">
+                    {/* 携帯では上の段に作品名と戻る道があるので、ここは出さない */}
+                    <div className="mwr-desk">
+                        <WorkspaceNav workId={workId} current="resource" />
+                    </div>
+
+                    <div className="rounded-lg border border-line bg-surface lg:mt-4">
+                        <div className="mwr-desk border-b border-line px-4 py-4">
                             <h1 className="truncate text-[15px] font-medium text-ink">
                                 {work.title}
                             </h1>
@@ -1677,6 +1717,47 @@ export default function ResourceClient({ workId }: Props) {
                     )}
                 </main>
             </div>
+
+            {/*
+              * 携帯：ほかの資料へすぐ移れる帯（下の帯のすぐ上）。
+              * トップに戻らずに、人物 → 場所 → 関係図 と行き来できる。
+              */}
+            {currentPage && (
+                <nav className="mwr-jump" aria-label="ほかの資料">
+                    <span className="mwr-jump-lab">ほかの資料</span>
+                    <button
+                        type="button"
+                        className="mwr-jump-c"
+                        onClick={() => {
+                            setView("top");
+                            window.scrollTo({ top: 0 });
+                        }}
+                    >
+                        <ResourceIcon builtinKey="home" size={14} />
+                        トップ
+                    </button>
+                    {pages
+                        .filter((page) => page.id !== currentPage.id)
+                        .map((page) => {
+                            const accent = accentOf(page);
+                            return (
+                                <button
+                                    key={page.id}
+                                    type="button"
+                                    className="mwr-jump-c"
+                                    style={{ borderColor: accent.line, color: accent.ink }}
+                                    onClick={() => {
+                                        setView(page.id);
+                                        window.scrollTo({ top: 0 });
+                                    }}
+                                >
+                                    <ResourceIcon builtinKey={page.builtin_key} size={14} />
+                                    {page.label}
+                                </button>
+                            );
+                        })}
+                </nav>
+            )}
         </div>
     );
 }

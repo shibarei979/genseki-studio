@@ -129,7 +129,7 @@ export default function ContactForm() {
   }
 
   return (
-    <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden'}}>
+    <div className="m9-contact" style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden'}}>
 
       {/* お問い合わせ区分 */}
       <div style={rowStyle}>
@@ -243,8 +243,8 @@ export default function ContactForm() {
         </div>
       )}
 
-      {/* 送信ボタン */}
-      <div style={{padding:'20px 24px',textAlign:'center'}}>
+      {/* 送信ボタン。携帯では画面の下に留める（m9-contact-send / styles/mobile-p9.css） */}
+      <div className="m9-contact-send" style={{padding:'20px 24px',textAlign:'center'}}>
         <button onClick={handleSubmit} disabled={loading}
           style={{padding:'12px 48px',background:'var(--color-brand)',color:'var(--color-text-inverse)',border:'none',borderRadius:6,fontSize:14,fontWeight:700,cursor:'pointer',opacity:loading?0.6:1}}>
           {loading ? '送信中...' : '送信する'}

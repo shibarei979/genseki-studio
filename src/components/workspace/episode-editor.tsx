@@ -32,6 +32,21 @@ import IllustPlaceSurface from "@/components/workspace/illust-place-surface";
 import PickSurface from "@/components/workspace/pick-surface";
 import { useRouter } from "next/navigation";
 import ProBadge from "@/components/common/pro-badge";
+import {
+    MobileBottomBar,
+    MobileEditorHeader,
+    MobileKeyBar,
+    MobileMarkPanel,
+    MobileToolsSheet,
+    guessBaseLength,
+    stepBack,
+    stepFwd,
+    useBarSlots,
+    useIsMobile,
+    useKeyboard,
+    type BarSlot,
+    type MarkKind,
+} from "@/components/workspace/mobile-write-kit";
 
 interface Props {
     episode: Episode;
@@ -83,6 +98,10 @@ interface Props {
     onToggleFocus?: () => void;
     /** 作品の話。注釈を付けるとき、前に同じ言葉へ付けた説明を探すのに使う */
     allEpisodes?: Episode[];
+    /** 携帯：話の一覧を開く（下から出る） */
+    onOpenList?: () => void;
+    /** 携帯：右上の「投稿」に出す、まだ出していない話の数 */
+    unpostedCount?: number;
 }
 
 export default function EpisodeEditor({
@@ -110,6 +129,8 @@ export default function EpisodeEditor({
     isFocusMode = false,
     onToggleFocus,
     allEpisodes = [],
+    onOpenList,
+    unpostedCount = 0,
 }: Props) {
     /* ルビ・置き換えの問い。ブラウザの prompt は出ない機械がある */
     const { ask, dialog: askDialog } = useAskText();
@@ -148,6 +169,66 @@ export default function EpisodeEditor({
     const [range, setRange] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
     /* 注釈を付ける小窓。開いたときの選び（カーソルの位置）を持つ */
     const [notePick, setNotePick] = useState<{ start: number; end: number } | null>(null);
+
+    /*
+     * ============================================================
+     * 携帯だけ
+     * ============================================================
+     */
+    const isMobile = useIsMobile();
+    const keyboard = useKeyboard();
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [slots, setSlots] = useBarSlots();
+    /*
+     * 話の題を打っているか。
+     * ★ そのあいだはキーボードの上の段を出さない。
+     *   段の記号やルビは本文に入るので、題を打っているのに本文が変わってしまう。
+     */
+    const [isTitleFocused, setIsTitleFocused] = useState(false);
+
+    /*
+     * ルビ・傍点・注釈の小窓。
+     *
+     * caret はカーソルの位置（付ける文字のすぐ後ろ）、
+     * len は付ける字数。本文を選ばずに決める。
+     */
+    const [mark, setMark] = useState<{
+        kind: MarkKind;
+        caret: number;
+        len: number;
+        reading: string;
+        auto: boolean;
+    } | null>(null);
+
+    /*
+     * 変換する前に打った読み。
+     *
+     * ★ 「しおもり」と打って「潮守」に変換した直後に「ルビ」を押すと、
+     *   読みの欄に「しおもり」を先に入れておく。
+     *   変換の途中の字は compositionupdate で届く。ひらがなだけのものを覚える。
+     *   届かない端末では、空の欄に自分で打つ。
+     */
+    const lastKanaRef = useRef("");
+    const composedRef = useRef<{ text: string; reading: string; end: number } | null>(null);
+
+    /*
+     * 戻す。
+     *
+     * ★ 本文は手元の値で持っているので、ブラウザの「元に戻す」が効かない。
+     *   打つ手が 0.8 秒止まるたびに、ひとつ前の姿を積む。
+     */
+    const undoStackRef = useRef<string[]>([]);
+    const lastSnapRef = useRef<string | null>(null);
+    const [canUndo, setCanUndo] = useState(false);
+
+    /*
+     * ★ 携帯では、行番号をはじめは出さない。
+     *   左に番号の列があると、1 行が 24 字に届かない。
+     *   出したい人は「道具」の「行番号を出す」から。
+     */
+    useEffect(() => {
+        if (isMobile) setShowLineNumbers(false);
+    }, [isMobile]);
 
     /*
      * 蛍光ペン。
@@ -205,6 +286,74 @@ export default function EpisodeEditor({
         setBody(episode.body);
         setBeforeNormalize(null);
     }, [episode.id, episode.title, episode.body]);
+
+    useEffect(() => {
+        if (lastSnapRef.current === null) {
+            lastSnapRef.current = body;
+            return;
+        }
+        const timer = window.setTimeout(() => {
+            if (lastSnapRef.current !== null && lastSnapRef.current !== body) {
+                undoStackRef.current.push(lastSnapRef.current);
+                if (undoStackRef.current.length > 50) undoStackRef.current.shift();
+                lastSnapRef.current = body;
+                setCanUndo(true);
+            }
+        }, 800);
+        return () => window.clearTimeout(timer);
+    }, [body]);
+
+    /* 話が変わったら、戻す手は捨てる */
+    useEffect(() => {
+        undoStackRef.current = [];
+        lastSnapRef.current = null;
+        setCanUndo(false);
+    }, [episode.id]);
+
+    function handleUndo() {
+        /*
+         * ★ まだ積んでいない打ちかけ（0.8 秒たっていない）があれば、
+         *   まずその手前（いま積んである最後の姿）へ戻す。
+         *   いきなり積んだ山から取ると、ひとつ飛ばして戻ってしまう。
+         */
+        const snap = lastSnapRef.current;
+        if (snap !== null && snap !== body) {
+            setBody(snap);
+            return;
+        }
+        const prev = undoStackRef.current.pop();
+        if (prev === undefined) return;
+        lastSnapRef.current = prev;
+        setBody(prev);
+        setCanUndo(undoStackRef.current.length > 0);
+    }
+
+    useEffect(() => {
+        if (!isMobile) return;
+        const area = surfaceRef.current?.querySelector("textarea");
+        if (!area) return;
+
+        const onUpdate = (e: CompositionEvent) => {
+            if (e.data && /^[\u3041-\u309F\u30FC]+$/.test(e.data)) lastKanaRef.current = e.data;
+        };
+        const onEnd = (e: CompositionEvent) => {
+            const text = e.data ?? "";
+            const reading = lastKanaRef.current;
+            lastKanaRef.current = "";
+            window.setTimeout(() => {
+                composedRef.current =
+                    text && reading && text !== reading
+                        ? { text, reading, end: area.selectionEnd }
+                        : null;
+            }, 0);
+        };
+        area.addEventListener("compositionupdate", onUpdate);
+        area.addEventListener("compositionend", onEnd);
+        return () => {
+            area.removeEventListener("compositionupdate", onUpdate);
+            area.removeEventListener("compositionend", onEnd);
+        };
+    });
 
     const { state, savedAt } = useAutosave({
         // 2 つの値をまとめて 1 つの文字列として監視する
@@ -405,6 +554,134 @@ export default function EpisodeEditor({
     const otherMode = settings.writing_mode === "vertical" ? "horizontal" : "vertical";
 
     /*
+     * ============================================================
+     * 携帯の道具
+     * ============================================================
+     */
+    function getArea(): HTMLTextAreaElement | null {
+        return surfaceRef.current?.querySelector("textarea") ?? null;
+    }
+
+    /** 本文を差し替えて、カーソルを pos に置く */
+    function replaceBodyAndPlace(next: string, pos: number) {
+        setBody(next);
+        window.setTimeout(() => {
+            const area = getArea();
+            if (!area) return;
+            area.focus();
+            area.setSelectionRange(pos, pos);
+        }, 0);
+    }
+
+    /** カーソルの所に記号を入れる。「」のように閉じがあれば、そのあいだに置く */
+    function insertPair(open: string, close = "") {
+        const area = getArea();
+        const start = area?.selectionStart ?? body.length;
+        const end = area?.selectionEnd ?? start;
+        const inside = body.slice(start, end);
+        const next = body.slice(0, start) + open + inside + close + body.slice(end);
+        replaceBodyAndPlace(next, start + open.length + inside.length);
+    }
+
+    /**
+     * ルビ・傍点・注釈の小窓を開く。
+     *
+     * ★ 文字を選んでいれば、その文字に付ける（パソコンと同じ）。
+     *   選んでいなければ、カーソルの直前の漢字のかたまりに付ける。
+     */
+    function openMark(kind: MarkKind) {
+        const area = getArea();
+        const start = area?.selectionStart ?? range.start;
+        const end = area?.selectionEnd ?? range.end;
+
+        const caret = end;
+        const len = end > start ? end - start : guessBaseLength(body, caret);
+        const base = body.slice(caret - len, caret);
+
+        /* 変換した直後なら、読みを先に入れておく */
+        const composed = composedRef.current;
+        const reading =
+            kind === "ruby" && composed && composed.end === caret && composed.text.endsWith(base)
+                ? base === composed.text
+                    ? composed.reading
+                    : ""
+                : "";
+
+        setMark({ kind, caret, len, reading, auto: reading !== "" });
+    }
+
+    function applyMark() {
+        if (!mark || mark.len <= 0) return;
+        const start = mark.caret - mark.len;
+        const end = mark.caret;
+
+        if (mark.kind === "note") {
+            setMark(null);
+            setNotePick({ start, end });
+            return;
+        }
+
+        if (mark.kind === "ruby" && !mark.reading.trim()) return;
+
+        /*
+         * ★ すぐ前も漢字・カタカナなら、必ず ｜ を付ける。
+         *   付けないと、読む画面では前の字までまとめてルビがかかる
+         *   （「潮守」の「守」だけ、「東京タワー」の「タワー」だけ、のとき）。
+         */
+        const joinsBefore = start > 0 && /[一-龥々〆ヶァ-ヴー]/.test(body[start - 1]);
+        const next =
+            mark.kind === "ruby"
+                ? joinsBefore
+                    ? `${body.slice(0, start)}｜${body.slice(start, end)}《${mark.reading.trim()}》${body.slice(end)}`
+                    : insertRuby(body, start, end, mark.reading.trim())
+                : insertEmphasis(body, start, end);
+
+        setMark(null);
+        replaceBodyAndPlace(next, end + (next.length - body.length));
+        setNotice(mark.kind === "ruby" ? `「${body.slice(start, end)}」にルビを付けました` : `「${body.slice(start, end)}」に傍点を付けました`);
+        window.setTimeout(() => setNotice(""), 3000);
+    }
+
+    /** 続きを書く。最後の行へ行って、キーボードを出す */
+    function writeOn() {
+        const area = getArea();
+        if (!area) return;
+        const endAt = area.value.length;
+        area.focus();
+        area.setSelectionRange(endAt, endAt);
+        area.scrollTop = area.scrollHeight;
+    }
+
+    function runSlot(slot: BarSlot) {
+        if (slot === "read") onOpenRead();
+        else if (slot === "mentions") onOpenMentions();
+        else if (slot === "proofread") onOpenProofread();
+        else if (slot === "history") onOpenHistory();
+        else if (slot === "replace") void handleReplace();
+        else if (slot === "focus") onToggleFocus?.();
+    }
+
+    /** ★ を押した道具を、下の段に置く。2 か所なので、古いほうと入れかえる */
+    function pinSlot(slot: BarSlot) {
+        if (slots.includes(slot)) return;
+        setSlots([slots[1], slot]);
+    }
+
+    const saveTone: "ok" | "draft" | "busy" =
+        state === "saving" || state === "pending" ? "busy" : episode.is_published === false ? "draft" : "ok";
+    const saveLabel =
+        state === "saving"
+            ? "保存中"
+            : state === "pending"
+              ? "未保存の変更"
+              : episode.is_published === false
+                ? `下書きに保存・${formatNumber(countChars(body))}字`
+                : `保存済み・${formatNumber(countChars(body))}字`;
+
+    const showKeyBar = isMobile && keyboard.isOpen && !mark && !notePick && !isTitleFocused;
+    const showBottomBar = isMobile && !keyboard.isOpen && !mark && !isFocusMode;
+
+    /*
      * 資料から飛んできたら、その行へ動かして選ぶ。
      * 開いただけで場所が分からないのでは、辿れるうちに入らない。
      *
@@ -479,15 +756,36 @@ export default function EpisodeEditor({
                 "flex h-full min-h-0 flex-col overflow-hidden bg-surface",
                 // 集中モードは画面の端まで使う。枠と角丸は普段だけ
                 isFocusMode ? "" : "rounded-lg border border-line",
+                /* 携帯：下の段のぶん、下を空ける */
+                showBottomBar ? "mw-pad" : "",
+                showKeyBar ? "mw-pad-key" : "",
             ].join(" ")}
         >
+            {/*
+              * 携帯の上の段。
+              *
+              * ★ パソコンの 2 段（題・保存・通し読み… と 道具の並び）は、
+              *   携帯では隠す（mw-desk）。道具は下の段と「道具」の中へ移した。
+              */}
+            {isMobile && !isFocusMode && (
+                <MobileEditorHeader
+                    title={title}
+                    saveLabel={saveLabel}
+                    saveTone={saveTone}
+                    backHref="/"
+                    postHref={`/workspace/${episode.work_id}/post?ep=${episode.id}`}
+                    unposted={unpostedCount}
+                    onOpenList={() => onOpenList?.()}
+                />
+            )}
+
             {/*
              * 上の帯。
              *
              * 狭い画面では 2 段にする。
              * 1 段に詰めると、右のボタンが画面の外へ出る。
              */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line px-3 py-2 sm:flex-nowrap sm:gap-2.5 sm:px-5 sm:py-2.5">
+            <div className="mw-desk flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line px-3 py-2 sm:flex-nowrap sm:gap-2.5 sm:px-5 sm:py-2.5">
                 {/*
                   * 題名のまわり。
                   *
@@ -648,7 +946,7 @@ export default function EpisodeEditor({
              *
              * よく使う「縦横」と「行番号」だけは外に出す。
              */}
-            <div className="relative flex items-center gap-1.5 border-b border-line bg-canvas px-3 py-1.5 text-[11px] sm:px-5">
+            <div className="mw-desk relative flex items-center gap-1.5 border-b border-line bg-canvas px-3 py-1.5 text-[11px] sm:px-5">
                 {/*
                  * 大きさ。
                  *
@@ -708,6 +1006,35 @@ export default function EpisodeEditor({
                 >
                     行番号
                 </button>
+
+                {/*
+                 * よく使う記号を、押すだけで入れる。
+                 *
+                 * ★ 「……」「――」は、打つと 2 回変換することになり手間。
+                 *   ほかのサイトでボタン 1 つで入れられるのが便利、という声があった。
+                 *   携帯はキーボードの上の帯に同じものがある。
+                 *
+                 * ★ 押しても本文から離れないようにする（onMouseDown で止める）。
+                 *   離れると、どこに入れるか分からなくなる。
+                 */}
+                <span aria-hidden className="h-4 w-px shrink-0 bg-line" />
+                <span className="flex shrink-0 items-center gap-1">
+                    {[
+                        { label: "……", open: "……", close: "", title: "三点リーダー（……）を入れます" },
+                        { label: "――", open: "――", close: "", title: "ダッシュ（――）を入れます" },
+                    ].map((one) => (
+                        <button
+                            key={one.label}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => insertPair(one.open, one.close)}
+                            title={one.title}
+                            className="min-w-[34px] rounded border border-line bg-surface px-2 py-0.5 tracking-normal text-muted hover:border-forest-line hover:text-forest"
+                        >
+                            {one.label}
+                        </button>
+                    ))}
+                </span>
 
                 {/* ここから先は、狭い画面では「…」の中 */}
                 <div
@@ -910,6 +1237,22 @@ export default function EpisodeEditor({
                  * 広く書きたいとの声で外した。
                  */}
                 <div className="mx-auto flex h-full min-h-0 w-full flex-col bg-surface shadow-[0_1px_4px_rgba(31,78,107,0.08)] sm:rounded">
+                {/*
+                  * 携帯：話の題は、原稿の紙のいちばん上で直す。
+                  * パソコンは上の帯のまま。
+                  */}
+                {isMobile && !illustPlacingId && !pickEntryId && (
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        onFocus={() => setIsTitleFocused(true)}
+                        onBlur={() => setIsTitleFocused(false)}
+                        aria-label="話のタイトル"
+                        placeholder="話の題を入れてください"
+                        className={`mw-title${title.trim() ? "" : " is-empty"}`}
+                    />
+                )}
                 {illustPlacingId ? (
                     /*
                       * 挿絵の置き場所を選んでいるあいだも、打ち込む欄をやめる。
@@ -962,6 +1305,89 @@ export default function EpisodeEditor({
                     </p>
                 )}
             </div>
+
+            {/* ---------- 携帯の下まわり ---------- */}
+            {showBottomBar && (
+                <MobileBottomBar
+                    slots={slots}
+                    onList={() => onOpenList?.()}
+                    onSlot={runSlot}
+                    onWrite={writeOn}
+                    onTools={() => setIsSheetOpen(true)}
+                />
+            )}
+
+            {showKeyBar && (
+                <MobileKeyBar
+                    bottom={keyboard.inset}
+                    onRuby={() => openMark("ruby")}
+                    onEmphasis={() => openMark("dot")}
+                    onNote={() => openMark("note")}
+                    onInsert={insertPair}
+                    onUndo={handleUndo}
+                    canUndo={canUndo}
+                    onClose={() => getArea()?.blur()}
+                />
+            )}
+
+            {isMobile && mark && (
+                <MobileMarkPanel
+                    bottom={keyboard.inset}
+                    kind={mark.kind}
+                    onKind={(kind) => setMark({ ...mark, kind })}
+                    base={body.slice(mark.caret - mark.len, mark.caret)}
+                    canGrow={
+                        mark.caret - mark.len > 0 &&
+                        body[mark.caret - mark.len - 1] !== "\n" &&
+                        mark.len < 20
+                    }
+                    canShrink={mark.len > stepFwd(body, mark.caret - mark.len)}
+                    /* 字を変えたら、先に入れた読みは合わなくなるので消す */
+                    onGrow={() => setMark({ ...mark, len: mark.len + stepBack(body, mark.caret - mark.len), reading: mark.auto ? "" : mark.reading, auto: false })}
+                    onShrink={() => setMark({ ...mark, len: mark.len - stepFwd(body, mark.caret - mark.len), reading: mark.auto ? "" : mark.reading, auto: false })}
+                    reading={mark.reading}
+                    onReading={(value) => setMark({ ...mark, reading: value })}
+                    autoFilled={mark.auto}
+                    onApply={applyMark}
+                    onCancel={() => {
+                        const at = mark.caret;
+                        setMark(null);
+                        window.setTimeout(() => {
+                            const area = getArea();
+                            area?.focus();
+                            area?.setSelectionRange(at, at);
+                        }, 0);
+                    }}
+                />
+            )}
+
+            {isMobile && isSheetOpen && (
+                <MobileToolsSheet
+                    workId={episode.work_id}
+                    onClose={() => setIsSheetOpen(false)}
+                    slots={slots}
+                    onPin={pinSlot}
+                    onSlot={runSlot}
+                    onIndent={handleIndent}
+                    onNormalize={handleNormalize}
+                    normalizeLabel={settings.writing_mode === "vertical" ? "縦書き用に整える" : "横書き用に整える"}
+                    isFocusMode={isFocusMode}
+                    zoom={zoom}
+                    onZoom={setZoom}
+                    showLineNumbers={showLineNumbers}
+                    onToggleLineNumbers={() => setShowLineNumbers((show) => !show)}
+                />
+            )}
+
+            {/* 集中モードのときは、戻る道だけ小さく残す */}
+            {isMobile && isFocusMode && !keyboard.isOpen && (
+                <button type="button" className="mw-focus-exit" onClick={onToggleFocus}>
+                    集中を解く
+                </button>
+            )}
+
+            {/* 知らせ（ルビを付けました など）。携帯では上の段が無いので、ここに出す */}
+            {isMobile && notice && <p className="mw-toast">{notice}</p>}
 
             {askDialog}
             {notePick && (

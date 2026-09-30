@@ -64,7 +64,7 @@ const ACCENTS: Record<string, { line: string; tint: string; ink: string }> = {
 
 const DEFAULT_ACCENT = { line: "#c6ccd4", tint: "#f5f6f8", ink: "#5a6672" };
 
-function accentOf(page: ResourcePage) {
+export function accentOf(page: ResourcePage) {
     return (page.builtin_key && ACCENTS[page.builtin_key]) || DEFAULT_ACCENT;
 }
 
@@ -677,9 +677,19 @@ export default function ResourceTop({
                                 >
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            focusPage(page.id, slot)
-                                        }
+                                        onClick={() => {
+                                            /*
+                                             * ★ 携帯では、押したらそのままそのページへ。
+                                             *   広がって中身を見せる動きは、狭い画面では
+                                             *   ひと手間増えるだけなので省く。
+                                             *   パソコンは今のまま（まず広がる）。
+                                             */
+                                            if (window.matchMedia("(max-width: 1023px)").matches) {
+                                                onOpen(page.id);
+                                                return;
+                                            }
+                                            focusPage(page.id, slot);
+                                        }}
                                         tabIndex={isSpread ? 0 : -1}
                                         className="relative flex flex-col items-center justify-center rounded-full text-center shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-md"
                                         style={{

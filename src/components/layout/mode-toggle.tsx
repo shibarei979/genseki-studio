@@ -271,7 +271,15 @@ export default function ModeToggle({
 
         <button
             type="button"
-            onClick={() => void toggle()}
+            onClick={(e) => {
+                /*
+                 * 携帯の 2 つ並びで、いまの向きの側を押したときは何もしない。
+                 * 押した側に切り替わる、と思って押すので。
+                 */
+                const hit = (e.target as HTMLElement).closest(".mode-toggle_seg-item");
+                if (hit && hit.getAttribute("data-on") === "true") return;
+                void toggle();
+            }}
             disabled={isBusy}
             aria-label={isRead ? "作家向けに切り替える" : "読書向けに切り替える"}
             title={isRead ? "いまは読書向け。押すと作家向けになります" : "いまは作家向け。押すと読書向けになります"}
@@ -307,6 +315,31 @@ export default function ModeToggle({
             </span>
 
             <span className="mode-toggle_knob" aria-hidden="true" />
+
+            {/*
+              * 携帯だけの形。ペンと本を 2 つ並べ、いまの向きに色を付ける。
+              *
+              * ★ パソコンでは出さない（CSS で隠す）。
+              *   パソコンの入り切りの形はそのまま。
+              */}
+            <span className="mode-toggle_seg" aria-hidden="true">
+                <span className="mode-toggle_seg-item" data-on={!isRead}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="1.8"
+                        strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m15.5 4.5 4 4" />
+                        <path d="M17.5 2.5a2.1 2.1 0 0 1 3 3L7.5 18.5l-4.5 1.5 1.5-4.5Z" />
+                    </svg>
+                </span>
+                <span className="mode-toggle_seg-item" data-on={isRead}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="1.8"
+                        strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                    </svg>
+                </span>
+            </span>
         </button>
         </>
     );

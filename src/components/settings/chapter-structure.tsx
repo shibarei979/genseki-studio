@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { moveChapterOnto } from "@/components/workspace/chapter-tree";
 
 import { getRepository } from "@/lib/repository";
 import type { Chapter, Episode } from "@/types";
@@ -477,6 +478,22 @@ export default function ChapterStructure({ workId }: { workId: string }) {
 
         void run("並べ替えるの", async () => {
             const repository = getRepository();
+
+            /*
+             * ★ 中の話ごと動かす。
+             *   章の並び（読者の目次・読む順）は、中の話の並びで決まる。
+             *   番号だけ入れ替えても、読者の目次は変わらなかった。
+             *   両方に話が入っているときは、話ごととなりの章の向こうへ運ぶ。
+             */
+            const sorted = [...episodes].sort((x, y) => x.ep_number - y.ep_number);
+            const moved = moveChapterOnto(chapters, sorted, chapter.id, siblings[next].id);
+            if (moved) {
+                await repository.reorderEpisodes(workId, moved.episodeIds);
+                await repository.reorderChapters(workId, moved.chapterIds);
+                return;
+            }
+
+            /* 話の入っていない章は、これまでどおり番号だけ入れ替える */
             await repository.updateChapter(chapter.id, {
                 sort_order: siblings[next].sort_order,
             });

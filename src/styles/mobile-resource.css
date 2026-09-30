@@ -1,0 +1,377 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯：作品の中のページの上の段（mobile-work-header.tsx）と、資料のページ
+ *
+ * ★ 1024px 未満でだけ効く。パソコンでは .mwh・.mwr-band・.mwr-jump を出さない。
+ * ============================================================
+ */
+
+.mwh,
+.mwr-band,
+.mwr-jump,
+.mwr-mob {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .mwh {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 52px;
+        padding: 0 6px;
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: var(--color-surface, #fff);
+        border-bottom: 1px solid var(--color-line, #dcdfda);
+    }
+    .mwh-title {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1.25;
+    }
+    .mwh-title small {
+        font-size: 10.5px;
+        color: var(--color-faint, #7d867f);
+    }
+    .mwh-title b {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    /* 資料のページ：パソコン用の並び（作品の行き先・作品名）は隠す */
+    .mwr-desk {
+        display: none !important;
+    }
+
+    .mwr-band {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--color-line, #dcdfda);
+    }
+    .mwr-band b {
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-size: 18px;
+        font-weight: 600;
+    }
+    .mwr-band small {
+        font-size: 12px;
+        color: var(--color-muted, #55605a);
+    }
+    .mwr-band-ic {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1.5px solid;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* ほかの資料へ移る帯。下の帯（行き先）のすぐ上に貼る */
+    .mwr-has-jump {
+        padding-bottom: 64px !important;
+    }
+    /* 関係図は「＋ 関係を足す」も下に貼るので、そのぶんも空ける（一覧の最後が隠れないように） */
+    .mwr-has-jump:has(.mwr-rel-add) {
+        padding-bottom: 124px !important;
+    }
+    .mwr-jump {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--mtb-h, 58px);
+        z-index: 50;
+        height: 52px;
+        padding: 0 10px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        background: rgba(255, 255, 255, .97);
+        border-top: 1px solid var(--color-line, #dcdfda);
+    }
+    .mwr-jump::-webkit-scrollbar {
+        display: none;
+    }
+    .mwr-jump-lab {
+        flex-shrink: 0;
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--color-faint, #7d867f);
+    }
+    .mwr-jump-c {
+        flex-shrink: 0;
+        height: 36px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1.5px solid var(--color-line, #dcdfda);
+        background: #fff;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--color-muted, #55605a);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    /* ---------- 関係図 ---------- */
+    .mwr-rel-top {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 8px;
+    }
+    .mwr-seg {
+        display: flex;
+        background: #eef1f3;
+        border-radius: 10px;
+        padding: 3px;
+        width: 132px;
+    }
+    .mwr-seg button {
+        flex: 1;
+        height: 34px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--color-muted, #55605a);
+    }
+    .mwr-seg button.is-on {
+        background: #fff;
+        color: var(--color-forest, #1f4e6b);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+    }
+
+    .mwr-rel-add {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        left: 14px;
+        right: 14px;
+        bottom: calc(var(--mtb-h, 58px) + 64px);
+        z-index: 51;
+        height: 50px;
+        border-radius: 16px;
+        background: var(--color-forest, #1f4e6b);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 800;
+        box-shadow: 0 8px 20px rgba(31, 78, 107, .35);
+    }
+
+    .mwr-sheet-wrap {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+    }
+    .mwr-dim {
+        position: absolute;
+        inset: 0;
+        background: rgba(12, 24, 33, .42);
+        border: none;
+    }
+    .mwr-sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        max-height: 88dvh;
+        overflow-y: auto;
+        background: #fff;
+        border-radius: 22px 22px 0 0;
+        padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -12px 34px rgba(0, 0, 0, .2);
+    }
+    .mwr-grab {
+        width: 40px;
+        height: 5px;
+        border-radius: 3px;
+        background: #cfd6da;
+        margin: 8px auto 4px;
+    }
+    .mwr-sheet-head {
+        display: flex;
+        align-items: center;
+        padding: 4px 0 8px;
+    }
+    .mwr-sheet-head h3 {
+        flex: 1;
+        font-size: 17px;
+        font-weight: 800;
+    }
+    .mwr-sheet-head button {
+        height: 40px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--color-forest, #1f4e6b);
+    }
+    .mwr-fl {
+        margin-top: 12px;
+    }
+    .mwr-l {
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--color-faint, #7d867f);
+        letter-spacing: .06em;
+        margin-bottom: 6px;
+    }
+    .mwr-pick {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding: 4px 2px;
+        scrollbar-width: none;
+    }
+    .mwr-pick button {
+        flex-shrink: 0;
+        width: 58px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .mwr-pick button span {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .mwr-pick i {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: #f3f7fc;
+        border: 2px solid #b9cfe8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-style: normal;
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-weight: 700;
+        font-size: 17px;
+        color: #4a6b96;
+    }
+    .mwr-pick button.is-on i {
+        border-color: var(--color-forest, #1f4e6b);
+        box-shadow: 0 0 0 4px rgba(31, 78, 107, .2);
+    }
+    .mwr-relc {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .mwr-relc button {
+        height: 38px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--color-line, #dcdfda);
+        background: #fff;
+        font-size: 13px;
+        font-weight: 700;
+    }
+    .mwr-relc button.is-on {
+        background: var(--color-forest, #1f4e6b);
+        border-color: var(--color-forest, #1f4e6b);
+        color: #fff;
+    }
+    .mwr-in {
+        width: 100%;
+        height: 44px;
+        margin-top: 8px;
+        border-radius: 12px;
+        border: 1px solid var(--color-line, #dcdfda);
+        padding: 0 12px;
+        font-size: 16px;
+    }
+    .mwr-preview {
+        margin-top: 14px;
+        background: #f7f4fc;
+        border: 1px solid #e3dcf0;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .mwr-preview b {
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+    }
+    .mwr-preview span {
+        color: #6d5a96;
+        font-weight: 700;
+    }
+    .mwr-big {
+        width: 100%;
+        height: 52px;
+        margin-top: 14px;
+        border-radius: 14px;
+        background: var(--color-forest, #1f4e6b);
+        color: #fff;
+        font-size: 16px;
+        font-weight: 800;
+    }
+    .mwr-big:disabled {
+        opacity: .4;
+    }
+}
+
+/*
+ * ============================================================
+ * 携帯：投稿のページ（work-post-client.tsx）
+ *
+ * ★ 投稿する話の欄を先に出し、「投稿する」は画面の下に貼り付ける。
+ * ============================================================
+ */
+@media (max-width: 1023px) {
+    .wp-main {
+        order: -1;
+    }
+    .wp-actions {
+        position: sticky;
+        bottom: var(--mtb-h, 58px);
+        z-index: 20;
+        margin-left: -12px;
+        margin-right: -12px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, .97);
+        border-top: 1px solid var(--color-line, #dcdfda);
+    }
+    .wp-actions > button {
+        flex: 1 1 auto;
+        min-height: 48px;
+        justify-content: center;
+    }
+}
+
+/* 640px 以上は外の余白が 16px なので、端まで届くように合わせる */
+@media (min-width: 640px) and (max-width: 1023px) {
+    .wp-actions {
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+@media (max-width: 1023px) {
+    [data-theme="dark"] .wp-actions { background: rgba(20, 26, 30, .96); }
+}

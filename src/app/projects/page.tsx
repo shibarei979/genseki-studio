@@ -86,8 +86,9 @@ export default async function ProjectsPage() {
         <div className="page-with-footer bg-canvas">
             <Header breadcrumbs={[{ label: "自主企画" }]} />
 
-            <div className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-6">
-                <div className="flex items-start justify-between gap-4">
+            {/* m9-pj: 携帯だけの見た目（styles/mobile-p9.css） */}
+            <div className="m9-pj mx-auto w-full max-w-5xl px-5 py-8 sm:px-6">
+                <div className="m9-pj-top flex items-start justify-between gap-4">
                     <div>
                         <h1 className="text-[20px] font-semibold text-ink">自主企画</h1>
                         <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
@@ -99,7 +100,7 @@ export default async function ProjectsPage() {
 
                     <Link
                         href="/projects/new"
-                        className="shrink-0 rounded-lg bg-forest px-4 py-2 text-[13px] font-medium text-white hover:bg-forest-dark"
+                        className="m9-pj-new shrink-0 rounded-lg bg-forest px-4 py-2 text-[13px] font-medium text-white hover:bg-forest-dark"
                     >
                         企画を立てる
                     </Link>
@@ -172,7 +173,7 @@ function ProjectList({
                                  * 線があると「誰かが立てたもの」が並んでいる
                                  * 感じになり、公式のものと見分けが付く。
                                  */
-                                "block border-l-[3px] border-l-forest-line bg-surface px-4 py-3.5",
+                                "m9-pj-card block border-l-[3px] border-l-forest-line bg-surface px-4 py-3.5",
                                 "rounded-r-lg border-y border-r border-line hover:border-l-forest",
                                 dim ? "opacity-60" : "",
                             ].join(" ")}
@@ -200,7 +201,7 @@ function ProjectList({
                             )}
 
                             <div className="mt-2.5 flex items-center gap-2">
-                                <span className="rounded-full bg-forest-tint px-2.5 py-1 text-[11px] text-forest">
+                                <span className="m9-pj-tag rounded-full bg-forest-tint px-2.5 py-1 text-[11px] text-forest">
                                     #{project.tag}
                                 </span>
                                 <span className="text-[11px] text-faint">

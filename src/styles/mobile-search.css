@@ -140,3 +140,117 @@
         margin-bottom: 4px !important;
     }
 }
+
+/*
+ * ============================================================
+ * 携帯：上の検索欄・気分の札・下から出る「条件」の 1 枚
+ *
+ * ★ 前は「検索条件を開く」で、長い入力欄が縦に並んで開いていた。
+ *   携帯では題名・作者名の欄だけを上に大きく置き、
+ *   細かい条件は下から出る 1 枚にまとめる。
+ *
+ * ★ パソコンでは、上の欄も札も出さない。条件の箱は今のまま。
+ * ============================================================
+ */
+.sf-mrow, .sf-moods-m, .sf-dim, .sf-sheet-head { display: none; }
+
+@media (max-width: 1023px) {
+    .sf-head .sf-toggle { display: none !important; }
+
+    .sf-mrow {
+        display: flex; align-items: center; gap: 8px;
+        height: 50px; padding: 0 5px 0 14px; margin-bottom: 10px;
+        background: var(--color-bg-card);
+        border: 1.5px solid var(--color-brand); border-radius: 14px;
+        color: var(--color-text-muted);
+    }
+    .sf-mrow input {
+        flex: 1; min-width: 0; height: 100%;
+        border: none; outline: none; background: transparent;
+        font-size: 16px; color: var(--color-text);
+    }
+    .sf-cond {
+        display: inline-flex; align-items: center; gap: 5px;
+        height: 40px; padding: 0 12px; border-radius: 10px; border: none;
+        background: var(--color-brand-light, #e8f0f5); color: var(--color-brand);
+        font-size: 13.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+    .sf-cond span {
+        min-width: 19px; height: 19px; border-radius: 10px; padding: 0 5px;
+        background: var(--color-brand); color: #fff; font-size: 11px;
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+
+    .sf-moods-m {
+        display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none;
+        margin: 0 -12px 12px; padding: 0 12px 2px;
+    }
+    .sf-moods-m::-webkit-scrollbar { display: none; }
+    .sf-moods-m button {
+        flex-shrink: 0; height: 36px; padding: 0 13px; border-radius: 18px;
+        border: 1px solid var(--color-brand-border); background: var(--color-bg-card);
+        color: var(--color-text); font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer;
+    }
+    .sf-moods-m button.is-on {
+        background: #fdecef; border-color: #f2b8c4; color: #b42c4c;
+    }
+
+    /* 閉じている箱は出さない（題名・作者名は上の欄で入れる） */
+    .sf-box:not(.is-open) { display: none !important; }
+
+    .sf-dim {
+        display: block; position: fixed; inset: 0; z-index: 1000;
+        background: rgba(20, 30, 40, .45); border: none;
+    }
+    .sf-box.is-open {
+        position: fixed !important; left: 0; right: 0; bottom: 0; z-index: 1001;
+        max-height: 86vh; overflow-y: auto; overscroll-behavior: contain;
+        margin: 0 !important; border-radius: 18px 18px 0 0 !important;
+        border: none !important; padding: 8px 16px 0 !important;
+        box-shadow: 0 -8px 30px rgba(0,0,0,.18);
+    }
+    .sf-box.is-open .sf-sheet-head {
+        display: flex; align-items: center; justify-content: space-between;
+        position: sticky; top: -8px; z-index: 2; margin: -8px -16px 10px; padding: 16px 16px 10px;
+        background: var(--color-bg-card);
+        border-bottom: 1px solid var(--color-brand-border);
+    }
+    .sf-sheet-head b { font-size: 17px; color: var(--color-text); }
+    .sf-sheet-head button {
+        border: none; background: none; color: var(--color-brand);
+        font-size: 14px; font-weight: 700; padding: 6px 4px; cursor: pointer;
+    }
+    .sf-box.is-open .sf-name,
+    .sf-box.is-open .sf-toggles { display: none !important; }
+
+    /* 条件の札は、指で押しやすい大きさに */
+    .sf-box.is-open .ranking-pill { padding: 8px 15px !important; font-size: 13px !important; border-radius: 18px !important; }
+
+    /* 下の「この条件で検索する」は、いつも見える所に */
+    .sf-box.is-open .sf-foot {
+        position: sticky; bottom: 0; z-index: 2;
+        margin: 12px -16px 0 !important; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        background: var(--color-bg-card);
+        border-top: 1px solid var(--color-brand-border);
+    }
+    .sf-box.is-open .sf-foot button:last-child { padding: 14px !important; font-size: 15px !important; border-radius: 12px !important; }
+
+    /* 件数と「文字｜本」を 1 行に */
+    .sp-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .sp-meta > div { margin-bottom: 0 !important; }
+
+    /* あらすじは 2 行 */
+    .sp-summary { -webkit-line-clamp: 2 !important; }
+}
+
+/* 携帯：ジャンルの帯（パソコンでは出さない） */
+.sp-genre-band { display: none; }
+@media (max-width: 1023px) {
+    .sp-genre-band {
+        display: block; margin-bottom: 12px; padding: 14px 16px 16px;
+        border-radius: 14px; color: #fff;
+    }
+    .sp-genre-band small { display: block; font-size: 11px; opacity: .85; }
+    .sp-genre-band b { display: block; font-size: 22px; font-weight: 700; margin: 2px 0 3px; }
+    .sp-genre-band span { font-size: 12px; opacity: .9; }
+}

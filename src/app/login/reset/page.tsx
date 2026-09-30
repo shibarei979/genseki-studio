@@ -69,7 +69,8 @@ export default function ResetRequestPage() {
         <div className="page-with-footer bg-canvas">
             <Header breadcrumbs={[{ label: "パスワードを忘れた方" }]} />
 
-            <main className="mx-auto w-full max-w-[420px] px-6 py-14">
+            {/* m9-auth: 携帯だけ入力と押し具を大きく（styles/mobile-p9.css） */}
+            <main className="m9-auth mx-auto w-full max-w-[420px] px-6 py-14">
                 <h1 className="font-serif text-[20px] font-bold tracking-wide text-ink">
                     パスワードを忘れた方
                 </h1>

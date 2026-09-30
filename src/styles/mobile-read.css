@@ -1,0 +1,214 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯：話を読む画面の下の帯（mobile-read-bar.tsx）
+ *
+ * ★ 1024px 未満でだけ出す。
+ * ============================================================
+ */
+
+.mrb,
+.mrb-progress {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .mrb-progress {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 0;
+        z-index: 40;
+        height: 3px;
+        background: transparent;
+        pointer-events: none;
+    }
+    .mrb-progress i {
+        display: block;
+        height: 100%;
+        background: var(--color-brand, #1f4e6b);
+        transition: width .15s linear;
+    }
+
+    .mrb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 60;
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+        background: #fff;
+        border-top: 1px solid var(--color-line, #dcdfda);
+        transition: transform .22s ease;
+    }
+    .mrb.is-hidden {
+        transform: translateY(110%);
+    }
+
+    .mrb-nb {
+        flex: 1;
+        height: 48px;
+        border-radius: 12px;
+        border: 1px solid var(--color-line, #dcdfda);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--color-ink, #1a211d);
+        text-decoration: none;
+        background: #fff;
+    }
+    .mrb-nb.is-pri {
+        background: var(--color-brand, #1f4e6b);
+        border-color: var(--color-brand, #1f4e6b);
+        color: #fff;
+    }
+    .mrb-nb.is-off {
+        color: var(--color-faint, #7d867f);
+        opacity: .5;
+    }
+
+    .mrb-sq {
+        width: 48px;
+        height: 48px;
+        flex-shrink: 0;
+        border-radius: 12px;
+        border: 1px solid var(--color-line, #dcdfda);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-brand, #1f4e6b);
+    }
+
+    /* 読み終わりのいいね・読了・共有を、指で押しやすい高さに */
+    .mrb-endbtns > * {
+        min-height: 44px;
+    }
+}
+
+/*
+ * ============================================================
+ * 携帯：作品のページ（目次の 2 行と、下に固定する「読む」）
+ * ============================================================
+ */
+.nv-sticky {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .nvr {
+        flex-wrap: wrap;
+        row-gap: 2px !important;
+        min-height: 56px;
+    }
+    .nvr-t {
+        flex-basis: 100% !important;
+    }
+    .nvr-t > span:last-child {
+        /* 名前で書くと next/font の明朝に当たらない。変数で指す */
+        font-family: var(--font-serif), 'Noto Serif JP', serif;
+        font-size: 14.5px !important;
+        font-weight: 600 !important;
+    }
+    .nvr-m {
+        flex-basis: 100%;
+        justify-content: flex-start;
+    }
+
+    /*
+     * ★ 固定した「読む」の帯のぶん、頁の下に余白を足す。
+     *   下のタブ帯の分しか空けていないと、フッターのいちばん下が帯に隠れる。
+     */
+    body:has(.nv-sticky) {
+        padding-bottom: calc(var(--mtb-h, 58px) + 16px + 64px);
+    }
+
+    .nv-sticky {
+        display: flex;
+        gap: 8px;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--mtb-h, 58px);
+        z-index: 55;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, .97);
+        border-top: 1px solid var(--color-line, #dcdfda);
+    }
+    .nv-sticky a {
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14.5px;
+        font-weight: 800;
+        text-decoration: none;
+    }
+    .nv-sticky-main {
+        flex: 1;
+        background: var(--color-brand, #1f4e6b);
+        color: #fff;
+        box-shadow: 0 6px 16px rgba(31, 78, 107, .3);
+    }
+    .nv-sticky-sub {
+        padding: 0 14px;
+        border: 1px solid var(--color-brand, #1f4e6b);
+        color: var(--color-brand, #1f4e6b);
+        background: #fff;
+        font-size: 13px !important;
+    }
+}
+
+/*
+ * ============================================================
+ * 携帯：作者のページ（フォローを大きく・ブロックは「⋯」の中）
+ * ============================================================
+ */
+@media (max-width: 1023px) {
+    .au-follow {
+        flex: 1;
+        display: flex;
+    }
+    .au-follow > * {
+        flex: 1;
+        min-height: 42px;
+    }
+    .au-more {
+        position: relative;
+    }
+    .au-more > summary {
+        list-style: none;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        border: 1px solid var(--color-brand-border, #b4cede);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: var(--color-text-muted, #55605a);
+        cursor: pointer;
+        background: #fff;
+    }
+    .au-more > summary::-webkit-details-marker {
+        display: none;
+    }
+    .au-more-pop {
+        position: absolute;
+        right: 0;
+        top: 48px;
+        z-index: 20;
+        background: #fff;
+        border: 1px solid var(--color-line, #dcdfda);
+        border-radius: 12px;
+        padding: 8px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .15);
+        min-width: 160px;
+    }
+}

@@ -147,7 +147,8 @@ export default function ProjectJoin({
                         setIsOpen(true);
                         setJoined(null);
                     }}
-                    className="mt-4 w-full rounded-lg bg-forest py-2.5 text-[13px] font-medium text-white hover:bg-forest-dark"
+                    /* m9-pj-join: 携帯では画面の下に留める（styles/mobile-p9.css） */
+                    className="m9-pj-join mt-4 w-full rounded-lg bg-forest py-2.5 text-[13px] font-medium text-white hover:bg-forest-dark"
                 >
                     参加する作品を選ぶ
                 </button>

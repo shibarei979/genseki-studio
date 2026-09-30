@@ -313,6 +313,26 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
                 </div>
             </div>
 
+            {/*
+              * 携帯だけ：画面の下にいつも出す「応募する」。
+              * どこまで読んでも、すぐ押せる。パソコンでは出さない（CSS）。
+              */}
+            <div className="cd-mbar">
+                {publicEntries.length > 0 && (
+                    <Link href={`/contest/${contestId}/entries`} className="cd-mbar-sub">
+                        応募作品 {publicEntries.length}
+                    </Link>
+                )}
+                <Link
+                    href={`/contest/${contestId}/entry`}
+                    className={`cd-mbar-main${isOpen ? "" : " is-off"}`}
+                    aria-disabled={!isOpen}
+                >
+                    {isOpen ? "応募する" : "受付終了"}
+                    {isOpen && remaining >= 0 && <small>締切まであと{remaining}日</small>}
+                </Link>
+            </div>
+
             {/* ============ 目次 ============ */}
 
             <main className="mx-auto max-w-5xl px-6 sm:px-8">
@@ -656,6 +676,14 @@ export default function ContestDetailClient({ contestId }: { contestId: string }
  * ============================================================
  */
 
+/** 携帯で閉じておく項目 */
+/*
+ * ★ 応募規約（terms）は畳まない。
+ *   「規約は初めから開いておく。畳むと読まないまま出す人が出る」という
+ *   もとからの決まりがあるので、携帯でもそれに従う。
+ */
+const FOLD_ON_MOBILE = ["rules", "how"];
+
 function Section({
     id,
     icon,
@@ -667,22 +695,47 @@ function Section({
     title: string;
     children: React.ReactNode;
 }) {
+    /*
+     * ★ 携帯だけ、長い説明（応募条件・応募のしかた）は閉じておき、
+     *   見出しを押して開く。読む所が短くなり、下の「応募する」まで早く着く。
+     *   パソコンでは閉じない（CSS で携帯のときだけ隠す）。
+     */
+    const [isShut, setIsShut] = useState(FOLD_ON_MOBILE.includes(id));
+    const canFold = FOLD_ON_MOBILE.includes(id);
+
+    /*
+     * ★ 住所の #terms などで来たときは開いておく。
+     *   応募の頁の「応募規約」から飛んでくると、閉じたままでは読めない。
+     */
+    useEffect(() => {
+        if (!canFold) return;
+        const openIfHere = () => {
+            if (window.location.hash === `#${id}`) setIsShut(false);
+        };
+        openIfHere();
+        window.addEventListener("hashchange", openIfHere);
+        return () => window.removeEventListener("hashchange", openIfHere);
+    }, [canFold, id]);
+
     return (
         <section
             id={id}
             /* 貼り付いた目次の下に隠れないよう、飛び先を下げる */
-            className="scroll-mt-28 border-b border-line py-8 last:border-b-0"
+            className="cd-sec scroll-mt-28 border-b border-line py-8 last:border-b-0"
+            data-shut={canFold && isShut ? "true" : undefined}
         >
             <div className="grid gap-3 sm:gap-5 lg:grid-cols-[minmax(0,200px)_minmax(0,1fr)]">
                 <h2
-                    className="flex items-center gap-2.5 text-[14px] font-semibold"
+                    className={`flex items-center gap-2.5 text-[14px] font-semibold${canFold ? " cd-fold" : ""}`}
                     style={{ color: C.navy }}
+                    onClick={canFold ? () => setIsShut((v) => !v) : undefined}
                 >
                     <span style={{ color: C.teal }}>{icon}</span>
                     {title}
+                    {canFold && <span className="cd-chev" aria-hidden="true">⌄</span>}
                 </h2>
 
-                <div className="min-w-0">{children}</div>
+                <div className="cd-sec-body min-w-0">{children}</div>
             </div>
         </section>
     );

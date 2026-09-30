@@ -129,7 +129,7 @@ export default function NoticesClient() {
         <div className="min-h-screen bg-canvas pb-16">
             <Header breadcrumbs={[{ label: "お知らせ" }]} />
 
-            <main className="mx-auto max-w-3xl px-8 py-8">
+            <main className="nt-main mx-auto max-w-3xl px-8 py-8">
                 <h1 className="text-xl font-semibold tracking-wide text-ink">
                     お知らせ
                 </h1>
@@ -291,11 +291,11 @@ function NoticeCard({ notice }: { notice: AdminNotice }) {
         <>
             {/* 左端に種類の色。並べたとき目印になる */}
             <span
-                className="w-1 shrink-0 rounded-full"
+                className="nt-line w-1 shrink-0 rounded-full"
                 style={{ background: tone.text }}
             />
 
-            <span className="min-w-0 flex-1 py-0.5">
+            <span className="nt-text min-w-0 flex-1 py-0.5">
                 <span className="flex flex-wrap items-center gap-2">
                     <span
                         className="rounded-full px-2 py-0.5 text-[10px] font-medium"
@@ -319,10 +319,15 @@ function NoticeCard({ notice }: { notice: AdminNotice }) {
                 )}
             </span>
 
+            {/*
+              * 絵。
+              * ★ 携帯ではカードの下に横いっぱいで出す（mobile-p7.css）。
+              *   右に小さく置くと、文字の幅が細くなって読みにくい。
+              */}
             {notice.image_url && (
                 <EntryImage
                     src={notice.image_url}
-                    className="aspect-video w-28 shrink-0 self-start rounded-lg border border-line object-cover"
+                    className="nt-img aspect-video w-28 shrink-0 self-start rounded-lg border border-line object-cover"
                 />
             )}
         </>
@@ -332,14 +337,14 @@ function NoticeCard({ notice }: { notice: AdminNotice }) {
         return (
             <Link
                 href={notice.link}
-                className="flex gap-3 rounded-xl bg-surface p-4 hover:shadow-sm"
+                className="nt-card flex gap-3 rounded-xl bg-surface p-4 hover:shadow-sm"
             >
                 {inner}
             </Link>
         );
     }
 
-    return <div className="flex gap-3 rounded-xl bg-surface p-4">{inner}</div>;
+    return <div className="nt-card flex gap-3 rounded-xl bg-surface p-4">{inner}</div>;
 }
 
 /** 「2026年8月3日（月）」 */

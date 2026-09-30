@@ -38,6 +38,7 @@ interface Item {
 
 const KINDS = [
     ['stamp', 'スタンプ'],
+    ['costume', 'アイコン衣装'],
     ['frame', 'フレーム'],
     ['background', '背景'],
     ['badge', '称号'],

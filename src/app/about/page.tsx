@@ -31,7 +31,8 @@ export default function AboutPage() {
   ]
 
   return (
-    <div className="page-with-footer" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
+    /* m9-doc: 文字だけのページの携帯の見た目（styles/mobile-p9.css） */
+    <div className="page-with-footer m9-doc" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
       <Header />
 
       {/* ヒーロー */}
@@ -56,7 +57,7 @@ export default function AboutPage() {
       </div>
 
       {/* サブナビ */}
-      <div style={{background:'var(--color-bg)',borderBottom:'1px solid var(--color-brand-border)',overflowX:'auto'}}>
+      <div className="m9-doc-tabs" style={{background:'var(--color-bg)',borderBottom:'1px solid var(--color-brand-border)',overflowX:'auto'}}>
         <div style={{maxWidth:860,margin:'0 auto',padding:'0 24px',display:'flex',gap:0}}>
           {navLinks.map(n => (
             <Link key={n.href} href={n.href}
@@ -68,7 +69,7 @@ export default function AboutPage() {
         </div>
       </div>
 
-      <div style={{maxWidth:860,margin:'0 auto',padding:'40px 24px 60px'}}>
+      <div className="m9-doc-body" style={{maxWidth:860,margin:'0 auto',padding:'40px 24px 60px'}}>
 
         {/* 説明文 */}
         <div style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'28px 32px',marginBottom:28}}>
@@ -87,7 +88,7 @@ export default function AboutPage() {
           <span style={{width:4,height:22,background:'var(--color-brand)',borderRadius:2,display:'inline-block'}}/>
           原石航路の特徴
         </h2>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:32}}>
+        <div className="m9-doc-feat" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:32}}>
           {features.map((f, i) => (
             <div key={i} style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'22px',display:'flex',gap:14,alignItems:'flex-start'}}>
               <div>

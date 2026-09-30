@@ -29,7 +29,8 @@ export default function NewProjectPage() {
                 ]}
             />
 
-            <div className="mx-auto w-full max-w-2xl px-5 py-8 sm:px-6">
+            {/* m9-pjn: 携帯だけの見た目（styles/mobile-p9.css） */}
+            <div className="m9-pjn mx-auto w-full max-w-2xl px-5 py-8 sm:px-6">
                 <h1 className="text-[20px] font-semibold text-ink">企画を立てる</h1>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
                     合言葉を決めると、その言葉をタグに入れた作品が集まります。

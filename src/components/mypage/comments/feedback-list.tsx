@@ -80,7 +80,12 @@ export default function FeedbackList({ items, titleMap, initialReadKeys, tab, my
           {it.body && (
             <div style={{ fontSize: 13.5, color: 'var(--color-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{it.body}</div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
+          {/*
+            * 返信と既読の段。
+            * ★ 携帯では本文の下に、2 つを同じ幅の大きなボタンで並べる（p8-fb-acts）。
+            *   返信欄を開いたときは、欄を横いっぱいに使う。
+            */}
+          <div className="p8-fb-acts" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
             {it.type === 'comment' ? (
               <FeedbackReplyBox
                 parentCommentId={it.key.slice(2)}
@@ -91,14 +96,14 @@ export default function FeedbackList({ items, titleMap, initialReadKeys, tab, my
                 myUserId={myUserId}
                 myName={myName}
               />
-            ) : <span/>}
+            ) : <span className="p8-fb-none"/>}
             {!readSet.has(it.key) ? (
-              <button onClick={() => markRead(it.key)}
+              <button className="p8-fb-read" onClick={() => markRead(it.key)}
                 style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--color-brand)', background: 'none', border: '1px solid var(--color-brand-border)', borderRadius: 12, padding: '4px 12px', cursor: 'pointer', flexShrink: 0 }}>
                 既読にする
               </button>
             ) : (
-              <span style={{ fontSize: 11, color: 'var(--color-text-faint)', flexShrink: 0 }}>既読</span>
+              <span className="p8-fb-done" style={{ fontSize: 11, color: 'var(--color-text-faint)', flexShrink: 0 }}>既読</span>
             )}
           </div>
         </div>

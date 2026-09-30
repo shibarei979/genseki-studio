@@ -34,6 +34,8 @@ import {
     buildChapterGroups,
     formatChapterNumber,
     formatPartNumber,
+    moveChapterGroup,
+    moveChapterOnto,
     orderedEpisodeIds,
 } from "./chapter-tree";
 
@@ -240,6 +242,22 @@ export default function EpisodeList({
         onReorder(next);
     }
 
+    /**
+     * 章をまるごと 1 つ上（または下）へ動かす。
+     *
+     * ★ つまんで動かす操作は、携帯では効かない（長押しで文字が選ばれる）。
+     *   押し具なら、どこでも同じように使える。
+     *
+     * ★ 章の並びは中の話の並びで決まるので、話ごと動かす。
+     *   章の番号も新しい並びに合わせて振り直す。
+     */
+    function moveChapter(groupAt: number, step: -1 | 1) {
+        const result = moveChapterGroup(chapters, episodes, groupAt, step);
+        if (!result) return;
+        onReorder(result.episodeIds);
+        onReorderChapters?.(result.chapterIds);
+    }
+
     function handleDrop(targetId: string) {
         if (!draggingId || draggingId === targetId) {
             setDraggingId(null);
@@ -385,28 +403,10 @@ export default function EpisodeList({
                   *   指を置いたときだけ出す形だと、
                   *   携帯では一度も出ない。
                   */}
-                {!isPicking && (
-                    <span className="absolute -left-0.5 top-1/2 z-10 flex -translate-y-1/2 flex-col rounded bg-surface/95 shadow-sm">
-                        <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); moveBy(episode.id, -1) }}
-                            title="1つ上へ"
-                            aria-label="1つ上へ動かす"
-                            className="flex h-3.5 w-3.5 items-center justify-center text-[9px] leading-none text-muted hover:text-forest"
-                        >
-                            ▲
-                        </button>
-                        <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); moveBy(episode.id, 1) }}
-                            title="1つ下へ"
-                            aria-label="1つ下へ動かす"
-                            className="flex h-3.5 w-3.5 items-center justify-center text-[9px] leading-none text-muted hover:text-forest"
-                        >
-                            ▼
-                        </button>
-                    </span>
-                )}
+                {/*
+                  * 話ごとの ▲▼ はやめた（一覧がごちゃつくため）。
+                  * 並べ替えは、つまんで動かす（パソコン）か、章の ▲▼ で。
+                  */}
 
 
 
@@ -793,19 +793,39 @@ export default function EpisodeList({
                                 }}
                                 onDragLeave={() => setOverChapterId(null)}
                                 onDrop={() => {
-                                    /* 章を章の上へ落としたら、並べ替え */
+                                    /*
+                                     * 章を章の上へ落としたら、並べ替え。
+                                     *
+                                     * ★ 中の話ごと動かす。章の並びは話の並びで決まるので、
+                                     *   番号だけ入れ替えても見た目が変わらなかった。
+                                     */
                                     if (
                                         draggingChapterId &&
                                         chapter &&
                                         draggingChapterId !== chapter.id &&
                                         onReorderChapters
                                     ) {
-                                        const ids = chapters.map((c) => c.id);
-                                        const from = ids.indexOf(draggingChapterId);
-                                        const to = ids.indexOf(chapter.id);
-                                        ids.splice(from, 1);
-                                        ids.splice(to, 0, draggingChapterId);
-                                        onReorderChapters(ids);
+                                        const result = moveChapterOnto(
+                                            chapters,
+                                            episodes,
+                                            draggingChapterId,
+                                            chapter.id,
+                                        );
+                                        if (result) {
+                                            onReorder(result.episodeIds);
+                                            onReorderChapters(result.chapterIds);
+                                        } else {
+                                            /*
+                                             * 話の入っていない章などは、今までどおり番号だけ入れ替える
+                                             * （空の章は、この番号の順で並ぶ）。
+                                             */
+                                            const ids = chapters.map((c) => c.id);
+                                            const from = ids.indexOf(draggingChapterId);
+                                            const to = ids.indexOf(chapter.id);
+                                            ids.splice(from, 1);
+                                            ids.splice(to, 0, draggingChapterId);
+                                            onReorderChapters(ids);
+                                        }
                                     } else if (draggingId && onAssignChapter) {
                                         /* 話を落としたら、その章に入れる */
                                         onAssignChapter(
@@ -826,7 +846,7 @@ export default function EpisodeList({
                                      * 残らず、「第一部　白書の魔女」が切れた。
                                      * 名前に 1 行ぜんぶを渡す。
                                      */
-                                    "group/chapter mt-2 flex flex-col gap-1 rounded-md px-2 py-1.5",
+                                    "el-chhead group/chapter mt-2 flex flex-col gap-1 rounded-md px-2 py-1.5",
                                     isOverHere
                                         ? "bg-forest-tint ring-1 ring-forest"
                                         : "bg-canvas",
@@ -935,6 +955,7 @@ export default function EpisodeList({
                                 {/* 2 段目：押し具。名前の幅を取らない */}
                                 <div className="flex w-full items-center gap-1">
 
+
                                 {chapter && onAssignChapter && (
                                     <button
                                         type="button"
@@ -990,6 +1011,39 @@ export default function EpisodeList({
                                         消す
                                     </button>
                                 )}
+                                {/*
+                                  * 章を上下へ動かす。中の話ごと動く。「消す」の横に小さく置く。
+                                  * 動かせない向き（いちばん上・下、話の無い章）は薄くする。
+                                  */}
+                                {chapter && onReorderChapters && (() => {
+                                    const canUp = moveChapterGroup(chapters, episodes, groupAt, -1) !== null;
+                                    const canDown = moveChapterGroup(chapters, episodes, groupAt, 1) !== null;
+                                    return (
+                                        <span className="el-chmove flex shrink-0 items-center overflow-hidden rounded border border-line">
+                                            <button
+                                                type="button"
+                                                onClick={() => moveChapter(groupAt, -1)}
+                                                disabled={!canUp}
+                                                title="章を1つ上へ"
+                                                aria-label="章を1つ上へ動かす"
+                                                className="px-1 py-0 text-[7px] leading-[12px] text-muted hover:text-forest disabled:opacity-30"
+                                            >
+                                                ▲
+                                            </button>
+                                            <span className="h-2 w-px bg-line" aria-hidden="true" />
+                                            <button
+                                                type="button"
+                                                onClick={() => moveChapter(groupAt, 1)}
+                                                disabled={!canDown}
+                                                title="章を1つ下へ"
+                                                aria-label="章を1つ下へ動かす"
+                                                className="px-1 py-0 text-[7px] leading-[12px] text-muted hover:text-forest disabled:opacity-30"
+                                            >
+                                                ▼
+                                            </button>
+                                        </span>
+                                    );
+                                })()}
                                 </div>
                             </div>
 

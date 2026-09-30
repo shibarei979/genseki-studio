@@ -14,6 +14,7 @@
 
 "use client";
 
+import MobileWorkHeader from "@/components/workspace/mobile-work-header";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -568,6 +569,14 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                 ]}
             />
 
+            {/* 携帯の上の段（‹・投稿／作品名）。この画面そのものが投稿なので、右の「投稿」は出さない */}
+            <MobileWorkHeader
+                workId={workId}
+                page="投稿"
+                title={work.title || "名前のない作品"}
+                right={<span style={{ width: 44 }} />}
+            />
+
             {/*
              * ほかの画面と同じ組み方にする。
              * 左の上にナビ、その下に中身。
@@ -579,7 +588,10 @@ export default function WorkPostClient({ workId }: { workId: string }) {
              */}
             <div className="flex flex-col gap-4 p-3 sm:p-4 lg:flex-row">
                 <aside className="w-full shrink-0 lg:w-64">
-                    <WorkspaceNav workId={workId} current="post" />
+                    {/* 携帯では上の段に戻る道があるので出さない */}
+                    <div className="mwr-desk">
+                        <WorkspaceNav workId={workId} current="post" />
+                    </div>
 
                     {/*
                      * 予約の一覧。
@@ -1131,7 +1143,11 @@ export default function WorkPostClient({ workId }: { workId: string }) {
                     </div>
                 </aside>
 
-                <main className="min-w-0 flex-1">
+                {/*
+                  * ★ 携帯では、投稿する話の欄を先に出す（wp-main）。
+                  *   前は話の一覧の下にあって、下まで送らないと投稿できなかった。
+                  */}
+                <main className="wp-main min-w-0 flex-1">
                     {/*
                       * 予約したことの知らせ。
                       * 次の話へ進んでも消えないよう、ここに出す。
@@ -1422,6 +1438,17 @@ function PostForm({
         episode.publish_at || episode.scheduled_at || askBeforePublish ? "schedule" : "now",
     );
     const [error, setError] = useState("");
+    /*
+     * ★ 携帯では「予約する」が画面の下に貼り付いている。
+     *   押して日時の欄にエラーが出ても、画面の外で見えなかった。
+     *   エラーが出たら、その場所まで送る（携帯だけ）。
+     */
+    const errorRef = useRef<HTMLParagraphElement>(null);
+    useEffect(() => {
+        if (!error) return;
+        if (!window.matchMedia("(max-width: 1023px)").matches) return;
+        errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, [error]);
 
     /* 詳細設定を開いているか。畳んで置く */
     const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -2287,7 +2314,7 @@ function PostForm({
                             )}
 
                             {error && (
-                                <p className="mt-2 text-[11.5px] text-[var(--color-danger)]">{error}</p>
+                                <p ref={errorRef} className="mt-2 text-[11.5px] text-[var(--color-danger)]">{error}</p>
                             )}
                         </section>
                     )}
@@ -2423,8 +2450,8 @@ function PostForm({
                 </div>
             )}
 
-            {/* 下の操作 */}
-            <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
+            {/* 下の操作。携帯では画面の下に貼り付ける（wp-actions） */}
+            <div className="wp-actions mt-5 flex flex-wrap items-center justify-end gap-3">
                 {notice && <span className="text-xs text-forest">{notice}</span>}
 
                 {/*

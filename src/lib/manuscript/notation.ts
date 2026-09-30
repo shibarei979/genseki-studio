@@ -102,7 +102,14 @@ export function insertRuby(
     const base = text.slice(start, end);
     if (!base || !ruby) return text;
 
-    const needsMarker = !/^[一-龥々〆ヶァ-ヴー]+$/.test(base);
+    /*
+     * ★ すぐ前の字も漢字・カタカナなら、必ず ｜ を付ける。
+     *   付けないと、読む画面で前の字までまとめてルビがかかる
+     *   （「潮守」の「守」だけに振ったつもりが「潮守」全体に付く）。
+     */
+    const prev = text.slice(0, start).slice(-1);
+    const needsMarker =
+        !/^[一-龥々〆ヶァ-ヴー]+$/.test(base) || /[一-龥々〆ヶァ-ヴー]/.test(prev);
     const inserted = needsMarker ? `｜${base}《${ruby}》` : `${base}《${ruby}》`;
     return text.slice(0, start) + inserted + text.slice(end);
 }

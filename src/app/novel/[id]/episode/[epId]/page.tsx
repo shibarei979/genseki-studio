@@ -31,7 +31,9 @@ import Link from 'next/link'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import CommentSection from '@/components/novel/episode/comment-section'
+import MobileReadBar from '@/components/novel/episode/mobile-read-bar'
 import EpisodeLikeButton from '@/components/novel/episode/episode-like-button'
+import EpisodeStamps from '@/components/novel/episode/episode-stamps'
 import ReadButton from '@/components/novel/episode/read-button'
 import EpisodeBody from '@/components/novel/episode/episode-body'
 import QuoteFromSelection from '@/components/novel/episode/quote-from-selection'
@@ -421,6 +423,8 @@ export default async function EpisodePage({ params, searchParams }: Props) {
             {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
             <ShareButtons text={`「${novel.title}」\n「${episode.title}」\n#原石航路 #ライトノベル\n`} url={`${appConfig.siteUrl}/novel/${params.id}/episode/${params.epId}`} size="sm"/>
           </div>
+          {/* スタンプ（アイテムツリーで交換したものを押せる） */}
+          <EpisodeStamps episodeId={params.epId}/>
           <ValidReadTracker episodeId={params.epId} enabled={!!user && user.id !== novel.author_id}/>
           <div style={{textAlign:'center',marginBottom:16}}>
             <TypoReportButton novelId={params.id} episodeId={params.epId} authorId={novel.author_id} userId={user?.id||null} userName={profile?.display_name||null} novelTitle={novel.title} episodeTitle={episode.title}/>
@@ -480,51 +484,71 @@ export default async function EpisodePage({ params, searchParams }: Props) {
           <span style={{color:'var(--color-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{episode.title}</span>
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:6,marginBottom:12}}>
-          {prevEp
-            ? <Link href={`/novel/${params.id}/episode/${prevEp.id}`} style={{...navBtn,textAlign:'center',display:'block'}}>← 前の話</Link>
-            : <div/>
-          }
-          <Link href={`/novel/${params.id}`} style={{...navBtn,color:'var(--color-text-muted)',textAlign:'center',display:'block',whiteSpace:'nowrap'}}>目次</Link>
-          {nextEp
-            ? <Link href={`/novel/${params.id}/episode/${nextEp.id}`} style={{...navBtn,textAlign:'center',display:'block'}}>次の話 →</Link>
-            : <div/>
-          }
-        </div>
+        {/*
+          * ★ 前の話・目次・次の話は、画面の下の帯（MobileReadBar）へ移した。
+          *   読み終わってから上まで戻らなくていい。
+          */}
+
+        {/*
+          * ★ パソコンにはあって、携帯に無かったものを出す。
+          *   予約投稿中の知らせ（作者だけ）・次の話の予定・音声で聴く。
+          */}
+        {isOwner && episode.published === false && episode.scheduled_at && (
+          <div style={{background:'#eff6ff',border:'1.5px solid #93c5fd',borderRadius:10,padding:'10px 14px',marginBottom:12,fontSize:12,color:'#1d4ed8',fontWeight:600}}>
+            この話は予約投稿中です。{new Date(episode.scheduled_at).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} に公開されます（このプレビューは作者にのみ表示されています）
+          </div>
+        )}
+        {showUpcoming && (
+          <div style={{background:'var(--color-info-bg)',border:'1px solid var(--color-info-border)',borderRadius:8,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--color-info)',textAlign:'center'}}>
+            次の話は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃の予定です
+          </div>
+        )}
+        {hasVoice && (
+          <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
+        )}
 
         {/* 挿絵は EpisodeBody の中で、縦書きの流れに沿って出す */}
 
         <EpisodeBody novelId={params.id} episodeId={params.epId} illusts={illusts} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
 
-        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:14,flexWrap:'wrap'}}>
+        <div className="mrb-endbtns" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:14,flexWrap:'wrap'}}>
           <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>
           {user && <ReadButton novelId={params.id} episodeId={params.epId} userId={user.id} initialRead={isRead}/>}
           <ShareButtons text={`「${novel.title}」\n「${episode.title}」\n#原石航路 #ライトノベル\n`} url={`${appConfig.siteUrl}/novel/${params.id}/episode/${params.epId}`} size="sm"/>
         </div>
 
+        {/* スタンプ（アイテムツリーで交換したものを押せる） */}
+        <EpisodeStamps episodeId={params.epId}/>
+
         <div style={{textAlign:'center',marginBottom:14}}>
           <TypoReportButton novelId={params.id} episodeId={params.epId} authorId={novel.author_id} userId={user?.id||null} userName={profile?.display_name||null} novelTitle={novel.title} episodeTitle={episode.title}/>
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
-          {prevEp ? (
-            <Link href={`/novel/${params.id}/episode/${prevEp.id}`}
-              style={{textAlign:'center',fontSize:12,color:'var(--color-brand)',border:'1.5px solid var(--color-brand-border)',padding:'10px 8px',borderRadius:10,background:'var(--color-bg-card)',textDecoration:'none',display:'block'}}>
-              ← 前の話<br/><span style={{fontSize:10,color:'var(--color-text-muted)',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prevEp.title}</span>
-            </Link>
-          ) : <div/>}
-          {nextEp ? (
-            <Link href={`/novel/${params.id}/episode/${nextEp.id}`}
-              style={{textAlign:'center',fontSize:12,color:'var(--color-brand)',border:'1.5px solid var(--color-brand)',padding:'10px 8px',borderRadius:10,background:'var(--color-brand-light)',textDecoration:'none',display:'block'}}>
-              次の話 →<br/><span style={{fontSize:10,color:'var(--color-text-muted)',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nextEp.title}</span>
-            </Link>
-          ) : (
-            <div style={{textAlign:'center',fontSize:12,color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'10px 8px',borderRadius:10,background:'var(--color-bg-card)'}}>
-              最新話です<br/>
-              <Link href={`/novel/${params.id}`} style={{fontSize:11,color:'var(--color-brand)',textDecoration:'none'}}>目次に戻る</Link>
-            </div>
-          )}
-        </div>
+        {/*
+          * ★ 読み終わったら、次の話を大きく。
+          *   前の話は下の帯にあるので、ここは次の話だけ。
+          */}
+        {nextEp ? (
+          <Link href={`/novel/${params.id}/episode/${nextEp.id}`}
+            style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,padding:'14px 16px',borderRadius:14,background:'var(--color-brand)',color:'#fff',textDecoration:'none',boxShadow:'0 6px 16px rgba(31,78,107,.25)'}}>
+            <span style={{flex:1,minWidth:0}}>
+              <span style={{display:'block',fontSize:11,color:'#bcd3e2'}}>次の話</span>
+              <span style={{display:'block',fontSize:16,fontWeight:600,fontFamily:"var(--font-serif), 'Noto Serif JP', serif",overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nextEp.title}</span>
+            </span>
+            <span aria-hidden style={{fontSize:22}}>›</span>
+          </Link>
+        ) : (
+          <div style={{textAlign:'center',fontSize:13,color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'12px 8px',borderRadius:12,background:'var(--color-bg-card)',marginBottom:14}}>
+            最新話です<br/>
+            {showUpcoming ? (
+              <span style={{fontSize:11,color:'var(--color-info)'}}>
+                次は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃
+              </span>
+            ) : (
+              <Link href={`/novel/${params.id}`} style={{fontSize:12,color:'var(--color-brand)',textDecoration:'none'}}>目次に戻る</Link>
+            )}
+          </div>
+        )}
 
         <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:10,padding:'12px 14px',marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
           <div style={{flex:1,minWidth:0}}>
@@ -536,9 +560,25 @@ export default async function EpisodePage({ params, searchParams }: Props) {
           </Link>
         </div>
 
-        <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments}/>
+        {/*
+          * ★ 読んだ印（ValidReadTracker）は、ここには置かない。
+          *   パソコン用の並びは隠れているだけで、中身は動いている。
+          *   2 つ置くと、1 回読んだだけで 2 回に数えてしまう。
+          */}
+
+        {/* ★ パソコンと同じく、コメントを受け付けない作品では欄を出さない */}
+        {(novel.allow_comments === false || authorAllowsComments === false) &&
+        comments.length === 0 ? null : (
+          <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments} allowNew={novel.allow_comments !== false && authorAllowsComments !== false}/>
+        )}
 
         <div style={{height:80}}/>
+
+        <MobileReadBar
+          prevHref={prevEp ? `/novel/${params.id}/episode/${prevEp.id}` : null}
+          tocHref={`/novel/${params.id}`}
+          nextHref={nextEp ? `/novel/${params.id}/episode/${nextEp.id}` : null}
+        />
       </div>
       <Footer />
     </div>

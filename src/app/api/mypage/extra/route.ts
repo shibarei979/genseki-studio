@@ -35,7 +35,7 @@ export async function GET() {
     /* 自分の作品。ここから先の数え上げに要る */
     const { data: novels } = await supabase
         .from("novels")
-        .select("id")
+        .select("id, cover_url")
         .eq("author_id", user.id);
 
     const novelIds = (novels ?? []).map((row: any) => row.id);
@@ -108,7 +108,26 @@ export async function GET() {
         .eq("user_id", user.id)
         .maybeSingle();
 
+    /*
+     * 書く向きのミッション（表紙をつける・はじめての応援・はじめての感想）の数。
+     *
+     * ★ 前は出していなかったので、画面ではずっと 0 のままで、
+     *   達成しても「クリア！」を押せなかった。
+     * ★ もらったいいね・コメントは、ほかの人の行なので運営の鍵で数える
+     *   （数だけ。中身は見ない）。ポイントを配る側（/api/points/missions）と同じ数え方。
+     */
+    const admin = createAdminClient();
+    const [gotLikeM, gotCommentM] = novelIds.length > 0
+        ? await Promise.all([
+            admin.from("likes").select("*", { count: "exact", head: true }).in("novel_id", novelIds),
+            admin.from("comments").select("*", { count: "exact", head: true }).in("novel_id", novelIds),
+        ])
+        : [{ count: 0 }, { count: 0 }];
+
     const missionStats = {
+        coverCount: (novels ?? []).filter((row: any) => row.cover_url).length,
+        receivedLikeCount: gotLikeM.count ?? 0,
+        receivedCommentCount: gotCommentM.count ?? 0,
         likeCount: likesM.count ?? 0,
         discoverCount: discoversM.count ?? 0,
         commentCount: commentsM.count ?? 0,

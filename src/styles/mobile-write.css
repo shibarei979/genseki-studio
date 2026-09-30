@@ -1,0 +1,750 @@
+/*
+ * ============================================================
+ * 原石航路 Studio
+ * 携帯の執筆画面（components/workspace/mobile-write-kit.tsx）
+ *
+ * ★ 1024px 未満でだけ効く。パソコンには一切効かない。
+ * ★ ボタンは指の幅（44px）より小さくしない。
+ * ============================================================
+ */
+
+@media (max-width: 1023px) {
+    /*
+     * 書く画面では、下の帯（サイトの行き先）を出さないので、
+     * そのぶんの body の下の余白も要らない。残すと画面が少し送れてしまう。
+     * ★ 集中モード（上の段が無い）や話が 0 件のときも同じ。書く画面（mw-room）で見る。
+     */
+    body:has(.mw-head),
+    body:has(.mw-room) {
+        padding-bottom: 0 !important;
+    }
+
+    /* パソコンの 2 段（題・保存・通し読み… と 道具の並び）は隠す */
+    .mw-desk {
+        display: none !important;
+    }
+
+    /* 下の段・キーボードの上の段のぶん、本文の下を空ける */
+    .mw-pad {
+        padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    }
+    .mw-pad-key {
+        padding-bottom: 54px;
+    }
+
+    /* ---------- 上の段 ---------- */
+    .mw-head {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 52px;
+        padding: 0 6px;
+        flex-shrink: 0;
+        background: #fff;
+        border-bottom: 1px solid var(--color-line, #dcdfda);
+    }
+
+    .mw-iconbtn {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: var(--color-ink, #1a211d);
+        background: transparent;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .mw-iconbtn:disabled {
+        opacity: .3;
+    }
+
+    .mw-head-title {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 48px;
+        background: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mw-head-ep {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        max-width: 100%;
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-ink, #1a211d);
+    }
+    .mw-head-ep-text {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mw-head-save {
+        font-size: 10.5px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .mw-head-save::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+    .mw-head-save.is-ok { color: #2b7a55; }
+    .mw-head-save.is-draft { color: var(--color-amber, #99610a); }
+    .mw-head-save.is-busy { color: var(--color-faint, #7d867f); }
+
+    .mw-post {
+        height: 36px;
+        padding: 0 12px 0 10px;
+        margin-right: 4px;
+        border-radius: 999px;
+        background: var(--color-forest, #1f4e6b);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        flex-shrink: 0;
+        box-shadow: 0 3px 8px rgba(31, 78, 107, .3);
+        text-decoration: none;
+    }
+    .mw-post-count {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 9px;
+        background: #f3d58e;
+        color: #5a4000;
+        font-size: 10.5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 話の題（原稿の紙のいちばん上） */
+    .mw-title {
+        flex-shrink: 0;
+        margin: 0;
+        padding: 12px 14px 4px;
+        border: none;
+        border-bottom: 1px dashed transparent;
+        background: transparent;
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--color-ink, #1a211d);
+        outline: none;
+    }
+    .mw-title.is-empty {
+        border-bottom-color: var(--color-amber, #99610a);
+    }
+
+    /* ---------- 下の段 ---------- */
+    .mw-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 55;
+        display: flex;
+        align-items: flex-start;
+        padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+        background: #fff;
+        border-top: 1px solid var(--color-line, #dcdfda);
+    }
+
+    .mw-bar-item,
+    .mw-bar-go {
+        flex: 1;
+        min-width: 0;
+        height: 54px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-muted, #55605a);
+        background: none;
+        white-space: nowrap;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .mw-bar-item svg {
+        color: var(--color-ink, #1a211d);
+    }
+
+    .mw-bar-go {
+        flex: 1.35;
+        font-weight: 700;
+        color: var(--color-forest, #1f4e6b);
+    }
+    .mw-bar-go-pill {
+        width: 64px;
+        height: 38px;
+        border-radius: 14px;
+        background: var(--color-forest, #1f4e6b);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(31, 78, 107, .35);
+    }
+
+    /* ---------- キーボードの上の段 ---------- */
+    .mw-key {
+        position: fixed;
+        left: 0;
+        right: 0;
+        z-index: 56;
+        height: 54px;
+        display: flex;
+        align-items: center;
+        padding: 0 6px;
+        background: #f7f8f9;
+        border-top: 1px solid #c9ced3;
+    }
+
+    .mw-key-scroll {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
+        mask-image: linear-gradient(90deg, #000 90%, transparent);
+    }
+    .mw-key-scroll::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mw-k {
+        flex-shrink: 0;
+        height: 42px;
+        min-width: 46px;
+        padding: 0 10px;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px solid #dde2e6;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-ink, #1a211d);
+        -webkit-tap-highlight-color: transparent;
+    }
+    .mw-k.is-serif {
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-size: 15px;
+    }
+    .mw-k.is-mark {
+        color: var(--color-forest, #1f4e6b);
+        border-color: var(--color-forest-line, #b4cede);
+    }
+
+    .mw-key-sep {
+        width: 1px;
+        height: 26px;
+        background: #d7dce0;
+        flex-shrink: 0;
+    }
+
+    .mw-key-fixed {
+        display: flex;
+        gap: 2px;
+        padding-left: 6px;
+        margin-left: 4px;
+        border-left: 1px solid #d7dce0;
+    }
+    .mw-key-fixed .mw-iconbtn {
+        width: 42px;
+        height: 42px;
+        color: var(--color-muted, #55605a);
+    }
+
+    /* ---------- ルビ・傍点・注釈の小窓 ---------- */
+    .mw-mark {
+        position: fixed;
+        left: 0;
+        right: 0;
+        z-index: 57;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+        background: #fff;
+        border-top: 1px solid #c9ced3;
+        border-radius: 18px 18px 0 0;
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, .12);
+    }
+
+    .mw-mark-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .mw-mark-top b {
+        flex: 1;
+        font-size: 13px;
+    }
+
+    .mw-mark-tabs {
+        display: flex;
+        gap: 4px;
+    }
+    .mw-mark-tabs button {
+        height: 32px;
+        padding: 0 11px;
+        border-radius: 999px;
+        background: #eef1f3;
+        color: var(--color-muted, #55605a);
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .mw-mark-tabs button.is-on {
+        background: var(--color-forest, #1f4e6b);
+        color: #fff;
+    }
+
+    .mw-mark-x {
+        height: 32px;
+        padding: 0 6px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--color-faint, #7d867f);
+        background: none;
+    }
+
+    .mw-mark-in {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .mw-mark-base {
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-size: 20px;
+        font-weight: 600;
+        padding: 0 4px;
+        white-space: nowrap;
+    }
+    .mw-mark-base.is-dot {
+        -webkit-text-emphasis: filled sesame;
+        -webkit-text-emphasis-color: var(--color-forest, #1f4e6b);
+        text-emphasis: filled sesame;
+        text-emphasis-color: var(--color-forest, #1f4e6b);
+    }
+
+    .mw-mark-field {
+        flex: 1;
+        min-width: 0;
+        height: 46px;
+        border-radius: 12px;
+        border: 2px solid var(--color-forest, #1f4e6b);
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        gap: 6px;
+    }
+    .mw-mark-field input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 16px;
+    }
+    .mw-mark-field em {
+        font-style: normal;
+        font-size: 10.5px;
+        color: #2b7a55;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .mw-mark-hint {
+        flex: 1;
+        font-size: 12px;
+        color: var(--color-muted, #55605a);
+    }
+
+    .mw-mark-ok {
+        height: 46px;
+        padding: 0 18px;
+        border-radius: 12px;
+        background: var(--color-forest, #1f4e6b);
+        color: #fff;
+        font-weight: 800;
+        font-size: 15px;
+        flex-shrink: 0;
+    }
+    .mw-mark-ok:disabled {
+        opacity: .4;
+    }
+
+    .mw-mark-adj {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+    }
+    .mw-mark-adj span {
+        flex: 1;
+        min-width: 0;
+        font-size: 11.5px;
+        color: var(--color-muted, #55605a);
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .mw-mark-adj button {
+        height: 36px;
+        padding: 0 12px;
+        border-radius: 9px;
+        border: 1px solid var(--color-line, #dcdfda);
+        background: #fff;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--color-ink, #1a211d);
+        flex-shrink: 0;
+    }
+    .mw-mark-adj button:disabled {
+        opacity: .35;
+    }
+
+    .mw-mark-empty {
+        margin-top: 10px;
+        font-size: 12.5px;
+        line-height: 1.7;
+        color: var(--color-muted, #55605a);
+    }
+
+    /* ---------- 道具（下から出る） ---------- */
+    .mw-sheet-wrap {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+    }
+    .mw-dim {
+        position: absolute;
+        inset: 0;
+        background: rgba(12, 24, 33, .42);
+        border: none;
+    }
+    .mw-sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        max-height: 88dvh;
+        overflow-y: auto;
+        background: #fff;
+        border-radius: 22px 22px 0 0;
+        box-shadow: 0 -12px 34px rgba(0, 0, 0, .2);
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+    .mw-grab {
+        width: 40px;
+        height: 5px;
+        border-radius: 3px;
+        background: #cfd6da;
+        margin: 8px auto 4px;
+    }
+    .mw-sheet-head {
+        display: flex;
+        align-items: center;
+        padding: 6px 18px 10px;
+    }
+    .mw-sheet-head h3 {
+        flex: 1;
+        font-size: 17px;
+        font-weight: 800;
+    }
+    .mw-sheet-head button {
+        height: 36px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--color-forest, #1f4e6b);
+        background: none;
+    }
+
+    .mw-jump {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        padding: 0 16px;
+    }
+    .mw-jump a {
+        height: 58px;
+        border-radius: 12px;
+        border: 1px solid var(--color-line, #dcdfda);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--color-ink, #1a211d);
+        text-decoration: none;
+    }
+    .mw-jump a svg {
+        color: var(--color-muted, #55605a);
+    }
+
+    .mw-grp {
+        padding: 10px 16px 4px;
+    }
+    .mw-gh {
+        font-size: 11.5px;
+        color: var(--color-faint, #7d867f);
+        font-weight: 700;
+        letter-spacing: .08em;
+        margin: 4px 2px 8px;
+    }
+    .mw-tiles {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .mw-tile {
+        position: relative;
+        border-radius: 14px;
+        background: #f4f6f7;
+    }
+    .mw-tile-main {
+        width: 100%;
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        text-align: left;
+        background: none;
+        color: var(--color-forest, #1f4e6b);
+    }
+    .mw-tile-main span {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    .mw-tile-main b {
+        font-size: 13.5px;
+        color: var(--color-ink, #1a211d);
+    }
+    .mw-tile-main small {
+        font-size: 10.5px;
+        color: var(--color-faint, #7d867f);
+    }
+    .mw-pro {
+        position: absolute;
+        top: 6px;
+        right: 34px;
+        font-size: 9.5px;
+        font-weight: 800;
+        color: #9a6a12;
+        background: #fdf1dc;
+        padding: 1px 6px;
+        border-radius: 999px;
+    }
+    .mw-pin {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #c8d0d5;
+        background: none;
+    }
+    .mw-pin.is-on {
+        color: var(--color-forest, #1f4e6b);
+    }
+    .mw-pin-note {
+        font-size: 11px;
+        color: var(--color-faint, #7d867f);
+        margin: 8px 2px 0;
+    }
+
+    .mw-row {
+        display: flex;
+        align-items: center;
+        min-height: 52px;
+        border-top: 1px solid var(--color-line, #dcdfda);
+        font-size: 14px;
+        font-weight: 600;
+    }
+    /* 見出しのすぐ下の行は、上の線を引かない（:first-of-type だと見出しの div に当たって効かない） */
+    .mw-gh + .mw-row {
+        border-top: none;
+    }
+    .mw-row > span {
+        flex: 1;
+    }
+
+    .mw-stepper {
+        display: flex;
+        border: 1px solid var(--color-line, #dcdfda);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .mw-stepper button {
+        width: 44px;
+        height: 40px;
+        font-family: var(--font-serif, "Noto Serif JP"), serif;
+        font-weight: 700;
+        font-size: 13px;
+        background: #fff;
+    }
+    .mw-stepper button.is-big {
+        font-size: 18px;
+    }
+    .mw-stepper button:disabled {
+        opacity: .35;
+    }
+    .mw-stepper .mw-stepper-mid {
+        width: 56px;
+        font-family: inherit;
+        font-size: 12px;
+        color: var(--color-muted, #55605a);
+        border-left: 1px solid var(--color-line, #dcdfda);
+        border-right: 1px solid var(--color-line, #dcdfda);
+    }
+
+    .mw-switch {
+        width: 50px;
+        height: 30px;
+        border-radius: 15px;
+        background: #cfd6da;
+        position: relative;
+    }
+    .mw-switch::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+        transition: left .15s ease;
+    }
+    .mw-switch.is-on {
+        background: var(--color-forest, #1f4e6b);
+    }
+    .mw-switch.is-on::after {
+        left: 23px;
+    }
+
+    /* ---------- そのほか ---------- */
+    .mw-focus-exit {
+        position: fixed;
+        right: 14px;
+        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        z-index: 55;
+        height: 40px;
+        padding: 0 16px;
+        border-radius: 999px;
+        background: rgba(31, 42, 49, .85);
+        color: #fff;
+        font-size: 12.5px;
+        font-weight: 700;
+    }
+
+    .mw-toast {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        top: 64px;
+        z-index: 58;
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: #1f2a31;
+        color: #fff;
+        font-size: 13px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .2);
+        pointer-events: none;
+    }
+
+    /* ---------- 話の一覧（下から出る） ---------- */
+    .mw-list-dim {
+        position: fixed;
+        inset: 0;
+        z-index: 64;
+        background: rgba(12, 24, 33, .42);
+        border: none;
+    }
+    .mw-list-sheet {
+        position: fixed !important;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 65;
+        max-height: 82dvh;
+        background: #fff;
+        border-radius: 22px 22px 0 0;
+        box-shadow: 0 -12px 34px rgba(0, 0, 0, .2);
+        padding: 4px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+    .mw-list-sheet .mw-list-head {
+        display: flex;
+        align-items: center;
+        padding: 6px 8px 8px;
+    }
+    .mw-list-sheet .mw-list-head h3 {
+        flex: 1;
+        font-size: 17px;
+        font-weight: 800;
+    }
+    .mw-list-sheet .mw-list-head small {
+        font-size: 12px;
+        color: var(--color-faint, #7d867f);
+        font-weight: 500;
+        margin-left: 6px;
+    }
+    .mw-list-sheet .mw-list-head button {
+        height: 40px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--color-forest, #1f4e6b);
+        background: none;
+    }
+}
+
+/*
+ * 携帯：話の一覧の章の見出し
+ *
+ * ★ 長押ししても文字が選ばれないようにする。
+ *   つかんで動かす操作は携帯では効かず、文字選びに化けていた。
+ *   並べ替えは見出しの ▲▼ で行う。
+ * ★ ▲▼ は「消す」の横に小さく置く。
+ */
+@media (max-width: 1023px) {
+    .el-chhead {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+    }
+    .el-chmove button {
+        min-width: 17px;
+        min-height: 15px;
+        font-size: 7px !important;
+    }
+}

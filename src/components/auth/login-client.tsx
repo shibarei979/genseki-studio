@@ -398,11 +398,12 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
     }
 
     return (
+        /* m9-login: 携帯だけの見た目（styles/mobile-p9.css） */
         <div
-            className="flex min-h-screen items-center justify-center px-6 py-12"
+            className="m9-login flex min-h-screen items-center justify-center px-6 py-12"
             style={{ background: "var(--color-canvas)" }}
         >
-            <div className="w-full max-w-md rounded-2xl bg-surface px-7 py-9 shadow-sm">
+            <div className="m9-login-card w-full max-w-md rounded-2xl bg-surface px-7 py-9 shadow-sm">
                 {/* ロゴ */}
                 <Link href="/lp" className="mx-auto block w-fit">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -666,7 +667,7 @@ export default function LoginClient({ initialMode = "signin" }: Props) {
                         void submitSignUp();
                     }}
                     disabled={isBusy}
-                    className="mt-6 w-full rounded-lg bg-forest py-3 text-sm font-medium text-white hover:bg-forest-dark disabled:opacity-40"
+                    className="m9-login-go mt-6 w-full rounded-lg bg-forest py-3 text-sm font-medium text-white hover:bg-forest-dark disabled:opacity-40"
                 >
                     {isBusy
                         ? "少し待ってください"

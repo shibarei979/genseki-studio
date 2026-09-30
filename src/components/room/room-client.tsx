@@ -525,6 +525,16 @@ export default function RoomClient({ roomId }: Props) {
 
     const isFocusing = focusUntil !== null;
 
+    /*
+     * 部屋の情報を開いているか（携帯だけ）。
+     *
+     * ★ 携帯では左の柱（自分・部屋・在室の人・接続）を畳み、
+     *   右上の「i」で出し入れする。
+     *   部屋の絵と操作を先に見せたいので、上に積まない。
+     *   パソコンでは使わない（柱はいつも出ている）。
+     */
+    const [isInfoOpen, setIsInfoOpen] = useState(false);
+
     /** 自分以外で、いまこの部屋にいる人 */
     const others = state.members.filter((member) => member.id !== identity.id);
 
@@ -683,7 +693,7 @@ export default function RoomClient({ roomId }: Props) {
                 ]}
             />
 
-            <div className="mx-auto max-w-[1560px] space-y-3 px-4 py-4">
+            <div className="rm-wrap mx-auto max-w-[1560px] space-y-3 px-4 py-4">
                 {/*
                  * 部屋が無くなっていた。
                  *
@@ -890,13 +900,67 @@ export default function RoomClient({ roomId }: Props) {
                         onBack={() => setIsManaging(false)}
                     />
                 ) : (
-                    /*
+                    <>
+                    {/*
+                     * 携帯だけの見出し。部屋の名前・在室の数・「i」。
+                     *
+                     * ★ パソコンでは出さない（mobile-p7.css）。
+                     *   同じことは左の柱に書いてある。
+                     */}
+                    <div className="rm-mbar">
+                        <p className="rm-mbar-title">
+                            <span className="rm-mbar-name">
+                                {room.name || "名前のない部屋"}
+                            </span>
+                            <span className="rm-mbar-count">
+                                {state.members.length}人が在室
+                            </span>
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setIsInfoOpen((open) => !open)}
+                            aria-expanded={isInfoOpen}
+                            aria-controls="room-info"
+                            aria-label="部屋の情報"
+                            className="rm-mbar-info"
+                        >
+                            i
+                        </button>
+                    </div>
+
+                    {/* 情報を開いたときの暗幕。押すと閉じる（携帯だけ） */}
+                    {isInfoOpen && (
+                        <div
+                            className="rm-info-backdrop"
+                            onClick={() => setIsInfoOpen(false)}
+                            aria-hidden="true"
+                        />
+                    )}
+
+                    {/*
                      * 左に自分と人、中央に部屋、右に決まりごとと話。
                      * 部屋が主役なので中央に置き、幅も一番取る。
-                     */
-                    <div className="grid items-start gap-3 xl:grid-cols-[320px_minmax(0,1fr)_340px]">
+                     */}
+                    <div className="rm-grid grid items-start gap-3 xl:grid-cols-[320px_minmax(0,1fr)_340px]">
                         {/* ===== 左 ===== */}
-                        <div className="flex flex-col gap-3">
+                        <div
+                            id="room-info"
+                            className={[
+                                "rm-info flex flex-col gap-3",
+                                isInfoOpen ? "is-open" : "",
+                            ].join(" ")}
+                        >
+                            {/* 携帯で開いたときの見出しと「閉じる」。パソコンでは出さない */}
+                            <div className="rm-info-head">
+                                <span>部屋の情報</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsInfoOpen(false)}
+                                >
+                                    閉じる
+                                </button>
+                            </div>
+
                             {/*
                              * 自分と、いまいる部屋。
                              *
@@ -1239,10 +1303,20 @@ export default function RoomClient({ roomId }: Props) {
                                     </p>
                                 )}
                             </section>
+
+                            {/*
+                             * 執筆室のルール（携帯だけ）。
+                             *
+                             * 携帯では右の柱のルールを畳むので、
+                             * 情報の中で読めるようにする。パソコンでは出さない。
+                             */}
+                            <div className="rm-info-rules">
+                                <RoomRulesCard />
+                            </div>
                         </div>
 
                         {/* ===== 中央 ===== */}
-                        <div className="flex min-w-0 flex-col gap-3">
+                        <div className="rm-main flex min-w-0 flex-col gap-3">
                             <RoomFloor
                                 maxHeight={paneHeight}
                                 /*
@@ -1286,7 +1360,7 @@ export default function RoomClient({ roomId }: Props) {
                              * 上の帯と同じものは並べない。
                              * 同じボタンが 2 つあると、どちらが効くのか迷う。
                              */}
-                            <div className="flex flex-wrap items-stretch justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-3">
+                            <div className="rm-actions flex flex-wrap items-stretch justify-center gap-2 rounded-xl border border-line bg-surface px-4 py-3">
                                 {/*
                                  * 声。
                                  *
@@ -1307,6 +1381,7 @@ export default function RoomClient({ roomId }: Props) {
                                 <ActionButton
                                     icon={<MicIcon off={!voice.isMicEnabled} />}
                                     label="マイク"
+                                    shortLabel="マイク"
                                     note={
                                         !isNetworked
                                             ? "繋がっていません"
@@ -1328,6 +1403,7 @@ export default function RoomClient({ roomId }: Props) {
                                 <ActionButton
                                     icon={<HeadphoneIcon />}
                                     label="集中モード"
+                                    shortLabel="集中"
                                     note={
                                         isFocusing
                                             ? `${Math.floor(focusLeft / 60)}:${String(
@@ -1352,6 +1428,7 @@ export default function RoomClient({ roomId }: Props) {
                                 <ActionButton
                                     icon={<ClockIcon large />}
                                     label="集中の時間"
+                                    shortLabel="タイマー"
                                     note={
                                         sprintLeft > 0
                                             ? `${Math.floor(sprintLeft / 60)}:${String(
@@ -1366,6 +1443,7 @@ export default function RoomClient({ roomId }: Props) {
                                 <ActionButton
                                     icon={<PenIcon />}
                                     label="執筆しに行く"
+                                    shortLabel="書きに行く"
                                     isPrimary
                                     onClick={() => router.push("/")}
                                 />
@@ -1382,6 +1460,7 @@ export default function RoomClient({ roomId }: Props) {
                                     <ActionButton
                                         icon={<GearIcon />}
                                         label="部屋の設定"
+                                        shortLabel="設定"
                                         onClick={() => setIsManaging(true)}
                                     />
                                 )}
@@ -1389,6 +1468,7 @@ export default function RoomClient({ roomId }: Props) {
                                 <ActionButton
                                     icon={<ExitIcon />}
                                     label="退出する"
+                                    shortLabel="退出"
                                     isDanger
                                     onClick={askToLeave}
                                 />
@@ -1402,10 +1482,10 @@ export default function RoomClient({ roomId }: Props) {
                          * 柱全体の高さは変わらない。
                          */}
                         <div
-                            className="flex flex-col gap-3"
+                            className="rm-side flex flex-col gap-3"
                             style={{ height: paneHeight }}
                         >
-                            <div className="shrink-0">
+                            <div className="rm-side-rules shrink-0">
                                 <RoomRulesCard />
                             </div>
 
@@ -1478,6 +1558,7 @@ export default function RoomClient({ roomId }: Props) {
                             )}
                         </div>
                     </div>
+                    </>
                 )}
             </div>
         </div>
@@ -1501,6 +1582,7 @@ export default function RoomClient({ roomId }: Props) {
 function ActionButton({
     icon,
     label,
+    shortLabel,
     note,
     onClick,
     disabled = false,
@@ -1510,6 +1592,12 @@ function ActionButton({
 }: {
     icon: React.ReactNode;
     label: string;
+    /**
+     * 携帯で出す短い名前。
+     * 横一列に並べると、長い名前は折り返して読みにくい。
+     * パソコンでは出さない（mobile-p7.css）。
+     */
+    shortLabel?: string;
     note?: string;
     onClick?: () => void;
     disabled?: boolean;
@@ -1528,7 +1616,7 @@ function ActionButton({
             aria-pressed={onClick && !isPrimary ? isOn : undefined}
             title={disabled ? `${label}（準備中）` : label}
             className={[
-                "flex min-w-[104px] flex-col items-center justify-center gap-1 rounded-lg border px-4 py-2.5",
+                "rm-act flex min-w-[104px] flex-col items-center justify-center gap-1 rounded-lg border px-4 py-2.5",
                 disabled
                     ? "cursor-not-allowed border-line text-faint opacity-60"
                     : isPrimary
@@ -1541,11 +1629,12 @@ function ActionButton({
             ].join(" ")}
         >
             {icon}
-            <span className="text-[12px] font-medium">{label}</span>
+            <span className="rm-act-label text-[12px] font-medium">{label}</span>
+            {shortLabel && <span className="rm-act-short">{shortLabel}</span>}
             {note && (
                 <span
                     className={[
-                        "text-[10px]",
+                        "rm-act-note text-[10px]",
                         isPrimary ? "text-white/75" : "text-faint",
                     ].join(" ")}
                 >

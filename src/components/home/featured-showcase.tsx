@@ -70,6 +70,16 @@ const TITLE_SIZE = 14
  */
 const PAGE_MAX = 5
 
+/*
+ * 携帯（1023px 以下）で 1 枚の板に載る冊数。
+ *
+ * ★ 携帯では 3 冊まで。
+ *   本を小さくして横 1 列に 3 冊並べる（mobile-home2.css）。
+ *   4 冊目からは次の板へ送る。段が折り返して
+ *   板の上に本が 2 段積み重なるのを防ぐため。
+ */
+const PAGE_MAX_SMALL = 3
+
 /** 帯の高さ。表紙の下から 4 分の 1 ほど */
 const OBI = 46
 
@@ -141,6 +151,19 @@ export default function FeaturedShowcase({
      * 1 枚ごとの冊数は揃わなくてよい。
      * 大賞を 1 冊、佳作を 3 冊、という並べ方ができる。
      */
+    /* 携帯かどうか。1 枚の板に載せる冊数を変える */
+    const [small, setSmall] = useState(false)
+
+    useEffect(() => {
+        const query = window.matchMedia('(max-width: 1023px)')
+        const update = () => setSmall(query.matches)
+        update()
+        query.addEventListener('change', update)
+        return () => query.removeEventListener('change', update)
+    }, [])
+
+    const pageMax = small ? PAGE_MAX_SMALL : PAGE_MAX
+
     const pages = useMemo(() => {
         const out: FeaturedItem[][] = []
         let current: FeaturedItem[] = []
@@ -153,7 +176,7 @@ export default function FeaturedShowcase({
                 current.length > 0 &&
                 (item.startsPage === true ||
                     contest !== lastContest ||
-                    current.length >= PAGE_MAX)
+                    current.length >= pageMax)
 
             if (cut) {
                 out.push(current)
@@ -166,7 +189,7 @@ export default function FeaturedShowcase({
 
         if (current.length > 0) out.push(current)
         return out
-    }, [items])
+    }, [items, pageMax])
 
     const [at, setAt] = useState(0)
 

@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { hasSupabase } from '@/config/env.client'
 import { createClient } from '@/lib/supabase/client'
 import { useLoginRequired } from '@/hooks/use-login-required'
 import { loadBlockedIds, loadMutedIds } from '@/lib/social/blocks'
 import ReportButton from '@/components/common/report-button'
+import CostumeOverlay from '@/components/common/costume-overlay'
+import { useCostumes } from '@/components/common/costume-map'
 
 interface Tweet {
   id: string
@@ -140,9 +142,26 @@ function IconBookmark({ filled }: { filled: boolean }) {
   )
 }
 
-function Avatar({ name, iconUrl, size=32 }: { name: string; iconUrl?: string | null; size?: number }) {
-  if (iconUrl) return <img src={iconUrl} style={{width:size,height:size,borderRadius:'50%',objectFit:'cover',flexShrink:0}} alt=""/>
-  return <div style={{width:size,height:size,borderRadius:'50%',background:'var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.38,fontWeight:700,color:'var(--color-bg-card)',flexShrink:0}}>{name?.[0]||'?'}</div>
+/*
+ * 並んでいる人たちがつけているアイコン衣装。
+ * ★ TweetSection がまとめて読み、ここから配る（1 人ずつ読みに行かない）。
+ */
+const CostumeContext = createContext<Record<string, string>>({})
+
+function Avatar({ name, iconUrl, size=32, userId }: { name: string; iconUrl?: string | null; size?: number; userId?: string | null }) {
+  const costumes = useContext(CostumeContext)
+  const costume = userId ? costumes[userId] : undefined
+  const face = iconUrl
+    ? <img src={iconUrl} style={{width:size,height:size,borderRadius:'50%',objectFit:'cover',flexShrink:0}} alt=""/>
+    : <div style={{width:size,height:size,borderRadius:'50%',background:'var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.38,fontWeight:700,color:'var(--color-bg-card)',flexShrink:0}}>{name?.[0]||'?'}</div>
+  if (!costume) return face
+  /* 衣装をつけていれば上に重ねる（その分だけ上を空ける） */
+  return (
+    <span style={{position:'relative',display:'inline-block',width:size,height:size,flexShrink:0,marginTop:Math.round(size*0.38)}}>
+      {face}
+      <CostumeOverlay url={costume} size={size}/>
+    </span>
+  )
 }
 
 // 線画アイコン
@@ -945,11 +964,19 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
    * 自分のつぶやきを見ているときは消さない。
    * 「まだ無い」と分かるほうがよい。
    */
+  /* 並んでいる人たちのアイコン衣装。まとめて読む */
+  const costumes = useCostumes([
+    currentUserId,
+    ...tweets.map(t => t.user_id),
+    ...tweets.flatMap(t => (t.comments || []).map(c => c.user_id)),
+  ])
+
   if (authorId && authorId !== currentUserId && !isOwner && tweets.length === 0 && !loading) {
     return null
   }
 
   return (
+    <CostumeContext.Provider value={costumes}>
     <div>
       {!isOwner && authorId && <div style={{fontSize:15,fontWeight:700,color:'var(--color-text)',marginBottom:12}}>コミュニティー</div>}
 
@@ -962,7 +989,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
       {isOwner && (
         <div id="compose" className="tw-compose" style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px',marginBottom:20,boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
           <div style={{display:'flex',gap:12}}>
-            <Avatar name={currentUserName||''} iconUrl={currentUserIconUrl} size={40}/>
+            <Avatar name={currentUserName||''} iconUrl={currentUserIconUrl} size={40} userId={currentUserId}/>
             <div style={{flex:1}}>
               <textarea
                 value={body}
@@ -1148,7 +1175,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                * ここに無いと途切れる。
                */}
               <Link href={`/author/${tweet.user_id}`} style={{flexShrink:0,display:'block'}}>
-                <Avatar name={tweet.display_name} iconUrl={tweet.icon_url} size={40}/>
+                <Avatar name={tweet.display_name} iconUrl={tweet.icon_url} size={40} userId={tweet.user_id}/>
               </Link>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:'flex',alignItems:'baseline',gap:8}}>
@@ -1382,7 +1409,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
             <div style={{borderTop:'1px solid var(--color-brand-border)',background:'var(--color-bg)'}}>
               {currentUserId && (
                 <div style={{display:'flex',gap:10,padding:'14px 22px',alignItems:'center',borderBottom:'1px solid var(--color-brand-border)',background:'var(--color-bg-card)'}}>
-                  <Avatar name={currentUserName||''} iconUrl={currentUserIconUrl} size={28}/>
+                  <Avatar name={currentUserName||''} iconUrl={currentUserIconUrl} size={28} userId={currentUserId}/>
                   <input
                     value={commentBody[tweet.id]||''}
                     onChange={e=>setCommentBody(prev=>({...prev,[tweet.id]:e.target.value}))}
@@ -1418,7 +1445,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                    */}
                   <div style={{display:'flex',gap:10,padding:'14px 22px',position:'relative'}}>
                     <div style={{position:'relative',flexShrink:0}}>
-                      <Avatar name={parent.display_name} iconUrl={parent.icon_url} size={28}/>
+                      <Avatar name={parent.display_name} iconUrl={parent.icon_url} size={28} userId={parent.user_id}/>
                       {tweet.comments.some(c => c.parent_id === parent.id) && (
                         <span
                           aria-hidden="true"
@@ -1469,7 +1496,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                       </div>
 
                       <div style={{display:'flex',gap:10,padding:'12px 0 12px 12px',flex:1,minWidth:0}}>
-                        <Avatar name={child.display_name} iconUrl={child.icon_url} size={24}/>
+                        <Avatar name={child.display_name} iconUrl={child.icon_url} size={24} userId={child.user_id}/>
                         <div style={{flex:1,minWidth:0}}>
                           <Link href={`/author/${child.user_id}`} style={{fontSize:12.5,fontWeight:600,color:'var(--color-text)',marginRight:8,textDecoration:'none'}}>{child.display_name}</Link>
                           <span style={{fontSize:11,color:'var(--color-text-faint)'}}>{fmtDate(child.created_at)}</span>
@@ -1516,6 +1543,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
         </>
       )}
     </div>
+    </CostumeContext.Provider>
   )
 }
 

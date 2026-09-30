@@ -102,13 +102,13 @@ export default async function MyCommentsPage({ searchParams }: { searchParams: {
         </div>
         <p style={{ fontSize: 12.5, color: 'var(--color-text-muted)', marginBottom: 16 }}>あなたの作品に届いたコメントと拡散（推薦）の一覧です。</p>
 
-        {/* 未読/既読タブ */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        {/* 未読/既読タブ（携帯では同じ幅で大きく：p8-fb-tabs） */}
+        <div className="p8-fb-tabs" style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
           <Link href={`/mypage/comments?tab=unread&kind=${kind}${seenQ}`} style={pill(tab === 'unread')}>未読{unreadCount > 0 ? `（${unreadCount}）` : ''}</Link>
           <Link href={`/mypage/comments?tab=read&kind=${kind}${seenQ}`} style={pill(tab === 'read')}>既読</Link>
         </div>
-        {/* 種類絞り込み */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+        {/* 種類絞り込み（携帯では同じ幅で大きく：p8-fb-tabs） */}
+        <div className="p8-fb-tabs" style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
           <Link href={`/mypage/comments?tab=${tab}&kind=all${seenQ}`} style={pill(kind === 'all')}>すべて</Link>
           <Link href={`/mypage/comments?tab=${tab}&kind=comment${seenQ}`} style={pill(kind === 'comment')}>コメント</Link>
           <Link href={`/mypage/comments?tab=${tab}&kind=discover${seenQ}`} style={pill(kind === 'discover')}>拡散</Link>

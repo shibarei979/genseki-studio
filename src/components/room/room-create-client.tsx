@@ -137,7 +137,7 @@ export default function RoomCreateClient() {
     }
 
     return (
-        <div className="min-h-screen bg-page px-4 py-6 sm:px-6 sm:py-10">
+        <div className="rc-page min-h-screen bg-page px-4 py-6 sm:px-6 sm:py-10">
             <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
                 {/* 見出しと段 */}
                 <div className="flex flex-wrap items-start gap-4 border-b border-line px-6 py-5 sm:px-8">
@@ -241,8 +241,12 @@ export default function RoomCreateClient() {
                     </div>
                 </div>
 
-                {/* 下の操作 */}
-                <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-6 py-4 sm:px-8">
+                {/*
+                  * 下の操作。
+                  * ★ 携帯では画面の下に留める（mobile-p7.css）。
+                  *   長い入力欄を下まで送らなくても「内容を確認する」が押せる。
+                  */}
+                <div className="rc-actions flex flex-wrap items-center justify-end gap-2 border-t border-line px-6 py-4 sm:px-8">
                     {step === 0 && (
                         <>
                             <Link
@@ -317,7 +321,7 @@ export default function RoomCreateClient() {
 
 function StepBar({ current }: { current: number }) {
     return (
-        <ol className="hidden items-center gap-1.5 sm:flex">
+        <ol className="rc-steps hidden items-center gap-1.5 sm:flex">
             {STEPS.map((label, index) => (
                 <li key={label} className="flex items-center gap-1.5">
                     {index > 0 && (
@@ -457,7 +461,7 @@ function SettingsStep({
                     誰がこの部屋に入れるかを選びましょう
                 </p>
 
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div className="rc-vis mt-2 grid gap-2 sm:grid-cols-2">
                     {SELECTABLE_VISIBILITY.map((key) => (
                         <label
                             key={key}
@@ -512,7 +516,7 @@ function SettingsStep({
                 <div className="mt-2 flex flex-wrap items-center gap-3">
                     <span className="text-[12px] text-ink">最大入室人数</span>
 
-                    <div className="flex items-center overflow-hidden rounded-lg border border-line">
+                    <div className="rc-count flex items-center overflow-hidden rounded-lg border border-line">
                         <StepButton
                             onClick={() => moveCapacity(-1)}
                             disabled={capacity <= CAPACITY_MIN}
@@ -521,7 +525,7 @@ function SettingsStep({
                             −
                         </StepButton>
 
-                        <span className="flex items-baseline gap-1 px-4 py-2">
+                        <span className="rc-count-num flex items-baseline gap-1 px-4 py-2">
                             <span className="text-[15px] font-semibold tabular-nums text-ink">
                                 {capacity}
                             </span>
@@ -718,7 +722,7 @@ function StepButton({
             onClick={onClick}
             disabled={disabled}
             aria-label={label}
-            className="px-3.5 py-2 text-[15px] text-forest hover:bg-forest-tint disabled:text-faint disabled:hover:bg-transparent"
+            className="rc-step px-3.5 py-2 text-[15px] text-forest hover:bg-forest-tint disabled:text-faint disabled:hover:bg-transparent"
         >
             {children}
         </button>

@@ -50,18 +50,30 @@ export async function GET() {
             .order("tier", { ascending: true })
             .order("position", { ascending: true });
 
+        /*
+         * ★ シークレットは、持っていない人には中身を送らない。
+         *   画面で隠すだけだと、通信を見れば名前や絵が分かってしまう。
+         */
+        const veil = (list: any[], ownedIds: string[]) =>
+            list.map((item) =>
+                item.is_secret && !ownedIds.includes(item.id)
+                    ? { ...item, name: "シークレット", description: "", asset_url: null }
+                    : item,
+            );
+
         if (!user) {
-            return NextResponse.json({ items: items ?? [], owned: [], free: 0 });
+            return NextResponse.json({ items: veil(items ?? [], []), owned: [], free: 0 });
         }
 
         const { data: mine } = await admin
             .from("user_items")
             .select("item_id")
             .eq("user_id", user.id);
+        const ownedIds = (mine ?? []).map((one: any) => one.item_id as string);
 
         return NextResponse.json({
-            items: items ?? [],
-            owned: (mine ?? []).map((one: any) => one.item_id),
+            items: veil(items ?? [], ownedIds),
+            owned: ownedIds,
             free: await freePointsOf(user.id),
         });
     } catch {
@@ -191,8 +203,11 @@ export async function POST(request: Request) {
             });
 
             return NextResponse.json(
-                { error: "渡せませんでした。ポイントは戻しました" },
-                { status: 500 },
+                /* 同時に 2 回押されたときは「もう持っています」（giveItem がそう返す） */
+                given.reason === "もう持っています"
+                    ? { error: "もう持っています。ポイントは戻しました" }
+                    : { error: "渡せませんでした。ポイントは戻しました" },
+                { status: given.reason === "もう持っています" ? 400 : 500 },
             );
         }
 

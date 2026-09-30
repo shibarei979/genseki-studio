@@ -1,0 +1,748 @@
+/* ============================================================
+ * 原石航路 Studio
+ * 携帯：コンテストの応募・応募作品・自主企画・ログイン・
+ *       はじめての人（welcome）・紹介（LP）・文字だけのページ
+ *
+ * ★ 1024px 未満でだけ効く。パソコンの見た目は変えない。
+ *   携帯だけに出す部品は、ここの外で display:none にしておく。
+ *
+ * ★ 元の部品はインラインの style が多いので、
+ *   上書きには !important を使っている。
+ * ============================================================ */
+
+/* 携帯だけの部品。パソコンでは出さない */
+.m9-wel-char,
+.m9-toc-check,
+.m9-toc-btn {
+    display: none;
+}
+
+/* ============================================================
+ * コンテストに応募する（/contest/[id]/entry）
+ * ============================================================ */
+@media (max-width: 1023px) {
+    .m9-entry main {
+        padding: 18px 14px 24px !important;
+    }
+
+    /*
+     * 作品は 1 作 1 枚の大きなカード。
+     * 指で押しやすいよう、高さを 72px ほど取る。
+     */
+    .m9-pick {
+        position: relative;
+        min-height: 76px;
+        gap: 14px !important;
+        padding: 12px 14px !important;
+        border-width: 1.5px !important;
+        border-radius: 14px !important;
+        background: #fff;
+    }
+    .m9-pick:has(input:checked) {
+        box-shadow: 0 0 0 3px rgba(43, 126, 145, .12);
+    }
+    .m9-pick-tile {
+        width: 42px !important;
+        height: 56px !important;
+    }
+    .m9-pick-title {
+        font-size: 16px !important;
+    }
+    .m9-pick-meta {
+        margin-top: 3px !important;
+        font-size: 12px !important;
+        line-height: 1.5;
+    }
+
+    /*
+     * 選べる作品の右に、空の丸を出す。
+     * 選ぶと元からある ✓ が出るので、丸は消す。
+     * 出せない作品（薄い札）には出さない。
+     */
+    .m9-pick:not(:has(input:disabled)):not(:has(input:checked))::after {
+        content: "";
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        border: 1.5px solid #c5d2de;
+        border-radius: 50%;
+    }
+
+    /* 同意は、押せる幅を広く */
+    .m9-agree {
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: #eef3f7;
+    }
+    .m9-agree input {
+        width: 20px;
+        height: 20px;
+        margin-top: 0 !important;
+        flex-shrink: 0;
+    }
+    .m9-agree span {
+        font-size: 13.5px !important;
+    }
+
+    /*
+     * 決めるボタンは画面の下に留める。
+     * 下の帯（--mtb-h）の上に乗せる。
+     * 「やめる」を左、「この作品で応募する」を右に。
+     */
+    .m9-entry-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--mtb-h, 0px);
+        z-index: 50;
+        margin: 0 !important;
+        flex-direction: row-reverse;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, .96);
+        border-top: 1px solid #d8e2ec;
+        backdrop-filter: blur(6px);
+    }
+    .m9-entry-go {
+        flex: 1;
+        min-height: 52px;
+        padding: 0 12px !important;
+        border-radius: 12px !important;
+        font-size: 16px !important;
+        font-weight: 700 !important;
+    }
+    .m9-entry-quit {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        min-height: 52px;
+        padding: 0 18px;
+        border: 1.5px solid #d8e2ec;
+        border-radius: 12px;
+        font-size: 14px !important;
+        font-weight: 600;
+        color: #44566b !important;
+    }
+
+    /* 下のボタンに本文の最後が隠れないように */
+    body:has(.m9-entry-bar) {
+        padding-bottom: calc(var(--mtb-h, 0px) + 84px) !important;
+    }
+
+    /* 暗い色のときも携帯だけ。外に書くとパソコンの帯にも色が付く */
+    [data-theme="dark"] .m9-entry-bar {
+        background: rgba(20, 26, 30, .95);
+    }
+}
+
+/* ============================================================
+ * 応募作品の一覧（/contest/[id]/entries）
+ * ============================================================ */
+@media (max-width: 1023px) {
+    .m9-ents {
+        padding: 14px 12px 24px !important;
+    }
+    .m9-ents h1 {
+        font-size: 20px !important;
+    }
+
+    /* 作品の数は、この頁の顔。大きく出す */
+    .m9-ents-count b {
+        font-size: 28px !important;
+        line-height: 1;
+        font-family: var(--font-serif, serif);
+    }
+    .m9-ents-count span {
+        font-size: 12.5px !important;
+    }
+
+    /* 一覧／本棚の切り替えは、指で押せる大きさに */
+    .m9-ents-view button {
+        min-height: 34px;
+        padding: 0 14px !important;
+        font-size: 13px !important;
+    }
+
+    /* 題を大きく、作者・ジャンル・字数は 1 行に */
+    .m9-ents-list {
+        gap: 10px !important;
+    }
+    .m9-ents-list a {
+        padding: 14px 15px !important;
+        border-radius: 12px !important;
+    }
+    .m9-ents-list a > p:first-child {
+        font-size: 16.5px !important;
+    }
+    .m9-ents-list a > p:nth-child(2) {
+        flex-wrap: nowrap !important;
+        overflow: hidden;
+        white-space: nowrap;
+        font-size: 12.5px !important;
+    }
+    .m9-ents-list a > p:nth-child(2) > span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .m9-ents-list a > p:nth-child(3) {
+        font-size: 13px !important;
+    }
+}
+
+/* ============================================================
+ * 自主企画（/projects・/projects/[id]・/projects/new）
+ * ============================================================ */
+@media (max-width: 1023px) {
+    .m9-pj,
+    .m9-pjd,
+    .m9-pjn {
+        padding: 18px 14px 28px !important;
+    }
+
+    /*
+     * 一覧の頭。
+     * 題と「企画を立てる」が横に並んで狭いので、
+     * ボタンは説明の下に横いっぱいで置く。
+     */
+    .m9-pj-top {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 14px !important;
+    }
+    .m9-pj-top h1 {
+        font-size: 22px !important;
+    }
+    .m9-pj-top p {
+        font-size: 13.5px !important;
+    }
+    .m9-pj-top p br {
+        display: none;
+    }
+    .m9-pj-new {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 50px;
+        border-radius: 12px !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+    }
+    .m9-pj-new::before {
+        content: "＋";
+        margin-right: 4px;
+    }
+
+    /* 企画の札。左の細い線・期間・合言葉は今のまま、文字を少し大きく */
+    .m9-pj-card {
+        padding: 14px 15px !important;
+    }
+    .m9-pj-card p:first-child {
+        font-size: 16px !important;
+    }
+    .m9-pj-card > p {
+        font-size: 13px !important;
+    }
+    .m9-pj-tag {
+        font-size: 12px !important;
+        font-weight: 700;
+    }
+
+    /* 企画の頁 */
+    .m9-pjd h1 {
+        font-size: 21px !important;
+    }
+    .m9-pjd section p {
+        font-size: 13.5px !important;
+    }
+    .m9-pjd section li p:first-child {
+        font-size: 15.5px !important;
+    }
+
+    /*
+     * 「参加する作品を選ぶ」と「この企画を立てる」は
+     * 画面の下に留める。押すと今までどおり選ぶ窓が出る。
+     */
+    .m9-pj-join,
+    .m9-pf-go {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(var(--mtb-h, 0px) + 10px);
+        z-index: 40;
+        width: auto !important;
+        min-height: 52px;
+        margin: 0 !important;
+        border-radius: 12px !important;
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, .18);
+    }
+    /*
+     * まだ押せないときも、透かさない。
+     * 浮いているので、透けると下の文字と重なって読めない。
+     */
+    .m9-pf-go:disabled {
+        opacity: 1 !important;
+        background: #a9b8c4 !important;
+    }
+    body:has(.m9-pj-join),
+    body:has(.m9-pf-go) {
+        padding-bottom: calc(var(--mtb-h, 0px) + 84px) !important;
+    }
+
+    /* 入力は 16px 以上に。小さいと iPhone が勝手に拡大する */
+    .m9-pjn input[type="text"],
+    .m9-pjn input[type="date"],
+    .m9-pjn textarea {
+        min-height: 48px;
+        font-size: 16px !important;
+    }
+    .m9-pjn label {
+        font-size: 13px !important;
+    }
+}
+
+/* ============================================================
+ * ログイン・アカウント登録（/login）と、パスワードの再設定
+ * ============================================================ */
+@media (max-width: 1023px) {
+    /* カードの余白をせまくして、画面いっぱいに使う */
+    .m9-login {
+        align-items: flex-start !important;
+        padding: 14px 12px 24px !important;
+    }
+    .m9-login-card {
+        padding: 26px 18px 24px !important;
+    }
+    .m9-login-card > a:first-child img {
+        height: 52px !important;
+    }
+    .m9-login-card h1 {
+        margin-top: 12px !important;
+        font-size: 22px !important;
+    }
+    .m9-login-card h1 + p {
+        font-size: 13px !important;
+    }
+
+    /* 小さすぎる文字（10〜11px）を大きく */
+    .m9-login-card .text-xs,
+    .m9-login-card .text-\[11px\],
+    .m9-login-card .text-\[11\.5px\] {
+        font-size: 13px !important;
+    }
+    .m9-login-card .text-\[10px\] {
+        font-size: 12px !important;
+    }
+    .m9-login-card .text-\[12px\],
+    .m9-login-card .text-\[13px\] {
+        font-size: 14px !important;
+    }
+
+    /* Google・X・GitHub のボタンは高さ 48px */
+    .m9-login-card .space-y-2 > button {
+        min-height: 48px;
+        font-size: 15px !important;
+        border-radius: 12px !important;
+    }
+
+    /* 入力は 16px 以上に。小さいと iPhone が勝手に拡大する */
+    .m9-login-card input[type="text"],
+    .m9-login-card input[type="email"],
+    .m9-login-card input[type="password"],
+    .m9-login-card select {
+        min-height: 48px;
+        font-size: 16px !important;
+        border-radius: 10px !important;
+    }
+    .m9-login-card input[type="checkbox"] {
+        width: 20px !important;
+        height: 20px !important;
+        margin-top: 1px !important;
+    }
+
+    /* 「ログイン」「次へ」「登録する」は太く大きく */
+    .m9-login-go {
+        min-height: 52px;
+        border-radius: 12px !important;
+        font-size: 16px !important;
+        font-weight: 700 !important;
+    }
+
+    /* パスワードの再設定 */
+    .m9-auth {
+        padding: 28px 16px 40px !important;
+    }
+    .m9-auth input {
+        min-height: 48px;
+        font-size: 16px !important;
+    }
+    .m9-auth button {
+        min-height: 50px;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+    }
+    .m9-auth p {
+        font-size: 13.5px !important;
+    }
+}
+
+/* ============================================================
+ * はじめての人（/welcome）
+ * ============================================================ */
+@media (max-width: 1023px) {
+    .m9-wel {
+        justify-content: flex-start !important;
+        padding: 36px 14px 32px !important;
+    }
+    .m9-wel-logo {
+        height: 56px !important;
+        margin-bottom: 14px !important;
+    }
+    .m9-wel h1 {
+        font-size: 21px !important;
+        line-height: 1.45;
+    }
+    .m9-wel-sub {
+        margin-bottom: 22px !important;
+        font-size: 13.5px !important;
+        line-height: 1.7 !important;
+    }
+
+    /*
+     * 見出しの両端に小さく添える絵。
+     * 目印ていどにして、主張させない。
+     */
+    .m9-wel-h {
+        position: relative;
+        padding: 0 50px;
+        white-space: nowrap;
+    }
+    .m9-wel-char {
+        display: block;
+        position: absolute;
+        top: 50%;
+        height: 64px;
+        width: auto;
+        transform: translateY(-50%);
+        pointer-events: none;
+        user-select: none;
+    }
+    .m9-wel-char-l {
+        left: 0;
+    }
+    .m9-wel-char-r {
+        right: 0;
+    }
+
+    /* 書く人・読む人は横に 2 枚 */
+    .m9-wel-cards {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px !important;
+        width: 100%;
+        max-width: 420px;
+    }
+    .m9-wel-cards > button {
+        width: auto !important;
+        border-radius: 14px !important;
+    }
+    .m9-wel-cards > button > div:first-child {
+        padding: 20px 10px 16px !important;
+    }
+    .m9-wel-cards > button > div:first-child > div:first-child {
+        width: 56px !important;
+        height: 56px !important;
+        margin-bottom: 12px !important;
+    }
+    .m9-wel-cards > button > div:first-child > div:first-child svg {
+        width: 26px;
+        height: 26px;
+    }
+    .m9-wel-cards > button > div:first-child > div:nth-child(2) {
+        margin-bottom: 4px !important;
+        font-size: 22px !important;
+    }
+    .m9-wel-cards > button > div:first-child > div:nth-child(3) {
+        font-size: 12px !important;
+    }
+    .m9-wel-cards > button > div:last-child {
+        gap: 4px !important;
+        padding: 13px 6px !important;
+        font-size: 13px !important;
+    }
+    .m9-wel-note {
+        margin-top: 22px !important;
+        font-size: 12.5px !important;
+    }
+
+    /*
+     * AI の使い方を聞くカードは、横長でコンパクトに。
+     * 丸の絵を左、名前と説明を右に。3 枚が 1 画面に入る。
+     */
+    .m9-wel-cards.is-ai {
+        grid-template-columns: 1fr;
+        /* 後ろのぼかしの丸が札にかぶって、白が濁って見えていた */
+        position: relative;
+        z-index: 1;
+    }
+    .m9-wel-cards.is-ai > button > div:first-child {
+        display: grid;
+        grid-template-columns: 46px 1fr;
+        column-gap: 14px;
+        align-items: center;
+        padding: 14px 16px !important;
+        text-align: left;
+    }
+    .m9-wel-cards.is-ai > button > div:first-child > div:first-child {
+        grid-row: 1 / span 2;
+        width: 46px !important;
+        height: 46px !important;
+        margin: 0 !important;
+    }
+    .m9-wel-cards.is-ai > button > div:first-child > div:first-child svg {
+        width: 22px;
+        height: 22px;
+    }
+    .m9-wel-cards.is-ai > button > div:first-child > div:nth-child(2) {
+        margin-bottom: 2px !important;
+        font-size: 17px !important;
+    }
+    .m9-wel-cards.is-ai > button > div:first-child > div:nth-child(3) {
+        font-size: 12px !important;
+        line-height: 1.55 !important;
+    }
+    .m9-wel-cards.is-ai > button > div:first-child > div:nth-child(3) br {
+        display: none;
+    }
+    .m9-wel-cards.is-ai > button > div:last-child {
+        padding: 10px 6px !important;
+    }
+}
+
+/* ============================================================
+ * 紹介（/lp）
+ *
+ * ★ 中身はそのまま。携帯で小さすぎる文字だけ少し大きくする。
+ *   上の帯は携帯では別の帯（mobile-header）に替わるので、
+ *   ここでは本文の側だけを見る。
+ * ============================================================ */
+@media (max-width: 639px) {
+    /* 顔の説明文 */
+    .lp-header ~ section .text-\[12px\].leading-\[1\.9\] {
+        font-size: 13.5px !important;
+    }
+    /* 顔のボタン */
+    .lp-header ~ section .grid-cols-2 > a,
+    .lp-header ~ section .grid-cols-2 > button {
+        padding-top: 12px !important;
+        padding-bottom: 12px !important;
+        font-size: 13.5px !important;
+    }
+
+    /*
+     * 「できること」の 4 つ。
+     * 説明が 9.5px で読めなかったので大きくする。
+     * 正方形に押し込むとはみ出すので、高さは中身に合わせる。
+     */
+    .lp-header ~ section .aspect-square {
+        aspect-ratio: auto !important;
+        min-height: 128px;
+        padding: 16px 8px !important;
+    }
+    .lp-header ~ section .text-\[9\.5px\] {
+        font-size: 11.5px !important;
+        line-height: 1.65 !important;
+    }
+    .lp-header ~ section h3.text-\[12px\] {
+        font-size: 14px !important;
+    }
+
+    /*
+     * そのほかの小さな説明文。
+     * 画面の見本（小さな絵）の中の文字は変えないよう、p と li だけ。
+     */
+    .lp-header ~ section p.text-\[11px\],
+    .lp-header ~ section li.text-\[11px\] {
+        font-size: 12.5px !important;
+    }
+    .lp-header ~ section .text-\[12px\].leading-\[2\],
+    .lp-header ~ section .text-\[12px\].leading-relaxed {
+        font-size: 13.5px !important;
+    }
+    .lp-header ~ section .text-\[13px\].leading-\[2\.1\],
+    .lp-header ~ section .text-\[13px\].leading-\[2\.3\] {
+        font-size: 14px !important;
+    }
+}
+
+/* ============================================================
+ * 文字だけのページ
+ * （ヘルプ・よくある質問・規約・プライバシー・お問い合わせ・ガイド等）
+ * ============================================================ */
+@media (max-width: 1023px) {
+    /* 上の切り替え。指で押せる高さに */
+    .m9-doc-tabs > div {
+        padding: 0 8px !important;
+    }
+    .m9-doc-tabs a {
+        padding: 13px 12px !important;
+        font-size: 13px !important;
+    }
+
+    /* 本文。左右は 16px、行間は広め */
+    .m9-doc-body {
+        padding: 22px 16px 40px !important;
+    }
+    .m9-doc-body h1 {
+        font-size: 22px !important;
+        line-height: 1.45;
+    }
+    .m9-doc-body h2 {
+        font-size: 16px !important;
+        line-height: 1.5;
+        align-items: flex-start !important;
+    }
+    .m9-doc-body p,
+    .m9-doc-body [style*="pre-line"] {
+        font-size: 14.5px !important;
+        line-height: 1.95 !important;
+    }
+    .m9-doc-body br {
+        /* PC 向けの途中の改行。狭い画面では変なところで切れる */
+        display: none;
+    }
+
+    /* よくある質問・ヘルプの Q は 1 行を指で押せる高さに */
+    .m9-doc-body summary {
+        min-height: 52px;
+        padding: 12px 14px !important;
+        font-size: 14.5px !important;
+        line-height: 1.55;
+    }
+    .m9-doc-body details > div {
+        padding: 12px 14px 14px !important;
+    }
+
+    /* 先頭のクイックリンクは 2 列 */
+    .m9-doc-quick {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+    .m9-doc-quick a {
+        min-height: 50px;
+        padding: 12px !important;
+    }
+    .m9-doc-quick span {
+        font-size: 13.5px !important;
+    }
+    .m9-doc-quick2 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px !important;
+    }
+    .m9-doc-quick2 a {
+        padding: 10px 12px !important;
+        font-size: 13px !important;
+        text-align: center;
+    }
+
+    /* 「原石航路とは」の特徴は 1 列。2 列だと説明が細切れになる */
+    .m9-doc-feat {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+    .m9-doc-feat > div {
+        padding: 16px !important;
+    }
+
+    /*
+     * 目次は、たたんだ形で出す。
+     * 見出しを押すと開く。
+     */
+    .m9-toc {
+        padding: 0 !important;
+        margin-bottom: 20px !important;
+    }
+    .m9-toc-head {
+        margin: 0 !important;
+        font-size: 0 !important;
+    }
+    .m9-toc-btn {
+        display: flex;
+        align-items: center;
+        min-height: 50px;
+        padding: 0 16px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .m9-toc-btn::after {
+        content: "";
+        width: 8px;
+        height: 8px;
+        margin-left: auto;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: rotate(45deg) translateY(-2px);
+        opacity: .6;
+        transition: transform .15s;
+    }
+    .m9-toc-check:checked ~ .m9-toc-head .m9-toc-btn::after {
+        transform: rotate(-135deg) translateY(-2px);
+    }
+    .m9-toc-list {
+        display: none !important;
+    }
+    .m9-toc-check:checked ~ .m9-toc-list {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 0 !important;
+        padding: 0 16px 12px;
+    }
+    .m9-toc-list a {
+        padding: 10px 0 !important;
+        font-size: 13.5px !important;
+    }
+
+    /* お問い合わせ。入力は大きく、「送信する」は下に留める */
+    .m9-contact > div {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+    .m9-contact input,
+    .m9-contact select,
+    .m9-contact textarea {
+        max-width: none !important;
+        min-height: 48px;
+        font-size: 16px !important;
+        border-radius: 10px !important;
+    }
+    .m9-contact-send {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: var(--mtb-h, 0px);
+        z-index: 50;
+        padding: 10px 12px !important;
+        background: rgba(255, 255, 255, .96);
+        border-top: 1px solid var(--color-brand-border, #e3e6e1);
+        backdrop-filter: blur(6px);
+    }
+    .m9-contact-send button {
+        width: 100%;
+        min-height: 52px;
+        border-radius: 12px !important;
+        font-size: 16px !important;
+    }
+    body:has(.m9-contact-send) {
+        padding-bottom: calc(var(--mtb-h, 0px) + 84px) !important;
+    }
+
+    /* 暗い色のときも携帯だけ。外に書くとパソコンの送信の段にも色が付く */
+    [data-theme="dark"] .m9-contact-send {
+        background: rgba(20, 26, 30, .95);
+    }
+}

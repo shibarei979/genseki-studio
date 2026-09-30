@@ -1,0 +1,74 @@
+/* ============================================================
+ * 原石航路 Studio
+ * 携帯：おすすめ・コンテスト（一覧と詳しい説明）
+ *
+ * ★ 1024px 未満でだけ効く。パソコンの見た目は変えない。
+ * ============================================================ */
+
+/* ---------- おすすめ ---------- */
+@media (max-width: 900px) {
+    /* 上の「探す」（おすすめ・ここからの作品 …）は横に流す 1 行に */
+    .rs .rs_group:first-of-type .rs_label { display: none; }
+    .rs .rs_group:first-of-type ul {
+        display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none;
+        margin: 0 -12px; padding: 0 12px 2px;
+    }
+    .rs .rs_group:first-of-type ul::-webkit-scrollbar { display: none; }
+    .rs .rs_group:first-of-type li { margin: 0; flex-shrink: 0; }
+    .rs .rs_group:first-of-type .rs_item { padding: 9px 15px; font-size: 13.5px; font-weight: 600; }
+}
+@media (max-width: 560px) {
+    /* コルク板の紙は、携帯でも 2 列。1 列だと数が少なく見える */
+    .rb_grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 14px 12px; }
+    .rb_board { padding: 18px 12px; border-width: 9px; }
+    .rb_card, .rb_card.is-big { min-height: 150px; padding: 16px 11px 11px; gap: 6px; }
+    .rb_card-title, .rb_card.is-big .rb_card-title { font-size: 15px; }
+    .rb_card-title::after { margin-top: 6px; }
+    .rb_card-head { font-size: 11px; line-height: 1.7; }
+    .rb_genre { padding: 3px 7px; font-size: 10px; }
+    .rb_title { font-size: 19px; }
+    .rb_head { gap: 4px 10px; }
+}
+
+/* ---------- コンテスト一覧 ---------- */
+@media (max-width: 1023px) {
+    .cl-main { padding: 16px 12px 24px !important; }
+    .cl-status li { padding: 7px 13px !important; font-size: 13px !important; }
+    .cl-left { color: #d23c32 !important; font-weight: 700; }
+}
+
+/* ---------- コンテストの詳しい説明 ---------- */
+.cd-mbar, .cd-chev { display: none; }
+
+@media (max-width: 1023px) {
+    .cd-fold { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .cd-chev { display: inline-block; margin-left: auto; font-size: 18px; color: #8a96a0; transition: transform .15s; transform: rotate(180deg); }
+    .cd-sec[data-shut="true"] .cd-chev { transform: none; }
+    .cd-sec[data-shut="true"] .cd-sec-body { display: none; }
+    .cd-sec[data-shut="true"] { padding-top: 18px !important; padding-bottom: 18px !important; }
+
+    .cd-mbar {
+        display: flex; gap: 8px;
+        position: fixed; left: 0; right: 0; bottom: var(--mtb-h, 0px); z-index: 50;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, .96);
+        border-top: 1px solid var(--color-brand-border, #e3e6e1);
+        backdrop-filter: blur(6px);
+    }
+    .cd-mbar-sub {
+        flex-shrink: 0; display: flex; align-items: center; padding: 0 14px;
+        border: 1.5px solid #2a7d8c; border-radius: 12px; color: #2a7d8c;
+        font-size: 13px; font-weight: 700; text-decoration: none;
+    }
+    .cd-mbar-main {
+        flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        min-height: 52px; border-radius: 12px; background: #2a7d8c; color: #fff;
+        font-size: 16px; font-weight: 700; text-decoration: none; line-height: 1.25;
+    }
+    .cd-mbar-main small { font-size: 11px; font-weight: 500; opacity: .9; }
+    .cd-mbar-main.is-off { opacity: .5; pointer-events: none; }
+
+    /* 下の帯に本文の最後が隠れないように */
+    body:has(.cd-mbar) { padding-bottom: calc(var(--mtb-h, 0px) + 80px) !important; }
+}
+[data-theme="dark"] .cd-mbar { background: rgba(20, 26, 30, .95); }

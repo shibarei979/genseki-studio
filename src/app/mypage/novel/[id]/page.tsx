@@ -117,10 +117,14 @@ export default async function NovelManagePage({ params }: { params: { id: string
           *
           *   ?new=1 を付けると、着いた先で新しい話が 1 つできる。
           */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
-          <Link href={`/workspace/${novel.id}?new=1`} style={{ background: 'var(--color-brand)', color: 'var(--color-text-inverse)', fontSize: 12.5, fontWeight: 700, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}>＋ 新しい話を追加</Link>
-          <Link href={`/workspace/${novel.id}`} style={{ border: '1px solid var(--color-brand-border)', color: 'var(--color-brand)', fontSize: 12.5, fontWeight: 600, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}>作品・話を編集</Link>
-          <Link href={`/mypage/analytics?novel=${novel.id}`} style={{ border: '1px solid var(--color-brand-border)', color: 'var(--color-brand)', fontSize: 12.5, fontWeight: 600, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}>アクセス解析</Link>
+        {/*
+          * ★ 携帯では 3 つを同じ幅で横に並べ、大きく押せるようにする（p8-nm-acts）。
+          *   幅が足りないので、携帯だけ短い名前（p8-sp-only）を出す。
+          */}
+        <div className="p8-nm-acts" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+          <Link href={`/workspace/${novel.id}?new=1`} style={{ background: 'var(--color-brand)', color: 'var(--color-text-inverse)', fontSize: 12.5, fontWeight: 700, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}><span className="p8-pc-only">＋ 新しい話を追加</span><span className="p8-sp-only">＋ 新しい話</span></Link>
+          <Link href={`/workspace/${novel.id}`} style={{ border: '1px solid var(--color-brand-border)', color: 'var(--color-brand)', fontSize: 12.5, fontWeight: 600, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}><span className="p8-pc-only">作品・話を編集</span><span className="p8-sp-only">編集</span></Link>
+          <Link href={`/mypage/analytics?novel=${novel.id}`} style={{ border: '1px solid var(--color-brand-border)', color: 'var(--color-brand)', fontSize: 12.5, fontWeight: 600, padding: '9px 18px', borderRadius: 16, textDecoration: 'none' }}><span className="p8-pc-only">アクセス解析</span><span className="p8-sp-only">解析</span></Link>
         </div>
 
         {/*
@@ -135,11 +139,17 @@ export default async function NovelManagePage({ params }: { params: { id: string
           </p>
         )}
 
-        {/* 作品情報：データ＋読者の反応 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
-          <div style={{ ...secStyle, marginBottom: 0 }}>
+        {/*
+          * 作品情報：データ＋読者の反応
+          *
+          * ★ 携帯では、数字を 2 列の札に並べる（p8-nm-stats）。
+          *   見出しの幅 130px のままだと、中身が細く詰まっていた。
+          *   長い中身の行（p8-nm-wide）は札を横いっぱいに使う。
+          */}
+        <div className="p8-nm-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+          <div className="p8-nm-stats" style={{ ...secStyle, marginBottom: 0 }}>
             <div style={secHead}>データ</div>
-            <div style={row}><span style={rowLabel}>投稿状態</span><span style={rowValue}>{publishedEps.length === 0 ? 'まだ投稿していません' : novel.visibility === 'draft' ? '非公開' : novel.visibility === 'limited' ? '限定公開中' : '公開中'}〈{novel.is_serial ? '連載中' : '完結'}〉</span></div>
+            <div className="p8-nm-wide" style={row}><span style={rowLabel}>投稿状態</span><span style={rowValue}>{publishedEps.length === 0 ? 'まだ投稿していません' : novel.visibility === 'draft' ? '非公開' : novel.visibility === 'limited' ? '限定公開中' : '公開中'}〈{novel.is_serial ? '連載中' : '完結'}〉</span></div>
             <div style={row}><span style={rowLabel}>話数</span><span style={rowValue}>{publishedEps.length}話{episodes.length !== publishedEps.length ? `（下書き${episodes.length - publishedEps.length}話）` : ''}</span></div>
             <div style={row}><span style={rowLabel}>投稿文字数</span><span style={rowValue}>{totalChars.toLocaleString()}文字</span></div>
             {/*
@@ -147,17 +157,17 @@ export default async function NovelManagePage({ params }: { params: { id: string
               * X のプロフィールなど、字数の少ない所に貼るためのもの。
               */}
             {novel.short_code && (
-              <div style={row}>
+              <div className="p8-nm-wide" style={row}>
                 <span style={rowLabel}>短い住所</span>
                 <span style={rowValue}>gensekikoro.com/w/{novel.short_code}</span>
               </div>
             )}
-            <div style={row}><span style={rowLabel}>初回掲載日</span><span style={rowValue}>{fmt(firstDate)}</span></div>
-            <div style={row}><span style={rowLabel}>最新掲載日</span><span style={rowValue}>{fmt(lastDate)}</span></div>
+            <div className="p8-nm-wide" style={row}><span style={rowLabel}>初回掲載日</span><span style={rowValue}>{fmt(firstDate)}</span></div>
+            <div className="p8-nm-wide" style={row}><span style={rowLabel}>最新掲載日</span><span style={rowValue}>{fmt(lastDate)}</span></div>
             <div style={row}><span style={rowLabel}>現在の順位</span><span style={{ ...rowValue, fontWeight: currentRank ? 700 : 400, color: currentRank ? 'var(--color-brand)' : 'var(--color-text-muted)' }}>{currentRank ? `${currentRank.rank}位（総合・${PERIOD_LABEL[currentRank.period] || currentRank.period}）` : '圏外'}</span></div>
             <div style={{ ...row, borderBottom: 'none' }}><span style={rowLabel}>最高順位</span><span style={rowValue}>{bestRank ? `${bestRank.rank}位（総合・${PERIOD_LABEL[bestRank.period] || bestRank.period}）` : '—'}</span></div>
           </div>
-          <div style={{ ...secStyle, marginBottom: 0 }}>
+          <div className="p8-nm-stats" style={{ ...secStyle, marginBottom: 0 }}>
             <div style={secHead}>読者の反応</div>
             <div style={row}><span style={rowLabel}>PV</span><span style={{ ...rowValue, fontWeight: 700 }}>{(pvRes.count || 0).toLocaleString()}</span></div>
             <div style={row}><span style={rowLabel}>いいね</span><span style={rowValue}>{(likeRes.count || 0).toLocaleString()}</span></div>
@@ -167,8 +177,8 @@ export default async function NovelManagePage({ params }: { params: { id: string
           </div>
         </div>
 
-        {/* 作品設定 */}
-        <div style={secStyle}>
+        {/* 作品設定（携帯では見出しの幅を詰める：p8-nm-rows） */}
+        <div className="p8-nm-rows" style={secStyle}>
           <div style={secHead}>
             作品設定
             <Link href={`/workspace/${novel.id}`} style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-brand)', textDecoration: 'none' }}>✎ 編集</Link>

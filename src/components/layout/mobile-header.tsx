@@ -64,6 +64,19 @@ export default function MobileHeader() {
     if (/^\/workspace\/[^/]+\/post/.test(pathname)) return null;
 
     /*
+     * ★ 本文を書く画面（/workspace/作品）でも出さない。
+     *   携帯の書く画面は、自前の上の段（‹・話の題・投稿）を持つ。
+     *   上に 2 段重なると、書く場所がそのぶん減る。
+     */
+    if (/^\/workspace\/[^/]+\/?$/.test(pathname)) return null;
+
+    /*
+     * 資料・設定・読者の目のページも、自前の上の段（‹・ページ名／作品名・投稿）を持つ。
+     * サイトの上の段も出すと 2 段になり、貼り付いた段どうしが重なる。
+     */
+    if (/^\/workspace\/[^/]+\/(resource|settings|preview)/.test(pathname)) return null;
+
+    /*
      * 全画面で読む頁でも出さない。
      * 読むことだけの頁なので、飾りは要らない。
      */

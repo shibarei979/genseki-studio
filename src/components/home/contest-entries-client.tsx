@@ -105,7 +105,8 @@ export default function ContestEntriesClient({
          *   札を白にしても、地も白だと浮かない。
          *   地を落として、札が乗っているように見せる。
          */
-        <main className="mx-auto w-full max-w-4xl bg-canvas px-5 py-8">
+        /* m9-ents: 携帯だけの見た目（styles/mobile-p9.css） */
+        <main className="m9-ents mx-auto w-full max-w-4xl bg-canvas px-5 py-8">
             {/*
               * 頭。
               *
@@ -209,7 +210,7 @@ export default function ContestEntriesClient({
                 </div>
             ) : (
                 <>
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+                    <div className="m9-ents-head mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
                         {/*
                           * 件数と並び。
                           *
@@ -217,7 +218,7 @@ export default function ContestEntriesClient({
                           *   「67作品」はこの頁の顔になる数字。
                           *   説明文に埋もれさせない。
                           */}
-                        <p className="text-[13px] text-ink">
+                        <p className="m9-ents-count text-[13px] text-ink">
                             <b className="text-[17px] font-medium">
                                 {entries.length}
                             </b>
@@ -228,7 +229,7 @@ export default function ContestEntriesClient({
                         </p>
 
                         {/* 見せ方を選ぶ */}
-                        <div className="flex gap-0.5 rounded-md border border-line p-0.5">
+                        <div className="m9-ents-view flex gap-0.5 rounded-md border border-line p-0.5">
                             {(
                                 [
                                     { key: "list", label: "一覧" },
@@ -272,7 +273,7 @@ export default function ContestEntriesClient({
                          * ★ あらすじを添える。
                          *   題名だけでは選べない。
                          */
-                        <ul className="mt-4 grid gap-2">
+                        <ul className="m9-ents-list mt-4 grid gap-2">
                             {entries.map((entry) => (
                                 <li key={entry.work_id}>
                                     <Link

@@ -94,7 +94,7 @@ interface Stats {
     hasBio: boolean;
 }
 
-export async function POST() {
+export async function POST(request: Request) {
     try {
         const supabase = await createClient();
 
@@ -107,6 +107,27 @@ export async function POST() {
         }
 
         const admin = createAdminClient();
+
+        /*
+         * いま見ている向き（読む・書く）。
+         * ★ 画面で「クリア！」を押したミッションだけを配る。
+         *   押す前に配ると、ポイントが勝手に増えて、押す楽しみが無くなる。
+         */
+        let side: "reader" | "writer" | null = null;
+        try {
+            const body = (await request.json()) as { side?: string };
+            if (body.side === "reader" || body.side === "writer") side = body.side;
+        } catch {
+            /* 中身が無くてもよい（両方の向きで見る） */
+        }
+
+        const { data: claimedRows } = await admin
+            .from("user_missions")
+            .select("mission_id")
+            .eq("user_id", user.id);
+        const claimed = new Set(
+            (claimedRows ?? []).map((row: { mission_id: string }) => row.mission_id),
+        );
 
         /*
          * ★ 件数だけ数える。
@@ -186,18 +207,20 @@ export async function POST() {
          */
         const done: string[] = [];
 
+        const wants = (one: "reader" | "writer") => side === null || side === one;
+
         for (const [id, check] of COMMON) {
-            if (!check(stats)) continue;
-            done.push(`reader:${id}`);
-            done.push(`writer:${id}`);
+            if (!check(stats) || !claimed.has(id)) continue;
+            if (wants("reader")) done.push(`reader:${id}`);
+            if (wants("writer")) done.push(`writer:${id}`);
         }
 
         for (const [id, check] of READER_ONLY) {
-            if (check(stats)) done.push(`reader:${id}`);
+            if (check(stats) && claimed.has(id) && wants("reader")) done.push(`reader:${id}`);
         }
 
         for (const [id, check] of WRITER_ONLY) {
-            if (check(stats)) done.push(`writer:${id}`);
+            if (check(stats) && claimed.has(id) && wants("writer")) done.push(`writer:${id}`);
         }
 
         /* 1 つずつ配る。もう配ったものは once が止める */

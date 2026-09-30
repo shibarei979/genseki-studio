@@ -21,6 +21,7 @@ import { redirect } from 'next/navigation'
 import MypageClient from '@/components/mypage/mypage-client'
 import { createClient } from '@/lib/supabase/server'
 import FooterOnWhite from '@/components/layout/footer-on-white'
+import MilestoneCelebration from '@/components/mypage/milestone-celebration'
 
 export default async function MypagePage() {
   const supabase = await createClient()
@@ -227,6 +228,8 @@ export default async function MypagePage() {
 
   return (
     <>
+    {/* 節目のお祝い（PV・いいね・ランキング）。まだ祝っていないものがあれば出る */}
+    <MilestoneCelebration />
     <MypageClient
       profile={profile}
       novels={novels || []}

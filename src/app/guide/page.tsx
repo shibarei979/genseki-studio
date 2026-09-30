@@ -67,11 +67,12 @@ const sections: Section[] = [
 export default function GuidePage() {
 
   return (
-    <div className="page-with-footer" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
+    /* m9-doc: 文字だけのページの携帯の見た目（styles/mobile-p9.css） */
+    <div className="page-with-footer m9-doc" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
       <Header />
 
       {/* サブナビ */}
-      <div style={{background:'var(--color-bg)',borderBottom:'1px solid var(--color-brand-border)',overflowX:'auto'}}>
+      <div className="m9-doc-tabs" style={{background:'var(--color-bg)',borderBottom:'1px solid var(--color-brand-border)',overflowX:'auto'}}>
         <div style={{maxWidth:860,margin:'0 auto',padding:'0 16px',display:'flex'}}>
           {navLinks.map(n => (
             <Link key={n.href} href={n.href}
@@ -83,7 +84,7 @@ export default function GuidePage() {
         </div>
       </div>
 
-      <div style={{maxWidth:860,margin:'0 auto',padding:'24px 16px 60px',display:'flex',gap:24,alignItems:'flex-start'}}>
+      <div className="m9-doc-body" style={{maxWidth:860,margin:'0 auto',padding:'24px 16px 60px',display:'flex',gap:24,alignItems:'flex-start'}}>
 
         {/* 目次（デスクトップのみ） */}
         <div className="desktop-only" style={{width:180,flexShrink:0,position:'sticky',top:80}}>

@@ -85,16 +85,24 @@ function useIsOperator(): boolean | null {
     return isOperator;
 }
 
+/*
+ * ★ ポイントは、みんなに開けた（ミッション・毎日ログインで貯まり、
+ *   アイテムツリーで交換できるようになったため）。
+ *   また運営だけに戻すときは false にする。
+ */
+const POINTS_OPEN = true;
+
 export default function PointBadge() {
     const [points, setPoints] = useState<number | null>(null);
     const isOperator = useIsOperator();
+    const canSee = POINTS_OPEN || isOperator === true;
 
     useEffect(() => {
-        if (isOperator !== true) return;
+        if (!canSee) return;
 
         let alive = true;
 
-        void (async () => {
+        const load = async () => {
             try {
                 const response = await fetch("/api/points/me");
                 if (!response.ok) return;
@@ -106,15 +114,20 @@ export default function PointBadge() {
             } catch {
                 /* 読めなくても、ほかは動く */
             }
-        })();
+        };
+        void load();
+
+        /* 毎日ログインのハンコを押したら、読み直す */
+        const onStamp = () => void load();
+        window.addEventListener("gk-login-stamp", onStamp);
 
         return () => {
             alive = false;
+            window.removeEventListener("gk-login-stamp", onStamp);
         };
-    }, [isOperator]);
+    }, [canSee]);
 
-    /* いまは運営だけに見せている */
-    if (isOperator !== true) return null;
+    if (!canSee) return null;
 
     /* 読めていないあいだは、場所を取らない */
     if (points === null) return null;

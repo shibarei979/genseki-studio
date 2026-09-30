@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import AnalyticsCharts from '@/components/mypage/analytics/analytics-charts'
+import MilestoneCelebration from '@/components/mypage/milestone-celebration'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { memberFeatures } from '@/lib/subscription/features'
 import { buildProStats } from '@/lib/analytics/pro-stats'
@@ -456,6 +457,8 @@ export default async function AnalyticsPage({
   return (
     <div style={{minHeight:'100vh'}}>
       <Header />
+      {/* 節目のお祝い。まだ祝っていないものがあれば出る */}
+      <MilestoneCelebration />
       <div style={{maxWidth:1100,margin:'0 auto',padding:'28px 16px'}}>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:22,flexWrap:'wrap',gap:12}}>
           <div>

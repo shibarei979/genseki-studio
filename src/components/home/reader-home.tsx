@@ -1298,6 +1298,7 @@ export default async function ReaderHome() {
               title="フォロー中の作家の新着"
               books={followedBooks}
               moreHref="/search?sort=new"
+              showAll
             />
 
             {/* ひと息で読み切れる */}
@@ -1306,6 +1307,7 @@ export default async function ReaderHome() {
               books={continueBooks}
               /* 履歴のページはまだ無い。作品を探すへ送る */
               moreHref="/search"
+              showAll
             />
 
             <ReaderWorkList

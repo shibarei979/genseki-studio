@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import CostumeOverlay from '@/components/common/costume-overlay'
 import GuestFollowButton from '@/components/guest-follow-button'
 import { notFound, redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -55,6 +56,23 @@ export default async function AuthorPage({ params }: Props) {
     .maybeSingle()
 
   if (!author) notFound()
+
+  /*
+   * つけているアイコン衣装と、飾っている称号。
+   *
+   * ★ public_profiles（見せてよい列だけの窓）には無い列なので、
+   *   運営の鍵で、この 2 つだけを読む。
+   */
+  const { data: dressUp } = await createAdminClient()
+    .from('profiles')
+    .select('costume_url, titles')
+    .eq('user_id', params.id)
+    .maybeSingle()
+  const costumeUrl: string | null = (dressUp as { costume_url?: string | null } | null)?.costume_url ?? null
+  const titles: { id: string; name: string; url: string | null }[] =
+    Array.isArray((dressUp as { titles?: unknown } | null)?.titles)
+      ? ((dressUp as { titles: { id: string; name: string; url: string | null }[] }).titles).filter(t => t && t.url)
+      : []
 
   const { data: novels } = await supabase
     .from('novels')
@@ -257,13 +275,15 @@ export default async function AuthorPage({ params }: Props) {
         <div style={{flex:1,minWidth:0}}>
           <div style={{background:'var(--color-bg)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'28px',marginBottom:20}}>
             <div style={{display:'flex',gap:20,alignItems:'flex-start'}}>
-              <div style={{flexShrink:0}}>
+              {/* アイコン。衣装をつけていれば上に重ねる（その分だけ上を空ける） */}
+              <div style={{flexShrink:0,position:'relative',width:80,height:80,marginTop:costumeUrl?30:0}}>
                 {author.icon_url
                   ? <img src={author.icon_url} style={{width:80,height:80,borderRadius:'50%',objectFit:'cover'}} alt=""/>
                   : <div style={{width:80,height:80,borderRadius:'50%',background:'var(--color-brand-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32,color:'var(--color-brand)',fontWeight:700}}>
                       {author.display_name?.[0] || '?'}
                     </div>
                 }
+                <CostumeOverlay url={costumeUrl} size={80}/>
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',marginBottom:6}}>
@@ -280,6 +300,15 @@ export default async function AuthorPage({ params }: Props) {
                     )
                   )}
                 </div>
+                {/* 飾っている称号 */}
+                {titles.length > 0 && (
+                  <div className="ttl-row">
+                    {titles.map(t => (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img key={t.id} src={t.url!} alt={t.name} title={t.name}/>
+                    ))}
+                  </div>
+                )}
                 <div style={{display:'flex',gap:20,marginBottom:12,fontSize:13}}>
                   <div><strong style={{fontSize:16}}>{(followerCount||0).toLocaleString()}</strong><span style={{color:'var(--color-text-muted)',marginLeft:4}}>フォロワー</span></div>
                   <div><strong style={{fontSize:16}}>{filteredNovels.length}</strong><span style={{color:'var(--color-text-muted)',marginLeft:4}}>作品</span></div>
@@ -329,27 +358,58 @@ export default async function AuthorPage({ params }: Props) {
            * 置き場所が押し具に潰され、1 文字ずつ縦に割れる。
            */}
           <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12,flexWrap:'wrap'}}>
+            <div style={{position:'relative',width:56,height:56,flexShrink:0,marginTop:costumeUrl?22:0}}>
             {author.icon_url
               ? <img src={author.icon_url} style={{width:56,height:56,borderRadius:'50%',objectFit:'cover',flexShrink:0}} alt=""/>
               : <div style={{width:56,height:56,borderRadius:'50%',background:'var(--color-brand-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,color:'var(--color-brand)',fontWeight:700,flexShrink:0}}>
                   {author.display_name?.[0] || '?'}
                 </div>
             }
+            <CostumeOverlay url={costumeUrl} size={56}/>
+            </div>
             <div style={{flex:'1 1 140px',minWidth:0}}>
               <h1 style={{fontSize:17,fontWeight:700,color:'var(--color-text)',margin:0,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{author.display_name}</h1>
               <div style={{fontSize:11,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>{joinStr}から活動中</div>
+              {titles.length > 0 && (
+                <div className="ttl-row">
+                  {titles.map(t => (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img key={t.id} src={t.url!} alt={t.name} title={t.name}/>
+                  ))}
+                </div>
+              )}
+              {/* ★ 携帯にも X への入口を出す（前はパソコンだけだった） */}
+              {author.x_account && (
+                <a href={`https://x.com/${author.x_account}`} target="_blank" rel="noopener noreferrer"
+                  style={{display:'inline-flex',alignItems:'center',gap:4,marginTop:3,fontSize:12,fontWeight:700,color:'var(--color-brand)',textDecoration:'none'}}>
+                  {/* 𝕏 の字は端末によって出ないので、パソコンと同じ絵にする */}
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M17.53 3h3.2l-6.99 7.99L22 21h-6.44l-5.04-6.6L4.75 21H1.54l7.48-8.55L2 3h6.6l4.56 6.03L17.53 3Zm-1.12 16.06h1.77L7.68 4.84H5.78l10.63 14.22Z"/>
+                  </svg>
+                  @{author.x_account}
+                </a>
+              )}
             </div>
             {/*
              * 未ログインでもフォローの押し具は出す。
              * 隠すと、その人を追えること自体が伝わらない。
              */}
             {!isMe && (
-              <div style={{display:'flex',gap:6,flexWrap:'wrap',width:'100%'}}>
+              <div className="au-btns" style={{display:'flex',gap:6,flexWrap:'wrap',width:'100%',alignItems:'center'}}>
                 {user ? (
                   <>
-                    <FollowButton authorId={params.id} userId={user.id} initialFollowing={isFollowing} followerCount={followerCount || 0}/>
+                    {/*
+                      * ★ フォローをいちばん大きく、メッセージは横、
+                      *   ブロックは「⋯」の中へ。3 つ同じ重さだと、ブロックを押し間違える。
+                      */}
+                    <span className="au-follow"><FollowButton authorId={params.id} userId={user.id} initialFollowing={isFollowing} followerCount={followerCount || 0}/></span>
                     <MessageButton targetId={params.id} userId={user.id}/>
-                    <BlockButton targetId={params.id} userId={user.id} initialBlocked={isBlocked} initialMuted={isMuted}/>
+                    <details className="au-more">
+                      <summary aria-label="ほかの操作">⋯</summary>
+                      <div className="au-more-pop">
+                        <BlockButton targetId={params.id} userId={user.id} initialBlocked={isBlocked} initialMuted={isMuted}/>
+                      </div>
+                    </details>
                   </>
                 ) : (
                   <GuestFollowButton followerCount={followerCount || 0}/>

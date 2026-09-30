@@ -517,7 +517,11 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
     const isScheduled = false
     return (
       <Link href={`/novel/${params.id}/episode/${ep.id}`} style={{textDecoration:'none',display:'block'}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderBottom:'1px solid var(--color-brand-light)',background: isReadEp ? '#e5e7eb' : 'var(--color-bg-card)'}}>
+        {/*
+          * ★ 携帯では 2 行にする（mobile-read.css の nvr）。
+          *   1 行に題・♡・コメント・日付 2 つを並べると、題が切れていた。
+          */}
+        <div className="nvr" style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderBottom:'1px solid var(--color-brand-light)',background: isReadEp ? '#e5e7eb' : 'var(--color-bg-card)'}}>
           {/*
            * ★ 挿絵は、ここには出さない。
            *
@@ -525,7 +529,7 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
            *   目次に並べると、そちらが主役になって
            *   題名が読み取りにくくなる。
            */}
-          <div style={{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:5}}>
+          <div className="nvr-t" style={{flex:1,minWidth:0,display:'flex',alignItems:'center',gap:5}}>
             {isReadEp && <span style={{fontSize:10,color:'var(--color-success)',fontWeight:700,flexShrink:0}}>✓</span>}
             <span style={{fontSize:13,fontWeight:500,color: isReadEp ? '#4b5563' : 'var(--color-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ep.title}</span>
             {isScheduled && (
@@ -534,7 +538,7 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
               </span>
             )}
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+          <div className="nvr-m" style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
             {epLikeCounts[ep.id] > 0 && <span style={{fontSize:10,color:'var(--color-text-muted)'}}>♡ {fmtNum(epLikeCounts[ep.id])}</span>}
             {epCommentCounts[ep.id] > 0 && (
               <span style={{fontSize:10,color:'var(--color-text-muted)',display:'inline-flex',alignItems:'center',gap:2}}>
@@ -992,6 +996,28 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
         </div>
 
       </div>
+
+      {/*
+        * 携帯：下に「読む」を固定する。
+        * どこまで下がっても、すぐ読み始められる。
+        * 読んだ話があれば「続きから 第N話」。
+        */}
+      {episodes && episodes.length > 0 && (() => {
+        const nextIndex = episodes.findIndex((ep: any) => !readEpisodeIds.has(ep.id))
+        const hasProgress = readEpisodeIds.size > 0 && nextIndex > 0
+        return (
+          <div className="nv-sticky">
+            <Link href={`/novel/${params.id}/episode/${episodes[0].id}`} className={hasProgress ? 'nv-sticky-sub' : 'nv-sticky-main'}>
+              最初から読む
+            </Link>
+            {hasProgress && (
+              <Link href={`/novel/${params.id}/episode/${episodes[nextIndex].id}`} className="nv-sticky-main">
+                続きから　第{nextIndex + 1}話
+              </Link>
+            )}
+          </div>
+        )
+      })()}
       <Footer />
     </div>
   )

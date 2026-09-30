@@ -129,7 +129,7 @@ function Nav({ onStart }: { onStart?: () => void }) {
 
     return (
         <header
-            className="sticky top-0 z-40 bg-white/95 backdrop-blur transition-shadow"
+            className="lp-header sticky top-0 z-40 bg-white/95 backdrop-blur transition-shadow"
             style={{ boxShadow: isScrolled ? "0 1px 0 rgba(0,0,0,0.07)" : "none" }}
         >
             <div className="mx-auto flex h-[72px] max-w-6xl items-center px-5 sm:px-8">

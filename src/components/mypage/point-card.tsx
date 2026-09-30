@@ -94,6 +94,9 @@ function useIsOperator(): boolean | null {
     return isOperator
 }
 
+/* ★ ポイントは、みんなに開けた。運営だけに戻すときは false にする */
+const POINTS_OPEN = true
+
 export default function PointCard() {
     const [free, setFree] = useState<number | null>(null)
     const [expiresAt, setExpiresAt] = useState<string | null>(null)
@@ -101,11 +104,11 @@ export default function PointCard() {
     const isOperator = useIsOperator()
 
     useEffect(() => {
-        if (isOperator !== true) return
+        if (!POINTS_OPEN && isOperator !== true) return
 
         let alive = true
 
-        void (async () => {
+        const load = async () => {
             try {
                 const response = await fetch('/api/points/me')
                 if (!response.ok) return
@@ -124,15 +127,21 @@ export default function PointCard() {
             } catch {
                 /* 読めなくても、ほかは動く */
             }
-        })()
+        }
+        void load()
+
+        /* 毎日ログインのハンコを押したら、読み直す */
+        const onStamp = () => void load()
+        window.addEventListener('gk-login-stamp', onStamp)
 
         return () => {
             alive = false
+            window.removeEventListener('gk-login-stamp', onStamp)
         }
     }, [isOperator])
 
     /* いまは運営だけに見せている */
-    if (isOperator !== true) return null
+    if (!POINTS_OPEN && isOperator !== true) return null
 
     /* 読めていないあいだは、場所を取らない */
     if (free === null) return null

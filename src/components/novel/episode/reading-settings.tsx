@@ -73,10 +73,21 @@ const SIZE_OPTIONS = [
   { label: '豆',   value: 8,  horizontalOnly: true },
   { label: '極小', value: 12, horizontalOnly: true },
   { label: '小',   value: 14 },
+  /*
+   * ★ 携帯だけの「標準」。
+   *
+   *   携帯の横書きで 1 行がほぼ 24 字になる大きさ。
+   *   16px だと 22 字ほどで、読みにくいという声があった。
+   *   何も選んでいない人は、これで始まる。
+   */
+  { label: '標準', value: 15, mobileOnly: true },
   { label: '中',   value: 16 },
   { label: '大',   value: 18 },
   { label: '特大', value: 21 },
 ]
+/** 携帯で、まだ何も選んでいない人の大きさ（1 行ほぼ 24 字） */
+const MOBILE_DEFAULT_SIZE = 15
+
 const LINE_OPTIONS = [
   { label: '狭', value: 1.6 },
   { label: '普通', value: 2.1 },
@@ -116,7 +127,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
       const saved = localStorage.getItem(STORAGE_KEY)
       const base = saved
         ? ({ ...DEFAULTS, ...JSON.parse(saved) } as Settings)
-        : { ...DEFAULTS }
+        : { ...DEFAULTS, ...(isMobile ? { fontSize: MOBILE_DEFAULT_SIZE } : {}) }
 
       /*
        * 作者のすすめる向きを、初めの姿にする。
@@ -269,6 +280,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
               <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                 {SIZE_OPTIONS
                   .filter(o => !o.horizontalOnly || settings.writingMode === 'horizontal')
+                  .filter(o => !('mobileOnly' in o) || isMobile)
                   .map(o => (
                   <button key={o.value} onClick={()=>update({fontSize:o.value})} style={btnBase(settings.fontSize===o.value)}>
                     {o.label}

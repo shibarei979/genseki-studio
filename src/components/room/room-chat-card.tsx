@@ -58,14 +58,14 @@ export default function RoomChatCard({
     }
 
     return (
-        <section className="flex min-h-0 flex-col rounded-xl border border-line bg-surface">
+        <section className="rcc flex min-h-0 flex-col rounded-xl border border-line bg-surface">
             <h2 className="border-b border-line px-4 py-2.5 text-[13px] font-semibold text-ink">
                 チャット
             </h2>
 
             <ul
                 ref={listRef}
-                className="thin-scroll min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-3"
+                className="rcc-list thin-scroll min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-3"
             >
                 {messages.length === 0 ? (
                     <li className="py-6 text-center text-[11px] text-faint">
@@ -140,8 +140,12 @@ export default function RoomChatCard({
                 )}
             </ul>
 
-            {/* 送る */}
-            <div className="border-t border-line p-2.5">
+            {/*
+              * 送る。
+              * ★ 携帯では画面の下に留める（mobile-p7.css）。
+              *   部屋の絵を見ながら、いつでも打てるようにする。
+              */}
+            <div className="rcc-send border-t border-line p-2.5">
                 {isStampOpen && canStamp && (
                     <ul className="mb-2 flex flex-wrap gap-1">
                         {STAMPS.map((stamp) => (
@@ -169,7 +173,7 @@ export default function RoomChatCard({
                                 type="button"
                                 onClick={() => setIsStampOpen((open) => !open)}
                                 aria-label="スタンプ"
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line text-muted hover:border-forest-line hover:text-forest"
+                                className="rcc-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line text-muted hover:border-forest-line hover:text-forest"
                             >
                                 <SmileIcon />
                             </button>
@@ -188,7 +192,7 @@ export default function RoomChatCard({
                             }}
                             placeholder="メッセージを入力…"
                             aria-label="メッセージ"
-                            className="min-w-0 flex-1 rounded-lg border border-line bg-canvas px-3.5 py-2 text-[12px] outline-none focus:border-forest focus:bg-surface"
+                            className="rcc-input min-w-0 flex-1 rounded-lg border border-line bg-canvas px-3.5 py-2 text-[12px] outline-none focus:border-forest focus:bg-surface"
                         />
 
                         <button
@@ -196,7 +200,7 @@ export default function RoomChatCard({
                             onClick={send}
                             disabled={draft.trim().length === 0}
                             aria-label="送る"
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forest-dark text-white hover:opacity-90 disabled:opacity-40"
+                            className="rcc-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-forest-dark text-white hover:opacity-90 disabled:opacity-40"
                         >
                             <SendIcon />
                         </button>

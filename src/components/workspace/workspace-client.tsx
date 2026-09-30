@@ -558,7 +558,7 @@ export default function WorkspaceClient({ workId }: Props) {
          * dvh にするのは、携帯で住所欄が出入りしても
          * 高さが狂わないようにするため。
          */
-        <div className="flex h-dvh flex-col overflow-hidden bg-page">
+        <div className="mw-room flex h-dvh flex-col overflow-hidden bg-page">
             {/*
              * 集中モードでは、ヘッダーごと消す。
              *
@@ -603,6 +603,15 @@ export default function WorkspaceClient({ workId }: Props) {
                  * 本文と並べると、どちらも読めない幅になる。
                  * 上の「話一覧」を押すと出る。
                  */}
+                {/* 携帯：一覧を出しているあいだの暗幕。押すと閉じる */}
+                {isListOpen && !isFocusMode && (
+                    <button
+                        type="button"
+                        aria-label="話の一覧をとじる"
+                        className="mw-list-dim lg:hidden"
+                        onClick={() => setIsListOpen(false)}
+                    />
+                )}
                 <aside
                     className={[
                         /*
@@ -624,20 +633,31 @@ export default function WorkspaceClient({ workId }: Props) {
                             : isListOpen
                               ? "flex"
                               : "hidden lg:flex",
+                        /*
+                         * ★ 携帯では、画面を入れかえずに下から出す（mobile-write.css）。
+                         *   閉じればすぐ、書いていた所に戻れる。
+                         */
+                        isListOpen ? "mw-list-sheet" : "",
                     ].join(" ")}
                 >
-                    <WorkspaceNav workId={workId} current="write" episodeId={selectedId} alwaysOpen />
+                    {/*
+                      * 携帯の見出し。パソコンでは出さない。
+                      * 設定・資料・投稿へは、書く画面の「道具」と右上の「投稿」から行ける。
+                      */}
+                    <div className="mw-list-head lg:hidden">
+                        <h3>
+                            話の一覧<small>全{episodes.length}話</small>
+                        </h3>
+                        <button type="button" onClick={() => setIsListOpen(false)}>
+                            とじる
+                        </button>
+                    </div>
 
-                    {/* 一覧を閉じる。狭い画面だけ */}
-                    <button
-                        type="button"
-                        onClick={() => setIsListOpen(false)}
-                        className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-line bg-surface py-2 text-[13px] text-muted hover:text-ink lg:hidden"
-                    >
-                        本文にもどる
-                    </button>
+                    <div className="hidden lg:block">
+                        <WorkspaceNav workId={workId} current="write" episodeId={selectedId} alwaysOpen />
+                    </div>
 
-                    <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-lg border border-line bg-surface">
+                    <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-line bg-surface lg:mt-4">
                         <div className="border-b border-line px-3.5 py-3">
                             <h1 className="truncate text-[14px] font-medium text-ink">
                                 {work.title}
@@ -803,7 +823,8 @@ export default function WorkspaceClient({ workId }: Props) {
                          * それ以外は、広さに関わらず横に並べる。
                          */
                         "min-h-0 min-w-0 flex-1 gap-4",
-                        isListOpen ? "hidden lg:flex" : "flex",
+                        /* 携帯の一覧は下から出るので、本文は隠さない */
+                        "flex",
                     ].join(" ")}
                 >
                     {/*
@@ -841,41 +862,15 @@ export default function WorkspaceClient({ workId }: Props) {
                      * 「一覧をひらく」とだけ書いても、
                      * それが話を選ぶ所だと分からない。
                      */}
-                    {!isFocusMode && (
-                        <button
-                            type="button"
-                            onClick={() => setIsListOpen(true)}
-                            /*
-                             * 押せると分かる見た目にする。
-                             *
-                             * 白地に細字だと、いま開いている話の
-                             * 見出しにしか見えず、ここから話を選べると
-                             * 気づかれない。
-                             * 枠の色を付け、右端は札の形にする。
-                             */
-                            /*
-                             * shrink-0 を付ける。
-                             *
-                             * 箱は縦並びの flex。付けないと高さが足りないとき
-                             * この押し具が潰され、上の行に食い込んで
-                             * パンくずと重なって見える。
-                             */
-                            className="mb-2 flex w-full shrink-0 items-center justify-between gap-2 rounded-md border border-forest-line bg-forest-tint/40 px-3.5 py-2.5 text-[13px] text-ink hover:bg-forest-tint lg:hidden"
-                        >
-                            <span className="min-w-0 truncate font-medium">
-                                {selected
-                                    ? selected.title || `${selected.ep_number}話`
-                                    : "話を選ぶ"}
-                            </span>
-                            <span className="flex shrink-0 items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[11px] text-forest">
-                                話を切りかえる
-                                <span aria-hidden="true">▾</span>
-                            </span>
-                        </button>
-                    )}
+                    {/*
+                      * ★ 携帯の「話を切りかえる」は、書く画面の上の段（話の題）へ移した。
+                      *   ここには出さない（パソコンでは前から出していない）。
+                      */}
 
                     {selected ? (
                         <EpisodeEditor
+                            onOpenList={() => setIsListOpen(true)}
+                            unpostedCount={episodes.filter((ep) => ep.is_published === false).length}
                             pickEntryId={searchParams.get("pick")}
                             pickEntryName={pickEntryName}
                             /*

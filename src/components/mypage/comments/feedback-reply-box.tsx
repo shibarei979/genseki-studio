@@ -51,13 +51,14 @@ export default function FeedbackReplyBox({ parentCommentId, novelId, episodeId, 
   }
 
   if (done) {
-    return <div style={{ fontSize: 12, color: 'var(--color-success, #15803d)', fontWeight: 600, marginTop: 8 }}>返信しました</div>
+    return <div className="p8-fb-reply is-done" style={{ fontSize: 12, color: 'var(--color-success, #15803d)', fontWeight: 600, marginTop: 8 }}>返信しました</div>
   }
 
+  /* p8-fb-reply：携帯で大きなボタンにする印。開いたら is-open で横いっぱいに */
   return (
-    <div style={{ marginTop: 8 }}>
+    <div className={`p8-fb-reply${open ? ' is-open' : ''}`} style={{ marginTop: 8 }}>
       {!open ? (
-        <button onClick={() => setOpen(true)}
+        <button className="p8-fb-reply-btn" onClick={() => setOpen(true)}
           style={{ fontSize: 12, color: 'var(--color-brand)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 600 }}>
           返信する
         </button>
@@ -67,7 +68,7 @@ export default function FeedbackReplyBox({ parentCommentId, novelId, episodeId, 
           <textarea value={body} onChange={e => setBody(e.target.value)} rows={2} maxLength={500}
             placeholder="返信を入力..."
             style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--color-brand-border)', borderRadius: 8, fontSize: 13, outline: 'none', resize: 'vertical', fontFamily: 'inherit', background: 'var(--color-bg)', color: 'var(--color-text)', boxSizing: 'border-box' }} />
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6 }}>
+          <div className="p8-fb-reply-row" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6 }}>
             <button onClick={() => { setOpen(false); setBody('') }}
               style={{ fontSize: 12, color: 'var(--color-text-muted)', background: 'none', border: '1px solid var(--color-brand-border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer' }}>キャンセル</button>
             <button onClick={handleSubmit} disabled={posting || !body.trim()}

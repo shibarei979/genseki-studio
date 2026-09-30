@@ -462,6 +462,8 @@ export default function Header({ breadcrumbs = [], sticky = true }: Props) {
                  * 押し下げられて画面の外へ出る。
                  * （上の帯や本文の頭が見えなくなる原因）
                  */
+                /* 携帯では隠す（mobile-header.css）。目印の名前 */
+                "site-header",
                 sticky ? "sticky top-0" : "shrink-0",
                 "z-30 border-b border-line bg-surface",
             ].join(" ")}

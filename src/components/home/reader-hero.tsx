@@ -48,7 +48,8 @@ export default function ReaderHero() {
     const [index, setIndex] = useState(0);
 
     return (
-        <section className="relative overflow-hidden rounded-xl border border-line bg-surface">
+        /* rh-hero の名前は携帯の直し（mobile-home2.css）が使う */
+        <section className="rh-hero relative overflow-hidden rounded-xl border border-line bg-surface">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
                 src={HERO_IMAGES[index]}
@@ -79,7 +80,7 @@ export default function ReaderHero() {
                 aria-hidden="true"
             />
 
-            <div className="relative px-8 py-7 sm:px-10 sm:py-9">
+            <div className="rh-hero-body relative px-8 py-7 sm:px-10 sm:py-9">
                 {/*
                  * 見出しは明朝。
                  * 小説を読む場所なので、いちばん大きな字は本文と同じ顔にする。
@@ -87,13 +88,13 @@ export default function ReaderHero() {
                  * 「出会い」だけ色を差す。
                  * 全部を主色にすると塊になって、下の棚より目立つ。
                  */}
-                <h1 className="font-serif text-[24px] leading-[1.4] tracking-[0.06em] text-ink sm:text-[32px]">
+                <h1 className="rh-hero-title font-serif text-[24px] leading-[1.4] tracking-[0.06em] text-ink sm:text-[32px]">
                     物語との<span className="text-forest">出会い</span>が、
                     <br />
                     人生を変える。
                 </h1>
 
-                <p className="mt-3.5 max-w-[30em] text-[12px] leading-[1.9] text-muted sm:text-[13px]">
+                <p className="rh-hero-sub mt-3.5 max-w-[30em] text-[12px] leading-[1.9] text-muted sm:text-[13px]">
                     まだ見ぬ一冊が、ここにある。
                     <br />
                     誰かが書いた物語を、あなたが見つける。
@@ -105,7 +106,7 @@ export default function ReaderHero() {
                  * 読ませるためではなく、余白を締めるために置く。
                  * 小さく、薄く、斜めに。
                  */}
-                <p className="mt-3 font-serif text-[13px] italic tracking-wide text-forest/70">
+                <p className="rh-hero-en mt-3 font-serif text-[13px] italic tracking-wide text-forest/70">
                     Find your story.
                 </p>
             </div>

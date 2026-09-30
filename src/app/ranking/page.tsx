@@ -853,9 +853,11 @@ export default async function RankingPage({ searchParams }: Props) {
               return (
                 <div key={n.id} style={{borderBottom:'1px solid var(--color-brand-light)'}}>
                   <NovelPopup novel={{...n, like_count: n.hideStats ? 0 : (n.score||n.like_count||0)}}>
-                  <div className="rk-row" style={{display:'flex',gap:12,padding:'12px 14px',alignItems:'flex-start',cursor:'pointer'}}>
+                  <div className={`rk-row${abs < 3 ? ' rk-top' : ''}`} style={{display:'flex',gap:12,padding:'12px 14px',alignItems:'flex-start',cursor:'pointer'}}>
                     <div className="rk-no" style={{width:28,textAlign:'center',flexShrink:0,paddingTop:2}}>
                       <span style={{fontSize:rankSize(abs),fontWeight:800,color:rankColor(abs),fontFamily:"'Noto Serif JP',serif"}}>{abs+1}</span>
+                      {/* 携帯だけ：上位 3 つに 金・銀・銅 を小さく添える（パソコンでは出さない） */}
+                      {abs < 3 && <small className="rk-medal">{['金','銀','銅'][abs]}</small>}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:'flex',gap:4,marginBottom:3,flexWrap:'wrap',alignItems:'center'}}>

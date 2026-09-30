@@ -77,7 +77,11 @@ export default function DisplaySettingsForm({ settings, workTitle, onChange }: P
                 </p>
             </div>
 
-            <div className="grid gap-8 px-6 py-6 lg:grid-cols-[260px_1fr]">
+            {/*
+              * 携帯では、プレビューをいちばん上に出す（p8-disp-*）。
+              * 下で選ぶと、上の絵がすぐ変わるのが見えるように。
+              */}
+            <div className="p8-disp-grid grid gap-8 px-6 py-6 lg:grid-cols-[260px_1fr]">
                 <div className="space-y-5">
                     <Section title="組み方向">
                         <Choices
@@ -160,7 +164,7 @@ export default function DisplaySettingsForm({ settings, workTitle, onChange }: P
                     </Section>
                 </div>
 
-                <div className="min-w-0">
+                <div className="p8-disp-preview min-w-0">
                     <div className="flex items-center justify-between">
                         <h3 className="text-sm font-medium text-ink">プレビュー</h3>
                         <div className="flex gap-1 rounded-md border border-line p-0.5">
@@ -179,7 +183,7 @@ export default function DisplaySettingsForm({ settings, workTitle, onChange }: P
 
                     <div className="mt-3 flex justify-center rounded-lg bg-canvas p-5">
                         {device === "pc" ? (
-                            <div className="h-[500px] w-full overflow-hidden rounded-md border border-line bg-surface">
+                            <div className="p8-disp-pcbox h-[500px] w-full overflow-hidden rounded-md border border-line bg-surface">
                                 {settings.page_mode_pc === "paged" ? (
                                     <PagedReader settings={settings} text={PREVIEW_TEXT} />
                                 ) : (

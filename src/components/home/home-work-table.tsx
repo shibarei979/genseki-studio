@@ -170,6 +170,48 @@ const BOOK = {
     title: 12,
 };
 
+/*
+ * 携帯（1023px 以下）での本の縮み具合。
+ *
+ * ★ 1 段に 3 冊並べるため。
+ *   128px のままだと、携帯の幅では 2 冊で段が終わる。
+ *   0.75 倍（96 × 125）なら、幅 360px の携帯でも 3 冊入る。
+ *
+ * ★ 縦横の比は変えない。大きさだけ小さくする。
+ *   パソコンでは使わない（いつもの大きさのまま）。
+ */
+const SMALL_RATIO = 0.75;
+/** 携帯での本と本の間。24px のままだと 3 冊目が入らない */
+const SMALL_GAP = 12;
+/** 携帯での題名の大きさ。本が小さいぶん 1 つ下げる */
+const SMALL_TITLE = 11;
+
+/** 本の大きさ。パソコンと携帯で切り替える */
+interface BookSize {
+    width: number;
+    height: number;
+    gap: number;
+    title: number;
+    /** 表紙の形ごとの幅 */
+    widthOf: (work: { cover_shape?: string | null }) => number;
+}
+
+const PC_SIZE: BookSize = {
+    width: BOOK_WIDTH,
+    height: BOOK_HEIGHT,
+    gap: BOOK_GAP,
+    title: BOOK.title,
+    widthOf,
+};
+
+const SMALL_SIZE: BookSize = {
+    width: Math.round(BOOK_WIDTH * SMALL_RATIO),
+    height: Math.round(BOOK_HEIGHT * SMALL_RATIO),
+    gap: SMALL_GAP,
+    title: SMALL_TITLE,
+    widthOf: (work) => Math.round(widthOf(work) * SMALL_RATIO),
+};
+
 /**
  * 表紙の色。
  *
@@ -341,6 +383,25 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
     const shelfRef = useRef<HTMLDivElement>(null);
     const [cols, setCols] = useState(0);
 
+    /*
+     * 携帯かどうか。
+     *
+     * 携帯では本を小さくして、1 段に 3 冊並べる。
+     * 段の切り分けを JavaScript でしているので、
+     * CSS だけでは大きさを変えられない（冊数の計算と食い違う）。
+     */
+    const [small, setSmall] = useState(false);
+
+    useEffect(() => {
+        const query = window.matchMedia("(max-width: 1023px)");
+        const update = () => setSmall(query.matches);
+        update();
+        query.addEventListener("change", update);
+        return () => query.removeEventListener("change", update);
+    }, []);
+
+    const size = small ? SMALL_SIZE : PC_SIZE;
+
     useEffect(() => {
         const el = shelfRef.current;
         if (!el) return;
@@ -349,7 +410,7 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
             setCols(
                 Math.max(
                     1,
-                    Math.floor((el.clientWidth + BOOK_GAP) / (BOOK_WIDTH + BOOK_GAP)),
+                    Math.floor((el.clientWidth + size.gap) / (size.width + size.gap)),
                 ),
             );
         };
@@ -358,7 +419,7 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
         const watcher = new ResizeObserver(measure);
         watcher.observe(el);
         return () => watcher.disconnect();
-    }, [view]);
+    }, [view, size]);
 
     const shown = [...works].sort((a, b) => {
         if (sort === "title")
@@ -620,7 +681,7 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
 
                         /* 測れていないあいだは、1 段に全部 */
                         const roomWidth = cols
-                            ? cols * (BOOK_WIDTH + BOOK_GAP)
+                            ? cols * (size.width + size.gap)
                             : Number.MAX_SAFE_INTEGER;
 
                         let line: (WorkWithStats | null)[] = [];
@@ -628,8 +689,8 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
 
                         for (const item of items) {
                             /* 「新しい作品を書く」は縦長と同じ幅 */
-                            const w = item ? widthOf(item) : BOOK_WIDTH;
-                            const need = w + BOOK_GAP;
+                            const w = item ? size.widthOf(item) : size.width;
+                            const need = w + size.gap;
 
                             if (line.length > 0 && used + need > roomWidth) {
                                 rows.push(line);
@@ -649,8 +710,8 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                                 <ul
                                     className="relative z-[3] flex items-end justify-center sm:justify-start"
                                     style={{
-                                        columnGap: `${BOOK_GAP}px`,
-                                        minHeight: `${BOOK_HEIGHT}px`,
+                                        columnGap: `${size.gap}px`,
+                                        minHeight: `${size.height}px`,
                                     }}
                                 >
                                     {row.map((item) =>
@@ -660,6 +721,7 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                                                 work={item}
                                                 episodes={episodesOf(item.id)}
                                                 onDelete={() => void onDelete(item)}
+                                                size={size}
                                             />
                                         ) : (
                                             /*
@@ -669,8 +731,8 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                                             <li
                                                 key="add"
                                                 style={{
-                                                    width: `${BOOK_WIDTH}px`,
-                                                    height: `${BOOK_HEIGHT}px`,
+                                                    width: `${size.width}px`,
+                                                    height: `${size.height}px`,
                                                 }}
                                             >
                                                 <Link
@@ -729,10 +791,13 @@ function Tile({
     work,
     episodes,
     onDelete,
+    size,
 }: {
     work: WorkWithStats;
     episodes: Episode[];
     onDelete: () => void;
+    /** 本の大きさ。携帯では小さい */
+    size: BookSize;
 }) {
     const state = stateOf(work);
     const chip = STATE_STYLE[state];
@@ -748,7 +813,7 @@ function Tile({
     return (
         <li
             className="group relative"
-            style={{ width: widthOf(work), height: BOOK_HEIGHT }}
+            style={{ width: size.widthOf(work), height: size.height }}
         >
             {/*
              * 板に落ちる影。
@@ -901,7 +966,7 @@ function Tile({
                                 <span
                                     className="line-clamp-2 block text-center font-serif leading-[1.4]"
                                     style={{
-                                        fontSize: BOOK.title,
+                                        fontSize: size.title,
                                         color: "#fff",
                                         textShadow: "0 1px 3px rgba(0,0,0,.6)",
                                     }}
@@ -913,13 +978,13 @@ function Tile({
                             <span
                                 className="absolute left-0 right-0 px-3"
                                 style={{
-                                    top: Math.round(BOOK_HEIGHT * 0.22),
+                                    top: Math.round(size.height * 0.22),
                                     paddingLeft: BOOK.spine + 10,
                                 }}
                             >
                                 <span
                                     className="line-clamp-2 block text-center font-serif leading-[1.5] tracking-[0.04em]"
-                                    style={{ fontSize: BOOK.title, color: cover.ink }}
+                                    style={{ fontSize: size.title, color: cover.ink }}
                                 >
                                     {work.title || "無題"}
                                 </span>

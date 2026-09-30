@@ -297,3 +297,165 @@ export function hasOwnNumber(title: string | null | undefined): boolean {
         title.trim(),
     );
 }
+
+/**
+ * 章をまるごと 1 つ上（または下）へ動かす。
+ *
+ * ★ 章の並びは、中の話の並びで決まる（上の buildChapterGroups）。
+ *   章の番号（sort_order）だけを入れ替えても、画面の並びも
+ *   読者の目次も変わらない。前のドラッグはそれで効かなかった。
+ *
+ *   だから、章に入っている話をひとかたまりで動かす。
+ *   となりの章（またはとなりのかたまり）と、中の話ごと入れ替える。
+ *
+ * ★ 同じ段の中で動かす。
+ *   小さい章は、同じ部の中のとなりと入れ替える。
+ *   部とふつうの章は、上の段のとなり（部・章・章に入れていない話）と入れ替える。
+ *   部を動かすと、中の章ごと動く。
+ *
+ * ★ 話の入っていない章は動かせない（並びを決める話が無い）。
+ *
+ * groupAt は buildChapterGroups の何番目の見出しか。
+ * 同じ章が離れて 2 回出るときも、押した方を動かすため。
+ *
+ * 返すのは、新しい話の並びと、それに合わせた章の並び。
+ * 動かせないときは null。
+ */
+export function moveChapterGroup(
+    chapters: Chapter[],
+    episodes: Episode[],
+    groupAt: number,
+    step: -1 | 1,
+): { episodeIds: string[]; chapterIds: string[] } | null {
+    const groups = buildChapterGroups(chapters, episodes);
+    const target = groups[groupAt];
+    if (!target || !target.chapter) return null;
+
+    /* 動かす単位。groups の何番目から何番目までか */
+    type Unit = { start: number; end: number };
+    const units: Unit[] = [];
+
+    if (target.depth === 1 && target.parentId) {
+        /* 小さい章：同じ部の、続いているところの中だけ */
+        let a = groupAt;
+        let b = groupAt;
+        while (a - 1 >= 0 && groups[a - 1].parentId === target.parentId) a -= 1;
+        while (b + 1 < groups.length && groups[b + 1].parentId === target.parentId) b += 1;
+        for (let i = a; i <= b; i += 1) units.push({ start: i, end: i });
+    } else {
+        /* 上の段：部は中の章ごと 1 つにまとめる */
+        const partOf = (g: ChapterGroup) =>
+            g.parentId ?? (g.isBig && g.chapter ? g.chapter.id : null);
+        let i = 0;
+        while (i < groups.length) {
+            const key = partOf(groups[i]);
+            let j = i;
+            if (key) {
+                while (j + 1 < groups.length && partOf(groups[j + 1]) === key) j += 1;
+            }
+            units.push({ start: i, end: j });
+            i = j + 1;
+        }
+    }
+
+    const idsOf = (from: number, to: number) =>
+        groups.slice(from, to + 1).flatMap((g) => g.items.map((ep) => ep.id));
+
+    /* 話の入っているかたまりだけで数える */
+    const filled = units.filter((u) => idsOf(u.start, u.end).length > 0);
+    const at = filled.findIndex((u) => groupAt >= u.start && groupAt <= u.end);
+    if (at < 0) return null;
+
+    const other = at + step;
+    if (other < 0 || other >= filled.length) return null;
+
+    const first = filled[Math.min(at, other)];
+    const second = filled[Math.max(at, other)];
+
+    const episodeIds = [
+        ...idsOf(0, first.start - 1),
+        ...idsOf(second.start, second.end),
+        ...idsOf(first.end + 1, second.start - 1),
+        ...idsOf(first.start, first.end),
+        ...idsOf(second.end + 1, groups.length - 1),
+    ];
+
+    /*
+     * 章の番号（第一章・第二章）も、新しい並びに合わせる。
+     * 話が出てくる順に章を拾い、部はその中の章より先に置く。
+     * 話の入っていない章は、今の順のまま後ろへ。
+     */
+    const byId = new Map(chapters.map((c) => [c.id, c]));
+    const episodeById = new Map(episodes.map((ep) => [ep.id, ep]));
+    const chapterIds: string[] = [];
+    const add = (id: string) => {
+        if (!chapterIds.includes(id)) chapterIds.push(id);
+    };
+    for (const id of episodeIds) {
+        const chapterId = episodeById.get(id)?.chapter_id;
+        const chapter = chapterId ? byId.get(chapterId) : undefined;
+        if (!chapter) continue;
+        if (chapter.parent_id && byId.has(chapter.parent_id)) add(chapter.parent_id);
+        add(chapter.id);
+    }
+    for (const chapter of chapters) add(chapter.id);
+
+    return { episodeIds, chapterIds };
+}
+
+/**
+ * 章を、別の章の場所まで動かす（パソコンでつまんで落としたとき）。
+ *
+ * ★ 前は章の番号だけを入れ替えていたので、落としても並びが変わらなかった。
+ *   moveChapterGroup を 1 つずつ重ねて、落とした章の場所まで運ぶ。
+ *   下へ運ぶときは落とした章の後ろ、上へ運ぶときは前に入る。
+ *
+ * 段が違う（部の中の章を、ほかの部の章の上に落とした など）ときや、
+ * 話の入っていない章のときは動かさない（null）。
+ */
+export function moveChapterOnto(
+    chapters: Chapter[],
+    episodes: Episode[],
+    fromId: string,
+    toId: string,
+): { episodeIds: string[]; chapterIds: string[] } | null {
+    if (fromId === toId) return null;
+
+    let nowEpisodes = episodes;
+    let nowChapters = chapters;
+    let result: { episodeIds: string[]; chapterIds: string[] } | null = null;
+
+    const firstAt = (list: ChapterGroup[], id: string) =>
+        list.findIndex((g) => g.chapter?.id === id && (g.items.length > 0 || g.isBig));
+
+    const startGroups = buildChapterGroups(nowChapters, nowEpisodes);
+    const from0 = firstAt(startGroups, fromId);
+    const to0 = firstAt(startGroups, toId);
+    if (from0 < 0 || to0 < 0) return null;
+    if ((startGroups[from0].parentId ?? null) !== (startGroups[to0].parentId ?? null)) return null;
+
+    const step: -1 | 1 = from0 < to0 ? 1 : -1;
+
+    for (let guard = 0; guard < chapters.length + 2; guard += 1) {
+        const groups = buildChapterGroups(nowChapters, nowEpisodes);
+        const from = firstAt(groups, fromId);
+        const to = firstAt(groups, toId);
+        if (from < 0 || to < 0) break;
+        if (step === 1 ? from > to : from < to) break;
+
+        const next = moveChapterGroup(nowChapters, nowEpisodes, from, step);
+        if (!next) break;
+        result = next;
+
+        const epOrder = new Map(next.episodeIds.map((id, at) => [id, at]));
+        nowEpisodes = [...nowEpisodes].sort(
+            (a, b) => (epOrder.get(a.id) ?? 0) - (epOrder.get(b.id) ?? 0),
+        );
+        const chOrder = new Map(next.chapterIds.map((id, at) => [id, at]));
+        nowChapters = [...nowChapters].sort(
+            (a, b) => (chOrder.get(a.id) ?? 0) - (chOrder.get(b.id) ?? 0),
+        );
+    }
+
+    return result;
+}

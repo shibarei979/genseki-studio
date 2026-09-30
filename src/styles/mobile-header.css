@@ -23,8 +23,16 @@
      * 隠しても高さが残っていた。
      * 丸ごと出さないほうが確実。
      */
-    body > div > header:not(.mh),
-    header:not(.mh) {
+    /*
+     * ★ 隠すのは、サイトの上の帯（パソコン用）と、LP・遊びの頁の帯だけ。
+     *
+     *   前は header:not(.mh) で「すべての <header>」を隠していた。
+     *   資料ページの見出しの段（＋人物を追加、見方の切り替え など）も
+     *   <header> で書いてあるので、携帯ではまるごと消えて押せなかった。
+     */
+    header.site-header,
+    header.lp-header,
+    header.gm_head {
         display: none !important;
     }
 
@@ -75,5 +83,67 @@
         border: 1px solid var(--color-line, #e5e7eb);
         color: var(--color-text-muted, #6b7280);
         -webkit-tap-highlight-color: transparent;
+    }
+}
+
+/*
+ * ============================================================
+ * 書く／読むの切り替え（携帯）
+ *
+ * ★ ペンと本を 2 つ並べ、いまの向きに色を付ける。
+ *   前の入り切りの形は小さく（54×28）、指で押しにくかった。
+ *   絵だけの形はそのままに、少し大きくする。
+ *
+ * ★ パソコンは今の入り切りのまま。
+ * ============================================================
+ */
+.mode-toggle_seg {
+    display: none;
+}
+
+@media (max-width: 1023px) {
+    .mh .mode-toggle {
+        width: 84px;
+        height: 40px;
+        padding: 3px;
+        background: #eef1f3;
+        color: var(--color-text-muted, #55605a);
+    }
+
+    .mh .mode-toggle_icon,
+    .mh .mode-toggle_knob {
+        display: none;
+    }
+
+    .mh .mode-toggle_seg {
+        display: flex;
+        width: 100%;
+        height: 100%;
+    }
+
+    .mh .mode-toggle_seg-item {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        transition: background .15s ease, color .15s ease;
+    }
+
+    .mh .mode-toggle_seg-item[data-on="true"] {
+        background: var(--color-forest, #1f4e6b);
+        color: #fff;
+        box-shadow: 0 2px 6px rgba(31, 78, 107, .35);
+    }
+
+    /* ベルも指の幅に */
+    .mh_bell {
+        width: 40px;
+        height: 40px;
+        border: none;
+    }
+
+    .mh_right {
+        gap: 6px;
     }
 }

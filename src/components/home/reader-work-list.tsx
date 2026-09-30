@@ -24,6 +24,7 @@ export default function ReaderWorkList({
   books,
   moreHref,
   labels,
+  showAll = false,
 }: {
   title: string
   books: HomeBook[]
@@ -35,11 +36,19 @@ export default function ReaderWorkList({
    * 出さないと、ただの推薦と見分けが付かない。
    */
   labels?: Record<string, string>
+  /**
+   * 携帯でも全部出す。
+   *
+   * ★ 携帯では一覧を 5 作品で切るが、「もっと見る」の行き先に
+   *   同じ作品が並ばない一覧（フォロー中の作家・続きから読む）は切らない。
+   *   切ると 6 作品目から先に行けなくなる。
+   */
+  showAll?: boolean
 }) {
   if (books.length === 0) return null
 
   return (
-    <section className="rwl">
+    <section className={`rwl${showAll ? ' is-all' : ''}`}>
       <div className="rwl_head">
         <h2 className="rwl_title">{title}</h2>
         <Link href={moreHref} className="rwl_more">

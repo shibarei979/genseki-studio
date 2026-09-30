@@ -102,7 +102,7 @@ export default function RoomCodeEntry() {
     }
 
     return (
-        <section className="rounded-xl border border-line bg-surface px-4 py-4">
+        <section className="rce rounded-xl border border-line bg-surface px-4 py-4">
             <h2 className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                 <span className="text-forest">
                     <KeyIcon />
@@ -110,7 +110,7 @@ export default function RoomCodeEntry() {
                 鍵部屋コード
             </h2>
 
-            <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+            <p className="rce-desc mt-1.5 text-[11px] leading-relaxed text-muted">
                 コードを入れると、一覧に出ない部屋へ入れます。
             </p>
 
@@ -123,7 +123,7 @@ export default function RoomCodeEntry() {
              * 見た目だけ 3 桁で区切って、
              * 打ちながら桁を数えられるようにする。
              */}
-            <div className="mt-3">
+            <div className="rce-row mt-3">
                 <input
                     type="text"
                     inputMode="numeric"
@@ -139,12 +139,12 @@ export default function RoomCodeEntry() {
                     }}
                     placeholder="123 456"
                     aria-label="鍵部屋コード（6桁）"
-                    className="w-full rounded-lg border-2 border-line bg-canvas px-3 py-3 text-center text-[22px] font-semibold tracking-[0.28em] tabular-nums outline-none placeholder:font-normal placeholder:text-faint focus:border-forest focus:bg-surface"
+                    className="rce-input w-full rounded-lg border-2 border-line bg-canvas px-3 py-3 text-center text-[22px] font-semibold tracking-[0.28em] tabular-nums outline-none placeholder:font-normal placeholder:text-faint focus:border-forest focus:bg-surface"
                 />
 
                 {/* 何桁入ったか。数えなくても分かるようにする */}
                 <div
-                    className="mt-2 flex justify-center gap-1.5"
+                    className="rce-dots mt-2 flex justify-center gap-1.5"
                     aria-hidden="true"
                 >
                     {[0, 1, 2, 3, 4, 5].map((index) => (
@@ -165,7 +165,7 @@ export default function RoomCodeEntry() {
                     type="button"
                     onClick={() => void enter()}
                     disabled={isSearching || code.length !== 6}
-                    className="mt-3 w-full rounded-lg bg-forest-dark py-2.5 text-[13px] font-medium text-white disabled:opacity-40"
+                    className="rce-go mt-3 w-full rounded-lg bg-forest-dark py-2.5 text-[13px] font-medium text-white disabled:opacity-40"
                 >
                     {isSearching
                         ? "探しています"
@@ -187,7 +187,7 @@ export default function RoomCodeEntry() {
              * 番号を入れる場所だけあっても、
              * その番号をどこから貰うのかが分からない。
              */}
-            <p className="mt-3 border-t border-line pt-3 text-[10px] leading-relaxed text-faint">
+            <p className="rce-foot mt-3 border-t border-line pt-3 text-[10px] leading-relaxed text-faint">
                 コードは、部屋を立てた人が伝えてくれます。
                 <br />
                 自分の部屋のコードは、その部屋に入ると左側に出ます。

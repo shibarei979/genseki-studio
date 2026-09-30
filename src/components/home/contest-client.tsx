@@ -56,7 +56,7 @@ export default function ContestClient() {
         <div className="min-h-screen bg-page">
             <Header breadcrumbs={[{ label: "コンテスト" }]} />
 
-            <main className="px-8 py-7 sm:px-12">
+            <main className="cl-main px-8 py-7 sm:px-12">
                 <BannerStrip place="contest-top" className="mb-5" limit={2} />
 
                 <h1 className="text-xl font-semibold tracking-wide text-ink">
@@ -70,7 +70,7 @@ export default function ContestClient() {
 
                 {/* 状態ごとの数。色で今どこかが分かる */}
                 {sorted.length > 0 && (
-                    <ul className="mt-3 flex flex-wrap gap-2">
+                    <ul className="cl-status mt-3 flex flex-wrap gap-2">
                         {(["open", "judging", "closed"] as const).map((key) => {
                             const count = sorted.filter(
                                 (row) => row.status === key,
@@ -196,7 +196,7 @@ function ContestCard({ contest }: { contest: Contest }) {
                 <p className="mt-2 text-xs text-muted">
                     締切：{formatDate(contest.ends_at)}
                     {isOpen && remaining >= 0 && (
-                        <span className="ml-2 text-faint">あと{remaining}日</span>
+                        <span className="cl-left ml-2 text-faint">あと{remaining}日</span>
                     )}
                 </p>
 

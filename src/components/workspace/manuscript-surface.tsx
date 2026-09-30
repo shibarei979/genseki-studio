@@ -208,6 +208,8 @@ export default function ManuscriptSurface({
          *   max(下限, その人の値) にするために、ここで渡す。
          */
         ["--ms-font-size" as string]: `${scaled}px`,
+        /* 携帯の横書きで、1 行 24 字の大きさに掛ける倍率（mobile-workspace.css） */
+        ["--ms-zoom" as string]: String(zoom),
         ["--ms-line-height" as string]: String(
             LINE_HEIGHT_VALUE[settings.line_height],
         ),

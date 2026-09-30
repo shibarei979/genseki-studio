@@ -81,7 +81,7 @@ export default function MessagesClient({
   const unread = rows.filter(r => !r.is_read).length
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-6">
+    <main className="msg-main mx-auto max-w-3xl px-6 py-6">
       <div className="flex items-baseline gap-3">
         <h1 className="text-[18px] font-semibold text-ink">運営からのお知らせ</h1>
         {unread > 0 && (
@@ -112,7 +112,7 @@ export default function MessagesClient({
                 type="button"
                 onClick={() => void open(row)}
                 aria-expanded={openId === row.id}
-                className="flex w-full items-center gap-3 px-5 py-3.5 text-left hover:bg-canvas"
+                className="msg-row flex w-full items-center gap-3 px-5 py-3.5 text-left hover:bg-canvas"
               >
                 {/*
                  * 未読の印。
@@ -144,7 +144,7 @@ export default function MessagesClient({
               </button>
 
               {openId === row.id && (
-                <div className="border-t border-line px-5 py-4">
+                <div className="msg-body border-t border-line px-5 py-4">
                   <p className="whitespace-pre-wrap text-[13px] leading-[1.9] text-ink">
                     {row.body}
                   </p>
@@ -161,9 +161,9 @@ export default function MessagesClient({
                       <div
                         key={reply.id}
                         className={[
-                          'mt-3 rounded-lg px-3.5 py-2.5',
+                          'msg-reply mt-3 rounded-lg px-3.5 py-2.5',
                           reply.from_user_id
-                            ? 'ml-8 bg-forest-tint'
+                            ? 'is-mine ml-8 bg-forest-tint'
                             : 'mr-8 bg-canvas',
                         ].join(' ')}
                       >
@@ -180,19 +180,19 @@ export default function MessagesClient({
                   {/* 返信 */}
                   {userId && (
                     replyTo === row.id ? (
-                      <div className="mt-3">
+                      <div className="msg-form mt-3">
                         <textarea
                           value={replyBody}
                           onChange={e => setReplyBody(e.target.value)}
                           rows={3}
                           placeholder="返信を書く"
-                          className="w-full rounded-lg border border-line px-3 py-2 text-[13px] outline-none focus:border-forest"
+                          className="msg-input w-full rounded-lg border border-line px-3 py-2 text-[13px] outline-none focus:border-forest"
                         />
-                        <div className="mt-2 flex gap-2">
+                        <div className="msg-form-actions mt-2 flex gap-2">
                           <button
                             type="button"
                             onClick={() => { setReplyTo(null); setReplyBody('') }}
-                            className="rounded-lg border border-line px-3 py-1.5 text-[11px] text-muted hover:text-ink"
+                            className="msg-cancel rounded-lg border border-line px-3 py-1.5 text-[11px] text-muted hover:text-ink"
                           >
                             やめる
                           </button>
@@ -223,7 +223,7 @@ export default function MessagesClient({
                               setReplyTo(null)
                               setReplyBody('')
                             }}
-                            className="rounded-lg bg-forest px-4 py-1.5 text-[11px] font-medium text-white hover:bg-forest-dark disabled:opacity-50"
+                            className="msg-send rounded-lg bg-forest px-4 py-1.5 text-[11px] font-medium text-white hover:bg-forest-dark disabled:opacity-50"
                           >
                             {sending ? '送っています…' : '返信する'}
                           </button>
@@ -233,7 +233,7 @@ export default function MessagesClient({
                       <button
                         type="button"
                         onClick={() => { setReplyTo(row.id); setReplyBody('') }}
-                        className="mt-3 text-[11px] text-forest hover:underline"
+                        className="msg-open-reply mt-3 text-[11px] text-forest hover:underline"
                       >
                         返信する
                       </button>

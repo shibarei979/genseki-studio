@@ -1196,9 +1196,14 @@ body {
      * 見渡しやすいものがある。
      * 一律に縦へ倒すと、そこまで崩れる。
      */
+    /*
+     * ★ 1 列ではなく 2 列にする。
+     *   1 列だと作品の表紙が画面いっぱいの大きさになり、
+     *   小さな選択肢の並び（3 つの押し具など）も縦に長くなりすぎた。
+     */
     .grid-cols-3,
     .grid-cols-4 {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     /*
@@ -1268,16 +1273,33 @@ body {
  * そのまま収まる。
  * ------------------------------------------------------------
  */
-@media (max-width: 375px) {
+/*
+ * ★ 375px 以下（多くの Android・iPhone SE / mini）で全体を縮めるのはやめた。
+ *   押し具も文字も 92% に小さくなり、「押しにくい・小さい」の一番の原因だった。
+ *   はみ出しは html・body の overflow-x: hidden と、各画面の折り返しで受ける。
+ *
+ *   320px（SE 第 1 世代など）だけは、入りきらない画面が多いので少し縮める。
+ */
+@media (max-width: 340px) {
     body {
-        zoom: 0.92;
+        zoom: 0.9;
     }
 }
 
-/* さらに小さい端末（SE 第1世代 320px など）は、もう少し縮める */
-@media (max-width: 340px) {
-    body {
-        zoom: 0.85;
+@media (max-width: 1023px) {
+    /*
+     * ★ 入力欄の字は 16px 以上。
+     *   iPhone は 16px 未満の入力欄を押すと、画面を勝手に拡大する。
+     *   書いている途中で画面が動き、戻すのも手間だった。
+     */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    textarea,
+    select {
+        /*
+         * !important は付けない。書く画面の本文のように、
+         * 大きさを直に決めている所（style=）はそちらを優先する。
+         */
+        font-size: 16px;
     }
 }
 

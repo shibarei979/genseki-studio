@@ -48,7 +48,7 @@ export default function RoomsPanel({
     return (
         <div>
             {/* 何をする場所か */}
-            <section className="relative overflow-hidden rounded-2xl border border-line bg-surface">
+            <section className="rp-hero relative overflow-hidden rounded-2xl border border-line bg-surface">
                 {/*
                  * 部屋の絵を右に薄く敷く。
                  * 文字だけだと、どんな見た目の場所か伝わらない。
@@ -70,7 +70,7 @@ export default function RoomsPanel({
                     aria-hidden="true"
                 />
 
-                <div className="relative px-6 py-6">
+                <div className="rp-hero-in relative px-6 py-6">
                     <h2 className="flex items-center gap-2.5 text-[17px] font-semibold text-ink">
                         <span className="text-forest">
                             <DoorIcon />
@@ -78,17 +78,20 @@ export default function RoomsPanel({
                         執筆室
                     </h2>
 
-                    <p className="mt-3 max-w-[34em] text-[12.5px] leading-[2] text-muted">
+                    <p className="rp-hero-desc mt-3 max-w-[34em] text-[12.5px] leading-[2] text-muted">
                         ひとりで書く作業を、誰かがいる空間でやるための場所です。
-                        <br />
-                        話しかけるためではなく、「ほかにも書いている人がいる」と
-                        分かるためにあります。
+                        {/* 携帯では 1 文目だけにする（mobile-p7.css）。ボタンを上に寄せたい */}
+                        <span className="rp-hero-more">
+                            <br />
+                            話しかけるためではなく、「ほかにも書いている人がいる」と
+                            分かるためにあります。
+                        </span>
                     </p>
 
-                    <div className="mt-5 flex flex-wrap items-center gap-2">
+                    <div className="rp-hero-actions mt-5 flex flex-wrap items-center gap-2">
                         <Link
                             href="/rooms/new"
-                            className="flex items-center gap-2 rounded-lg bg-forest-dark px-5 py-2.5 text-[13px] font-medium text-white hover:opacity-90"
+                            className="rp-new flex items-center gap-2 rounded-lg bg-forest-dark px-5 py-2.5 text-[13px] font-medium text-white hover:opacity-90"
                         >
                             <PlusIcon />
                             部屋を立てる
@@ -115,7 +118,7 @@ export default function RoomsPanel({
              * 場所は「何をする場所か」の説明のすぐ下。
              * 一覧を見て「無い」と分かる前に目に入る。
              */}
-            <div className="mt-3 xl:hidden">
+            <div className="rp-code mt-3 xl:hidden">
                 <RoomCodeEntry />
             </div>
 
@@ -296,7 +299,7 @@ function RoomCard({ room, onDelete }: { room: WritingRoom; onDelete?: () => void
                         {room.description || "説明はありません"}
                     </span>
 
-                    <span className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-2.5 text-[11px] text-faint">
+                    <span className="rp-card-foot mt-3 flex items-center justify-between gap-2 border-t border-line pt-2.5 text-[11px] text-faint">
                         <span className="flex items-center gap-1.5">
                             <PeopleIcon />
                             上限 {room.capacity}人
@@ -311,7 +314,7 @@ function RoomCard({ room, onDelete }: { room: WritingRoom; onDelete?: () => void
                          * 数を偽って出すと、入った瞬間に誰もいなくて
                          * 「壊れている」と受け取られる。ここは席の数だけ出す。
                          */}
-                        <span className="flex items-center gap-1 text-forest">
+                        <span className="rp-enter flex items-center gap-1 text-forest">
                             <span>入る</span>
                             <span aria-hidden="true">›</span>
                         </span>

@@ -279,3 +279,42 @@
     background: var(--color-bg-card);
     border-left: 2px solid var(--color-brand-border);
 }
+
+/*
+ * ============================================================
+ * 携帯の横書きは、1 行 24 字を基本にする
+ *
+ * ★ パソコンで選んだ字の大きさ（16px など）のままだと、
+ *   携帯の幅では 1 行が 20 字ほどになり、紙の感じが出ない。
+ *   読む画面の「標準」と同じく、24 字で折り返す大きさにする。
+ *
+ * ★ 「大きくする／小さくする」の倍率はそのまま効かせる。
+ *
+ * ★ 左右の余白は 14px。原稿の紙の見た目（白い面）はそのまま。
+ * ============================================================
+ */
+/*
+ * ★ 幅は画面（100vw）ではなく、本文の欄の幅で測る（100cqw）。
+ *   まわりの余白と枠のぶん欄は画面より狭く、100vw だと 22 字で折り返していた。
+ *   cqw が使えない端末では、前の 100vw の式が効く。
+ * ★ 30px は左右の余白 28px と、はみ出さないための 2px。
+ * ★ 読むだけの見本（設定の画面）には掛けない。選んだ字の大きさが見えなくなる。
+ */
+@media (max-width: 1023px) {
+    .manuscript-surface:has(> textarea:not(.manuscript-vertical):not([readonly])) {
+        container-type: inline-size;
+    }
+
+    .manuscript-surface textarea:not(.manuscript-vertical):not([readonly]) {
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+        /*
+         * ★ 字の大きさは 20px（×拡大）までにする。
+         *   タブレットの幅でも 24 字に合わせると 28px を超え、大きすぎる。
+         *   携帯（〜480px ほど）は上限に届かないので 24 字のまま。
+         */
+        font-size: min(calc((100vw - 50px) / 24 * var(--ms-zoom, 1)), calc(20px * var(--ms-zoom, 1))) !important;
+        font-size: min(calc((100cqw - 30px) / 24 * var(--ms-zoom, 1)), calc(20px * var(--ms-zoom, 1))) !important;
+        letter-spacing: 0 !important;
+    }
+}

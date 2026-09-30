@@ -15,10 +15,11 @@ const navLinks = [
 export default function ContactPage() {
 
   return (
-    <div className="page-with-footer" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
+    /* m9-doc: 文字だけのページの携帯の見た目（styles/mobile-p9.css） */
+    <div className="page-with-footer m9-doc" style={{minHeight:'100vh',fontFamily:"'Noto Sans JP',sans-serif"}}>
       <Header />
 
-      <div style={{background:'var(--color-bg)',borderBottom:'1px solid var(--color-brand-border)',overflowX:'auto'}}>
+      <div className="m9-doc-tabs" style={{background:'var(--color-bg)',borderBottom:'1px solid var(--color-brand-border)',overflowX:'auto'}}>
         <div style={{maxWidth:860,margin:'0 auto',padding:'0 24px',display:'flex'}}>
           {navLinks.map(n => (
             <Link key={n.href} href={n.href}
@@ -30,7 +31,7 @@ export default function ContactPage() {
         </div>
       </div>
 
-      <div style={{maxWidth:720,margin:'0 auto',padding:'40px 24px 60px'}}>
+      <div className="m9-doc-body" style={{maxWidth:720,margin:'0 auto',padding:'40px 24px 60px'}}>
         <div style={{marginBottom:28}}>
           <h1 style={{fontSize:24,fontWeight:700,color:'var(--color-text)',marginBottom:4}}>お問い合わせ</h1>
           <p style={{fontSize:13,color:'var(--color-text-muted)'}}>ご不明な点はお気軽にお問い合わせください</p>
@@ -46,7 +47,7 @@ export default function ContactPage() {
               </div>
             ))}
           </div>
-          <div style={{display:'flex',gap:10,marginTop:10}}>
+          <div className="m9-doc-quick2" style={{display:'flex',gap:10,marginTop:10}}>
             <Link href="/faq" style={{fontSize:12,color:'var(--color-brand)',textDecoration:'none',border:'1px solid var(--color-tag-border)',borderRadius:8,padding:'4px 12px',background:'var(--color-bg)'}}>よくある質問</Link>
             <Link href="/help" style={{fontSize:12,color:'var(--color-brand)',textDecoration:'none',border:'1px solid var(--color-tag-border)',borderRadius:8,padding:'4px 12px',background:'var(--color-bg)'}}>ヘルプ・FAQ</Link>
           </div>

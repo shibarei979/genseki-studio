@@ -19,6 +19,7 @@ import ChapterStructure from "@/components/settings/chapter-structure";
 import PublishSettingsForm from "@/components/settings/publish-settings-form";
 import WorkInfoForm from "@/components/settings/work-info-form";
 import WorkspaceNav from "@/components/workspace/workspace-nav";
+import MobileWorkHeader from "@/components/workspace/mobile-work-header";
 import { useEpisodes } from "@/hooks/use-episodes";
 import { getRepository } from "@/lib/repository";
 import { formatNumber } from "@/lib/utils/text";
@@ -33,10 +34,13 @@ import type {
 
 type Section = "info" | "display" | "manuscript" | "publish" | "ai" | "log" | "chapters";
 
-const SECTIONS: { key: Section; label: string; isReady: boolean }[] = [
+/*
+ * short は携帯の札（横に流す）で使う短い名前。無ければ label をそのまま出す。
+ */
+const SECTIONS: { key: Section; label: string; short?: string; isReady: boolean }[] = [
     { key: "info", label: "基本情報", isReady: true },
-    { key: "publish", label: "公開・読者設定", isReady: true },
-    { key: "display", label: "表示設定", isReady: true },
+    { key: "publish", label: "公開・読者設定", short: "公開・読者", isReady: true },
+    { key: "display", label: "表示設定", short: "表示", isReady: true },
     { key: "chapters", label: "章の構成", isReady: true },
     { key: "manuscript", label: "インポート・バックアップ", isReady: true },
     { key: "log", label: "執筆ログ", isReady: true },
@@ -227,6 +231,14 @@ export default function SettingsClient({ workId }: Props) {
                 ]}
             />
 
+            {/* 携帯の上の段（‹・設定／作品名・投稿）。パソコンでは出さない */}
+            <MobileWorkHeader
+                workId={workId}
+                page="設定"
+                title={work.title}
+                unposted={episodes.filter((ep) => ep.is_published === false).length}
+            />
+
             {/*
              * 狭い画面では縦に積む。
              *
@@ -235,7 +247,11 @@ export default function SettingsClient({ workId }: Props) {
              * 広い画面は今までどおり横に並べる。
              */}
             <div className="flex flex-col gap-4 p-4 lg:flex-row">
-                <aside className="w-full shrink-0 lg:w-64">
+                {/*
+                  * 携帯では、この柱ごと出さない（mwr-desk）。
+                  * 上の段に戻る道があり、項目は下の札で選ぶため。
+                  */}
+                <aside className="mwr-desk w-full shrink-0 lg:w-64">
                     <WorkspaceNav workId={workId} current="settings" />
 
                     <div className="mt-4 rounded-lg border border-line bg-surface">
@@ -303,6 +319,27 @@ export default function SettingsClient({ workId }: Props) {
                         </nav>
                     </div>
                 </aside>
+
+                {/*
+                  * 携帯：項目を横に並べた札。押すとその項目に切り替わる。
+                  *
+                  * ★ 前は「ほかの項目」を押さないと、何があるか見えなかった。
+                  *   パソコンでは出さない（p8-set-chips は携帯でだけ見える）。
+                  */}
+                <nav className="p8-set-chips" aria-label="設定の項目">
+                    {SECTIONS.map((item) => (
+                        <button
+                            key={item.key}
+                            type="button"
+                            disabled={!item.isReady}
+                            aria-pressed={section === item.key}
+                            onClick={() => setSection(item.key)}
+                            className={section === item.key ? "is-on" : ""}
+                        >
+                            {item.short ?? item.label}
+                        </button>
+                    ))}
+                </nav>
 
                 <main className="min-w-0 flex-1">
                     {section === "info" && (

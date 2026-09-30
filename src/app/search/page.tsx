@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import { ROOT_ADMIN_EMAIL } from '@/types'
 import { GENRE_LEGACY_MATCH } from '@/types'
+import { genreColor } from '@/types'
 export const dynamic = 'force-dynamic'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
@@ -596,6 +597,19 @@ export default async function SearchPage({ searchParams }: Props) {
       <div className="main-layout sp-page" style={{maxWidth:1200,margin:'0 auto',padding:'24px 32px',display:'flex',gap:20,alignItems:'flex-start'}}>
         <div style={{flex:1,minWidth:0}}>
 
+          {/*
+            * 携帯だけ：ジャンルで開いたとき（/genre/◯◯ から来たときなど）、
+            * いちばん上にジャンルの帯を出す。何のジャンルを見ているかが分かるように。
+            * パソコンでは出さない（CSS）。
+            */}
+          {genre && (
+            <div className="sp-genre-band" style={{background:`linear-gradient(135deg, ${genreColor(genre)}, color-mix(in srgb, ${genreColor(genre)} 70%, #000))`}}>
+              <small>ジャンル</small>
+              <b>{genre}</b>
+              <span>{fmtNum(count)}作品</span>
+            </div>
+          )}
+
           <SearchForm
             defaultName={nameQ}
             defaultQ={q} defaultExclude={exclude} defaultGenre={genre}
@@ -606,6 +620,8 @@ export default async function SearchPage({ searchParams }: Props) {
             defaultPtMin={searchParams.ptMin || ''} defaultPtMax={searchParams.ptMax || ''}
           />
 
+          {/* 件数と「文字｜本」。携帯では 1 行に並べる（パソコンは今のまま 2 行） */}
+          <div className="sp-meta">
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,fontSize:13,color:'var(--color-text-muted)'}}>
             {hasSearch
               ? <span>検索結果：<strong style={{color:'var(--color-text)'}}>{fmtNum(count)}作品</strong></span>
@@ -644,6 +660,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 本
               </Link>
             </div>
+          </div>
           </div>
 
           {shelfView ? (
