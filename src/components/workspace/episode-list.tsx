@@ -23,7 +23,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import DeleteButton from "@/components/common/delete-button";
 import EpisodeStatusMark from "@/components/workspace/episode-status-mark";
 import { formatNumber } from "@/lib/utils/text";
 import type { Chapter, Episode } from "@/types";
@@ -95,6 +94,8 @@ export default function EpisodeList({
     const { ask, dialog: askDialog } = useAskText();
 
     const [draggingId, setDraggingId] = useState<string | null>(null);
+    /* 「⋯」を開いている話。confirm は削除の確かめ中 */
+    const [menuFor, setMenuFor] = useState<{ id: string; confirm: boolean } | null>(null);
     const [overId, setOverId] = useState<string | null>(null);
     /* ドラッグが乗っている章の見出し */
     const [overChapterId, setOverChapterId] = useState<string | null>(null);
@@ -445,66 +446,117 @@ export default function EpisodeList({
                     }
                     className="min-w-0 flex-1 text-left"
                 >
-                    <span className="block truncate text-[13px] text-ink">
+                    {/*
+                      * ★ 題名は 2 行まで出す（それでも長ければ … で止める）。
+                      *   部と章で入れ子にすると幅が狭くなり、1 行だと 2 文字しか見えなかった。
+                      */}
+                    <span className="block text-[13px] leading-snug text-ink [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden break-all">
                         {formatEpisodeLabel(episode)}
                     </span>
-                    <span className="mt-0.5 block text-xs text-faint">
+                    <span className="mt-0.5 block whitespace-nowrap text-xs text-faint">
                         {formatNumber(episode.char_count)}文字
                     </span>
                 </button>
-
-                {onRenameEpisode && (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            void (async () => {
-                                const next = await ask(
-                                    `${episode.ep_number}話目の名前`,
-                                    episode.title ?? "",
-                                );
-                                if (next === null) return;
-                                onRenameEpisode(episode.id, next.trim());
-                            })();
-                        }}
-                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-faint opacity-0 hover:text-forest group-hover:opacity-100"
-                    >
-                        名前
-                    </button>
-                )}
-
-                {/*
-                  * 章から出す。
-                  *
-                  * つまんで落とす道も作ったが、
-                  * スマホや、つまむのが不得手な人には届かない。
-                  * 章に入っている話にだけ出す。
-                  */}
-                {episode.chapter_id && onAssignChapter && (
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onAssignChapter(episode.id, null);
-                        }}
-                        title="この話を章から出す"
-                        className="shrink-0 rounded border border-line px-1.5 py-0.5 text-[10px] text-faint hover:border-forest hover:text-forest"
-                    >
-                        章から出す
-                    </button>
-                )}
 
                 <EpisodeStatusMark
                     status={episode.status}
                     onToggle={() => onToggleStatus(episode)}
                 />
 
-                <DeleteButton
-                    label={formatEpisodeLabel(episode)}
-                    note="この話の本文と履歴を削除します。元に戻せません。"
-                    onDelete={() => onDelete(episode.id)}
-                    isFloating
-                    size="small"
-                />
+                {/*
+                  * ★ 「名前」「章から出す」「削除」は「⋯」にまとめる。
+                  *   前は行に並べていて（見えない押し具も幅を取っていた）、
+                  *   部と章で入れ子にすると題名が 2 文字しか見えなかった。
+                  */}
+                <span className="relative shrink-0">
+                    <button
+                        type="button"
+                        aria-label="この話の操作"
+                        aria-haspopup="menu"
+                        aria-expanded={menuFor?.id === episode.id}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setMenuFor((now) => (now?.id === episode.id ? null : { id: episode.id, confirm: false }));
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-faint hover:bg-canvas hover:text-ink"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
+                        </svg>
+                    </button>
+                    {menuFor?.id === episode.id && (
+                        <>
+                            <span className="fixed inset-0 z-30" onClick={() => setMenuFor(null)} aria-hidden="true" />
+                            <span
+                                role="menu"
+                                className="absolute right-0 top-full z-40 mt-1 block w-44 overflow-hidden rounded-lg border border-line bg-surface text-left shadow-lg"
+                            >
+                                {menuFor.confirm ? (
+                                    <span className="block px-3 py-2.5">
+                                        <span className="block text-[12px] font-medium text-ink">この話を削除しますか？</span>
+                                        <span className="mt-1 block text-[10.5px] leading-relaxed text-muted">本文と履歴も消えます。元に戻せません。</span>
+                                        <span className="mt-2 flex gap-1.5">
+                                            <button type="button" onClick={() => setMenuFor({ id: episode.id, confirm: false })} className="flex-1 rounded border border-line py-1.5 text-[11px] text-muted">
+                                                やめる
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setMenuFor(null);
+                                                    onDelete(episode.id);
+                                                }}
+                                                className="flex-1 rounded bg-[var(--color-danger)] py-1.5 text-[11px] font-medium text-white"
+                                            >
+                                                削除する
+                                            </button>
+                                        </span>
+                                    </span>
+                                ) : (
+                                    <>
+                                        {onRenameEpisode && (
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                onClick={() => {
+                                                    setMenuFor(null);
+                                                    void (async () => {
+                                                        const next = await ask(`${episode.ep_number}話目の名前`, episode.title ?? "");
+                                                        if (next === null) return;
+                                                        onRenameEpisode(episode.id, next.trim());
+                                                    })();
+                                                }}
+                                                className="block w-full px-3 py-2.5 text-left text-[12.5px] text-ink hover:bg-canvas"
+                                            >
+                                                名前を変える
+                                            </button>
+                                        )}
+                                        {episode.chapter_id && onAssignChapter && (
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                onClick={() => {
+                                                    setMenuFor(null);
+                                                    onAssignChapter(episode.id, null);
+                                                }}
+                                                className="block w-full border-t border-line px-3 py-2.5 text-left text-[12.5px] text-ink hover:bg-canvas"
+                                            >
+                                                章から出す
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            onClick={() => setMenuFor({ id: episode.id, confirm: true })}
+                                            className="block w-full border-t border-line px-3 py-2.5 text-left text-[12.5px] text-[var(--color-danger)] hover:bg-canvas"
+                                        >
+                                            削除する
+                                        </button>
+                                    </>
+                                )}
+                            </span>
+                        </>
+                    )}
+                </span>
             </li>
         );
     }
