@@ -2,8 +2,8 @@
 import ShioriMark, { SHIORI_COLORS } from '@/components/common/shiori-mark'
 import { illustBox } from '@/config/illust-size'
 import { splitIntoSentences } from '@/lib/utils/sentences'
-import { useState, useRef, useEffect, useMemo } from 'react'
-import ReadingSettings, { Settings } from '@/components/novel/episode/reading-settings'
+import { useState, useRef, useEffect, useMemo, type ReactNode, type CSSProperties } from 'react'
+import ReadingSettings, { PAPERS, PAPER_DEFAULT, Settings } from '@/components/novel/episode/reading-settings'
 import { splitRuby } from '@/lib/utils/ruby'
 import { buildNoteIndex, markAnnotations, tokensToHtml } from '@/lib/utils/annotation'
 import { NoteContext, NoteLayer, NotesList, NoteStyles, renderNoteTokens, useNoteContext } from '@/components/novel/episode/notes'
@@ -38,9 +38,14 @@ interface Props {
   marks?: { id: string; sentence: number; text: string; color: string }[]
   onMark?: (idx: number, raw: string) => void
   onOpenMark?: (m: { id: string; sentence: number; text: string; color: string }) => void
+  /**
+   * 音声で聴く（作り置きした音声がある話だけ）。
+   * ★ 渡されたときだけ「聴く β」を出し、押すと段の下に出す。
+   */
+  voice?: ReactNode
 }
 
-const DEFAULTS: Settings = { font: 'serif', illustSize: 'wide', useRecommend: true, fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal' }
+const DEFAULTS: Settings = { font: 'serif', illustSize: 'wide', useRecommend: true, fontSize: 16, lineHeight: 2.1, writingMode: 'horizontal', paper: PAPER_DEFAULT }
 
 
 /**
@@ -410,8 +415,20 @@ function MobileIllustVertical({ url, isAi, size }: { url: string; isAi?: boolean
   )
 }
 
-export default function MobileEpisodeBody({ marking, onToggleMarking, markColor = 'yellow', onPickColor, marks = [], onMark, onOpenMark, illusts = [], illustUrl, illustIsAi, title, body, preface, afterword, authorName, recommendedMode = null }: Props) {
+export default function MobileEpisodeBody({ marking, onToggleMarking, markColor = 'yellow', onPickColor, marks = [], onMark, onOpenMark, illusts = [], illustUrl, illustIsAi, title, body, preface, afterword, authorName, recommendedMode = null, voice }: Props) {
   const [isVertical, setIsVertical] = useState(false)
+  /* 下から出る設定の窓（色 / Aa）。下の帯の Aa からも開く（gk-reading-open） */
+  const [sheet, setSheet] = useState<null | 'color' | 'text'>(null)
+  /* 聴く β の再生の欄を出しているか */
+  const [voiceOpen, setVoiceOpen] = useState(false)
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const which = (event as CustomEvent<string>).detail === 'color' ? 'color' : 'text'
+      setSheet(which)
+    }
+    window.addEventListener('gk-reading-open', onOpen)
+    return () => window.removeEventListener('gk-reading-open', onOpen)
+  }, [])
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
 
   /*
@@ -454,7 +471,8 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
       const width = window.innerWidth
       if (width === lastWidth) return
       lastWidth = width
-      setContainerHeight(window.innerHeight - 140)
+      /* ★ 上ヘッダー・話の題の帯・道具の段・下の帯のぶんを引く（見本の形にして増えた） */
+      setContainerHeight(Math.max(320, window.innerHeight - 236))
     }
     fit()
     window.addEventListener('resize', fit)
@@ -548,6 +566,25 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
     </div>
   ) : null
 
+  /*
+   * 紙の色。本文の入れ物の中だけに効かせる。
+   * ★ 文字・薄い文字・線の色もそろえて変える（中の部品は CSS の変数で色を取っているため）。
+   */
+  const paper = PAPERS[settings.paper ?? PAPER_DEFAULT] ?? PAPERS[PAPER_DEFAULT]
+  const paperStyle = {
+    background: paper.bg,
+    color: paper.text,
+    '--color-bg-card': paper.bg,
+    '--color-bg': paper.sub,
+    '--color-text': paper.text,
+    '--color-text-muted': paper.muted,
+    '--color-text-faint': paper.muted,
+    '--color-brand-light': paper.line,
+    '--color-brand-border': paper.line,
+    /* 道具の段の押し具の地。夜は暗く、それ以外は白 */
+    '--mrt-btn': (settings.paper ?? PAPER_DEFAULT) === 'night' ? '#2a3136' : '#ffffff',
+  } as CSSProperties
+
   // ===== 縦書き =====
   if (isVertical) {
 
@@ -565,50 +602,30 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
 
     return (
       <NoteContext.Provider value={noteCtx}>
-      <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
-        <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-          <>
-          {marking && onPickColor && (
-            <div style={{display:'flex',alignItems:'center',gap:3,marginRight:5}}>
-              {(Object.keys(SHIORI_COLORS) as (keyof typeof SHIORI_COLORS)[]).map(key => (
-                <button key={key} type="button"
-                  onClick={()=>onPickColor(key)}
-                  title={SHIORI_COLORS[key].label}
-                  aria-label={SHIORI_COLORS[key].label}
-                  style={{width:20,height:20,borderRadius:'50%',cursor:'pointer',
-                    background:SHIORI_COLORS[key].paper,
-                    border: markColor === key
-                      ? `2.5px solid ${SHIORI_COLORS[key].line}`
-                      : '1px solid var(--color-brand-border)'}}/>
-              ))}
-            </div>
-          )}
-          {onToggleMarking && (
-            <button type="button" onClick={onToggleMarking}
-              title="文に栞をはさみます"
-              style={{display:'flex',alignItems:'center',gap:4,marginRight:6,
-                padding:'5px 10px',borderRadius:999,
-                border:'1px solid var(--color-brand-border)',
-                background: marking ? 'var(--color-brand)' : 'var(--color-bg-card)',
-                color: marking ? 'var(--base-color-1)' : 'var(--color-text-muted)',
-                fontSize:11,cursor:'pointer'}}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="1.8"
-                strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
-              </svg>
-              {marking ? 'やめる' : '栞'}
-            </button>
-          )}
-          <ReadingSettings onFullscreen={()=>router.push(`${pathname}/read`)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
-          </>
-        </div>
+      <div className="mep" style={paperStyle}>
+        <ToolRow
+          marking={!!marking}
+          onToggleMarking={onToggleMarking}
+          markColor={markColor}
+          onPickColor={onPickColor}
+          onColor={()=>setSheet('color')}
+          onText={()=>setSheet('text')}
+          hasVoice={!!voice}
+          voiceOpen={voiceOpen}
+          onVoice={()=>setVoiceOpen(v=>!v)}
+        />
+        {voice && voiceOpen && <div className="mrt-voice">{voice}</div>}
+        <ReadingSettings
+          onFullscreen={()=>router.push(`${pathname}/read`)}
+          onChange={handleSettingsChange}
+          isMobile={true}
+          recommendedMode={recommendedMode}
+          external={{ open: sheet !== null, section: sheet ?? 'text', onClose: ()=>setSheet(null) }}
+        />
 
         {preface && (
-          <div style={{padding:'10px 14px',background:'var(--color-bg)',borderBottom:'1px solid var(--color-brand-light)'}}>
-            <div style={{fontSize:13,color:'var(--color-text-muted)',lineHeight:1.9,padding:'8px 12px',background:'var(--color-bg-card)',borderLeft:'3px solid var(--color-brand-border)',borderRadius:4,whiteSpace:'pre-wrap'}}>
-              {preface}
-            </div>
+          <div className="mep-pre" style={{margin:'12px 20px 4px'}}>
+            {preface}
           </div>
         )}
 
@@ -802,46 +819,28 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
   // ===== 横書き =====
   return (
     <NoteContext.Provider value={noteCtx}>
-    <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,overflow:'hidden',marginBottom:16}}>
-      <div style={{padding:'8px 12px',borderBottom:'1px solid var(--color-brand-light)',background:'var(--color-bg)',display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-        <>
-          {marking && onPickColor && (
-            <div style={{display:'flex',alignItems:'center',gap:3,marginRight:5}}>
-              {(Object.keys(SHIORI_COLORS) as (keyof typeof SHIORI_COLORS)[]).map(key => (
-                <button key={key} type="button"
-                  onClick={()=>onPickColor(key)}
-                  title={SHIORI_COLORS[key].label}
-                  aria-label={SHIORI_COLORS[key].label}
-                  style={{width:20,height:20,borderRadius:'50%',cursor:'pointer',
-                    background:SHIORI_COLORS[key].paper,
-                    border: markColor === key
-                      ? `2.5px solid ${SHIORI_COLORS[key].line}`
-                      : '1px solid var(--color-brand-border)'}}/>
-              ))}
-            </div>
-          )}
-          {onToggleMarking && (
-            <button type="button" onClick={onToggleMarking}
-              title="文に栞をはさみます"
-              style={{display:'flex',alignItems:'center',gap:4,marginRight:6,
-                padding:'5px 10px',borderRadius:999,
-                border:'1px solid var(--color-brand-border)',
-                background: marking ? 'var(--color-brand)' : 'var(--color-bg-card)',
-                color: marking ? 'var(--base-color-1)' : 'var(--color-text-muted)',
-                fontSize:11,cursor:'pointer'}}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="1.8"
-                strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
-              </svg>
-              {marking ? 'やめる' : '栞'}
-            </button>
-          )}
-          <ReadingSettings onFullscreen={()=>router.push(`${pathname}/read`)} onChange={handleSettingsChange} isMobile={true} recommendedMode={recommendedMode}/>
-          </>
-      </div>
+    <div className="mep" style={paperStyle}>
+      <ToolRow
+          marking={!!marking}
+          onToggleMarking={onToggleMarking}
+          markColor={markColor}
+          onPickColor={onPickColor}
+          onColor={()=>setSheet('color')}
+          onText={()=>setSheet('text')}
+          hasVoice={!!voice}
+          voiceOpen={voiceOpen}
+          onVoice={()=>setVoiceOpen(v=>!v)}
+        />
+        {voice && voiceOpen && <div className="mrt-voice">{voice}</div>}
+        <ReadingSettings
+          onFullscreen={()=>router.push(`${pathname}/read`)}
+          onChange={handleSettingsChange}
+          isMobile={true}
+          recommendedMode={recommendedMode}
+          external={{ open: sheet !== null, section: sheet ?? 'text', onClose: ()=>setSheet(null) }}
+        />
 
-      <div style={{padding:'20px 16px 28px'}}>
+      <div style={{padding:'18px 22px 28px'}}>
         {/*
           * 話ごとの挿絵。
           *
@@ -872,11 +871,12 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
           </div>
         )}
 
-        <h1 style={{fontFamily, fontSize:settings.fontSize+2, fontWeight:700, color:'var(--color-text)', textAlign:'center', marginBottom:20, lineHeight:1.6}}>
+        {/* ★ 題は明朝で真ん中（見本どおり）。前書きは左に線 */}
+        <h1 className="mep-title" style={{fontSize:settings.fontSize+5}}>
           {title}
         </h1>
         {preface && (
-          <div style={{fontSize:settings.fontSize-2, color:'var(--color-text-muted)', lineHeight:1.9, padding:'10px 12px', background:'var(--color-bg)', borderLeft:'3px solid var(--color-brand-border)', borderRadius:4, marginBottom:20, whiteSpace:'pre-wrap'}}>
+          <div className="mep-pre" style={{fontSize:Math.max(12, settings.fontSize-2), margin:'4px 0 20px'}}>
             {preface}
           </div>
         )}
@@ -956,5 +956,73 @@ export default function MobileEpisodeBody({ marking, onToggleMarking, markColor 
       {NotesBlock}
     </div>
     </NoteContext.Provider>
+  )
+}
+
+/**
+ * 携帯の読む画面の道具の段（見本どおり 1 段）。
+ *
+ *   栞 ｜ 色 ｜ Aa ｜ 聴く β（音声がある話だけ）
+ *
+ * ★ 前は右に「栞」「読書設定」「？」が小さく並んでいた。
+ *   読書設定の中身を、よく使う「色」と「Aa（文字）」に分けて、押す所を大きくした。
+ */
+function ToolRow({
+  marking, onToggleMarking, markColor, onPickColor, onColor, onText, hasVoice, voiceOpen, onVoice,
+}: {
+  marking: boolean
+  onToggleMarking?: () => void
+  markColor: string
+  onPickColor?: (color: string) => void
+  onColor: () => void
+  onText: () => void
+  hasVoice: boolean
+  voiceOpen: boolean
+  onVoice: () => void
+}) {
+  return (
+    <>
+      <div className="mrt">
+        {onToggleMarking && (
+          <button type="button" onClick={onToggleMarking} className={marking ? 'is-on' : undefined} title="文に栞をはさみます">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+            </svg>
+            {marking ? 'やめる' : '栞'}
+          </button>
+        )}
+        <button type="button" onClick={onColor} title="紙の色">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z" />
+            <circle cx="7.5" cy="11" r="1.2" fill="currentColor" /><circle cx="10.5" cy="7.2" r="1.2" fill="currentColor" /><circle cx="15" cy="7.4" r="1.2" fill="currentColor" />
+          </svg>
+          色
+        </button>
+        <button type="button" onClick={onText} title="文字の設定" className="mrt-aa">Aa</button>
+        {hasVoice && (
+          <button type="button" onClick={onVoice} className={voiceOpen ? 'is-on' : undefined} title="音声で聴く">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>
+            聴く β
+          </button>
+        )}
+      </div>
+      {marking && onPickColor && (
+        <div className="mrt-colors" aria-label="栞の色">
+          <span>栞の色</span>
+          {(Object.keys(SHIORI_COLORS) as (keyof typeof SHIORI_COLORS)[]).map(key => (
+            <button key={key} type="button"
+              onClick={()=>onPickColor(key)}
+              title={SHIORI_COLORS[key].label}
+              aria-label={SHIORI_COLORS[key].label}
+              style={{width:24,height:24,borderRadius:'50%',cursor:'pointer',
+                background:SHIORI_COLORS[key].paper,
+                border: markColor === key
+                  ? `2.5px solid ${SHIORI_COLORS[key].line}`
+                  : '1px solid var(--color-brand-border)'}}/>
+          ))}
+          <small>文を押すと栞をはさめます</small>
+        </div>
+      )}
+    </>
   )
 }

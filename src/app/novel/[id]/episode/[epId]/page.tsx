@@ -40,6 +40,7 @@ import QuoteFromSelection from '@/components/novel/episode/quote-from-selection'
 import CopyAttribution from '@/components/novel/episode/copy-attribution'
 import VoicePlayer from '@/components/novel/episode/voice-player'
 import TypoReportButton from '@/components/novel/episode/typo-report-button'
+import MobileEpisodeHead from '@/components/novel/episode/mobile-episode-head'
 import ValidReadTracker from '@/components/novel/episode/valid-read-tracker'
 import ReadProgressTracker from '@/components/reader/read-progress-tracker'
 import { QuoteProvider } from '@/components/novel/episode/quote-context'
@@ -476,13 +477,11 @@ export default async function EpisodePage({ params, searchParams }: Props) {
 
       {/* ===== モバイルレイアウト ===== */}
       <div className="mobile-only" style={{padding:'12px 16px 0'}}>
-        <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:10,display:'flex',alignItems:'center',gap:4,overflow:'hidden'}}>
-          <Link href="/" style={{color:'var(--color-brand)',textDecoration:'none',flexShrink:0}}>ホーム</Link>
-          <span style={{flexShrink:0}}>›</span>
-          <Link href={`/novel/${params.id}`} style={{color:'var(--color-brand)',textDecoration:'none',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{novel.title}</Link>
-          <span style={{flexShrink:0}}>›</span>
-          <span style={{color:'var(--color-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{episode.title}</span>
-        </div>
+        {/*
+          * ★ 話の題の帯（見本どおり）。サイトの上ヘッダーはそのまま残し、その下に置く。
+          *   前はパンくず（ホーム › 作品 › 話）だった。
+          */}
+        <MobileEpisodeHead novelId={params.id} novelTitle={novel.title} episodeTitle={episode.title}/>
 
         {/*
           * ★ 前の話・目次・次の話は、画面の下の帯（MobileReadBar）へ移した。
@@ -503,13 +502,11 @@ export default async function EpisodePage({ params, searchParams }: Props) {
             次の話は {new Date(upcomingEp!.scheduled_at!).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 頃の予定です
           </div>
         )}
-        {hasVoice && (
-          <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/>
-        )}
-
         {/* 挿絵は EpisodeBody の中で、縦書きの流れに沿って出す */}
+        {/* ★ 音声で聴くは、道具の段の「聴く β」を押したときに、段の下に出す */}
 
-        <EpisodeBody novelId={params.id} episodeId={params.epId} illusts={illusts} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}/>
+        <EpisodeBody novelId={params.id} episodeId={params.epId} illusts={illusts} illustUrl={episode.illust_url} illustIsAi={episode.illust_is_ai} title={episode.title} body={episode.body} preface={episode.preface} afterword={episode.afterword} authorName={author?.display_name} recommendedMode={((novel as { recommended_mode?: string }).recommended_mode as 'vertical' | 'horizontal' | undefined) ?? null}
+          voice={hasVoice ? <VoicePlayer episodeId={params.epId} isLoggedIn={Boolean(user)}/> : undefined}/>
 
         <div className="mrb-endbtns" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:14,flexWrap:'wrap'}}>
           <EpisodeLikeButton episodeId={params.epId} userId={user?.id||null} initialLiked={epLiked} initialCount={epLikeCount??0}/>

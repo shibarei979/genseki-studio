@@ -3,7 +3,7 @@
  * 原石航路 Studio
  * 携帯：話を読む画面の下の帯
  *
- *   ‹ 前の話 ｜ 目次 ｜ 次の話 ›
+ *   ‹ 前の話 ｜ 目次 ｜ Aa ｜ 次の話 ›
  *
  * ★ 前は画面の上に並んでいて、読み終わってから押しに戻る必要があった。
  *   親指の届く下に置く。
@@ -94,6 +94,15 @@ export default function MobileReadBar({
                         <circle cx="4.5" cy="18" r="1.2" fill="currentColor" />
                     </svg>
                 </Link>
+                {/* ★ 文字の設定（Aa）。読みながら親指で開ける（本文の上の Aa と同じ窓） */}
+                <button
+                    type="button"
+                    className="mrb-sq mrb-aa"
+                    aria-label="文字の設定"
+                    onClick={() => window.dispatchEvent(new CustomEvent("gk-reading-open", { detail: "text" }))}
+                >
+                    Aa
+                </button>
                 {nextHref ? (
                     <Link href={nextHref} className="mrb-nb is-pri">次の話 ›</Link>
                 ) : (

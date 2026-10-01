@@ -46,9 +46,25 @@ export interface Settings {
   writingModeChosen?: boolean
   /** 注釈の印（点線と ※番号）を出すか。既定は出す。切っても話の終わりの一覧は残る */
   showNotes?: boolean
+  /** 紙の色（携帯の読む画面）。white / cream / sepia / night。既定は cream */
+  paper?: string
 }
 
-const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'wide', useRecommend: true, lineHeight: 2.1, writingMode: 'horizontal' }
+/**
+ * 紙の色。
+ *
+ * ★ 携帯の読む画面の「色」で選ぶ。本文の入れ物の中だけに効かせる（頁の外枠は変えない）。
+ * ★ 色の名前は、文字・薄い文字・線もそろえて変える（夜だけ白い字が要る）。
+ */
+export const PAPERS: Record<string, { label: string; bg: string; sub: string; text: string; muted: string; line: string }> = {
+  white: { label: '白',     bg: '#ffffff', sub: '#f7f8f6', text: '#1f2421', muted: '#5c6560', line: '#e6e9e7' },
+  cream: { label: '生成り', bg: '#fbfaf6', sub: '#f4f1e8', text: '#222222', muted: '#6a645a', line: '#ece9df' },
+  sepia: { label: 'セピア', bg: '#f3ead6', sub: '#ebe0c7', text: '#3b3024', muted: '#7a6a55', line: '#e0d3b6' },
+  night: { label: '夜',     bg: '#1d2226', sub: '#252b30', text: '#d9dcd6', muted: '#9aa3a0', line: '#343b41' },
+}
+export const PAPER_DEFAULT = 'cream'
+
+const DEFAULTS: Settings = { font: 'serif', fontSize: 16, illustSize: 'wide', useRecommend: true, lineHeight: 2.1, writingMode: 'horizontal', paper: 'cream' }
 const STORAGE_KEY = 'reading_settings'
 
 
@@ -114,10 +130,20 @@ interface Props {
    * 読む人が選ぶ邪魔をしない。
    */
   recommendedMode?: 'vertical' | 'horizontal' | null
+  /**
+   * 外から開ける（携帯の読む画面の「色」「Aa」と、下の帯の「Aa」）。
+   *
+   * ★ 渡されたときは、自分の押し具（読書設定）を出さず、下から出る窓で開く。
+   *   section が color なら紙の色だけ、text なら文字まわり（向き・書体・大きさ・行間…）。
+   */
+  external?: { open: boolean; section: 'color' | 'text'; onClose: () => void }
 }
 
-export default function ReadingSettings({ onChange, isMobile = false, showWritingMode = false, recommendedMode = null, onFullscreen }: Props) {
-  const [open, setOpen] = useState(false)
+export default function ReadingSettings({ onChange, isMobile = false, showWritingMode = false, recommendedMode = null, onFullscreen, external }: Props) {
+  const [ownOpen, setOpen] = useState(false)
+  const open = external ? external.open : ownOpen
+  const section = external ? external.section : 'text'
+  const close = () => (external ? external.onClose() : setOpen(false))
   /* 30 書体は Pro */
   const { fonts } = useMemberFeatures()
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
@@ -172,7 +198,8 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
   })
 
   return (
-    <div style={{position:'relative', display:'inline-flex', alignItems:'center', gap:6}}>
+    <div style={{position:'relative', display: external ? 'contents' : 'inline-flex', alignItems:'center', gap:6}}>
+      {!external && (<>
       <button
         onClick={() => setOpen(o => !o)}
         title="読書設定"
@@ -191,16 +218,44 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
       </button>
       {/* 何ができるかの説明。押し具の中ではなく横に置く */}
       <HelpTip topic="reading-settings" />
+      </>)}
 
       {open && (
         <>
-          <div style={{position:'fixed',inset:0,zIndex:98}} onClick={()=>setOpen(false)}/>
-          <div style={{
+          <div className={external ? 'rs-dim' : undefined} style={{position:'fixed',inset:0,zIndex:98}} onClick={close}/>
+          <div className={external ? 'rs-sheet' : undefined} role={external ? 'dialog' : undefined} aria-label={external ? (section === 'color' ? '紙の色' : '文字の設定') : undefined} style={external ? undefined : {
             position:'absolute', top:'calc(100% + 8px)', right:0,
             background:'var(--color-bg-card)', border:'1px solid var(--color-brand-border)', borderRadius:12,
             boxShadow:'0 4px 20px rgba(0,0,0,0.12)',
             padding:'16px', minWidth:'min(300px, calc(100vw - 32px))', maxHeight:'calc(100vh - 120px)', overflowY:'auto', zIndex:99,
           }}>
+            {external && (
+              <div className="rs-sheet-h">
+                <b>{section === 'color' ? '紙の色' : '文字の設定'}</b>
+                {section === 'text' && <HelpTip topic="reading-settings" />}
+                <button type="button" onClick={close} aria-label="とじる">とじる</button>
+              </div>
+            )}
+            {/*
+              * 紙の色（外から「色」で開いたときだけ）。
+              * ★ 本文の入れ物の中だけに効く。
+              */}
+            {external && section === 'color' && (
+              <div className="rs-papers">
+                {Object.entries(PAPERS).map(([key, one]) => {
+                  const on = (settings.paper ?? PAPER_DEFAULT) === key
+                  return (
+                    <button key={key} type="button" onClick={()=>update({paper:key})} aria-pressed={on}
+                      className={on ? 'is-on' : undefined}
+                      style={{background:one.bg,color:one.text,borderColor:on?'var(--color-brand)':one.line}}>
+                      <span style={{fontFamily:"var(--font-serif), 'Noto Serif JP', serif"}}>あ</span>
+                      <small style={{color:one.muted}}>{one.label}</small>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {(!external || section === 'text') && (<>
             {/* 縦書き/横書き（モバイル または showWritingMode時） */}
             {/*
               * 全画面で読む。
@@ -210,7 +265,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
               */}
             {onFullscreen && (
               <button
-                onClick={()=>{ setOpen(false); onFullscreen() }}
+                onClick={()=>{ close(); onFullscreen() }}
                 style={{
                   display:'flex', alignItems:'center', justifyContent:'center', gap:6,
                   width:'100%', marginBottom:14, padding:'9px',
@@ -354,6 +409,7 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
                 <button onClick={()=>update({showNotes:false})} style={btnBase(settings.showNotes === false)}>出さない</button>
               </div>
             </div>
+            </>)}
           </div>
         </>
       )}

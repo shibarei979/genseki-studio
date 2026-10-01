@@ -35,6 +35,8 @@ interface Props {
    * それを伝える手立てが要る。
    */
   recommendedMode?: 'vertical' | 'horizontal' | null
+  /** 携帯：「聴く β」で出す音声の欄（作り置きの音声がある話だけ渡す） */
+  voice?: React.ReactNode
   /**
    * 話の中の挿絵。
    *
@@ -876,7 +878,7 @@ function VerticalIllust({ url, isAi, size }: { url: string; isAi?: boolean; size
   )
 }
 
-export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null }: Props) {
+export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIsAi, illustSize, title, body, preface, afterword, authorName, episodeId, onQuote, recommendedMode = null, voice }: Props) {
   /*
    * 栞を置く状態か。
    *
@@ -979,7 +981,8 @@ export default function EpisodeBody({ novelId, illusts = [], illustUrl, illustIs
           onOpenMark={setAskingMark}
           illusts={illusts} illustUrl={illustUrl} illustIsAi={illustIsAi} title={title} body={body} preface={preface} afterword={afterword} authorName={authorName}
           /* ★ 作者のすすめる向きを、携帯にも渡す（前は渡しておらず、推奨の印が出なかった） */
-          recommendedMode={recommendedMode}/>
+          recommendedMode={recommendedMode}
+          voice={voice}/>
         {askingMark && (
           <div
             onClick={()=>setAskingMark(null)}
