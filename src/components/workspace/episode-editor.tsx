@@ -564,14 +564,40 @@ export default function EpisodeEditor({
         return surfaceRef.current?.querySelector("textarea") ?? null;
     }
 
-    /** 本文を差し替えて、カーソルを pos に置く */
+    /*
+     * 本文の欄の送り位置。
+     *
+     * ★ iPhone の Safari は、本文を差し替えると本文の欄を先頭まで送り戻す。
+     *   カーソルは戻しても画面は戻らず、ルビや記号を入れるたびに一番上へ飛んでいた。
+     *   入れる前の位置を覚えておき、差し替えたあとに戻す。
+     *   ルビ・傍点・注釈の窓を開いているあいだは、開いた時の位置を使う。
+     */
+    const keptScrollRef = useRef<number | null>(null);
+
+    function restoreScroll(area: HTMLTextAreaElement, top: number | null) {
+        if (top === null) return;
+        area.scrollTop = top;
+        /* Safari はカーソルを置いた後にもう一度送ることがあるので、描いた後にも戻す */
+        window.requestAnimationFrame(() => {
+            area.scrollTop = top;
+            window.setTimeout(() => {
+                area.scrollTop = top;
+            }, 60);
+        });
+    }
+
+    /** 本文を差し替えて、カーソルを pos に置く（画面の送り位置はそのまま） */
     function replaceBodyAndPlace(next: string, pos: number) {
+        const before = getArea();
+        const top = keptScrollRef.current ?? (before ? before.scrollTop : null);
+        keptScrollRef.current = null;
         setBody(next);
         window.setTimeout(() => {
             const area = getArea();
             if (!area) return;
-            area.focus();
+            area.focus({ preventScroll: true });
             area.setSelectionRange(pos, pos);
+            restoreScroll(area, top);
         }, 0);
     }
 
@@ -593,6 +619,8 @@ export default function EpisodeEditor({
      */
     function openMark(kind: MarkKind) {
         const area = getArea();
+        /* 窓を開いた時の送り位置を覚える（付けたあと・やめたあとに戻す） */
+        keptScrollRef.current = area ? area.scrollTop : null;
         const start = area?.selectionStart ?? range.start;
         const end = area?.selectionEnd ?? range.end;
 
@@ -802,11 +830,15 @@ export default function EpisodeEditor({
                     onApply={applyMark}
                     onCancel={() => {
                         const at = mark.caret;
+                        const top = keptScrollRef.current;
+                        keptScrollRef.current = null;
                         setMark(null);
                         window.setTimeout(() => {
                             const area = getArea();
-                            area?.focus();
-                            area?.setSelectionRange(at, at);
+                            if (!area) return;
+                            area.focus({ preventScroll: true });
+                            area.setSelectionRange(at, at);
+                            restoreScroll(area, top);
                         }, 0);
                     }}
                 />
