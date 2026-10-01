@@ -804,4 +804,151 @@
     html:has(.mw-key) {
         scroll-padding-bottom: calc(64px + var(--kb-extra, 0px));
     }
+
+    /*
+     * ★ 書いているあいだは、話の題の帯（‹ 第○章 ∨ ・投稿）の所に、帯と入れ替えて道具の段を出す。
+     *   iPhone の Safari はキーボードの上に住所の札と「∧ ∨ ✓」の帯を重ねて出し、下に置くと隠れるため。
+     *
+     *   見た目は話の題の帯にそろえる。
+     *     高さ 52px・白地・下に細い線（帯と同じ）
+     *     右はしは「完了」。投稿の押し具と同じ場所・同じ形（紺の丸い札）
+     *     押し具は帯に収まる高さ（36px）に詰める
+     *   入れ替わったときに目が迷わないよう、すっと出す。
+     */
+    .mw-key.is-inline {
+        position: relative;
+        left: auto;
+        right: auto;
+        z-index: 2;
+        height: 52px;
+        flex-shrink: 0;
+        padding: 0 6px 0 8px;
+        background: #fff;
+        border-top: none;
+        border-bottom: 1px solid var(--color-line, #dcdfda);
+        animation: mw-swap .16s ease-out both;
+    }
+    .mw-key.is-inline .mw-k {
+        height: 36px;
+        min-width: 42px;
+        padding: 0 9px;
+        border-radius: 9px;
+        font-size: 12.5px;
+    }
+    .mw-key.is-inline .mw-k.is-serif {
+        font-size: 14px;
+    }
+    .mw-key.is-inline .mw-k.is-mark {
+        background: var(--color-forest-tint, #eef4f8);
+        font-weight: 700;
+    }
+    .mw-key.is-inline .mw-key-sep {
+        height: 22px;
+    }
+    .mw-key.is-inline .mw-key-fixed {
+        align-items: center;
+        gap: 4px;
+        padding-left: 4px;
+        margin-left: 2px;
+    }
+    .mw-key.is-inline .mw-key-fixed .mw-iconbtn {
+        width: 36px;
+        height: 36px;
+    }
+    .mw-key-done {
+        height: 36px;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: var(--color-forest, #1f4e6b);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 800;
+        flex-shrink: 0;
+        box-shadow: 0 3px 8px rgba(31, 78, 107, .3);
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ルビ・傍点・注釈を付ける窓も、帯の所に出す */
+    .mw-mark.is-inline {
+        position: relative;
+        left: auto;
+        right: auto;
+        z-index: 2;
+        flex-shrink: 0;
+        padding: 10px 12px 12px;
+        border-top: none;
+        border-bottom: 1px solid var(--color-line, #dcdfda);
+        border-radius: 0;
+        box-shadow: none;
+        animation: mw-swap .16s ease-out both;
+    }
+
+    /* ルビ・傍点・注釈をまとめた札 */
+    .mw-key-group {
+        display: flex;
+        flex-shrink: 0;
+        height: 36px;
+        border-radius: 10px;
+        border: 1px solid var(--color-forest-line, #b4cede);
+        background: var(--color-forest-tint, #eef4f8);
+        overflow: hidden;
+    }
+    .mw-key-group button {
+        padding: 0 10px;
+        font-size: 12.5px;
+        font-weight: 800;
+        color: var(--color-forest, #1f4e6b);
+        background: transparent;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .mw-key-group button + button {
+        border-left: 1px solid var(--color-forest-line, #b4cede);
+    }
+    .mw-key-group button:active {
+        background: #dbe8f1;
+    }
+    /* 記号は詰めて、1 画面に多く並べる */
+    .mw-key.is-inline .mw-key-scroll {
+        gap: 5px;
+        padding-right: 14px;
+    }
+    .mw-key.is-inline .mw-k:not(.is-mark) {
+        min-width: 36px;
+        padding: 0 7px;
+    }
+    .mw-key.is-inline .mw-k:active {
+        background: #eef2f5;
+    }
+    /* 完了の札の保存の点 */
+    .mw-key-done {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .mw-key-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #7fd3a4;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, .25);
+    }
+    .mw-key-dot.is-busy {
+        background: #cfd8de;
+        animation: mw-dot 1s ease-in-out infinite;
+    }
+    @keyframes mw-dot { 50% { opacity: .35; } }
+
+    /* 本文を書いているあいだは、題の欄を畳む */
+    .mw-title.is-folded {
+        display: none;
+    }
+
+    @keyframes mw-swap {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .mw-key.is-inline, .mw-mark.is-inline, .mw-key-dot.is-busy { animation: none; }
+    }
+
 }

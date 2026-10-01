@@ -53,27 +53,20 @@ export function useIsMobile(): boolean {
  *   キーボードの上の段は、ここに置く。
  * ------------------------------------------------------------ */
 /*
- * ★ iPhone の新しい Safari（iOS 26〜）は、キーボードの上に「∧ ∨ ✓」の帯を浮かせて出す。
- *   この帯は、見えている部分（visualViewport）の外ではなく、頁の上に重なる。
- *   そのため、見えている部分の下端に置いた道具の段が、帯の下に完全に隠れていた。
- *   その版の Safari のときだけ、帯の高さぶん上に持ち上げる。
- *   （前の版は帯がキーボードの一部なので、足すと隙間が空く。だから版で分ける）
+ * ★ iPhone の新しい Safari（iOS 26〜）は、キーボードの上に「gensekikoro.com」の住所の札と
+ *   「∧ ∨ ✓」の帯を浮かせて出す（どちらも Safari のもので、頁の側からは消せない）。
+ *
+ *   実機の画面で測ると、見えている部分（visualViewport）の下端は、住所の札のすぐ上で終わっていた。
+ *   つまり見えている部分の下端に置けば、Safari の札や帯には重ならない。
+ *   前は帯のぶん（56px）さらに持ち上げていたため、画面の途中に浮いて見えていた。足すぶんは 0 にする。
+ *   （どの版でも「見えている部分の下端に置く」だけでよい）
  */
-const IOS_FLOATING_BAR = 56;
-
 function floatingBarExtra(): number {
-    if (typeof navigator === "undefined") return 0;
-    const ua = navigator.userAgent;
-    const isIOS = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-    if (!isIOS) return 0;
-    /* Safari 本体だけ（Chrome・Firefox の iOS 版は別の作り） */
-    if (/CriOS|FxiOS|EdgiOS/.test(ua)) return 0;
-    const version = Number((ua.match(/Version\/(\d+)/) ?? [])[1] ?? 0);
-    return version >= 26 ? IOS_FLOATING_BAR : 0;
+    return 0;
 }
 
-export function useKeyboard(): { isOpen: boolean; inset: number; anchor: number | null } {
-    const [state, setState] = useState<{ isOpen: boolean; inset: number; anchor: number | null }>({ isOpen: false, inset: 0, anchor: null });
+export function useKeyboard(): { isOpen: boolean; inset: number; anchor: number | null; viewTop: number | null } {
+    const [state, setState] = useState<{ isOpen: boolean; inset: number; anchor: number | null; viewTop: number | null }>({ isOpen: false, inset: 0, anchor: null, viewTop: null });
 
     useEffect(() => {
         const vv = window.visualViewport;
@@ -118,10 +111,19 @@ export function useKeyboard(): { isOpen: boolean; inset: number; anchor: number 
              *   固定した部品の基準（頁の窓の上端）から見た、見えている部分の下端に置く。
              */
             const anchor = isOpen && vv ? Math.round(vv.offsetTop + vv.height - extra) : null;
+            /*
+             * ★ 見えている部分の上端（頁の窓の上端から）。
+             *   書いているあいだは、道具の段をここ（画面の一番上）に出す。
+             *   iPhone の Safari は、キーボードの上に住所の札と「∧ ∨ ✓」の帯を重ねて出し、
+             *   下に置いた段がどうしても隠れるため。上には何も重ならない。
+             */
+            const viewTop = isOpen ? Math.round(vv ? vv.offsetTop : 0) : null;
             document.documentElement.style.setProperty("--kb-extra", `${isOpen ? extra : 0}px`);
             /* 同じなら描き直さない（見えている部分が動くたびに呼ばれる） */
             setState((prev) =>
-                prev.isOpen === isOpen && prev.inset === inset && prev.anchor === anchor ? prev : { isOpen, inset, anchor },
+                prev.isOpen === isOpen && prev.inset === inset && prev.anchor === anchor && prev.viewTop === viewTop
+                    ? prev
+                    : { isOpen, inset, anchor, viewTop },
             );
         }
 
@@ -177,7 +179,8 @@ export function useNoFocusZoom(active: boolean) {
  * anchor（見えている部分の下端）があれば、そこに下端を合わせる（translate で自分の高さぶん上げる）。
  * 無ければ、これまでどおり画面の下からの距離で置く。
  */
-function placeAt(bottom: number, anchor: number | null): React.CSSProperties {
+function placeAt(bottom: number, anchor: number | null, top: number | null = null): React.CSSProperties {
+    if (top !== null) return { top, bottom: "auto" };
     if (anchor === null) return { bottom };
     return { top: anchor, bottom: "auto", translate: "0 -100%" };
 }
@@ -384,6 +387,9 @@ export function MobileBottomBar({
 export function MobileKeyBar({
     bottom,
     anchor = null,
+    top = null,
+    inline = false,
+    saving = false,
     onRuby,
     onEmphasis,
     onNote,
@@ -395,6 +401,12 @@ export function MobileKeyBar({
     bottom: number;
     /** 見えている部分の下端（頁の窓の上端から）。あればこちらで置く */
     anchor?: number | null;
+    /** 見えている部分の上端。あれば画面の一番上に出す（書いているあいだ） */
+    top?: number | null;
+    /** 話の題の帯の所に、帯と入れ替えて出す（固定しない） */
+    inline?: boolean;
+    /** 保存中か（完了の札に小さな点で出す） */
+    saving?: boolean;
     onRuby: () => void;
     onEmphasis: () => void;
     onNote: () => void;
@@ -415,12 +427,27 @@ export function MobileKeyBar({
     ];
 
     return (
-        <div className="mw-key" style={placeAt(bottom, anchor)} onMouseDown={keep}>
+        <div
+            className={`mw-key${inline ? " is-inline" : top !== null ? " is-top" : ""}`}
+            style={inline ? undefined : placeAt(bottom, anchor, top)}
+            onMouseDown={keep}
+        >
             <div className="mw-key-scroll">
-                <button type="button" className="mw-k is-mark" onClick={onRuby}>ルビ</button>
-                <button type="button" className="mw-k is-mark" onClick={onEmphasis}>傍点</button>
-                <button type="button" className="mw-k is-mark" onClick={onNote}>注釈</button>
-                <span className="mw-key-sep" aria-hidden="true" />
+                {inline ? (
+                    /* ★ ルビ・傍点・注釈は 1 つの札にまとめる（同じ仲間だと一目で分かり、幅も詰まる） */
+                    <span className="mw-key-group" role="group" aria-label="文字に付ける">
+                        <button type="button" onClick={onRuby}>ルビ</button>
+                        <button type="button" onClick={onEmphasis}>傍点</button>
+                        <button type="button" onClick={onNote}>注釈</button>
+                    </span>
+                ) : (
+                    <>
+                        <button type="button" className="mw-k is-mark" onClick={onRuby}>ルビ</button>
+                        <button type="button" className="mw-k is-mark" onClick={onEmphasis}>傍点</button>
+                        <button type="button" className="mw-k is-mark" onClick={onNote}>注釈</button>
+                        <span className="mw-key-sep" aria-hidden="true" />
+                    </>
+                )}
                 {marks.map((one) => (
                     <button
                         key={one.label}
@@ -436,9 +463,18 @@ export function MobileKeyBar({
                 <button type="button" className="mw-iconbtn" onClick={onUndo} disabled={!canUndo} aria-label="戻す">
                     <MwIcon name="undo" />
                 </button>
-                <button type="button" className="mw-iconbtn" onClick={onClose} aria-label="キーボードを閉じる">
-                    <MwIcon name="kbd" size={24} />
-                </button>
+                {inline ? (
+                    /* ★ 投稿の押し具と同じ場所・同じ形。押すとキーボードをしまい、話の題の帯に戻る */
+                    <button type="button" className="mw-key-done" onClick={onClose} aria-label={saving ? "完了（保存中）" : "完了（保存済み）"}>
+                        {/* ★ 書いているあいだも保存の様子が分かるように。緑＝保存済み、灰の点滅＝保存中 */}
+                        <i className={`mw-key-dot${saving ? " is-busy" : ""}`} aria-hidden="true" />
+                        完了
+                    </button>
+                ) : (
+                    <button type="button" className="mw-iconbtn" onClick={onClose} aria-label="キーボードを閉じる">
+                        <MwIcon name="kbd" size={24} />
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -506,6 +542,8 @@ export type MarkKind = "ruby" | "dot" | "note";
 export function MobileMarkPanel({
     bottom,
     anchor = null,
+    top = null,
+    inline = false,
     kind,
     onKind,
     base,
@@ -521,6 +559,8 @@ export function MobileMarkPanel({
 }: {
     bottom: number;
     anchor?: number | null;
+    top?: number | null;
+    inline?: boolean;
     kind: MarkKind;
     onKind: (kind: MarkKind) => void;
     base: string;
@@ -538,8 +578,8 @@ export function MobileMarkPanel({
 
     return (
         <div
-            className="mw-mark"
-            style={placeAt(bottom, anchor)}
+            className={`mw-mark${inline ? " is-inline" : top !== null ? " is-top" : ""}`}
+            style={inline ? undefined : placeAt(bottom, anchor, top)}
             /*
              * ★ 押しても本文からフォーカスを外さない（キーボードの上の段と同じ）。
              *   外れるとキーボードがしまわれ、付けたあと書き続けられない。

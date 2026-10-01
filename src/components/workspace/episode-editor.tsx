@@ -770,7 +770,60 @@ export default function EpisodeEditor({
               * ★ パソコンの 2 段（題・保存・通し読み… と 道具の並び）は、
               *   携帯では隠す（mw-desk）。道具は下の段と「道具」の中へ移した。
               */}
-            {isMobile && !isFocusMode && (
+            {/*
+              * ★ 話の題の帯の所に、いまの用事を出す。
+              *   ふだん          話の題の帯（‹ 第○章 ∨ ・投稿）
+              *   書いているあいだ  道具の段（ルビ・傍点・注釈・記号・戻す・完了）
+              *   ルビなどを付ける  付ける窓
+              *
+              *   前はキーボードのすぐ上に出していたが、iPhone の Safari は
+              *   キーボードの上に住所の札と「∧ ∨ ✓」の帯を重ねて出すため、段が隠れていた。
+              *   話の題の帯の所なら、何にも重ならない。
+              */}
+            {isMobile && (mark ? (
+                <MobileMarkPanel
+                    inline
+                    bottom={0}
+                    kind={mark.kind}
+                    onKind={(kind) => setMark({ ...mark, kind })}
+                    base={body.slice(mark.caret - mark.len, mark.caret)}
+                    canGrow={
+                        mark.caret - mark.len > 0 &&
+                        body[mark.caret - mark.len - 1] !== "\n" &&
+                        mark.len < 20
+                    }
+                    canShrink={mark.len > stepFwd(body, mark.caret - mark.len)}
+                    /* 字を変えたら、先に入れた読みは合わなくなるので消す */
+                    onGrow={() => setMark({ ...mark, len: mark.len + stepBack(body, mark.caret - mark.len), reading: mark.auto ? "" : mark.reading, auto: false })}
+                    onShrink={() => setMark({ ...mark, len: mark.len - stepFwd(body, mark.caret - mark.len), reading: mark.auto ? "" : mark.reading, auto: false })}
+                    reading={mark.reading}
+                    onReading={(value) => setMark({ ...mark, reading: value })}
+                    autoFilled={mark.auto}
+                    onApply={applyMark}
+                    onCancel={() => {
+                        const at = mark.caret;
+                        setMark(null);
+                        window.setTimeout(() => {
+                            const area = getArea();
+                            area?.focus();
+                            area?.setSelectionRange(at, at);
+                        }, 0);
+                    }}
+                />
+            ) : showKeyBar ? (
+                <MobileKeyBar
+                    inline
+                    bottom={0}
+                    saving={saveTone === "busy"}
+                    onRuby={() => openMark("ruby")}
+                    onEmphasis={() => openMark("dot")}
+                    onNote={() => openMark("note")}
+                    onInsert={insertPair}
+                    onUndo={handleUndo}
+                    canUndo={canUndo}
+                    onClose={() => getArea()?.blur()}
+                />
+            ) : !isFocusMode ? (
                 <MobileEditorHeader
                     title={title}
                     saveLabel={saveLabel}
@@ -780,7 +833,7 @@ export default function EpisodeEditor({
                     unposted={unpostedCount}
                     onOpenList={() => onOpenList?.()}
                 />
-            )}
+            ) : null)}
 
             {/*
              * 上の帯。
@@ -1253,7 +1306,8 @@ export default function EpisodeEditor({
                         onBlur={() => setIsTitleFocused(false)}
                         aria-label="話のタイトル"
                         placeholder="話の題を入れてください"
-                        className={`mw-title${title.trim() ? "" : " is-empty"}`}
+                        /* ★ 本文を書いているあいだは題の欄を畳む（キーボードの上に見える行を 1 行でも増やす） */
+                        className={`mw-title${title.trim() ? "" : " is-empty"}${showKeyBar ? " is-folded" : ""}`}
                     />
                 )}
                 {illustPlacingId ? (
@@ -1318,52 +1372,6 @@ export default function EpisodeEditor({
                     onWrite={writeOn}
                     onTools={() => setIsSheetOpen(true)}
                     onSettings={() => router.push(`/workspace/${episode.work_id}/settings`)}
-                />
-            )}
-
-            {showKeyBar && (
-                <MobileKeyBar
-                    bottom={keyboard.inset}
-                    anchor={keyboard.anchor}
-                    onRuby={() => openMark("ruby")}
-                    onEmphasis={() => openMark("dot")}
-                    onNote={() => openMark("note")}
-                    onInsert={insertPair}
-                    onUndo={handleUndo}
-                    canUndo={canUndo}
-                    onClose={() => getArea()?.blur()}
-                />
-            )}
-
-            {isMobile && mark && (
-                <MobileMarkPanel
-                    bottom={keyboard.inset}
-                    anchor={keyboard.anchor}
-                    kind={mark.kind}
-                    onKind={(kind) => setMark({ ...mark, kind })}
-                    base={body.slice(mark.caret - mark.len, mark.caret)}
-                    canGrow={
-                        mark.caret - mark.len > 0 &&
-                        body[mark.caret - mark.len - 1] !== "\n" &&
-                        mark.len < 20
-                    }
-                    canShrink={mark.len > stepFwd(body, mark.caret - mark.len)}
-                    /* 字を変えたら、先に入れた読みは合わなくなるので消す */
-                    onGrow={() => setMark({ ...mark, len: mark.len + stepBack(body, mark.caret - mark.len), reading: mark.auto ? "" : mark.reading, auto: false })}
-                    onShrink={() => setMark({ ...mark, len: mark.len - stepFwd(body, mark.caret - mark.len), reading: mark.auto ? "" : mark.reading, auto: false })}
-                    reading={mark.reading}
-                    onReading={(value) => setMark({ ...mark, reading: value })}
-                    autoFilled={mark.auto}
-                    onApply={applyMark}
-                    onCancel={() => {
-                        const at = mark.caret;
-                        setMark(null);
-                        window.setTimeout(() => {
-                            const area = getArea();
-                            area?.focus();
-                            area?.setSelectionRange(at, at);
-                        }, 0);
-                    }}
                 />
             )}
 
