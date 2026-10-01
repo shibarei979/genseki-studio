@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { freePointsOf, spendFreePoints } from "@/lib/points";
 import {
     PAID_BY_POINTS,
+    ALL_IN_LINES,
     POINT_PRICE,
-    allPerks,
     listPlans,
     liveSubscriptionOf,
     startSubscription,
@@ -49,9 +49,8 @@ async function anchorPlan() {
 }
 
 async function view(userId: string) {
-    const [anchor, perks, live, points] = await Promise.all([
+    const [anchor, live, points] = await Promise.all([
         anchorPlan(),
-        allPerks(),
         liveSubscriptionOf(userId),
         freePointsOf(userId),
     ]);
@@ -65,8 +64,8 @@ async function view(userId: string) {
                   {
                       id: anchor.id,
                       name: ALL_IN_NAME,
-                      blurb: "これまでのサブスクの特典が、すべて使えます。",
-                      perks: [...new Set(perks.map((perk) => perk.note).filter(Boolean))],
+                      blurb: "資料の追加の機能がすべて開き、回数に上限のある機能は上限がなくなります。",
+                      perks: ALL_IN_LINES,
                   },
               ]
             : [],
@@ -75,7 +74,7 @@ async function view(userId: string) {
                   id: live.id,
                   planId: live.plan_id,
                   planName: live.note === PAID_BY_POINTS ? ALL_IN_NAME : live.plan.name,
-                  perks: [...new Set(live.perks.map((perk) => perk.note).filter(Boolean))],
+                  perks: live.note === PAID_BY_POINTS ? ALL_IN_LINES : live.perks.map((perk) => perk.note).filter(Boolean),
                   status: live.status,
                   currentEnd: live.current_end,
                   cancelAtPeriodEnd: live.cancel_at_period_end,

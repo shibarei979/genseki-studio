@@ -155,26 +155,66 @@ export async function listPlans(): Promise<
 /**
  * ポイント払いのサブスク（全部入り）の特典。
  *
- * ★ 800pt で、これまでの売り物の特典がすべて使える。
- *   どの売り物の特典も 1 つにまとめ、同じ合言葉どうしは大きい数を採る。
- * ★ 無料ポイントの特典だけは入れない。
- *   800pt 払って、ポイントがまた戻ってくると、払いの意味がなくなる。
+ * ★ 800pt で、すべての特典が使える。
+ *   ・資料の追加の機能（関係図の囲み・報告書・画像づくり など）がすべて開く
+ *   ・回数に上限のある機能は、上限なし（数 0 ＝ 無制限。各 *-quota.ts と同じ決まり）
+ *   ・広告なし
+ * ★ 売り物の表に何が入っているかに関わらず、ここで決めた中身を持つ。
+ *   表にここに無い合言葉が足されたときも、上限なしで持つ。
+ * ★ 無料ポイントは配らない（800pt 払って、ポイントが戻ってくると払う意味がなくなる）。
  */
-export async function allPerks(): Promise<Perk[]> {
-    const admin = createAdminClient();
-    const { data } = await admin
-        .from("plan_perks")
-        .select("*")
-        .order("sort", { ascending: true });
+const ALL_IN_REFS = [
+    "graph_group",
+    "entry_report",
+    "version_keep",
+    "fonts",
+    "ai_check",
+    "image_monthly",
+    "analytics_pro",
+    "scan_full",
+    "scan_latest",
+];
 
-    const byKey = new Map<string, Perk>();
-    for (const perk of (data ?? []) as Perk[]) {
-        if (perk.kind === "free_points") continue;
-        const key = `${perk.kind}:${perk.ref ?? ""}`;
-        const had = byKey.get(key);
-        if (!had || perk.amount > had.amount) byKey.set(key, perk);
+/** 画面に出す、全部入りの中身（並べる順） */
+export const ALL_IN_LINES = [
+    "広告なし",
+    "資料：関係図の囲みと、よけて回る線",
+    "資料：報告書の形で見る",
+    "資料の画像づくり：上限なし",
+    "本文から資料を集める：全文も最新も上限なし",
+    "AI 誤字脱字・表記揺れチェックと語彙集",
+    "読む・書くで 30 書体",
+    "版の履歴を 1 話 200 版まで残す",
+    "ダッシュボードの詳しい分析",
+];
+
+function synthPerk(kind: PerkKind, ref: string | null, sort: number): Perk {
+    return {
+        id: `all-in:${kind}:${ref ?? ""}`,
+        plan_id: "all-in",
+        kind,
+        amount: 0,
+        ref,
+        note: "",
+        sort,
+        first_period_only: false,
+    };
+}
+
+export async function allPerks(): Promise<Perk[]> {
+    const out: Perk[] = [synthPerk("no_ads", null, 0)];
+    ALL_IN_REFS.forEach((ref, index) => out.push(synthPerk("limit", ref, index + 1)));
+
+    /* 表にだけある合言葉も、上限なしで持つ */
+    const admin = createAdminClient();
+    const { data } = await admin.from("plan_perks").select("kind, ref");
+    const known = new Set(ALL_IN_REFS);
+    for (const row of (data ?? []) as { kind: string; ref: string | null }[]) {
+        if (row.kind !== "limit" || !row.ref || known.has(row.ref)) continue;
+        known.add(row.ref);
+        out.push(synthPerk("limit", row.ref, out.length));
     }
-    return [...byKey.values()];
+    return out;
 }
 
 /** いま生きている契約 */
