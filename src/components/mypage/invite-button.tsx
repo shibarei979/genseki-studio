@@ -34,25 +34,33 @@ export default function InviteButton() {
     const [entry, setEntry] = useState("");
     const [entryMsg, setEntryMsg] = useState("");
     const [entryBusy, setEntryBusy] = useState(false);
+    /** 読み込めなかったときの理由（札は出したまま、中で知らせる） */
+    const [failed, setFailed] = useState("");
+    const [tries, setTries] = useState(0);
 
     useEffect(() => {
         let alive = true;
         void (async () => {
             try {
                 const response = await fetch("/api/invite", { cache: "no-store" });
-                if (!response.ok) return;
-                const next = (await response.json()) as Summary;
+                if (response.status === 401) return; /* 入っていない人には出さない */
+                const next = (await response.json().catch(() => null)) as (Summary & { error?: string }) | null;
                 if (!alive) return;
+                if (!response.ok || !next || !next.code) {
+                    setFailed(next?.error ?? `読み込めませんでした（${response.status}）`);
+                    return;
+                }
+                setFailed("");
                 setData(next);
                 if (next.rewardedNow) window.dispatchEvent(new Event("gk-points-changed"));
             } catch {
-                /* 読めなくても、ほかは出す */
+                if (alive) setFailed("繋がりませんでした");
             }
         })();
         return () => {
             alive = false;
         };
-    }, []);
+    }, [tries]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -63,7 +71,25 @@ export default function InviteButton() {
         return () => window.removeEventListener("keydown", onKey);
     }, [isOpen]);
 
-    if (!data || !data.code) return null;
+    /* 読み込めなかったとき：札は出して、押すと読み直す */
+    if (!data || !data.code) {
+        if (!failed) return null;
+        return (
+            <button type="button" className="lsb inv-b" onClick={() => setTries((n) => n + 1)} title={failed}>
+                <span className="inv-ic" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="9" cy="8" r="3.2" />
+                        <path d="M3 19c.6-3.2 3-5 6-5s5.4 1.8 6 5" />
+                        <path d="M18 8v6M15 11h6" />
+                    </svg>
+                </span>
+                <span className="lsb-t">
+                    <b>友だち招待</b>
+                    <small>{failed}（押すと読み直す）</small>
+                </span>
+            </button>
+        );
+    }
 
     const url = `${window.location.origin}/?invite=${data.code}`;
     const text = `原石航路で小説を読んだり書いたりしています。このリンクから登録して1話読むと、招待した人と登録した人の両者に無料ポイント${data.points}ptずつ届きます。`;

@@ -50,14 +50,22 @@ export default function PlanButton() {
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState("");
     const [confirmCancel, setConfirmCancel] = useState(false);
+    /** 読み込めなかったときの理由（札は出したまま、中で知らせる） */
+    const [failed, setFailed] = useState("");
 
     const load = useCallback(async () => {
         try {
             const response = await fetch("/api/member/subscription", { cache: "no-store" });
-            if (!response.ok) return;
-            setData((await response.json()) as View);
+            if (response.status === 401) return; /* 入っていない人には出さない */
+            const next = (await response.json().catch(() => null)) as (View & { error?: string }) | null;
+            if (!response.ok || !next || !Array.isArray(next.plans)) {
+                setFailed(next?.error ?? `読み込めませんでした（${response.status}）`);
+                return;
+            }
+            setFailed("");
+            setData(next);
         } catch {
-            /* 読めなくても、ほかは出す */
+            setFailed("繋がりませんでした");
         }
     }, []);
 
@@ -109,11 +117,27 @@ export default function PlanButton() {
         }
     }
 
-    if (!data) return null;
-    /* 出しているプランが無く、入ってもいないときは札を出さない */
-    if (!data.current && data.plans.length === 0) return null;
+    /* 読み込めなかったとき：札は出して、押すと読み直す */
+    if (!data) {
+        if (!failed) return null;
+        return (
+            <button type="button" className="lsb sub-b" onClick={() => void load()} title={failed}>
+                <span className="sub-ic" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 8l4 3 5-6 5 6 4-3-2 11H5z" />
+                    </svg>
+                </span>
+                <span className="lsb-t">
+                    <b>サブスク</b>
+                    <small>{failed}（押すと読み直す）</small>
+                </span>
+            </button>
+        );
+    }
 
     const current = data.current;
+    /* 出しているプランがまだ無い（管理画面で月のプランを公開すると入れるようになる） */
+    const notYet = !current && data.plans.length === 0;
     const short = data.points < data.price;
 
     return (
@@ -131,10 +155,12 @@ export default function PlanButton() {
                             ? current.cancelAtPeriodEnd || current.byPoints
                                 ? `${day(current.currentEnd)}まで`
                                 : `${current.planName}　入っています`
-                            : `${data.price}pt で 1 か月`}
+                            : notYet
+                              ? "準備中です"
+                              : `${data.price}pt で 1 か月`}
                     </small>
                 </span>
-                <span className="lsb-n sub-n">{current ? "会員" : "入る"}</span>
+                {!notYet && <span className="lsb-n sub-n">{current ? "会員" : "入る"}</span>}
             </button>
 
             {isOpen && createPortal(
@@ -145,6 +171,7 @@ export default function PlanButton() {
                             <button type="button" onClick={close} aria-label="とじる">×</button>
                         </div>
 
+                        {!notYet && (
                         <p className="sub-note">
                             いまは <strong>無料ポイント {data.price}pt</strong> で 1 か月入れます。
                             <br />
@@ -152,6 +179,7 @@ export default function PlanButton() {
                             <br />
                             続けたいときは、終わったあとにもう一度入ってください。
                         </p>
+                        )}
                         <p className="sub-have">
                             手持ち <strong>{data.points.toLocaleString()}</strong> pt
                         </p>
@@ -251,6 +279,8 @@ export default function PlanButton() {
                                     </>
                                 )}
                             </div>
+                        ) : notYet ? (
+                            <p className="sub-msg">いまは入れるプランがありません。準備ができたら、ここから入れます。</p>
                         ) : (
                             <ul className="sub-plans">
                                 {data.plans.map((plan) => (

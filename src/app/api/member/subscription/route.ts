@@ -73,7 +73,14 @@ export async function GET() {
     const user = await me();
     if (!user) return NextResponse.json({ error: "入っていません" }, { status: 401 });
 
-    return NextResponse.json(await view(user.id));
+    try {
+        return NextResponse.json(await view(user.id));
+    } catch (caught) {
+        return NextResponse.json(
+            { error: caught instanceof Error ? caught.message : "読めません" },
+            { status: 500 },
+        );
+    }
 }
 
 export async function POST(request: Request) {
