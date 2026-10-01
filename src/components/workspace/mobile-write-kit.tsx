@@ -72,8 +72,8 @@ function floatingBarExtra(): number {
     return version >= 26 ? IOS_FLOATING_BAR : 0;
 }
 
-export function useKeyboard(): { isOpen: boolean; inset: number } {
-    const [state, setState] = useState({ isOpen: false, inset: 0 });
+export function useKeyboard(): { isOpen: boolean; inset: number; anchor: number | null } {
+    const [state, setState] = useState<{ isOpen: boolean; inset: number; anchor: number | null }>({ isOpen: false, inset: 0, anchor: null });
 
     useEffect(() => {
         const vv = window.visualViewport;
@@ -110,9 +110,19 @@ export function useKeyboard(): { isOpen: boolean; inset: number } {
                     (active as HTMLElement).isContentEditable);
             const isOpen = typing && (gap > 120 || shrunk > 120);
             const inset = isOpen ? gap + extra : 0;
+            /*
+             * ★ 置く場所は「見えている部分の上端から」決める（anchor）。
+             *   画面の下からの距離（inset）で決めると、新しい iPhone の Safari では
+             *   キーボードを出したときに窓の高さの値（innerHeight）も変わるため、
+             *   少し足りずに帯に重なったり、画面の途中まで浮いたりしていた。
+             *   固定した部品の基準（頁の窓の上端）から見た、見えている部分の下端に置く。
+             */
+            const anchor = isOpen && vv ? Math.round(vv.offsetTop + vv.height - extra) : null;
             document.documentElement.style.setProperty("--kb-extra", `${isOpen ? extra : 0}px`);
             /* 同じなら描き直さない（見えている部分が動くたびに呼ばれる） */
-            setState((prev) => (prev.isOpen === isOpen && prev.inset === inset ? prev : { isOpen, inset }));
+            setState((prev) =>
+                prev.isOpen === isOpen && prev.inset === inset && prev.anchor === anchor ? prev : { isOpen, inset, anchor },
+            );
         }
 
         tell();
@@ -160,6 +170,16 @@ export function useNoFocusZoom(active: boolean) {
             meta.setAttribute("content", before);
         };
     }, [active]);
+}
+
+/**
+ * キーボードの上に出す部品の置き場所。
+ * anchor（見えている部分の下端）があれば、そこに下端を合わせる（translate で自分の高さぶん上げる）。
+ * 無ければ、これまでどおり画面の下からの距離で置く。
+ */
+function placeAt(bottom: number, anchor: number | null): React.CSSProperties {
+    if (anchor === null) return { bottom };
+    return { top: anchor, bottom: "auto", translate: "0 -100%" };
 }
 
 /* ------------------------------------------------------------
@@ -363,6 +383,7 @@ export function MobileBottomBar({
  * ------------------------------------------------------------ */
 export function MobileKeyBar({
     bottom,
+    anchor = null,
     onRuby,
     onEmphasis,
     onNote,
@@ -372,6 +393,8 @@ export function MobileKeyBar({
     onClose,
 }: {
     bottom: number;
+    /** 見えている部分の下端（頁の窓の上端から）。あればこちらで置く */
+    anchor?: number | null;
     onRuby: () => void;
     onEmphasis: () => void;
     onNote: () => void;
@@ -392,7 +415,7 @@ export function MobileKeyBar({
     ];
 
     return (
-        <div className="mw-key" style={{ bottom }} onMouseDown={keep}>
+        <div className="mw-key" style={placeAt(bottom, anchor)} onMouseDown={keep}>
             <div className="mw-key-scroll">
                 <button type="button" className="mw-k is-mark" onClick={onRuby}>ルビ</button>
                 <button type="button" className="mw-k is-mark" onClick={onEmphasis}>傍点</button>
@@ -482,6 +505,7 @@ export type MarkKind = "ruby" | "dot" | "note";
 
 export function MobileMarkPanel({
     bottom,
+    anchor = null,
     kind,
     onKind,
     base,
@@ -496,6 +520,7 @@ export function MobileMarkPanel({
     onCancel,
 }: {
     bottom: number;
+    anchor?: number | null;
     kind: MarkKind;
     onKind: (kind: MarkKind) => void;
     base: string;
@@ -514,7 +539,7 @@ export function MobileMarkPanel({
     return (
         <div
             className="mw-mark"
-            style={{ bottom }}
+            style={placeAt(bottom, anchor)}
             /*
              * ★ 押しても本文からフォーカスを外さない（キーボードの上の段と同じ）。
              *   外れるとキーボードがしまわれ、付けたあと書き続けられない。

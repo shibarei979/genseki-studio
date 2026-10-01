@@ -1324,6 +1324,7 @@ export default function EpisodeEditor({
             {showKeyBar && (
                 <MobileKeyBar
                     bottom={keyboard.inset}
+                    anchor={keyboard.anchor}
                     onRuby={() => openMark("ruby")}
                     onEmphasis={() => openMark("dot")}
                     onNote={() => openMark("note")}
@@ -1337,6 +1338,7 @@ export default function EpisodeEditor({
             {isMobile && mark && (
                 <MobileMarkPanel
                     bottom={keyboard.inset}
+                    anchor={keyboard.anchor}
                     kind={mark.kind}
                     onKind={(kind) => setMark({ ...mark, kind })}
                     base={body.slice(mark.caret - mark.len, mark.caret)}
