@@ -1,4 +1,5 @@
 import { moodWords } from '@/lib/search-moods'
+import { lastPostedOf } from '@/lib/last-posted'
 import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import { ROOT_ADMIN_EMAIL } from '@/types'
@@ -501,24 +502,8 @@ export default async function SearchPage({ searchParams }: Props) {
        *   同じ時刻が何十作品も並ぶことがあり、
        *   それで並べても更新順にならない。
        */
-      const lastPostedMap: Record<string, string> = {}
-
-      for (let at = 0; at < novelIds.length; at += 300) {
-        const { data: eps } = await supabase
-          .from('episodes')
-          .select('novel_id, posted_at, created_at')
-          .in('novel_id', novelIds.slice(at, at + 300))
-          .eq('is_published', true)
-          .limit(1000)
-
-        eps?.forEach((e: any) => {
-          const when = e.posted_at || e.created_at
-          if (!when) return
-
-          const now = lastPostedMap[e.novel_id]
-          if (!now || when > now) lastPostedMap[e.novel_id] = when
-        })
-      }
+      /* ★ 1,000 話で切られないよう、分けて読み切る（lib/last-posted.ts） */
+      const { last: lastPostedMap } = await lastPostedOf(supabase, novelIds)
 
       novels.sort((a, b) =>
         String(lastPostedMap[b.id] || '').localeCompare(
@@ -552,19 +537,8 @@ export default async function SearchPage({ searchParams }: Props) {
    */
   {
     const shownIds = novels.map((n: any) => n.id)
-    const lastPosted: Record<string, string> = {}
-    if (shownIds.length > 0) {
-      const { data: eps } = await supabase
-        .from('episodes')
-        .select('novel_id, posted_at, created_at')
-        .in('novel_id', shownIds)
-        .eq('is_published', true)
-        .limit(5000)
-      eps?.forEach((e: any) => {
-        const when = e.posted_at || e.created_at
-        if (when && (!lastPosted[e.novel_id] || when > lastPosted[e.novel_id])) lastPosted[e.novel_id] = when
-      })
-    }
+    /* ★ limit(5000) と書いても 1,000 件で切られていた。分けて読み切る */
+    const { last: lastPosted } = await lastPostedOf(supabase, shownIds)
     novels = novels.map((n: any) => ({ ...n, last_posted: lastPosted[n.id] || null }))
   }
 

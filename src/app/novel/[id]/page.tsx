@@ -241,11 +241,18 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
    * ここは、その取りこぼしを作者が拾うための道。
    */
   if (isAuthor && toPublish.length > 0) {
-    await supabase.from('episodes')
+    /*
+     * ★ 公開日（posted_at）も入れる。予約していた時刻を公開日にする。
+     *   前は入れていなかったので空のままになり、
+     *   ランキングなどの「更新」に、話を作った日（予約を入れた日）が出ていた。
+     *   時刻が話ごとに違うので、1 話ずつ書く。
+     */
+    const nowIso = new Date().toISOString()
+    await Promise.all(toPublish.map(ep => supabase.from('episodes')
       /* 印は 2 つあるので、両方そろえて立てる */
-      .update({ published: true, is_published: true, scheduled_at: null, publish_at: null })
-      .in('id', toPublish.map(ep => ep.id))
-    toPublish.forEach(ep => { ep.published = true; ep.is_published = true; ep.scheduled_at = null })
+      .update({ published: true, is_published: true, scheduled_at: null, publish_at: null, posted_at: (ep as any).scheduled_at || (ep as any).publish_at || nowIso })
+      .eq('id', ep.id)))
+    toPublish.forEach(ep => { (ep as any).posted_at = (ep as any).posted_at || ep.scheduled_at || nowIso; ep.published = true; ep.is_published = true; ep.scheduled_at = null })
     if (novel.published === false) {
       await supabase.from('novels').update({ published: true }).eq('id', novel.id)
     }

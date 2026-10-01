@@ -943,6 +943,25 @@ export const supabaseRepository: Repository = {
             return current;
         }
 
+        /*
+         * ★ もう出ている話を、もう一度「公開」で保存したときは、公開日を動かさない。
+         *
+         *   前は保存のたびに posted_at が今の時刻に書き換わり、
+         *   直しただけで「更新日」が新しくなっていた（ランキング・作品を探す）。
+         *   公開日は、はじめて読めるようになった日のまま。
+         */
+        if (patch.is_published === true) {
+            const { data: was } = await db()
+                .from("episodes")
+                .select("is_published, posted_at")
+                .eq("id", episodeId)
+                .maybeSingle();
+            if (was?.is_published === true && was.posted_at) {
+                delete next.posted_at;
+                delete next.published_by;
+            }
+        }
+
         next.updated_at = new Date().toISOString();
 
         const { data, error } = await db()

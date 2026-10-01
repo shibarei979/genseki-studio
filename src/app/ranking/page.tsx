@@ -1,4 +1,5 @@
 import RankSheetSwipe from '@/components/ranking/rank-sheet-swipe'
+import { lastPostedOf } from '@/lib/last-posted'
 import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import { createClient as createSbClient } from '@supabase/supabase-js'
@@ -200,10 +201,13 @@ async function computeRanking(period: string, novelType: string, serial: string,
       const { data: authors } = await supabase.from('public_profiles').select('user_id, display_name').in('user_id', authorIds as string[])
       authors?.forEach((a:any) => { authorMap[a.user_id] = a.display_name })
     }
+    /* 更新日は、出た話のいちばん新しい公開日（前は作品を作った日を出していた） */
+    const { last: lastG } = await lastPostedOf(supabase, paged.map((n:any) => n.id))
     return {
       total,
       items: paged.map((n:any) => ({
         ...n,
+        last_updated: lastG[n.id] || n.created_at,
         display_name: authorMap[n.author_id]||'',
         ratePercent: (n.rate * 100).toFixed(1),
       }))
@@ -233,7 +237,9 @@ async function computeRanking(period: string, novelType: string, serial: string,
       const { data: authors2 } = await supabase.from('public_profiles').select('user_id, display_name').in('user_id', authorIds2 as string[])
       authors2?.forEach((a:any) => { authorMap2[a.user_id] = a.display_name })
     }
-    return { items: risingItems.map((n:any) => ({...n, display_name: authorMap2[n.author_id]||''})), total: risingItems.length }
+    /* 更新日は、出た話のいちばん新しい公開日（前は作品を作った日を出していた） */
+    const { last: lastR } = await lastPostedOf(supabase, risingItems.map((n:any) => n.id))
+    return { items: risingItems.map((n:any) => ({...n, last_updated: lastR[n.id] || n.created_at, display_name: authorMap2[n.author_id]||''})), total: risingItems.length }
   } else {
     /*
      * ★ ここでは何も数えない。
@@ -496,12 +502,10 @@ async function computeRanking(period: string, novelType: string, serial: string,
      *   そのため、予約を入れた日が「更新」に出ていた。
      *   文字数も、出た話だけで数える（読めない予約の話は入れない）。
      */
-    const { data: eps } = await supabase.from('episodes').select('novel_id, body, created_at, posted_at').in('novel_id', novelIds).eq('is_published', true)
-    eps?.forEach((ep: any) => {
-      charCountMap[ep.novel_id] = (charCountMap[ep.novel_id]||0) + (ep.body?.length||0)
-      const when = ep.posted_at || ep.created_at
-      if (when && (!lastUpdateMap[ep.novel_id] || when > lastUpdateMap[ep.novel_id])) lastUpdateMap[ep.novel_id] = when
-    })
+    /* ★ 1,000 話を超えても切れないよう、分けて読み切る（lib/last-posted.ts） */
+    const { last, chars } = await lastPostedOf(supabase, novelIds, { withChars: true })
+    Object.assign(lastUpdateMap, last)
+    Object.assign(charCountMap, chars)
   }
   // ランキング履歴の記録：総合（全フィルタ既定・1ページ目）のみ、上位20位を保存
   // 3時間キャッシュのため、この計算は3時間に1回だけ走る
