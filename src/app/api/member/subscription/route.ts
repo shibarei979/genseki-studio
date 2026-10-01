@@ -6,6 +6,7 @@ import { freePointsOf, spendFreePoints } from "@/lib/points";
 import {
     PAID_BY_POINTS,
     POINT_PRICE,
+    allPerks,
     listPlans,
     liveSubscriptionOf,
     startSubscription,
@@ -35,9 +36,22 @@ async function me() {
     return user;
 }
 
+/** 全部入りの名前 */
+const ALL_IN_NAME = "サブスク（全部入り）";
+
+/**
+ * 全部入りの契約に付ける売り物（表の上で、契約はどれか 1 つの売り物に付く）。
+ * 出しているものを先に、無ければ並びの先頭。売り物が 1 つも無ければ null。
+ */
+async function anchorPlan() {
+    const plans = await listPlans();
+    return plans.find((plan) => plan.is_active) ?? plans[0] ?? null;
+}
+
 async function view(userId: string) {
-    const [plans, live, points] = await Promise.all([
-        listPlans(),
+    const [anchor, perks, live, points] = await Promise.all([
+        anchorPlan(),
+        allPerks(),
         liveSubscriptionOf(userId),
         freePointsOf(userId),
     ]);
@@ -45,21 +59,23 @@ async function view(userId: string) {
     return {
         price: POINT_PRICE,
         points,
-        /* 出している月ぎめの売り物だけ */
-        plans: plans
-            .filter((plan) => plan.is_active && plan.interval === "month")
-            .map((plan) => ({
-                id: plan.id,
-                name: plan.name,
-                blurb: plan.blurb,
-                perks: plan.perks.map((perk) => perk.note).filter(Boolean),
-            })),
+        /* ★ 800pt で、これまでの売り物の特典すべて。選ぶものは 1 つだけ */
+        plans: anchor
+            ? [
+                  {
+                      id: anchor.id,
+                      name: ALL_IN_NAME,
+                      blurb: "これまでのサブスクの特典が、すべて使えます。",
+                      perks: [...new Set(perks.map((perk) => perk.note).filter(Boolean))],
+                  },
+              ]
+            : [],
         current: live
             ? {
                   id: live.id,
                   planId: live.plan_id,
-                  planName: live.plan.name,
-                  perks: live.perks.map((perk) => perk.note).filter(Boolean),
+                  planName: live.note === PAID_BY_POINTS ? ALL_IN_NAME : live.plan.name,
+                  perks: [...new Set(live.perks.map((perk) => perk.note).filter(Boolean))],
                   status: live.status,
                   currentEnd: live.current_end,
                   cancelAtPeriodEnd: live.cancel_at_period_end,
@@ -97,19 +113,15 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
 
     if (body.action === "join") {
-        if (!body.planId) return NextResponse.json({ error: "プランを選んでください" }, { status: 400 });
-
         const live = await liveSubscriptionOf(user.id);
         if (live) return NextResponse.json({ error: "すでに入っています" }, { status: 400 });
 
-        const { data: plan } = await admin
-            .from("plans")
-            .select("id, is_active, interval")
-            .eq("id", body.planId)
-            .maybeSingle();
-        if (!plan || plan.is_active !== true || plan.interval !== "month") {
-            return NextResponse.json({ error: "そのプランには、いま入れません" }, { status: 400 });
+        /* 全部入りは 1 つだけ。送られてきた planId ではなく、こちらで決めた売り物に付ける */
+        const plan = await anchorPlan();
+        if (!plan) {
+            return NextResponse.json({ error: "いまは入れません（準備中です）" }, { status: 400 });
         }
+        body.planId = plan.id;
 
         /* 先に払う。払えたら始める。始められなければ返す */
         const paid = await spendFreePoints({
@@ -130,6 +142,8 @@ export async function POST(request: Request) {
             planId: body.planId,
             note: PAID_BY_POINTS,
             skipTrial: true,
+            /* 売り物が年ぎめでも、ポイント払いは 1 か月 */
+            interval: "month",
         });
 
         if (started.error) {

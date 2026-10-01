@@ -173,7 +173,7 @@ export default function PlanButton() {
 
                         {!notYet && (
                         <p className="sub-note">
-                            いまは <strong>無料ポイント {data.price}pt</strong> で 1 か月入れます。
+                            いまは <strong>無料ポイント {data.price}pt</strong> で 1 か月、これまでのサブスクの特典が<strong>すべて</strong>使えます。
                             <br />
                             1 か月たつと自動で終わります（続けてポイントが引かれることはありません）。
                             <br />

@@ -37,18 +37,22 @@ function newCode(): string {
 /** 自分の招待コード。無ければ作る */
 export async function inviteCodeOf(userId: string): Promise<string | null> {
     const admin = createAdminClient();
-    const { data } = await admin.from("invite_codes").select("code").eq("user_id", userId).maybeSingle();
+    const { data, error: readError } = await admin.from("invite_codes").select("code").eq("user_id", userId).maybeSingle();
     if (data?.code) return data.code as string;
+    /* ★ 読めないときは理由ごと投げる（札にそのまま出して、原因が分かるようにする） */
+    if (readError) throw new Error(`招待コードを読めません：${readError.message}`);
 
+    let last = "";
     for (let tries = 0; tries < 5; tries += 1) {
         const code = newCode();
         const { error } = await admin.from("invite_codes").insert({ user_id: userId, code });
         if (!error) return code;
+        last = error.message;
         /* 同時に作られていたら、それを使う */
         const { data: again } = await admin.from("invite_codes").select("code").eq("user_id", userId).maybeSingle();
         if (again?.code) return again.code as string;
     }
-    return null;
+    throw new Error(`招待コードを作れません：${last}`);
 }
 
 /**

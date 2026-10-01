@@ -152,6 +152,31 @@ export async function listPlans(): Promise<
     }));
 }
 
+/**
+ * ポイント払いのサブスク（全部入り）の特典。
+ *
+ * ★ 800pt で、これまでの売り物の特典がすべて使える。
+ *   どの売り物の特典も 1 つにまとめ、同じ合言葉どうしは大きい数を採る。
+ * ★ 無料ポイントの特典だけは入れない。
+ *   800pt 払って、ポイントがまた戻ってくると、払いの意味がなくなる。
+ */
+export async function allPerks(): Promise<Perk[]> {
+    const admin = createAdminClient();
+    const { data } = await admin
+        .from("plan_perks")
+        .select("*")
+        .order("sort", { ascending: true });
+
+    const byKey = new Map<string, Perk>();
+    for (const perk of (data ?? []) as Perk[]) {
+        if (perk.kind === "free_points") continue;
+        const key = `${perk.kind}:${perk.ref ?? ""}`;
+        const had = byKey.get(key);
+        if (!had || perk.amount > had.amount) byKey.set(key, perk);
+    }
+    return [...byKey.values()];
+}
+
 /** いま生きている契約 */
 export async function liveSubscriptionOf(
     userId: string,
@@ -193,6 +218,11 @@ export async function liveSubscriptionOf(
         .maybeSingle();
 
     if (!plan) return null;
+
+    /* ポイント払いは全部入り */
+    if (row.note === PAID_BY_POINTS) {
+        return { ...row, plan: plan as Plan, perks: await allPerks() };
+    }
 
     const { data: perks } = await admin
         .from("plan_perks")
@@ -286,6 +316,8 @@ export async function applyPerks(
     const sub = row as Subscription;
 
     if (!LIVE.includes(sub.status)) return { granted: 0, skipped: 0 };
+    /* ポイント払い（全部入り）は、無料ポイントの特典を配らない（allPerks を参照） */
+    if (sub.note === PAID_BY_POINTS) return { granted: 0, skipped: 0 };
 
     const { data: perks } = await admin
         .from("plan_perks")
@@ -372,6 +404,8 @@ export async function startSubscription(options: {
     note?: string;
     /** お試し期間を付けない（ポイントで先に払ったとき） */
     skipTrial?: boolean;
+    /** 期間の長さを売り物と別に決める（ポイント払いは必ず 1 か月） */
+    interval?: "month" | "year";
 }): Promise<{ id?: string; error?: string }> {
     const admin = createAdminClient();
 
@@ -399,7 +433,7 @@ export async function startSubscription(options: {
     const end =
         trial > 0
             ? new Date(now.getTime() + trial * 24 * 60 * 60 * 1000)
-            : nextEnd(now, (plan as Plan).interval);
+            : nextEnd(now, options.interval ?? (plan as Plan).interval);
 
     const { data, error } = await admin
         .from("subscriptions")
