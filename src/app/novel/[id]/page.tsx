@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { rowsFor } from '@/lib/count-rows'
 import EpisodeChunks, { CHUNK_THRESHOLD } from '@/components/novel/episode-chunks'
 export const revalidate = 10
 
@@ -342,7 +343,8 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
 
   if (epIds.length > 0) {
     const [elData, ecData] = await Promise.all([
-      supabase.from('episode_likes').select('episode_id').in('episode_id', epIds),
+      /* ★ 話のいいねは自分の押した行しか読めない表。運営の鍵で数だけ読む */
+      rowsFor('episode_likes', 'episode_id', epIds).then((data) => ({ data })),
       supabase.from('comments').select('episode_id').in('episode_id', epIds).not('episode_id','is',null),
     ])
     elData.data?.forEach((el: any) => { epLikeCounts[el.episode_id] = (epLikeCounts[el.episode_id] || 0) + 1 })

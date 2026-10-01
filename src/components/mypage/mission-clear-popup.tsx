@@ -3,9 +3,14 @@
 /**
  * ============================================================
  * 原石航路 Studio
- * MissionClearPopup — ミッションをクリアしたときの小窓（紙吹雪つき）
+ * MissionClearPopup — ミッションをクリアしたときの知らせ（紙吹雪つき）
  *
- *   紙吹雪が降る → 真ん中に「ミッションクリア！」とミッション名 → もらったポイント
+ *   紙吹雪が降る → 下に「ミッションクリア！」とミッション名・もらったポイントの帯
+ *
+ * ★ 押して閉じる小窓をやめた。
+ *   クリアを押すたびに「とじる」も押すことになり、手間が倍になっていた。
+ *   帯は画面を塞がず、押せない（下のボタンをそのまま続けて押せる）。
+ *   SHOW_MS たつと自分で消える。続けてクリアしたら、新しいほうに入れ替わる。
  *
  * ★ 体の直下に出す（祖先の枠に縛られず、画面いっぱいに出すため）。
  * ★ 動きを減らす設定の人には、紙吹雪を出さない。
@@ -13,6 +18,9 @@
  */
 
 import { useEffect, useMemo } from "react";
+
+/** 帯を出しておく時間 */
+const SHOW_MS = 2400;
 import { createPortal } from "react-dom";
 
 const COLORS = ["#e9b949", "#1f4e6b", "#4a7fa5", "#e25b45", "#35a45d", "#f3d27a", "#c6b0f2"];
@@ -43,18 +51,16 @@ export default function MissionClearPopup({
         [],
     );
 
+    /* 時間がたったら自分で消える */
     useEffect(() => {
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === "Escape") onClose();
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
+        const timer = window.setTimeout(onClose, SHOW_MS);
+        return () => window.clearTimeout(timer);
     }, [onClose]);
 
     if (typeof document === "undefined") return null;
 
     return createPortal(
-        <div className="mcl-dim" onClick={onClose}>
+        <div className="mcl-layer" aria-live="polite">
             <div className="mcl-confetti" aria-hidden="true">
                 {pieces.map((one, i) => (
                     <i
@@ -75,29 +81,21 @@ export default function MissionClearPopup({
                     />
                 ))}
             </div>
-            <div
-                className="mcl"
-                role="dialog"
-                aria-modal="true"
-                aria-label="ミッションクリア"
-                onClick={(event) => event.stopPropagation()}
-            >
-                <div className="mcl-badge" aria-hidden="true">
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <div className="mcl-toast" role="status" style={{ animationDuration: `${SHOW_MS}ms` }}>
+                <span className="mcl-badge" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                     </svg>
-                </div>
-                <h3>ミッションクリア！</h3>
-                <p className="mcl-name">{label}</p>
+                </span>
+                <span className="mcl-t">
+                    <b>ミッションクリア！</b>
+                    <small>{label}</small>
+                </span>
                 {earned > 0 && (
-                    <p className="mcl-pt">
+                    <span className="mcl-pt">
                         <span className="mcl-coin">P</span>+{earned}
-                        <small>無料ポイント</small>
-                    </p>
+                    </span>
                 )}
-                <button type="button" className="mcl-close" onClick={onClose}>
-                    とじる
-                </button>
             </div>
         </div>,
         document.body,

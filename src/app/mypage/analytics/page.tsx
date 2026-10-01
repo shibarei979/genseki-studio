@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { rowsFor } from '@/lib/count-rows'
 import { readAll } from '@/lib/utils/read-all'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -123,20 +124,12 @@ export default async function AnalyticsPage({
               .range(from, to),
           ).then((data) => ({ data }))
         : Promise.resolve({ data: [] }),
-      readAll((from, to) =>
-        supabase.from('likes').select('novel_id')
-          .in('novel_id', novelIds).order('novel_id', { ascending: true }).range(from, to),
-      ).then((data) => ({ data })),
-      readAll((from, to) =>
-        supabase.from('bookmarks').select('novel_id')
-          .in('novel_id', novelIds).order('novel_id', { ascending: true }).range(from, to),
-      ).then((data) => ({ data })),
+      /* ★ いいね・保存は自分の押した行しか読めない表。運営の鍵で数だけ読む（lib/count-rows.ts） */
+      rowsFor('likes', 'novel_id', novelIds).then((data) => ({ data })),
+      rowsFor('bookmarks', 'novel_id', novelIds).then((data) => ({ data })),
       supabase.from('comments').select('novel_id, episode_id, body, user_id, created_at, rating').in('novel_id', novelIds).neq('user_id', user.id).order('created_at', { ascending: false }),
       epIds.length > 0
-        ? readAll((from, to) =>
-            supabase.from('episode_likes').select('episode_id')
-              .in('episode_id', epIds).order('episode_id', { ascending: true }).range(from, to),
-          ).then((data) => ({ data }))
+        ? rowsFor('episode_likes', 'episode_id', epIds).then((data) => ({ data }))
         : Promise.resolve({ data: [] }),
       Promise.resolve({ data: [] }),
     ])

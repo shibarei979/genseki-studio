@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { rowsFor } from "@/lib/count-rows";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -219,7 +220,8 @@ export async function GET() {
         if (historyNovelIds.length > 0) {
             const [epData, likeData, firstEps] = await Promise.all([
                 supabase.from("episodes").select("novel_id, char_count").in("novel_id", historyNovelIds),
-                supabase.from("likes").select("novel_id").in("novel_id", historyNovelIds),
+                /* ★ いいねは自分の押した行しか読めない表。運営の鍵で数だけ読む */
+                rowsFor("likes", "novel_id", historyNovelIds).then((data) => ({ data })),
                 supabase.from("episodes").select("id, novel_id, ep_number").in("novel_id", historyNovelIds).eq("published", true).lte("ep_number", 5).order("ep_number", { ascending: true }),
             ]);
 

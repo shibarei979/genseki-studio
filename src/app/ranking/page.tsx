@@ -1,4 +1,5 @@
 import RankSheetSwipe from '@/components/ranking/rank-sheet-swipe'
+import { rowsFor } from '@/lib/count-rows'
 import { lastPostedOf } from '@/lib/last-posted'
 import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
@@ -134,8 +135,9 @@ async function computeRanking(period: string, novelType: string, serial: string,
       /* 閲覧は novel_stats から。作者と見回りの機械を除いた数 */
       supabase.from('novel_stats').select('novel_id, view_count').in('novel_id', poolIds),
       supabase.from('discovers').select('novel_id').in('novel_id', poolIds).eq('is_pending', false),
-      supabase.from('likes').select('novel_id').in('novel_id', poolIds),
-      supabase.from('bookmarks').select('novel_id').in('novel_id', poolIds),
+      /* ★ いいね・保存は自分の押した行しか読めない表。運営の鍵で数だけ読む */
+      rowsFor('likes', 'novel_id', poolIds).then((data) => ({ data })),
+      rowsFor('bookmarks', 'novel_id', poolIds).then((data) => ({ data })),
       supabase.from('read_episodes').select('novel_id').in('novel_id', poolIds),
     ])
 

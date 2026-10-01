@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { countOne } from '@/lib/count-rows'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/layout/header'
@@ -40,8 +41,9 @@ export default async function NovelManagePage({ params }: { params: { id: string
 
   // 統計を並列取得（PVはpage_viewsから集計）
   const [likeRes, bookmarkRes, discoverRes, commentRes, pvRes] = await Promise.all([
-    supabase.from('likes').select('*', { count: 'exact', head: true }).eq('novel_id', params.id),
-    supabase.from('bookmarks').select('*', { count: 'exact', head: true }).eq('novel_id', params.id),
+    /* ★ いいね・保存は自分の押した行しか読めない表。運営の鍵で数だけ読む */
+    countOne('likes', 'novel_id', params.id).then((count) => ({ count })),
+    countOne('bookmarks', 'novel_id', params.id).then((count) => ({ count })),
     supabase.from('discovers').select('*', { count: 'exact', head: true }).eq('novel_id', params.id).eq('is_pending', false),
     supabase.from('comments').select('*', { count: 'exact', head: true }).eq('novel_id', params.id).neq('user_id', user.id),
     epIds.length > 0

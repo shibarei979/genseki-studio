@@ -1,4 +1,5 @@
 import { looksLikeBotRequest } from '@/lib/utils/bot'
+import { countOne } from '@/lib/count-rows'
 import ShareButtons from '@/components/common/share-buttons'
 import EpisodeNav from '@/components/novel/episode/episode-nav'
 import { ENTRY_COOKIE, entryName, nameSource } from '@/lib/utils/view-source'
@@ -171,7 +172,8 @@ export default async function EpisodePage({ params, searchParams }: Props) {
   const [authorRes, allEpsRes, epLikeCountRes] = await Promise.all([
     supabase.from('public_profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('episodes').select('id, ep_number, title, published, is_published, scheduled_at').eq('novel_id', params.id).order('ep_number', { ascending: true }),
-    supabase.from('episode_likes').select('*', { count: 'exact', head: true }).eq('episode_id', params.epId),
+    /* ★ 話のいいねは自分の押した行しか読めない表。運営の鍵で数だけ読む */
+    countOne('episode_likes', 'episode_id', params.epId).then((count) => ({ count })),
   ])
   const authorData = authorRes.data
   const allEps = allEpsRes.data

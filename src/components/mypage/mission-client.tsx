@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import MissionClearPopup from '@/components/mypage/mission-clear-popup'
 
@@ -162,7 +162,8 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
   /* もうポイントを配ったミッション。押しても +10pt は付かない */
   const [paidIds, setPaidIds] = useState<Set<string>>(new Set())
   /* クリアしたときの小窓（紙吹雪つき） */
-  const [cleared, setCleared] = useState<{ label: string; earned: number } | null>(null)
+  const [cleared, setCleared] = useState<{ label: string; earned: number; key: number } | null>(null)
+  const closeCleared = useCallback(() => setCleared(null), [])
 
   /*
    * ポイントを受け取る。
@@ -221,7 +222,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
         const label = MISSIONS.find(m => m.id === missionId)?.label ?? ''
         void collectPoints().then((earned) => {
           setEarnedNote('')
-          setCleared({ label, earned })
+          setCleared({ label, earned, key: Date.now() })
         })
         return
       }
@@ -254,7 +255,8 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
 
   return (
     <div>
-      {cleared && <MissionClearPopup label={cleared.label} earned={cleared.earned} onClose={() => setCleared(null)} />}
+      {/* 続けてクリアしたら key が変わり、新しい帯に入れ替わる */}
+      {cleared && <MissionClearPopup key={cleared.key} label={cleared.label} earned={cleared.earned} onClose={closeCleared} />}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '-0.01em', lineHeight: 1.3 }}>ミッション</h1>
         <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 10, lineHeight: 1.7 }}>読んで、応援して、書いて。1つクリアするごとに無料ポイントを10pt、全部そろうとさらに300ptもらえます。ポイントはアイテムツリーで交換できます。</p>

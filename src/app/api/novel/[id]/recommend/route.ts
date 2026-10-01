@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { rowsFor } from '@/lib/count-rows'
 
 import { calcQualityScore } from '@/lib/quality-score'
 import { createClient } from '@/lib/supabase/server'
@@ -146,10 +147,11 @@ export async function GET(
   const recReadMap: Record<string, number> = {}
   if (recNovelIds.length > 0) {
     const [{ data: recLikes }, { data: recDiscovers }, { data: recEpisodes }, { data: recBookmarks }, { data: recViews }, { data: recReads }] = await Promise.all([
-      supabase.from('likes').select('novel_id').in('novel_id', recNovelIds),
+      /* ★ いいね・保存は自分の押した行しか読めない表。運営の鍵で数だけ読む */
+      rowsFor('likes', 'novel_id', recNovelIds).then((data) => ({ data })),
       supabase.from('discovers').select('novel_id').eq('is_pending', false).in('novel_id', recNovelIds),
       supabase.from('episodes').select('novel_id, created_at').in('novel_id', recNovelIds).eq('published', true),
-      supabase.from('bookmarks').select('novel_id').in('novel_id', recNovelIds),
+      rowsFor('bookmarks', 'novel_id', recNovelIds).then((data) => ({ data })),
       /* 閲覧は novel_stats から。作者と見回りの機械を除いた数 */
       supabase.from('novel_stats').select('novel_id, view_count').in('novel_id', recNovelIds),
       supabase.from('read_episodes').select('novel_id').in('novel_id', recNovelIds),

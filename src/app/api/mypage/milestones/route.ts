@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { countOne } from "@/lib/count-rows";
 
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -84,7 +85,8 @@ export async function GET() {
                               .or("is_bot.is.null,is_bot.eq.false")
                               .in("episode_id", ids)
                         : Promise.resolve({ count: 0 }),
-                    supabase.from("likes").select("*", { count: "exact", head: true }).eq("novel_id", novel.id),
+                    /* ★ いいねは自分の押した行しか読めない表。運営の鍵で数だけ読む */
+                    countOne("likes", "novel_id", novel.id).then((count) => ({ count })),
                 ]);
                 return { id: novel.id, pv: pv.count ?? 0, like: like.count ?? 0 };
             }),

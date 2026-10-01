@@ -1,4 +1,5 @@
 import { moodWords } from '@/lib/search-moods'
+import { rowsFor } from '@/lib/count-rows'
 import { lastPostedOf } from '@/lib/last-posted'
 import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
@@ -371,7 +372,8 @@ export default async function SearchPage({ searchParams }: Props) {
   // いいね（総合）
   const likeMap: Record<string, number> = {}
   if (novelIds.length > 0) {
-    const { data: likes } = await supabase.from('likes').select('novel_id').in('novel_id', novelIds)
+    /* ★ いいねは自分の押した行しか読めない表。運営の鍵で数だけ読む */
+    const likes = await rowsFor('likes', 'novel_id', novelIds)
     likes?.forEach((l: any) => { likeMap[l.novel_id] = (likeMap[l.novel_id] || 0) + 1 })
   }
 
@@ -382,15 +384,14 @@ export default async function SearchPage({ searchParams }: Props) {
   if (novelIds.length > 0 && ['like_daily','like_weekly','like_monthly'].includes(sort)) {
     const since = sort === 'like_daily' ? oneDayAgo : sort === 'like_weekly' ? oneWeekAgo : oneMonthAgo
     const targetMap = sort === 'like_daily' ? likeDailyMap : sort === 'like_weekly' ? likeWeeklyMap : likeMonthlyMap
-    const { data: periodLikes } = await supabase
-      .from('likes').select('novel_id').in('novel_id', novelIds).gte('created_at', since)
+    const periodLikes = await rowsFor('likes', 'novel_id', novelIds, since)
     periodLikes?.forEach((l: any) => { targetMap[l.novel_id] = (targetMap[l.novel_id] || 0) + 1 })
   }
 
   // ブックマーク
   const bookmarkMap: Record<string, number> = {}
   if (novelIds.length > 0 && sort === 'bookmark') {
-    const { data: bookmarks } = await supabase.from('bookmarks').select('novel_id').in('novel_id', novelIds)
+    const bookmarks = await rowsFor('bookmarks', 'novel_id', novelIds)
     bookmarks?.forEach((b: any) => { bookmarkMap[b.novel_id] = (bookmarkMap[b.novel_id] || 0) + 1 })
   }
 
