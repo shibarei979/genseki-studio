@@ -795,3 +795,13 @@
 @media (max-width: 1023px) {
     .mw-sheet-top { touch-action: none; }
 }
+
+/*
+ * ★ キーボードを出して書いているとき、カーソルの行が道具の段（と iPhone の浮いた帯）の下に隠れないよう、
+ *   頁を送るときの下の余白をそのぶん取る。
+ */
+@media (max-width: 1023px) {
+    html:has(.mw-key) {
+        scroll-padding-bottom: calc(64px + var(--kb-extra, 0px));
+    }
+}

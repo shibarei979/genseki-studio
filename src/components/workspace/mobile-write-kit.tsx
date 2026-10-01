@@ -52,6 +52,26 @@ export function useIsMobile(): boolean {
  * ★ 返す inset は、画面の下からキーボードの上までの高さ。
  *   キーボードの上の段は、ここに置く。
  * ------------------------------------------------------------ */
+/*
+ * ★ iPhone の新しい Safari（iOS 26〜）は、キーボードの上に「∧ ∨ ✓」の帯を浮かせて出す。
+ *   この帯は、見えている部分（visualViewport）の外ではなく、頁の上に重なる。
+ *   そのため、見えている部分の下端に置いた道具の段が、帯の下に完全に隠れていた。
+ *   その版の Safari のときだけ、帯の高さぶん上に持ち上げる。
+ *   （前の版は帯がキーボードの一部なので、足すと隙間が空く。だから版で分ける）
+ */
+const IOS_FLOATING_BAR = 56;
+
+function floatingBarExtra(): number {
+    if (typeof navigator === "undefined") return 0;
+    const ua = navigator.userAgent;
+    const isIOS = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    if (!isIOS) return 0;
+    /* Safari 本体だけ（Chrome・Firefox の iOS 版は別の作り） */
+    if (/CriOS|FxiOS|EdgiOS/.test(ua)) return 0;
+    const version = Number((ua.match(/Version\/(\d+)/) ?? [])[1] ?? 0);
+    return version >= 26 ? IOS_FLOATING_BAR : 0;
+}
+
 export function useKeyboard(): { isOpen: boolean; inset: number } {
     const [state, setState] = useState({ isOpen: false, inset: 0 });
 
@@ -74,6 +94,7 @@ export function useKeyboard(): { isOpen: boolean; inset: number } {
          *   縦で測った高さのままだと、横にしただけで「縮んだ」と見なしてしまう。
          */
         const tallestByWidth = new Map<number, number>();
+        const extra = floatingBarExtra();
 
         function tell() {
             const w = window.innerWidth;
@@ -88,7 +109,8 @@ export function useKeyboard(): { isOpen: boolean; inset: number } {
                     (active.tagName === "INPUT" && (active as HTMLInputElement).type === "text") ||
                     (active as HTMLElement).isContentEditable);
             const isOpen = typing && (gap > 120 || shrunk > 120);
-            const inset = isOpen ? gap : 0;
+            const inset = isOpen ? gap + extra : 0;
+            document.documentElement.style.setProperty("--kb-extra", `${isOpen ? extra : 0}px`);
             /* 同じなら描き直さない（見えている部分が動くたびに呼ばれる） */
             setState((prev) => (prev.isOpen === isOpen && prev.inset === inset ? prev : { isOpen, inset }));
         }
