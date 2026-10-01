@@ -749,18 +749,34 @@
  * 続けて置くと同じ列に流れ込むので、
  * 著者を必ず次の列から始める。
  */
-.reader-home .bi_v {
+/*
+ * ★ 並べる向きは column（縦書きでは「列を右から左へ」並べる向き）。
+ *   前は row-reverse（縦書きでは「上下」に並べる向き）で、折り返しに頼って著者を次の列へ送っていた。
+ *   題名が長いと折り返して横に並ぶが、短い題名だと同じ列に上下で詰まり、
+ *   「著 ○○ 題名」が 1 列に重なって見えていた。
+ *   さらに一部の書体では、短い題名の高さが 0 と計算され、題名が消えたように見えた。
+ * ★ 題名と著者は、列の高さいっぱいに伸ばす（stretch）。字の量から高さを測らせない。
+ */
+.reader-home .bi_v,
+.reader-home .bi_right .bi_v {
     display: flex;
-    flex-direction: row-reverse;
+    flex-direction: column;
+    flex-wrap: nowrap;
     justify-content: center;
-    align-items: flex-start;
+    align-items: stretch;
+    align-content: normal;
     gap: 18px;
+}
+
+.reader-home .bi_title {
+    flex: 0 1 auto;
+    min-width: 0;
 }
 
 .reader-home .bi_author {
     /* 縦の列として独立させる */
     flex: 0 0 auto;
-    align-self: flex-start;
+    align-self: stretch;
 }
 
 /*
