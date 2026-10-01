@@ -1,7 +1,8 @@
 'use client'
 import HelpTip from '@/components/common/help-tip'
 import { ILLUST_SHAPE_LABEL } from '@/config/illust-size'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useSwipeClose } from '@/lib/swipe-close'
 import FontPicker from '@/components/common/font-picker'
 import { useMemberFeatures } from '@/lib/subscription/use-member-features'
 
@@ -144,6 +145,10 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
   const open = external ? external.open : ownOpen
   const section = external ? external.section : 'text'
   const close = () => (external ? external.onClose() : setOpen(false))
+  /* ★ 下から出る窓は、見出しの段を下へなでて閉じる（探すの条件と同じ） */
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const handleRef = useRef<HTMLDivElement>(null)
+  useSwipeClose(handleRef, sheetRef, close, !!external && open)
   /* 30 書体は Pro */
   const { fonts } = useMemberFeatures()
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
@@ -223,14 +228,15 @@ export default function ReadingSettings({ onChange, isMobile = false, showWritin
       {open && (
         <>
           <div className={external ? 'rs-dim' : undefined} style={{position:'fixed',inset:0,zIndex:98}} onClick={close}/>
-          <div className={external ? 'rs-sheet' : undefined} role={external ? 'dialog' : undefined} aria-label={external ? (section === 'color' ? '紙の色' : '文字の設定') : undefined} style={external ? undefined : {
+          <div ref={sheetRef} className={external ? 'rs-sheet' : undefined} role={external ? 'dialog' : undefined} aria-label={external ? (section === 'color' ? '紙の色' : '文字の設定') : undefined} style={external ? undefined : {
             position:'absolute', top:'calc(100% + 8px)', right:0,
             background:'var(--color-bg-card)', border:'1px solid var(--color-brand-border)', borderRadius:12,
             boxShadow:'0 4px 20px rgba(0,0,0,0.12)',
             padding:'16px', minWidth:'min(300px, calc(100vw - 32px))', maxHeight:'calc(100vh - 120px)', overflowY:'auto', zIndex:99,
           }}>
             {external && (
-              <div className="rs-sheet-h">
+              <div className="rs-sheet-h" ref={handleRef}>
+                <span className="rs-grab" aria-hidden="true"/>
                 <b>{section === 'color' ? '紙の色' : '文字の設定'}</b>
                 {section === 'text' && <HelpTip topic="reading-settings" />}
                 <button type="button" onClick={close} aria-label="とじる">とじる</button>
