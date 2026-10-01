@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import LoginStampButton from '@/components/mypage/login-stamp-button'
 import MissionClearPopup from '@/components/mypage/mission-clear-popup'
 
 export interface MissionStats {
@@ -266,9 +265,6 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
           {earnedNote}
         </div>
       )}
-
-      {/* 乗船印帳（毎日ログイン） */}
-      {user && <div style={{ marginBottom: 16 }}><LoginStampButton /></div>}
 
       {/* サマリーカード */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, background: 'var(--color-bg-card)', border: '1px solid var(--color-brand-border)', borderRadius: 14, padding: '20px 24px', marginBottom: 20, flexWrap: 'wrap' }}>
