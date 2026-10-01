@@ -565,7 +565,13 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
             <span style={{fontSize:10,color:'var(--color-text-faint)',whiteSpace:'nowrap'}}>
               {/* ★ 何の日付か分かるように「投稿」と添える */}
               {fmtDate(ep.posted_at || ep.created_at)} 投稿
+              {/*
+                * ★ 改稿は「公開したあとに直した日」だけ。
+                *   予約の話は、予約を入れた日（＝公開より前）に最後に触っていることが多く、
+                *   それが「改稿」と出ていた。公開より前の日付は出さない。
+                */}
               {ep.updated_at &&
+                new Date(ep.updated_at).getTime() > new Date(ep.posted_at || ep.created_at).getTime() &&
                 fmtDate(ep.updated_at) !== fmtDate(ep.posted_at || ep.created_at) && (
                   <span style={{marginLeft:5,color:'var(--color-text-muted)'}}>
                     ・{fmtDate(ep.updated_at)} 改稿
