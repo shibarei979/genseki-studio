@@ -20,7 +20,6 @@ const PAGE = 1000;
 /** 1 回に並べる作品の数（住所が長くなりすぎないように） */
 const IDS_AT_ONCE = 100;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = any;
 
 export async function lastPostedOf(
