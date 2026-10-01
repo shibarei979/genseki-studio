@@ -13,6 +13,11 @@
  *
  * ★ 帯の上の細い線で、どこまで読んだかを見せる。
  *
+ * ★ 本文を読み終えて下へ進んだら（いいね・次の話・コメントのあたり）、
+ *   サイトの下の帯（ホーム・探す・マイページ など）に入れ替える。
+ *   html に data-read-end を立てると、CSS（mobile-read.css）で入れ替わる。
+ *   上へ戻して本文に入れば、また読む帯に戻る。
+ *
  * ★ 1024px 未満でだけ出す（mobile-read.css）。
  * ============================================================
  */
@@ -39,7 +44,18 @@ export default function MobileReadBar({
         /* 縦書きで読んでいる（進み具合は本文から届く） */
         let vertical = false;
 
+        /* 本文の終わりの印（いいね・共有の段）。ここが画面に入ったら入れ替える */
+        const root = document.documentElement;
+        function checkEnd() {
+            const mark = document.querySelector(".mrb-endbtns");
+            if (!mark) return;
+            const passed = mark.getBoundingClientRect().top < window.innerHeight - 60;
+            if (passed) root.setAttribute("data-read-end", "");
+            else root.removeAttribute("data-read-end");
+        }
+
         function onScroll() {
+            checkEnd();
             const now = window.scrollY;
             const max = document.documentElement.scrollHeight - window.innerHeight;
             if (!vertical) setProgress(max > 0 ? Math.min(1, Math.max(0, now / max)) : 1);
@@ -72,6 +88,8 @@ export default function MobileReadBar({
         return () => {
             window.removeEventListener("scroll", onScroll);
             window.removeEventListener("gk-read-progress", onVertical);
+            /* ほかの頁へ移ったら、印を下ろす */
+            root.removeAttribute("data-read-end");
         };
     }, []);
 

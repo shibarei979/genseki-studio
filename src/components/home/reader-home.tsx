@@ -1155,7 +1155,7 @@ export default async function ReaderHome() {
          *   前は main の py-4（16px）も足して 56px にしたが、
          *   柱には py-4 が掛かっていないので、その分だけ下がった。
          */}
-        <div className="sticky top-14 pl-[52px] pr-0 pt-10">
+        <div className="sticky top-[var(--gk-head-h)] pl-[52px] pr-0 pt-10">
           <ReaderSidebar
             reading={sidebarReading}
             notices={sidebarNotices}

@@ -2363,7 +2363,7 @@ export default function MypageClient({
               background:'var(--color-bg-card)',
               alignSelf:'stretch',
             }}>
-              <div style={{padding:'24px 12px',position:'sticky',top:60,maxHeight:'calc(100vh - 60px)',overflowY:'auto'}}>
+              <div style={{padding:'24px 12px',position:'sticky',top:'var(--gk-head-h, 72px)',maxHeight:'calc(100vh - var(--gk-head-h, 72px))',overflowY:'auto'}}>
               {visibleTabs.map(tab => {
                 const on = activeTab===tab.id
                 return (

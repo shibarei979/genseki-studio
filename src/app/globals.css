@@ -1153,6 +1153,31 @@ body {
     overflow-x: hidden;
 }
 
+/*
+ * ★ 上の帯を、送っても付いてくるようにする。
+ *
+ *   html と body の両方に hidden が付いていると、body が「送れない送り枠」になり、
+ *   貼り付き（sticky）がどこにも貼り付かなかった。上の帯も、柱も、送ると上へ流れていた。
+ *   body だけ clip（切るだけで、送り枠にならない）にすると、画面に貼り付く。
+ *   はみ出しは、これまでどおり html の hidden で受ける。
+ *
+ * ★ 書く画面（携帯の上の帯が is-static）と、全画面で読む頁・遊びの頁（携帯の上の帯が無い）は
+ *   元のまま。縦書きの執筆画面は、body を横へ送って読み進めるので clip だと壊れる（上の記録）。
+ */
+body:has(.mh:not(.is-static)) {
+    overflow-x: clip;
+}
+
+/* 上の帯の高さ。貼り付く柱は、この下に付ける */
+:root {
+    --gk-head-h: 54px;
+}
+@media (min-width: 1024px) {
+    :root {
+        --gk-head-h: 72px;
+    }
+}
+
 @media (max-width: 1023px) {
     /*
      * 決め打ちの幅を、画面に合わせる。

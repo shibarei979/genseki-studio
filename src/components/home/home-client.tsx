@@ -162,7 +162,7 @@ export default function HomeClient() {
                          * 切ると、中身が入りきらないとき柱の中だけを送ることになり、
                          * ページを送っても下の札が出てこない。
                          */}
-                        <div className="sticky top-14 px-5 py-5">
+                        <div className="sticky top-[var(--gk-head-h)] px-5 py-5">
                             {side}
                         </div>
                     </aside>

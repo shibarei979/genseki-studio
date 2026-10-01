@@ -180,11 +180,15 @@ export default function MobileTabBar() {
     if (/^\/workspace\/[^/]+\/?$/.test(pathname)) return null
 
     /*
-     * ★ 話を読む画面では出さない。
-     *   代わりに「前の話・目次・次の話」の帯（mobile-read-bar.tsx）を出す。
+     * ★ 話を読む画面では、ふだんは隠しておく。
+     *   本文を読んでいるあいだは「前の話・目次・次の話」の帯（mobile-read-bar.tsx）を出す。
      *   帯が 2 本重なると、本文を読む場所がそのぶん減る。
+     *
+     * ★ 本文を読み終えて下へ進んだら（コメントのあたり）、こちらに入れ替える。
+     *   前は頁のいちばん下からホームやマイページへ行けず、上まで戻る必要があった。
+     *   入れ替えの合図は html の data-read-end（mobile-read-bar.tsx が立てる）。
      */
-    if (/^\/novel\/[^/]+\/episode\/[^/]+\/?$/.test(pathname)) return null
+    const onEpisode = /^\/novel\/[^/]+\/episode\/[^/]+\/?$/.test(pathname)
 
     /*
      * 作品を書いているあいだは、その作品の中の行き先にする。
@@ -209,7 +213,7 @@ export default function MobileTabBar() {
     return (
         <nav
             ref={barRef}
-            className="mtb"
+            className={onEpisode ? 'mtb is-ep' : 'mtb'}
             aria-label={inWorkspace ? 'この作品の行き先' : '主な行き先'}
         >
             {TABS.map((tab: any) => {

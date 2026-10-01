@@ -571,7 +571,8 @@ export default async function EpisodePage({ params, searchParams }: Props) {
           <CommentSection novelId={params.id} episodeId={params.epId} userId={user?.id||null} userName={profile?.display_name||null} userIconUrl={profile?.icon_url||null} authorId={novel.author_id} isAdmin={profile?.is_admin === true} comments={comments} allowNew={novel.allow_comments !== false && authorAllowsComments !== false}/>
         )}
 
-        <div style={{height:80}}/>
+        {/* 下の帯のぶんの余白は body が持つ。ここは段落の区切りだけ */}
+        <div style={{height:16}}/>
 
         <MobileReadBar
           prevHref={prevEp ? `/novel/${params.id}/episode/${prevEp.id}` : null}

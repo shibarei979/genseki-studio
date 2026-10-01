@@ -89,6 +89,22 @@
     .mrb-endbtns > * {
         min-height: 44px;
     }
+
+    /*
+     * ★ 本文を読み終えたら、下の帯をサイトの帯（ホーム・探す・マイページ など）に入れ替える。
+     *   合図は html の data-read-end（mobile-read-bar.tsx）。
+     *   読んでいるあいだのサイトの帯は、画面の下に隠しておく。
+     */
+    .mtb.is-ep {
+        transform: translateY(110%);
+        transition: transform .22s ease;
+    }
+    html[data-read-end] .mtb.is-ep {
+        transform: none;
+    }
+    html[data-read-end] .mrb {
+        transform: translateY(110%);
+    }
 }
 
 /*
@@ -395,3 +411,4 @@
 .rs-papers button span { font-size: 20px; font-weight: 600; }
 .rs-papers button small { font-size: 11px; font-weight: 700; }
 .rs-papers button.is-on { box-shadow: 0 0 0 2px var(--color-brand, #1f4e6b); }
+

@@ -86,7 +86,8 @@
 /* ---- 柱 ---- */
 .rs {
     position: sticky;
-    top: 64px;
+    /* 上の帯の下に付ける */
+    top: calc(var(--gk-head-h, 72px) + 12px);
 }
 
 .rs_group + .rs_group {

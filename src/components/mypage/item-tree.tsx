@@ -1287,7 +1287,8 @@ export default function ItemTree() {
                         flex: '0 0 278px',
                         minWidth: 252,
                         position: 'sticky',
-                        top: 8,
+                        /* 上の帯の下に付ける */
+                        top: 'calc(var(--gk-head-h, 72px) + 8px)',
                         alignSelf: 'flex-start',
                     }}
                 >
