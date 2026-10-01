@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import MissionClearPopup from '@/components/mypage/mission-clear-popup'
+import MissionClearPopup, { missionToastOff } from '@/components/mypage/mission-clear-popup'
 
 export interface MissionStats {
   likeCount: number
@@ -222,7 +222,8 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
         const label = MISSIONS.find(m => m.id === missionId)?.label ?? ''
         void collectPoints().then((earned) => {
           setEarnedNote('')
-          setCleared({ label, earned, key: Date.now() })
+          /* 「出さなくていい」を選んだ端末では出さない */
+          if (!missionToastOff()) setCleared({ label, earned, key: Date.now() })
         })
         return
       }

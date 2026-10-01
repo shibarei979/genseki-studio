@@ -17,10 +17,22 @@
  * ============================================================
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-/** 帯を出しておく時間 */
-const SHOW_MS = 2400;
+/** 帯を出しておく時間（下の「出さなくていい」を押す間があるように少し長め） */
+const SHOW_MS = 3600;
+
+/** 「出さなくていい」を選んだ印（この端末だけ） */
+const OFF_KEY = "gk-mission-toast-off";
+
+/** 帯を出さない設定になっているか */
+export function missionToastOff(): boolean {
+    try {
+        return window.localStorage.getItem(OFF_KEY) === "1";
+    } catch {
+        return false;
+    }
+}
 import { createPortal } from "react-dom";
 
 const COLORS = ["#e9b949", "#1f4e6b", "#4a7fa5", "#e25b45", "#35a45d", "#f3d27a", "#c6b0f2"];
@@ -50,6 +62,18 @@ export default function MissionClearPopup({
             })),
         [],
     );
+
+    const [off, setOff] = useState(false);
+
+    function turnOff() {
+        try {
+            window.localStorage.setItem(OFF_KEY, "1");
+        } catch {
+            /* 覚えられない端末でも、今は閉じる */
+        }
+        setOff(true);
+        window.setTimeout(onClose, 900);
+    }
 
     /* 時間がたったら自分で消える */
     useEffect(() => {
@@ -97,6 +121,23 @@ export default function MissionClearPopup({
                     </span>
                 )}
             </div>
+            {/* ★ この端末では次から出さない。押せるのはここだけ（帯の他は押せない） */}
+            <button
+                type="button"
+                className={`mcl-off${off ? " is-on" : ""}`}
+                style={{ animationDuration: `${SHOW_MS}ms` }}
+                onClick={turnOff}
+                disabled={off}
+            >
+                <span className="mcl-off-ring" aria-hidden="true">
+                    {off && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    )}
+                </span>
+                {off ? "次から出しません" : "出さなくていい"}
+            </button>
         </div>,
         document.body,
     );
