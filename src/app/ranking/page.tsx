@@ -490,10 +490,17 @@ async function computeRanking(period: string, novelType: string, serial: string,
   const charCountMap: Record<string,number> = {}
   const lastUpdateMap: Record<string,string> = {}
   if (novelIds.length > 0) {
-    const { data: eps } = await supabase.from('episodes').select('novel_id, body, created_at').in('novel_id', novelIds)
+    /*
+     * ★ 「更新」は、出た話の公開日（posted_at）のいちばん新しいもの。
+     *   前は話を作った日（created_at）で、まだ出ていない予約の話まで数えていた。
+     *   そのため、予約を入れた日が「更新」に出ていた。
+     *   文字数も、出た話だけで数える（読めない予約の話は入れない）。
+     */
+    const { data: eps } = await supabase.from('episodes').select('novel_id, body, created_at, posted_at').in('novel_id', novelIds).eq('is_published', true)
     eps?.forEach((ep: any) => {
       charCountMap[ep.novel_id] = (charCountMap[ep.novel_id]||0) + (ep.body?.length||0)
-      if (!lastUpdateMap[ep.novel_id] || ep.created_at > lastUpdateMap[ep.novel_id]) lastUpdateMap[ep.novel_id] = ep.created_at
+      const when = ep.posted_at || ep.created_at
+      if (when && (!lastUpdateMap[ep.novel_id] || when > lastUpdateMap[ep.novel_id])) lastUpdateMap[ep.novel_id] = when
     })
   }
   // ランキング履歴の記録：総合（全フィルタ既定・1ページ目）のみ、上位20位を保存

@@ -667,7 +667,8 @@ export default function WorkspaceClient({ workId }: Props) {
                             </p>
                         </div>
 
-                        <div className="min-h-0 flex-1">
+                        {/* mw-list-body：携帯の下から出る一覧で、中を送れるようにする（mobile-write.css） */}
+                        <div className="mw-list-body min-h-0 flex-1">
                             <EpisodeList
                                 episodes={episodes}
                                 selectedId={selectedId}

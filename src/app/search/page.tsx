@@ -535,11 +535,37 @@ export default async function SearchPage({ searchParams }: Props) {
     }
 
     // ポストソート後にページネーション
-    const needsPostSort = ['like','like_daily','like_weekly','like_monthly','bookmark','view','comment','rising','ep_count','char_count','award'].includes(sort)
+    /* ★ 更新順（updated）も上で 500 件まとめて読んでいるので、ここで頁に切る（前は切れずに全部並んでいた） */
+    const needsPostSort = ['like','like_daily','like_weekly','like_monthly','bookmark','view','comment','rising','ep_count','char_count','award','updated'].includes(sort)
     if (needsPostSort) {
       count = novels.length
       novels = novels.slice(offset, offset + PAGE_SIZE)
     }
+  }
+
+  /*
+   * 一覧に出す「最終更新」は、いちばん新しく出た話の公開日。
+   *
+   * ★ novels.updated_at は、予約を入れたときや作品の情報を直したときにも動く。
+   *   それを出していたので、予約した日が「最終更新」に見えていた。
+   *   出た話（is_published）の公開日（posted_at、無ければ作った日）のいちばん新しいものにする。
+   */
+  {
+    const shownIds = novels.map((n: any) => n.id)
+    const lastPosted: Record<string, string> = {}
+    if (shownIds.length > 0) {
+      const { data: eps } = await supabase
+        .from('episodes')
+        .select('novel_id, posted_at, created_at')
+        .in('novel_id', shownIds)
+        .eq('is_published', true)
+        .limit(5000)
+      eps?.forEach((e: any) => {
+        const when = e.posted_at || e.created_at
+        if (when && (!lastPosted[e.novel_id] || when > lastPosted[e.novel_id])) lastPosted[e.novel_id] = when
+      })
+    }
+    novels = novels.map((n: any) => ({ ...n, last_posted: lastPosted[n.id] || null }))
   }
 
   function fmtNum(n: number | undefined | null): string {
@@ -731,7 +757,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 )}
                 <span style={{display:'flex',gap:12,fontSize:11,color:'var(--color-text-faint)',flexWrap:'wrap',alignItems:'center'}}>
                   {n.charCount > 0 && <span>{n.charCount >= 10000 ? `${(n.charCount/10000).toFixed(1)}万文字` : `${n.charCount.toLocaleString()}文字`}</span>}
-                  {n.updated_at && <span>最終更新：{new Date(n.updated_at).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'numeric',day:'numeric'})}</span>}
+                  {n.last_posted && <span>最終更新：{new Date(n.last_posted).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'numeric',day:'numeric'})}</span>}
                   {!n.hideStats && n.likeCount > 0 && <span style={{color:'var(--color-text-muted)',fontWeight:600}}>♡ {fmtNum(n.likeCount)}</span>}
                 </span>
               </div>
