@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { countOne } from '@/lib/count-rows'
+import { countOne, rowsFor } from '@/lib/count-rows'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/layout/header'
@@ -40,7 +40,7 @@ export default async function NovelManagePage({ params }: { params: { id: string
   const currentRank = currentRankRes.data?.[0] || null
 
   // 統計を並列取得（PVはpage_viewsから集計）
-  const [likeRes, bookmarkRes, discoverRes, commentRes, pvRes] = await Promise.all([
+  const [likeRes, bookmarkRes, discoverRes, commentRes, pvRes, epLikeRows] = await Promise.all([
     /* ★ いいね・保存は自分の押した行しか読めない表。運営の鍵で数だけ読む */
     countOne('likes', 'novel_id', params.id).then((count) => ({ count })),
     countOne('bookmarks', 'novel_id', params.id).then((count) => ({ count })),
@@ -49,6 +49,8 @@ export default async function NovelManagePage({ params }: { params: { id: string
     epIds.length > 0
       ? supabase.from('page_views').select('*', { count: 'exact', head: true }).eq('is_author', false).or('is_bot.is.null,is_bot.eq.false').in('episode_id', epIds)
       : Promise.resolve({ count: 0 } as any),
+    /* 話へのいいね（各話のハート）。作品へのいいねとは別に数える */
+    rowsFor('episode_likes', 'episode_id', epIds),
   ])
   const totalChars = episodes.reduce((s: number, e: any) => s + (e.body?.length || 0), 0)
   /* 公開の印は is_published。published は作った時点で立つので使わない */
@@ -172,7 +174,9 @@ export default async function NovelManagePage({ params }: { params: { id: string
           <div className="p8-nm-stats" style={{ ...secStyle, marginBottom: 0 }}>
             <div style={secHead}>読者の反応</div>
             <div style={row}><span style={rowLabel}>PV</span><span style={{ ...rowValue, fontWeight: 700 }}>{(pvRes.count || 0).toLocaleString()}</span></div>
-            <div style={row}><span style={rowLabel}>いいね</span><span style={rowValue}>{(likeRes.count || 0).toLocaleString()}</span></div>
+            {/* ★ いいねは 2 種類。作品ページのハートと、各話のハート。分けて出す */}
+            <div style={row}><span style={rowLabel}>作品へのいいね</span><span style={rowValue}>{(likeRes.count || 0).toLocaleString()}</span></div>
+            <div style={row}><span style={rowLabel}>話へのいいね（合計）</span><span style={rowValue}>{epLikeRows.length.toLocaleString()}</span></div>
             <div style={row}><span style={rowLabel}>保存</span><span style={rowValue}>{(bookmarkRes.count || 0).toLocaleString()}</span></div>
             <div style={row}><span style={rowLabel}>発掘・拡散</span><span style={rowValue}>{(discoverRes.count || 0).toLocaleString()}</span></div>
             <div style={{ ...row, borderBottom: 'none' }}><span style={rowLabel}>コメント</span><span style={rowValue}>{(commentRes.count || 0).toLocaleString()}</span></div>

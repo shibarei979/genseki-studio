@@ -417,6 +417,8 @@ export default async function AnalyticsPage({
       viewsWeek: st.viewsWeek,
       viewsMonth: st.viewsMonth,
       likes: st.likes,
+      /* 話へのいいねの合計（話別の表の数を足したもの） */
+      epLikes: Object.values(st.episodeLikes as Record<string, number>).reduce((sum, n) => sum + n, 0),
       bookmarks: st.bookmarks,
       comments: st.comments,
       uniqueCount: st.uniqueUsers.size,

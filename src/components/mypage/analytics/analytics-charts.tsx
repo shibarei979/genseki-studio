@@ -24,7 +24,10 @@ interface NovelStat {
   viewsYesterday: number
   viewsWeek: number
   viewsMonth: number
+  /** 作品そのものへのいいね（作品ページのハート） */
   likes: number
+  /** 話へのいいねの合計（読む画面の各話のハート）。前は数に入れておらず、少なく見えていた */
+  epLikes?: number
   bookmarks: number
   comments: number
   uniqueCount: number
@@ -160,6 +163,7 @@ function buildAll(novels: NovelStat[]): NovelStat {
     viewsWeek: sumOf(novels, n => n.viewsWeek),
     viewsMonth: sumOf(novels, n => n.viewsMonth),
     likes: sumOf(novels, n => n.likes),
+    epLikes: sumOf(novels, n => n.epLikes ?? 0),
     bookmarks: sumOf(novels, n => n.bookmarks),
     comments: sumOf(novels, n => n.comments),
     uniqueCount: sumOf(novels, n => n.uniqueCount),
@@ -541,7 +545,12 @@ export default function AnalyticsCharts({
               )}
             </div>
             <div style={{borderTop:'1px solid var(--color-brand-light)',paddingTop:12,display:'flex',flexDirection:'column',gap:10}}>
-              {[['いいね',selected.likes,'var(--color-danger)'],['保存',selected.bookmarks,'var(--color-brand)'],['コメント',selected.comments,'var(--color-info)']].map(([l,v,c])=>(
+              {/*
+                * ★ いいねは 2 種類ある。作品ページのハート（作品へのいいね）と、各話のハート（話へのいいね）。
+                *   前は作品へのいいねだけを「いいね」と出していて、下の話別の数と合わず、少なく見えていた。
+                *   両方を分けて出す。
+                */}
+              {[['作品へのいいね',selected.likes,'var(--color-danger)'],['話へのいいね（合計）',selected.epLikes ?? 0,'var(--color-danger)'],['保存',selected.bookmarks,'var(--color-brand)'],['コメント',selected.comments,'var(--color-info)']].map(([l,v,c])=>(
                 <div key={l as string} style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                   <span style={{fontSize:12,color:'var(--color-text-muted)'}}>{l as string}</span>
                   <span style={{fontSize:18,fontWeight:700,color:c as string}}>{(v as number).toLocaleString()}</span>
