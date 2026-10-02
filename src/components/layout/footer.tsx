@@ -40,6 +40,7 @@ const SECTIONS = [
             { href: "/terms", label: "利用規約" },
             { href: "/privacy", label: "プライバシーポリシー" },
             { href: "/guidelines", label: "投稿ガイドライン" },
+            { href: "/tokusho", label: "特定商取引法に基づく表記" },
         ],
     },
     {
