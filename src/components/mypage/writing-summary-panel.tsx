@@ -125,7 +125,88 @@ function stepKey(key: string, diff: number) {
 
 function labelOf(key: string) {
     if (key.length === 4) return `${key}年`
+    if (key.length === 10) {
+        const start = shiftDay(key, -(DAY_SPAN - 1))
+        return `${md(start)}〜${md(key)}`
+    }
     return `${key.slice(0, 4)}年${Number(key.slice(5))}月`
+}
+
+/*
+ * ============================================================
+ * 日ごと（ここ 30 日）
+ *
+ * ★ 月の升目だと、月の頭では数日しか並ばない。
+ *   「ここ 30 日」をいつでも同じ長さで見られるようにする。
+ * ★ 送りの矢印は 30 日ずつ。鍵は窓の最後の日 "YYYY-MM-DD"。
+ * ============================================================
+ */
+const DAY_SPAN = 30
+
+/** 日本時間の今日 "YYYY-MM-DD" */
+function jstToday() {
+    return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
+/** "YYYY-MM-DD" を diff 日ずらす（日付だけで計算し、時差に左右されない） */
+function shiftDay(key: string, diff: number) {
+    const at = new Date(`${key}T00:00:00Z`)
+    at.setUTCDate(at.getUTCDate() + diff)
+    return at.toISOString().slice(0, 10)
+}
+
+/** "M月D日" */
+function md(key: string) {
+    return `${Number(key.slice(5, 7))}月${Number(key.slice(8, 10))}日`
+}
+
+interface DayPeriod {
+    /** 古い順に 30 日 */
+    dates: string[]
+    bars: number[]
+    chars: number
+    days: number
+    bestIndex: number
+    bestChars: number
+    works: WorkRow[]
+}
+
+/** end を最後の日とする 30 日ぶん */
+function buildDays(end: string, logs: Log[], titles: Map<string, string>): DayPeriod {
+    const dates = Array.from({ length: DAY_SPAN }, (_, index) => shiftDay(end, index - (DAY_SPAN - 1)))
+    const at = new Map(dates.map((date, index) => [date, index]))
+    const bars = dates.map(() => 0)
+    const perWork = new Map<string, number>()
+
+    for (const log of logs) {
+        if (log.delta <= 0) continue
+        const index = at.get(log.log_date)
+        if (index === undefined) continue
+        bars[index] += log.delta
+        perWork.set(log.novel_id, (perWork.get(log.novel_id) ?? 0) + log.delta)
+    }
+
+    let bestIndex = -1
+    let bestChars = 0
+    bars.forEach((one, index) => {
+        if (one > bestChars) {
+            bestChars = one
+            bestIndex = index
+        }
+    })
+
+    return {
+        dates,
+        bars,
+        chars: bars.reduce((sum, one) => sum + one, 0),
+        days: bars.filter((one) => one > 0).length,
+        bestIndex,
+        bestChars,
+        works: Array.from(perWork.entries())
+            .map(([id, chars]) => ({ id, title: titles.get(id) || '名前のない作品', chars }))
+            .sort((a, b) => b.chars - a.chars)
+            .slice(0, 4),
+    }
 }
 
 export default function WritingSummaryPanel() {
@@ -134,7 +215,7 @@ export default function WritingSummaryPanel() {
 
     /* いま見ている所。"YYYY-MM" か "YYYY" */
     const [at, setAt] = useState(() => monthKeyOf(new Date()))
-    const [span, setSpan] = useState<'month' | 'year'>('month')
+    const [span, setSpan] = useState<'day' | 'month' | 'year'>('month')
 
     /* さかのぼれる下限 */
     const [oldest, setOldest] = useState('')
@@ -184,23 +265,45 @@ export default function WritingSummaryPanel() {
         }
     }, [])
 
-    const now = useMemo(() => (logs ? build(at, logs, titles) : null), [logs, at, titles])
-    const before = useMemo(
-        () => (logs ? build(stepKey(at, -1), logs, titles) : null),
-        [logs, at, titles],
+    const isDay = span === 'day'
+    const now = useMemo(
+        () => (logs && !isDay ? build(at, logs, titles) : null),
+        [logs, at, titles, isDay],
     )
+    const before = useMemo(
+        () => (logs && !isDay ? build(stepKey(at, -1), logs, titles) : null),
+        [logs, at, titles, isDay],
+    )
+    /* 日ごと：いまの 30 日と、その前の 30 日 */
+    const dayNow = useMemo(() => (logs && isDay ? buildDays(at, logs, titles) : null), [logs, at, titles, isDay])
+    const dayBefore = useMemo(
+        () => (logs && isDay ? buildDays(shiftDay(at, -DAY_SPAN), logs, titles) : null),
+        [logs, at, titles, isDay],
+    )
+    /* 日ごとの棒で、押して選んだ日（無ければ窓の最後の日） */
+    const [pick, setPick] = useState<number | null>(null)
 
-    if (!logs || !now) return null
+    if (!logs || (!now && !dayNow)) return null
 
     const thisMonth = monthKeyOf(new Date())
-    const isNow = span === 'year' ? at === thisMonth.slice(0, 4) : at === thisMonth
-    const canBack = span === 'year' ? at > oldest.slice(0, 4) : at > oldest
+    const today = jstToday()
+    const isNow = isDay ? at === today : span === 'year' ? at === thisMonth.slice(0, 4) : at === thisMonth
+    const canBack = isDay
+        ? shiftDay(at, -(DAY_SPAN - 1)) > `${oldest}-01`
+        : span === 'year'
+          ? at > oldest.slice(0, 4)
+          : at > oldest
 
-    /* 月と年を行き来する。いま見ている所の年を引き継ぐ */
-    function changeSpan(next: 'month' | 'year') {
+    /* 日・月・年を行き来する。いま見ている所を引き継ぐ */
+    function changeSpan(next: 'day' | 'month' | 'year') {
         if (next === span) return
-        if (next === 'year') {
+        setPick(null)
+        if (next === 'day') {
+            setAt(today)
+        } else if (next === 'year') {
             setAt(at.slice(0, 4))
+        } else if (span === 'day') {
+            setAt(at.slice(0, 7))
         } else {
             /* その年の今月。違う年なら 12 月から */
             setAt(at === thisMonth.slice(0, 4) ? thisMonth : `${at}-12`)
@@ -208,8 +311,40 @@ export default function WritingSummaryPanel() {
         setSpan(next)
     }
 
-    const sheets = Math.round(now.chars / 400)
-    const diff = now.chars - (before?.chars ?? 0)
+    /* 送り。日ごとは 30 日ずつ */
+    function move(diff: number) {
+        setPick(null)
+        if (isDay) {
+            const next = shiftDay(at, diff * DAY_SPAN)
+            setAt(next > today ? today : next)
+        } else {
+            setAt(stepKey(at, diff))
+        }
+    }
+
+    const sheets = Math.round((now?.chars ?? dayNow?.chars ?? 0) / 400)
+    /*
+     * ★ 今日書いた文字数（すべての作品の合計、日本時間の今日）。
+     *   「今日はよく書いた」を確かめたい、という声から。
+     */
+    const todayKeyJst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const todayChars = (logs ?? [])
+        .filter((log) => log.log_date === todayKeyJst && log.delta > 0)
+        .reduce((sum, log) => sum + log.delta, 0)
+    const diff = (now?.chars ?? 0) - (before?.chars ?? 0)
+
+    /*
+     * ★ 日ごとの比べ方
+     *   今日：その前の 30 日（昨日まで）の 1 日あたりの平均と比べる
+     *   30 日：その前の 30 日と比べる
+     */
+    const prev30 = logs
+        ? buildDays(shiftDay(today, -1), logs, titles)
+        : null
+    const avgPrev = prev30 ? Math.round(prev30.chars / DAY_SPAN) : 0
+    const todayVsAvg = todayChars - avgPrev
+    const dayDiff = (dayNow?.chars ?? 0) - (dayBefore?.chars ?? 0)
+    const signed = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toLocaleString()}`
 
     const arrow: CSSProperties = {
         border: '1px solid var(--color-line, #e1e9ee)',
@@ -245,7 +380,7 @@ export default function WritingSummaryPanel() {
                      * 押し具にせず、字の切り替えにする。送りの矢印より目立たせない。
                      */}
                     <span style={{ display: 'flex', gap: 8 }}>
-                        {(['month', 'year'] as const).map((key) => (
+                        {(['day', 'month', 'year'] as const).map((key) => (
                             <button
                                 key={key}
                                 type="button"
@@ -265,25 +400,25 @@ export default function WritingSummaryPanel() {
                                     textDecoration: span === key ? 'none' : 'underline',
                                 }}
                             >
-                                {key === 'month' ? '月ごと' : '年ごと'}
+                                {key === 'day' ? '日ごと' : key === 'month' ? '月ごと' : '年ごと'}
                             </button>
                         ))}
                     </span>
 
                     <button
                         type="button"
-                        onClick={() => setAt(stepKey(at, -1))}
+                        onClick={() => move(-1)}
                         disabled={!canBack}
-                        aria-label={span === 'year' ? '前の年' : '前の月'}
+                        aria-label={isDay ? '前の30日' : span === 'year' ? '前の年' : '前の月'}
                         style={{ ...arrow, opacity: canBack ? 1 : 0.35, cursor: canBack ? 'pointer' : 'default' }}
                     >
                         ‹
                     </button>
                     <button
                         type="button"
-                        onClick={() => setAt(stepKey(at, 1))}
+                        onClick={() => move(1)}
                         disabled={isNow}
-                        aria-label={span === 'year' ? '次の年' : '次の月'}
+                        aria-label={isDay ? '次の30日' : span === 'year' ? '次の年' : '次の月'}
                         style={{ ...arrow, opacity: isNow ? 0.35 : 1, cursor: isNow ? 'default' : 'pointer' }}
                     >
                         ›
@@ -291,7 +426,17 @@ export default function WritingSummaryPanel() {
                 </span>
             </div>
 
-            {now.chars === 0 ? (
+            {isDay && dayNow ? (
+                <DayView
+                    period={dayNow}
+                    isNow={isNow}
+                    todayChars={todayChars}
+                    todayNote={avgPrev > 0 ? `ここ30日の平均より ${signed(todayVsAvg)}` : undefined}
+                    diffNote={dayBefore && dayBefore.chars > 0 ? `その前の30日より ${signed(dayDiff)} 文字` : undefined}
+                    pick={pick}
+                    onPick={setPick}
+                />
+            ) : !now ? null : now.chars === 0 ? (
                 <p style={{ margin: '4px 0 6px', fontSize: 13.5, color: 'var(--color-text-muted, #71818c)' }}>
                     {isNow
                         ? `まだ${span === 'year' ? 'この年' : 'この月'}の記録はありません。一文字でも書けば、ここに残ります。`
@@ -308,6 +453,9 @@ export default function WritingSummaryPanel() {
                                 gap: 10,
                             }}
                         >
+                            {isNow && span === 'month' && (
+                                <Figure label="今日書いた文字数" value={todayChars.toLocaleString()} unit="文字" />
+                            )}
                             <Figure
                                 label="書いた文字数"
                                 value={now.chars.toLocaleString()}
@@ -525,6 +673,173 @@ function Figure({
                 {unit && <span style={{ fontSize: 12, color: 'var(--color-text-muted, #71818c)' }}>{unit}</span>}
             </div>
             {note && <div style={{ fontSize: 11.5, color: 'var(--color-text-muted, #71818c)', marginTop: 2 }}>{note}</div>}
+        </div>
+    )
+}
+
+/**
+ * 日ごと（ここ 30 日）の中身。
+ *
+ *   今日・30 日の合計・書いた日・いちばん書いた日 の札と、30 本の棒。
+ *   棒を押すと、その日の文字数を下に出す（携帯は指を置いて見る手段が無いため）。
+ */
+function DayView({
+    period,
+    isNow,
+    todayChars,
+    todayNote,
+    diffNote,
+    pick,
+    onPick,
+}: {
+    period: DayPeriod
+    isNow: boolean
+    todayChars: number
+    todayNote?: string
+    diffNote?: string
+    pick: number | null
+    onPick: (index: number | null) => void
+}) {
+    const last = period.dates.length - 1
+    const shown = pick ?? last
+    const sheets = Math.round(period.chars / 400)
+
+    return (
+        <>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'stretch' }}>
+                <div
+                    style={{
+                        flex: '1 1 380px',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                        gap: 10,
+                    }}
+                >
+                    {isNow && (
+                        <Figure label="今日書いた文字数" value={todayChars.toLocaleString()} unit="文字" note={todayNote} />
+                    )}
+                    <Figure
+                        label="30日で書いた文字数"
+                        value={period.chars.toLocaleString()}
+                        unit="文字"
+                        note={diffNote ?? (sheets >= 1 ? `原稿用紙 約${sheets.toLocaleString()} 枚` : undefined)}
+                        strong
+                    />
+                    <Figure
+                        label="書いた日"
+                        value={`${period.days}`}
+                        unit={`日 / ${DAY_SPAN}日`}
+                        note={period.days > 0 ? `書いた日は平均 ${Math.round(period.chars / period.days).toLocaleString()}字` : undefined}
+                    />
+                    <Figure
+                        label="いちばん書いた日"
+                        value={period.bestIndex < 0 ? '—' : md(period.dates[period.bestIndex])}
+                        unit=""
+                        note={period.bestChars > 0 ? `${period.bestChars.toLocaleString()} 文字` : undefined}
+                    />
+                </div>
+
+                <div
+                    style={{
+                        flex: '1 1 300px',
+                        minWidth: 0,
+                        background: 'var(--color-brand-light, #eef4f8)',
+                        borderRadius: 10,
+                        padding: '10px 12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                    }}
+                >
+                    <DayBars period={period} shown={shown} onPick={onPick} />
+                    <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-muted, #71818c)', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{md(period.dates[shown])}{shown === last && isNow ? '（今日）' : ''}</span>
+                        <span style={{ fontWeight: 700, color: 'var(--color-brand, #1f4e6b)' }}>
+                            {period.bars[shown].toLocaleString()} 文字
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {period.works.length > 0 && (
+                <div style={{ marginTop: 12, borderTop: '1px solid var(--color-line, #e8eef2)', paddingTop: 10 }}>
+                    {period.works.map((work) => (
+                        <div
+                            key={work.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, color: 'var(--color-text, #26343d)', padding: '4px 0' }}
+                        >
+                            <span style={{ width: 170, flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {work.title}
+                            </span>
+                            <span style={{ flex: 1, minWidth: 60, height: 7, borderRadius: 999, background: 'var(--color-brand-light, #eaf0f4)' }}>
+                                <span
+                                    style={{
+                                        display: 'block',
+                                        height: '100%',
+                                        borderRadius: 999,
+                                        width: `${Math.max(5, (work.chars / (period.works[0].chars || 1)) * 100)}%`,
+                                        background: 'var(--color-brand, #1f4e6b)',
+                                    }}
+                                />
+                            </span>
+                            <span style={{ width: 84, textAlign: 'right', flex: 'none', color: 'var(--color-text-muted, #71818c)' }}>
+                                {work.chars.toLocaleString()} 文字
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    )
+}
+
+/** 30 本の棒。押した日を濃くする */
+function DayBars({ period, shown, onPick }: { period: DayPeriod; shown: number; onPick: (index: number) => void }) {
+    const best = period.bestChars || 1
+    const last = period.dates.length - 1
+    return (
+        <div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 84 }}>
+                {period.bars.map((one, index) => (
+                    <button
+                        key={period.dates[index]}
+                        type="button"
+                        onClick={() => onPick(index)}
+                        aria-label={`${md(period.dates[index])} ${one.toLocaleString()} 文字`}
+                        title={`${md(period.dates[index])}　${one.toLocaleString()} 文字`}
+                        style={{
+                            flex: 1,
+                            minWidth: 0,
+                            height: '100%',
+                            padding: 0,
+                            border: 'none',
+                            background: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                        }}
+                    >
+                        <span
+                            style={{
+                                display: 'block',
+                                width: '100%',
+                                height: one > 0 ? `${Math.max(6, (one / best) * 100)}%` : 3,
+                                borderRadius: '3px 3px 0 0',
+                                background:
+                                    index === shown
+                                        ? 'var(--color-brand, #1f4e6b)'
+                                        : one > 0
+                                          ? 'rgba(31, 78, 107, .45)'
+                                          : 'rgba(31, 78, 107, .12)',
+                            }}
+                        />
+                    </button>
+                ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 9.5, color: '#8a9aa5' }}>
+                <span>{md(period.dates[0])}</span>
+                <span>{md(period.dates[Math.floor(last / 2)])}</span>
+                <span>{md(period.dates[last])}</span>
+            </div>
         </div>
     )
 }
