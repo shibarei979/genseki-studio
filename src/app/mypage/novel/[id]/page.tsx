@@ -8,7 +8,8 @@ import NovelManageActions from '@/components/mypage/novel/novel-manage-actions'
 
 export const dynamic = 'force-dynamic'
 
-const AI_LABEL: Record<string, string> = { none: 'AI未使用', assist: '補助的利用', full: '全面的利用' }
+/* 表の値は none / assist / generated。'full' は古い名前の名残 */
+const AI_LABEL: Record<string, string> = { none: 'AI未使用', assist: '補助的利用', generated: '全面的利用', full: '全面的利用' }
 
 export default async function NovelManagePage({ params }: { params: { id: string } }) {
   const supabase = await createClient()

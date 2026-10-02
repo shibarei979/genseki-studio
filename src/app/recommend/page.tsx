@@ -121,7 +121,7 @@ export default async function RecommendPage({
      * AI が本文を書いた作品を外す。
      *
      * ★ マイページで「出さない」を選んだ人にだけ。
-     *   ai_usage が 'full' のものだけ外す。
+     *   ai_usage が 'generated' のものだけ外す（前は 'full' で比べていて、外れていなかった）。
      *   'assist'（下調べなどに使った）は残す。
      *   表紙を AI で作っただけの作品も残る。
      */
@@ -131,7 +131,7 @@ export default async function RecommendPage({
     const rated = all.filter(
         (n) =>
             ratings.includes((n.age_rating as "all" | "r15" | "r18") ?? "all")
-            && !(hideAi && (n as { ai_usage?: string }).ai_usage === "full"),
+            && !(hideAi && (n as { ai_usage?: string }).ai_usage === "generated"),
     );
 
     /*

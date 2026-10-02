@@ -135,7 +135,8 @@ export default async function SearchPage({ searchParams }: Props) {
     }
 
     if (profile?.show_ai_works === false) {
-      q2 = (q2 as any).neq('ai_usage', 'full')
+      /* AI が本文を書いた作品の印は 'generated'（前は 'full' で比べていて、外れていなかった） */
+      q2 = (q2 as any).neq('ai_usage', 'generated')
     }
     const { data: allData, count: allCount } = await q2
     const shuffled = [...(allData || [])].sort(() => Math.random() - 0.5)
@@ -161,7 +162,7 @@ export default async function SearchPage({ searchParams }: Props) {
     }
 
     if (profile?.show_ai_works === false) {
-      query = (query as any).neq('ai_usage', 'full')
+      query = (query as any).neq('ai_usage', 'generated')
     }
     if (q) {
       query = (query as any).or(`title.ilike.%${q}%,summary.ilike.%${q}%,catchcopy.ilike.%${q}%`)

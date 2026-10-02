@@ -105,8 +105,9 @@ async function computeRanking(period: string, novelType: string, serial: string,
       .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at')
       .eq('published', true).in('age_rating', ratings)
     poolQuery = keepR18Out(poolQuery, genre, ratings) as typeof poolQuery
-    if (aiMode === 'ai') poolQuery = (poolQuery as any).eq('ai_usage', 'full')
-    else poolQuery = (poolQuery as any).neq('ai_usage', 'full')
+    /* AI が本文を書いた作品の印は 'generated'（前は 'full' で比べていて、どれにも当たらなかった） */
+    if (aiMode === 'ai') poolQuery = (poolQuery as any).eq('ai_usage', 'generated')
+    else poolQuery = (poolQuery as any).neq('ai_usage', 'generated')
     const { data: poolNovels } = await poolQuery
       .order('created_at', { ascending: false }).limit(300)
 
@@ -285,8 +286,9 @@ async function computeRanking(period: string, novelType: string, serial: string,
       .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at')
       .eq('published', true).is('deleted_at', null).in('age_rating', ratings)
     // AI作品ランキングと人間作品ランキングを分離
-    if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'full')
-    else q = (q as any).neq('ai_usage', 'full')
+    /* AI が本文を書いた作品の印は 'generated'（前は 'full' で比べていて、どれにも当たらなかった） */
+    if (aiMode === 'ai') q = (q as any).eq('ai_usage', 'generated')
+    else q = (q as any).neq('ai_usage', 'generated')
     q = keepR18Out(q, genre, ratings) as typeof q
     if (novelType !== '全て') q = (q as any).eq('novel_type', novelType)
     if (genre !== '全て') {

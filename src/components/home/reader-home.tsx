@@ -264,7 +264,7 @@ export default async function ReaderHome() {
    * ★ マイページで「出さない」を選んだ人にだけ。
    *   何も決めていない人には、これまでどおり見せる。
    *
-   * ★ ai_usage が 'full' のものだけ外す。
+   * ★ ai_usage が 'generated' のものだけ外す（前は 'full' で比べていて、外れていなかった）。
    *   'assist'（下調べなどに使った）は残す。
    *   表紙を AI で作っただけの作品も残る。
    */
@@ -273,7 +273,7 @@ export default async function ReaderHome() {
   const newest: NovelRow[] = (newestRaw || []).filter(
     (n: NovelRow) =>
       !blockedAuthors.has((n as { author_id?: string }).author_id ?? '')
-      && !(hideAi && (n as { ai_usage?: string }).ai_usage === 'full'),
+      && !(hideAi && (n as { ai_usage?: string }).ai_usage === 'generated'),
   )
   const novelById: Record<string, NovelRow> = {}
   newest.forEach((n) => { novelById[n.id] = n })

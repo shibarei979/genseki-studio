@@ -250,7 +250,8 @@ export function pickWeightedRandom<T extends { finalScore: number }>(items: T[],
 export function buildRecommendation(scored: ScoredNovel[], count: number, favoriteGenres: string[], excludeAuthorId?: string, hideAi?: boolean): ScoredNovel[] {
   let pool = scored
   if (excludeAuthorId) pool = pool.filter(n => n.author_id !== excludeAuthorId)
-  if (hideAi) pool = pool.filter(n => n.ai_usage !== 'full')
+  /* AI が本文を書いた作品の印は 'generated'（前は 'full' で比べていて、外れていなかった） */
+  if (hideAi) pool = pool.filter(n => n.ai_usage !== 'generated')
   if (pool.length === 0) return []
 
   const picked: ScoredNovel[] = []
