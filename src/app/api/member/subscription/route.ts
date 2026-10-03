@@ -48,15 +48,33 @@ async function anchorPlan() {
     return plans.find((plan) => plan.is_active) ?? plans[0] ?? null;
 }
 
+/**
+ * ★ 初月 0pt：一度もサブスクに入ったことがない人は、最初の 1 か月を 0pt で使える。
+ *   入ったことがあるか（途中でやめた・自動で終わったを含む）は subscriptions の行で見る。
+ */
+async function isFirstTime(userId: string): Promise<boolean> {
+    const admin = createAdminClient();
+    const { count, error } = await admin
+        .from("subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
+    if (error) return false;
+    return (count ?? 0) === 0;
+}
+
 async function view(userId: string) {
-    const [anchor, live, points] = await Promise.all([
+    const [anchor, live, points, firstFree] = await Promise.all([
         anchorPlan(),
         liveSubscriptionOf(userId),
         freePointsOf(userId),
+        isFirstTime(userId),
     ]);
 
     return {
         price: POINT_PRICE,
+        /* 今回入るときに引く数（初月なら 0） */
+        joinPrice: firstFree ? 0 : POINT_PRICE,
+        firstFree,
         points,
         /* ★ 800pt で、これまでの売り物の特典すべて。選ぶものは 1 つだけ */
         plans: anchor
@@ -122,13 +140,18 @@ export async function POST(request: Request) {
         }
         body.planId = plan.id;
 
+        /* 初めての人は 0pt（初月無料）。2 回目からは POINT_PRICE */
+        const firstFree = await isFirstTime(user.id);
+
         /* 先に払う。払えたら始める。始められなければ返す */
-        const paid = await spendFreePoints({
-            userId: user.id,
-            amount: POINT_PRICE,
-            reason: "subscription",
-            reasonRef: `join:${body.planId}:${new Date().toISOString()}`,
-        });
+        const paid = firstFree
+            ? { spent: true, reason: undefined as string | undefined }
+            : await spendFreePoints({
+                  userId: user.id,
+                  amount: POINT_PRICE,
+                  reason: "subscription",
+                  reasonRef: `join:${body.planId}:${new Date().toISOString()}`,
+              });
         if (!paid.spent) {
             return NextResponse.json(
                 { error: paid.reason === "ポイントが足りません" ? `無料ポイントが足りません（${POINT_PRICE}pt 要ります）` : paid.reason ?? "払えませんでした" },
@@ -144,6 +167,10 @@ export async function POST(request: Request) {
             /* 売り物が年ぎめでも、ポイント払いは 1 か月 */
             interval: "month",
         });
+
+        if (started.error && firstFree) {
+            return NextResponse.json({ error: started.error }, { status: 400 });
+        }
 
         if (started.error) {
             /* 払ったのに入れなかった。ポイントを戻す */

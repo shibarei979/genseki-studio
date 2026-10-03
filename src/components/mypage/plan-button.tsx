@@ -25,6 +25,10 @@ interface PlanRow {
 
 interface View {
     price: number;
+    /** 今回入るときに引く数（初月なら 0）。古い受け口では無いので price で代える */
+    joinPrice?: number;
+    /** 初めて入る人か（初月 0pt） */
+    firstFree?: boolean;
     points: number;
     plans: PlanRow[];
     current: {
@@ -138,7 +142,9 @@ export default function PlanButton() {
     const current = data.current;
     /* 出しているプランがまだ無い（管理画面で月のプランを公開すると入れるようになる） */
     const notYet = !current && data.plans.length === 0;
-    const short = data.points < data.price;
+    const joinPrice = data.joinPrice ?? data.price;
+    const firstFree = data.firstFree === true && joinPrice === 0;
+    const short = data.points < joinPrice;
 
     return (
         <>
@@ -157,7 +163,9 @@ export default function PlanButton() {
                                 : `${current.planName}　入っています`
                             : notYet
                               ? "準備中です"
-                              : `${data.price}pt で 1 か月`}
+                              : firstFree
+                                ? '初月 0pt で 1 か月'
+                                : `${data.price}pt で 1 か月`}
                     </small>
                 </span>
                 {!notYet && <span className="lsb-n sub-n">{current ? "会員" : "入る"}</span>}
@@ -173,7 +181,17 @@ export default function PlanButton() {
 
                         {!notYet && (
                         <p className="sub-note">
-                            いまは <strong>無料ポイント {data.price}pt</strong> で 1 か月、<strong>すべての特典</strong>が使えます。
+                            {firstFree ? (
+                                <>
+                                    はじめての方は、<strong>最初の 1 か月を 0pt</strong> で、<strong>すべての特典</strong>が使えます。
+                                    <br />
+                                    2 回目からは 無料ポイント {data.price}pt で 1 か月です。
+                                </>
+                            ) : (
+                                <>
+                                    いまは <strong>無料ポイント {data.price}pt</strong> で 1 か月、<strong>すべての特典</strong>が使えます。
+                                </>
+                            )}
                             <br />
                             1 か月たつと自動で終わります。続けてポイントが引かれることはありません。続けたいときは、終わったあとにもう一度入ってください。
                         </p>
@@ -287,7 +305,13 @@ export default function PlanButton() {
                                             <b>{plan.name}</b>
                                             <span>
                                                 <span className="mc-coin">P</span>
-                                                {data.price}pt / 1 か月
+                                                {firstFree ? (
+                                                    <>
+                                                        <s style={{ opacity: 0.5, fontWeight: 600 }}>{data.price}pt</s> 初月 0pt
+                                                    </>
+                                                ) : (
+                                                    <>{data.price}pt / 1 か月</>
+                                                )}
                                             </span>
                                         </p>
                                         {plan.blurb && <p className="sub-plan-d">{plan.blurb}</p>}
@@ -304,7 +328,11 @@ export default function PlanButton() {
                                             disabled={busy || short}
                                             onClick={() => void act({ action: "join", planId: plan.id }, "入りました。")}
                                         >
-                                            {short ? `あと ${(data.price - data.points).toLocaleString()} pt` : `${data.price}pt で入る`}
+                                            {short
+                                                ? `あと ${(joinPrice - data.points).toLocaleString()} pt`
+                                                : firstFree
+                                                  ? '0pt で入る（初月）'
+                                                  : `${data.price}pt で入る`}
                                         </button>
                                     </li>
                                 ))}
