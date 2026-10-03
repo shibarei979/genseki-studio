@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { likesReceived, likesSent, savedWorks } from "@/lib/mission-counts";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -164,8 +165,9 @@ export async function POST(request: Request) {
             gotLike, gotComment,
         ] = await Promise.all([
             count("read_episodes", (q) => q.eq("user_id", user.id)),
-            count("likes", (q) => q.eq("user_id", user.id)),
-            count("bookmarks", (q) => q.eq("user_id", user.id)),
+            /* いいねは作品＋話、保存はブックマーク・栞（lib/mission-counts.ts） */
+            likesSent(admin, user.id),
+            savedWorks(admin, user.id),
             count("comments", (q) => q.eq("user_id", user.id)),
             count("follows", (q) => q.eq("follower_id", user.id)),
             count("discovers", (q) => q.eq("user_id", user.id)),
@@ -174,9 +176,7 @@ export async function POST(request: Request) {
                 ? count("episodes", (q) => q.in("novel_id", novelIds))
                 : Promise.resolve(0),
             count("series", (q) => q.eq("user_id", user.id)),
-            novelIds.length > 0
-                ? count("likes", (q) => q.in("novel_id", novelIds))
-                : Promise.resolve(0),
+            likesReceived(admin, novelIds),
             novelIds.length > 0
                 ? count("comments", (q) => q.in("novel_id", novelIds))
                 : Promise.resolve(0),

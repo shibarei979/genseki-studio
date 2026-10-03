@@ -15,6 +15,9 @@
  *   update  自分のつぶやきだけ
  *   delete  自分のつぶやき、または運営
  *   hide    運営だけ
+ *   comment-update  自分の返信（コメント）だけ
+ *   comment-delete  自分の返信、または運営。下に返信が付いているときは
+ *                   中身だけ「削除されました」に置き換える（返信の流れを切らないため）
  * ============================================================
  */
 
@@ -25,10 +28,14 @@ import { createClient } from "@/lib/supabase/server";
 
 /** 一度に入れられる長さ。長文は作品のほうへ */
 const MAX_BODY = 1000;
+/** 返信（コメント）の長さ。書く欄と同じ */
+const COMMENT_MAX = 200;
+/** 下に返信が付いた返信を消したときに、代わりに残す言葉（画面の側と同じ） */
+const DELETED_COMMENT = "（このコメントは削除されました）";
 
 export async function POST(request: Request) {
     try {
-        const { action, tweetId, body, imageUrl, topic, hidden } =
+        const { action, tweetId, commentId, body, imageUrl, topic, hidden } =
             await request.json();
 
         const supabase = await createClient();
@@ -87,6 +94,55 @@ export async function POST(request: Request) {
 
             if (error) throw error;
             return NextResponse.json({ tweet: data });
+        }
+
+        /* ---------- 返信（コメント）を直す・消す ---------- */
+        if (action === "comment-update" || action === "comment-delete") {
+            if (!commentId) {
+                return NextResponse.json({ error: "どの返信か分かりません" }, { status: 400 });
+            }
+            const { data: comment } = await admin
+                .from("tweet_comments")
+                .select("id, user_id")
+                .eq("id", commentId)
+                .maybeSingle();
+            if (!comment) {
+                return NextResponse.json({ error: "その返信がありません" }, { status: 404 });
+            }
+            const mine = comment.user_id === user.id;
+
+            if (action === "comment-update") {
+                if (!mine) {
+                    return NextResponse.json({ error: "自分の返信ではありません" }, { status: 403 });
+                }
+                const text = String(body ?? "").trim();
+                if (!text || text.length > COMMENT_MAX) {
+                    return NextResponse.json({ error: "中身を確かめてください" }, { status: 400 });
+                }
+                const { error } = await admin.from("tweet_comments").update({ body: text }).eq("id", commentId);
+                if (error) throw error;
+                return NextResponse.json({ ok: true });
+            }
+
+            if (!mine && !isAdmin) {
+                return NextResponse.json({ error: "自分の返信ではありません" }, { status: 403 });
+            }
+            /* 下に返信が付いていれば、中身だけ消す。付いていなければ行ごと消す */
+            const { count: children } = await admin
+                .from("tweet_comments")
+                .select("*", { count: "exact", head: true })
+                .eq("parent_id", commentId);
+            if ((children ?? 0) > 0) {
+                const { error } = await admin
+                    .from("tweet_comments")
+                    .update({ body: DELETED_COMMENT })
+                    .eq("id", commentId);
+                if (error) throw error;
+                return NextResponse.json({ ok: true, softDeleted: true });
+            }
+            const { error } = await admin.from("tweet_comments").delete().eq("id", commentId);
+            if (error) throw error;
+            return NextResponse.json({ ok: true });
         }
 
         if (!tweetId) {

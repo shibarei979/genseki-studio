@@ -47,6 +47,13 @@ interface PollOption {
   votes: number
 }
 
+/** 返信 1 つに付けられる返信の数 */
+const REPLY_LIMIT = 100
+/** 返信の下に、はじめから見せる返信の数。残りは「続きを見る」で開く */
+const REPLY_PREVIEW = 2
+/** 下に返信が付いた返信を消したときに残る言葉（/api/tweets/write と同じ） */
+const DELETED_COMMENT = '（このコメントは削除されました）'
+
 interface TweetComment {
   id: string
   user_id: string
@@ -248,6 +255,11 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
   const [postError, setPostError] = useState('')
   /* いまどの返信に返そうとしているか。つぶやきごとに 1 つ */
   const [replyTo, setReplyTo] = useState<Record<string, string | null>>({})
+  /* いま直している返信（コメント）。直している間だけ入る */
+  const [commentEdit, setCommentEdit] = useState<{ id: string; text: string } | null>(null)
+  const [commentSaving, setCommentSaving] = useState(false)
+  /* 返信の下の返信を、全部開いているか（返信ごと） */
+  const [openReplies, setOpenReplies] = useState<Record<string, boolean>>({})
 
   /*
    * アンケート。
@@ -788,6 +800,14 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     const key = parentId ?? tweetId
     if (!currentUserId) return guard('返信する', () => {})()
     if (!commentBody[key]?.trim()) return
+    /* 返信への返信は REPLY_LIMIT 件まで（表の決まりでも止めている） */
+    if (parentId) {
+      const kids = tweets.find(t => t.id === tweetId)?.comments.filter(c => c.parent_id === parentId).length ?? 0
+      if (kids >= REPLY_LIMIT) {
+        setPostError(`この返信には、これ以上返信できません（${REPLY_LIMIT}件まで）`)
+        return
+      }
+    }
 
     setCommentPosting(prev => ({...prev, [key]: true}))
 
@@ -851,6 +871,106 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
     /* 返された相手に知らせる。宛先は受け口の側で引く */
     fetch('/api/notify', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ tweet_comment_id: data.id }) }).catch(() => {})
+  }
+
+  /**
+   * 返信（コメント）を直す・消す。書いた本人だけ（受け口でも確かめる）。
+   *
+   * ★ 下に返信が付いている返信を消したときは、行は残して中身だけ
+   *   「削除されました」にする（受け口が決める）。返信の流れを切らないため。
+   */
+  async function sendCommentAction(payload: Record<string, unknown>): Promise<{ ok?: boolean; softDeleted?: boolean; error?: string }> {
+    try {
+      const response = await fetch('/api/tweets/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      return await response.json()
+    } catch (caught) {
+      return { error: caught instanceof Error ? caught.message : '送れませんでした' }
+    }
+  }
+
+  async function saveCommentEdit(tweetId: string) {
+    if (!commentEdit || commentSaving) return
+    const text = commentEdit.text.trim()
+    if (!text) return
+    setCommentSaving(true)
+    const result = await sendCommentAction({ action: 'comment-update', commentId: commentEdit.id, body: text })
+    setCommentSaving(false)
+    if (result.error) {
+      window.alert(`直せませんでした：${result.error}`)
+      return
+    }
+    const id = commentEdit.id
+    setTweets(prev => prev.map(t => t.id === tweetId
+      ? { ...t, comments: t.comments.map(c => c.id === id ? { ...c, body: text } : c) }
+      : t))
+    setCommentEdit(null)
+  }
+
+  async function deleteComment(tweetId: string, commentId: string) {
+    if (!confirm('この返信を削除しますか？')) return
+    const result = await sendCommentAction({ action: 'comment-delete', commentId })
+    if (result.error) {
+      window.alert(`削除できませんでした：${result.error}`)
+      return
+    }
+    setTweets(prev => prev.map(t => {
+      if (t.id !== tweetId) return t
+      if (result.softDeleted) {
+        return { ...t, comments: t.comments.map(c => c.id === commentId ? { ...c, body: DELETED_COMMENT } : c) }
+      }
+      return { ...t, comments: t.comments.filter(c => c.id !== commentId), comment_count: Math.max(0, t.comment_count - 1) }
+    }))
+  }
+
+  /** 返信の中身。直しているときは入力欄、自分の返信には「編集・削除」 */
+  function renderCommentBody(tweetId: string, c: TweetComment, small: boolean) {
+    const isDeleted = c.body === DELETED_COMMENT
+    const fontSize = small ? 12.5 : 13
+    if (commentEdit?.id === c.id) {
+      return (
+        <div style={{marginTop:6}}>
+          <textarea
+            value={commentEdit.text}
+            onChange={e=>setCommentEdit({ id: c.id, text: e.target.value })}
+            maxLength={200}
+            rows={2}
+            autoFocus
+            style={{width:'100%',padding:'8px 10px',border:'1px solid var(--color-brand-border)',borderRadius:10,fontSize,lineHeight:1.6,resize:'vertical',outline:'none'}}
+          />
+          <div style={{display:'flex',gap:8,marginTop:6}}>
+            <button onClick={()=>saveCommentEdit(tweetId)} disabled={commentSaving||!commentEdit.text.trim()}
+              style={{height:30,padding:'0 14px',background:'var(--color-brand)',color:'var(--color-text-inverse)',border:'none',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',opacity:commentSaving||!commentEdit.text.trim()?0.5:1}}>
+              保存
+            </button>
+            <button onClick={()=>setCommentEdit(null)}
+              style={{height:30,padding:'0 12px',background:'none',color:'var(--color-text-muted)',border:'1px solid var(--color-line)',borderRadius:8,fontSize:12,cursor:'pointer'}}>
+              やめる
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return (
+      <>
+        <div style={{fontSize,color:isDeleted?'var(--color-text-faint)':'var(--color-text)',marginTop:4,lineHeight:1.7,whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{c.body}</div>
+        {currentUserId === c.user_id && !isDeleted && (
+          <span style={{display:'inline-flex',gap:12,marginTop:6,marginRight:12}}>
+            <button onClick={()=>setCommentEdit({ id: c.id, text: c.body })}
+              style={{fontSize:11.5,color:'var(--color-text-muted)',background:'none',border:'none',padding:0,cursor:'pointer'}}>
+              編集
+            </button>
+            <button onClick={()=>deleteComment(tweetId, c.id)}
+              style={{fontSize:11.5,color:'var(--color-danger)',background:'none',border:'none',padding:0,cursor:'pointer'}}>
+              削除
+            </button>
+          </span>
+        )}
+      </>
+    )
   }
 
   async function handleDelete(tweetId: string) {
@@ -1456,9 +1576,13 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                     <div style={{flex:1,minWidth:0}}>
                       <Link href={`/author/${parent.user_id}`} style={{fontSize:13,fontWeight:600,color:'var(--color-text)',marginRight:8,textDecoration:'none'}}>{parent.display_name}</Link>
                       <span style={{fontSize:11.5,color:'var(--color-text-faint)'}}>{fmtDate(parent.created_at)}</span>
-                      <div style={{fontSize:13,color:'var(--color-text)',marginTop:4,lineHeight:1.7}}>{parent.body}</div>
+                      {renderCommentBody(tweet.id, parent, false)}
 
-                      {currentUserId && (
+                      {/* 返信は 1 つにつき REPLY_LIMIT 件まで。届いたら返信の押し具を出さない */}
+                      {currentUserId && commentEdit?.id !== parent.id && tweet.comments.filter(c => c.parent_id === parent.id).length >= REPLY_LIMIT && (
+                        <span style={{display:'inline-block',marginTop:6,fontSize:11.5,color:'var(--color-text-faint)'}}>返信は{REPLY_LIMIT}件までです</span>
+                      )}
+                      {currentUserId && commentEdit?.id !== parent.id && tweet.comments.filter(c => c.parent_id === parent.id).length < REPLY_LIMIT && (
                         <button
                           onClick={()=>setReplyTo(prev=>({
                             ...prev,
@@ -1478,7 +1602,12 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                    * 最後の 1 件だけ線を途中で止める。
                    * そこで話が終わっていることが分かる。
                    */}
-                  {tweet.comments.filter(c => c.parent_id === parent.id).map((child, index, all) => (
+                  {(() => {
+                    const kids = tweet.comments.filter(c => c.parent_id === parent.id)
+                    const shown = openReplies[parent.id] ? kids : kids.slice(0, REPLY_PREVIEW)
+                    return (
+                      <>
+                  {shown.map((child, index, all) => (
                     <div key={child.id} style={{display:'flex',gap:10,padding:'0 22px 0 35px',position:'relative'}}>
                       <div style={{position:'relative',flexShrink:0,width:2}}>
                         <span
@@ -1500,11 +1629,24 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                         <div style={{flex:1,minWidth:0}}>
                           <Link href={`/author/${child.user_id}`} style={{fontSize:12.5,fontWeight:600,color:'var(--color-text)',marginRight:8,textDecoration:'none'}}>{child.display_name}</Link>
                           <span style={{fontSize:11,color:'var(--color-text-faint)'}}>{fmtDate(child.created_at)}</span>
-                          <div style={{fontSize:12.5,color:'var(--color-text)',marginTop:4,lineHeight:1.7}}>{child.body}</div>
+                          {renderCommentBody(tweet.id, child, true)}
                         </div>
                       </div>
                     </div>
                   ))}
+                  {/* はじめは REPLY_PREVIEW 件だけ。残りは押すと全部開く */}
+                  {kids.length > shown.length && (
+                    <div style={{padding:'4px 22px 12px 59px'}}>
+                      <button
+                        onClick={()=>setOpenReplies(prev=>({...prev,[parent.id]:true}))}
+                        style={{fontSize:12,color:'var(--color-brand)',background:'none',border:'none',padding:0,cursor:'pointer',fontWeight:600}}>
+                        続きを見る（残り{kids.length - shown.length}件）
+                      </button>
+                    </div>
+                  )}
+                      </>
+                    )
+                  })()}
 
                   {/* 返信を書く欄。押したときだけ出す */}
                   {replyTo[tweet.id] === parent.id && currentUserId && (

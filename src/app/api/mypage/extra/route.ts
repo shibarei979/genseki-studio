@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { likesReceived, likesSent, savedWorks } from "@/lib/mission-counts";
 import { rowsFor } from "@/lib/count-rows";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -125,14 +126,21 @@ export async function GET() {
         ])
         : [{ count: 0 }, { count: 0 }];
 
+    /* いいねは作品＋話、保存はブックマーク・栞。ポイントを配る側と同じ数え方（lib/mission-counts.ts） */
+    const [likeSentAll, savedAll, gotLikeAll] = await Promise.all([
+        likesSent(admin, user.id),
+        savedWorks(admin, user.id),
+        likesReceived(admin, novelIds),
+    ]);
+
     const missionStats = {
         coverCount: (novels ?? []).filter((row: any) => row.cover_url).length,
-        receivedLikeCount: gotLikeM.count ?? 0,
+        receivedLikeCount: gotLikeAll,
         receivedCommentCount: gotCommentM.count ?? 0,
-        likeCount: likesM.count ?? 0,
+        likeCount: likeSentAll,
         discoverCount: discoversM.count ?? 0,
         commentCount: commentsM.count ?? 0,
-        bookmarkCount: bookmarksM.count ?? 0,
+        bookmarkCount: savedAll,
         novelCount: novelsCountM.count ?? 0,
         episodeCount: epCountRes.count ?? 0,
         followCount: followsM.count ?? 0,

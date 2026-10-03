@@ -83,8 +83,8 @@ const CatIcon = ({ cat }: { cat: MissionCat }) => {
 export const COMMON_MISSIONS: Mission[] = [
   { id: 'first-read',     label: 'はじめての読了',     desc: '作品を1話、最後まで読む',      target: 1,  cat: 'start',    cur: s => s.readCount || 0 },
   { id: 'read-5',         label: '読書の習慣',         desc: '5話読了する',                  target: 5,  cat: 'start',    cur: s => s.readCount || 0 },
-  { id: 'first-like',     label: 'はじめてのいいね',   desc: '作品にいいねを送る',           target: 1,  cat: 'social',   cur: s => s.likeCount },
-  { id: 'first-bookmark', label: 'はじめての保存',     desc: '気になる作品を保存する',       target: 1,  cat: 'start',    cur: s => s.bookmarkCount },
+  { id: 'first-like',     label: 'はじめてのいいね',   desc: '作品や話にいいねを送る',       target: 1,  cat: 'social',   cur: s => s.likeCount },
+  { id: 'first-bookmark', label: 'はじめての保存',     desc: '作品を保存する（栞でもOK）',   target: 1,  cat: 'start',    cur: s => s.bookmarkCount },
   { id: 'first-comment',  label: 'はじめてのコメント', desc: '作品にコメントを書く',         target: 1,  cat: 'social',   cur: s => s.commentCount },
   { id: 'first-follow',   label: '作家をフォロー',     desc: '気になる作家をフォローする',   target: 1,  cat: 'social',   cur: s => s.followCount },
   { id: 'profile-setup',  label: '自己紹介を書く',     desc: 'プロフィールに自己紹介を設定', target: 1,  cat: 'start',    cur: s => (s.hasBio ? 1 : 0) },
@@ -93,9 +93,9 @@ export const COMMON_MISSIONS: Mission[] = [
 /** 読む向きだけに出るもの */
 export const READER_ONLY_MISSIONS: Mission[] = [
   { id: 'read-30',        label: '読み込む人',         desc: '30話読了する',                 target: 30, cat: 'start',    cur: s => s.readCount || 0 },
-  { id: 'like-10',        label: '応援の達人',         desc: 'いいねを10回送る',             target: 10, cat: 'social',   cur: s => s.likeCount },
+  { id: 'like-10',        label: '応援の達人',         desc: '作品や話にいいねを10回送る',             target: 10, cat: 'social',   cur: s => s.likeCount },
   { id: 'comment-5',      label: '感想の語り部',       desc: 'コメントを5件書く',            target: 5,  cat: 'social',   cur: s => s.commentCount },
-  { id: 'bookmark-5',     label: '積ん読のはじまり',   desc: '5作品を保存する',              target: 5,  cat: 'start',    cur: s => s.bookmarkCount },
+  { id: 'bookmark-5',     label: '積ん読のはじまり',   desc: '5作品を保存する（栞でもOK）',              target: 5,  cat: 'start',    cur: s => s.bookmarkCount },
   { id: 'follow-5',       label: '追いかける人',       desc: '5人の作家をフォローする',      target: 5,  cat: 'social',   cur: s => s.followCount },
   { id: 'first-discover', label: 'はじめての発掘',     desc: '作品を発掘・拡散する',         target: 1,  cat: 'discover', cur: s => s.discoverCount },
   { id: 'discover-3',     label: '原石ハンター',       desc: '3作品を発掘する',              target: 3,  cat: 'discover', cur: s => s.discoverCount },
