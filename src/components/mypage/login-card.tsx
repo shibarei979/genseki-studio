@@ -5,7 +5,8 @@
  * 原石航路 Studio
  * LoginCard — 乗船印帳（マイページのミッション）
  *
- *   7 マス × 4 行。来た日に朱色のハンコ。行の右に「宝」の角印。
+ *   7 マス × 4 行 ＝ 28 日分のカレンダー。来た日に朱色のハンコ。
+ *   来なかった日は空いたまま。1 行 7 日ぜんぶ押すと、行の右に「宝」の角印。
  *   明日押される柄がうっすら見える。続いた日数も出す。
  *
  * ★ 押す（ポイントを配る）のは DailyBonus。ここは見せるだけ。
@@ -22,9 +23,14 @@ import {
     MOTIF_NAME,
     ROW_BONUS,
     ROW_CELLS,
+    cardDone,
+    cardMissed,
     inkOf,
     motifOf,
     pointsInBook,
+    rowDone,
+    rowMissed,
+    shortDate,
     tiltOf,
     type LoginCardState,
 } from "@/lib/login-card";
@@ -69,16 +75,22 @@ export default function LoginCard({ initial = null }: { initial?: LoginCardState
 
     if (!state) return null;
 
+    /* 古い形（カレンダーにする前）の返事なら、出さない */
+    if (!Array.isArray(state.cells) || state.cells.length !== CARD_CELLS) return null;
+
     const ink = inkOf(state.book);
-    const next = state.filled < CARD_CELLS ? state.filled + 1 : 0;
-    const left = CARD_CELLS - state.filled;
+    const t = state.todayIndex;
+    const next = state.todayDone && t + 1 < CARD_CELLS ? t + 1 : -1;
+    const done = cardDone(state);
 
     return (
         <section className="lcard" aria-label="ログインスタンプ">
             <InkDefs />
             <header className="lcard-h">
                 <b>ログインスタンプ</b>
-                <small>{state.book}枚目</small>
+                <small>
+                    {state.book}枚目　{shortDate(state.start)}〜{shortDate(state.end)}
+                </small>
                 {state.streak > 0 && (
                     <span className="lcard-streak">
                         連続 <strong>{state.streak}</strong> 日
@@ -91,52 +103,63 @@ export default function LoginCard({ initial = null }: { initial?: LoginCardState
 
             <div className="lcard-rows">
                 {Array.from({ length: CARD_CELLS / ROW_CELLS }, (_, r) => {
-                    const rowDone = state.filled >= (r + 1) * ROW_CELLS;
+                    const isRowDone = rowDone(state, r);
+                    const isRowOff = !isRowDone && rowMissed(state, r);
                     return (
                         <div className="lcard-row" key={r}>
                             {Array.from({ length: ROW_CELLS }, (_, c) => {
-                                const n = r * ROW_CELLS + c + 1;
-                                const day = state.days[n - 1];
-                                const isDone = n <= state.filled;
-                                const isToday = isDone && n === state.filled && state.todayDone;
-                                const isNext = n === next;
+                                const i = r * ROW_CELLS + c;
+                                const n = i + 1;
+                                const cell = state.cells[i];
+                                const isToday = i === t;
+                                const isMiss = !cell.stamped && i < t;
+                                const label = shortDate(cell.date);
                                 return (
                                     <div
                                         key={n}
-                                        className={`lcard-cell${isToday ? " is-today" : ""}${isNext ? " is-next" : ""}`}
-                                        title={isDone ? `${n}日目　${MOTIF_NAME[motifOf(n)]}のスタンプ` : undefined}
+                                        className={`lcard-cell${isToday ? " is-today" : ""}${i === next ? " is-next" : ""}${isMiss ? " is-miss" : ""}`}
+                                        title={
+                                            cell.stamped
+                                                ? `${label}　${MOTIF_NAME[motifOf(n)]}のスタンプ`
+                                                : isMiss
+                                                  ? `${label}　来なかった日`
+                                                  : label
+                                        }
                                     >
                                         <span className="lcard-slot" />
-                                        {isDone ? (
+                                        {cell.stamped ? (
                                             <>
                                                 <Seal
                                                     className="lcard-seal"
                                                     motif={motifOf(n)}
                                                     day={n}
-                                                    color={day?.gold ? GOLD_INK : ink}
+                                                    color={cell.gold ? GOLD_INK : ink}
                                                     tilt={tiltOf(n)}
                                                 />
-                                                {day?.gold && <span className="lcard-kin">金</span>}
+                                                {cell.gold && <span className="lcard-kin">金</span>}
                                             </>
-                                        ) : isNext && state.todayDone ? (
+                                        ) : i === next ? (
                                             <>
                                                 <Seal className="lcard-seal" motif={motifOf(n)} day={n} color={ink} ghost />
                                                 <span className="lcard-tag">明日</span>
                                             </>
                                         ) : (
-                                            <span className="lcard-n">{n}</span>
+                                            <>
+                                                <span className="lcard-n">{label}</span>
+                                                {isToday && <span className="lcard-tag">今日</span>}
+                                            </>
                                         )}
                                     </div>
                                 );
                             })}
-                            <div className="lcard-tre">
+                            <div className={`lcard-tre${isRowOff ? " is-off" : ""}`}>
                                 <span className="lcard-slot" />
-                                {rowDone ? (
+                                {isRowDone ? (
                                     <SquareSeal className="lcard-seal" text="宝" color={ink} />
                                 ) : (
                                     <>
                                         <span className="lcard-tre-t">宝</span>
-                                        <span className="lcard-tre-p">+{ROW_BONUS}</span>
+                                        <span className="lcard-tre-p">{isRowOff ? "—" : `+${ROW_BONUS}`}</span>
                                     </>
                                 )}
                             </div>
@@ -145,15 +168,19 @@ export default function LoginCard({ initial = null }: { initial?: LoginCardState
                 })}
             </div>
 
+            <p className="lcard-rule">1 行 7 日連続で「宝」 +{ROW_BONUS}　来なかった日は空いたままです</p>
+
             <footer className="lcard-f">
                 <span>このカードで {pointsInBook(state)} pt</span>
                 <span className="lcard-left">
-                    {left > 0 ? (
-                        <>
-                            全部うまるまで あと <b style={{ color: ink }}>{left}</b>　全部で +{FULL_BONUS}
-                        </>
+                    {done ? (
+                        <>28日連続！ +{FULL_BONUS}　次に来た日から {state.book + 1}枚目</>
+                    ) : cardMissed(state) ? (
+                        <>{shortDate(state.end)} まで。次のカードで 28日連続 +{FULL_BONUS}</>
                     ) : (
-                        <>全部うまりました！ 次に来た日から {state.book + 1}枚目（スタンプの色が変わります）</>
+                        <>
+                            {shortDate(state.end)} まで毎日で <b style={{ color: ink }}>28日連続</b> +{FULL_BONUS}
+                        </>
                     )}
                 </span>
             </footer>

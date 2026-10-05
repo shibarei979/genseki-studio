@@ -60,18 +60,23 @@ export default function LoginStampButton() {
         return () => window.removeEventListener("keydown", onKey);
     }, [isOpen]);
 
-    if (!state) return null;
+    /* 古い形（カレンダーにする前）の返事なら、出さない */
+    if (!state || !Array.isArray(state.cells)) return null;
 
-    const last = state.filled > 0 ? state.filled : 1;
-    const lastDay = state.days[state.filled - 1];
-    const ink = lastDay?.gold ? GOLD_INK : inkOf(state.book);
+    /* いちばん新しく押したマス（まだ無ければ 1 マス目をうすく） */
+    let lastIndex = -1;
+    state.cells.forEach((c, i) => {
+        if (c.stamped) lastIndex = i;
+    });
+    const last = lastIndex >= 0 ? lastIndex + 1 : 1;
+    const ink = lastIndex >= 0 && state.cells[lastIndex].gold ? GOLD_INK : inkOf(state.book);
 
     return (
         <>
             <button type="button" className="lsb" onClick={() => setIsOpen(true)} aria-haspopup="dialog">
                 <InkDefs />
                 <span className="lsb-seal">
-                    <Seal motif={motifOf(last)} day={last} color={ink} ghost={state.filled === 0} />
+                    <Seal motif={motifOf(last)} day={last} color={ink} ghost={lastIndex < 0} />
                 </span>
                 <span className="lsb-t">
                     <b>ログインスタンプ</b>

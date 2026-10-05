@@ -8,6 +8,7 @@
  *   その日はじめて開いたとき（またはログインしたとき）、裏で /api/points/daily を呼ぶ。
  *   押せたら、真ん中に「本日の乗船印」を出す。
  *   木のハンコが降りてきて、ポンと押す → 今の行に印が入る → もらったポイント → 明日の印。
+ *   来なかった日は、今の行でも空いたまま見える。
  *
  * ★ 配るかどうかはサーバーが決める（1 日 1 回まで）。
  *   ここでは、同じ日に何度も頼まないよう、この端末に日付を覚えるだけ。
@@ -23,10 +24,14 @@ import {
     CARD_CELLS,
     GOLD_INK,
     MOTIF_NAME,
+    FULL_BONUS,
     ROW_BONUS,
     ROW_CELLS,
+    cardMissed,
     inkOf,
     motifOf,
+    rowMissed,
+    shortDate,
     tiltOf,
     type LoginCardState,
     type LoginGrant,
@@ -93,7 +98,7 @@ export default function DailyBonus() {
                 if (data.state) {
                     window.dispatchEvent(new CustomEvent(STAMP_EVENT, { detail: data.state }));
                 }
-                if (alive && data.granted && data.grant && data.state && data.state.filled > 0) {
+                if (alive && data.granted && data.grant && data.state && Array.isArray(data.state.cells) && data.state.filled > 0) {
                     setShown({ grant: data.grant, state: data.state });
                 }
             } catch {
@@ -142,20 +147,35 @@ export default function DailyBonus() {
 function StampPopup({ shown, onClose }: { shown: Shown; onClose: () => void }) {
     const { grant, state } = shown;
     const ink = inkOf(state.book);
-    const today = state.filled;
+    /* 今日は何マス目か（1 から） */
+    const today = state.todayIndex + 1;
     const todayGold = grant.gold > 0;
     const todayInk = todayGold ? GOLD_INK : ink;
-    const rowStart = Math.floor((today - 1) / ROW_CELLS) * ROW_CELLS;
-    const rowDoneToday = today % ROW_CELLS === 0;
+    const row = Math.floor(state.todayIndex / ROW_CELLS);
+    const rowStart = row * ROW_CELLS;
+    const rowEnd = today % ROW_CELLS === 0;
+    const rowOff = rowMissed(state, row);
+    const rowDoneToday = rowEnd && !rowOff;
     const total = grant.daily + grant.row + grant.full + grant.gold;
 
     const parts: string[] = [`毎日 ${grant.daily}`];
-    if (grant.row) parts.push(`宝 ${grant.row}`);
-    if (grant.full) parts.push(`全部うまった ${grant.full}`);
+    if (grant.row) parts.push(`7日連続 ${grant.row}`);
+    if (grant.full) parts.push(`28日連続 ${grant.full}`);
     if (grant.gold) parts.push(`金のスタンプ ${grant.gold}`);
 
     const next = today < CARD_CELLS ? today + 1 : 0;
     const toTreasure = ROW_CELLS - (today % ROW_CELLS);
+
+    /* 明日の一言 */
+    let hint: string;
+    if (rowEnd) {
+        hint = `明日から次の行。7日連続で「宝」のスタンプ +${ROW_BONUS}`;
+    } else if (rowOff) {
+        hint = `この行は休んだ日があるので「宝」はなし。次の行で7日連続 +${ROW_BONUS}`;
+    } else {
+        hint = `あと ${toTreasure} 日続けると「宝」のスタンプ +${ROW_BONUS}`;
+    }
+    if (!cardMissed(state) && next) hint += `。${shortDate(state.end)} まで毎日で 28日連続 +${FULL_BONUS}`;
 
     return (
         <div className="lpop-dim" onClick={onClose}>
@@ -170,7 +190,7 @@ function StampPopup({ shown, onClose }: { shown: Shown; onClose: () => void }) {
                 <h3>今日のスタンプ</h3>
                 <p className="lpop-d">
                     {state.book > 1 ? `${state.book}枚目　` : ""}
-                    {today}日目　{MOTIF_NAME[motifOf(today)]}のスタンプ
+                    {shortDate(state.cells[state.todayIndex].date)}（{today}日目）　{MOTIF_NAME[motifOf(today)]}のスタンプ
                     {todayGold && <span className="lpop-gold">金のスタンプ！</span>}
                 </p>
 
@@ -209,16 +229,17 @@ function StampPopup({ shown, onClose }: { shown: Shown; onClose: () => void }) {
                 <div className="lpop-row">
                     {Array.from({ length: ROW_CELLS }, (_, i) => {
                         const n = rowStart + i + 1;
-                        const day = state.days[n - 1];
+                        const cell = state.cells[n - 1];
+                        const isMiss = n < today && !cell.stamped;
                         return (
-                            <div className="lcard-cell" key={n}>
+                            <div className={`lcard-cell${isMiss ? " is-miss" : ""}`} key={n}>
                                 <span className="lcard-slot" />
-                                {n < today ? (
+                                {n < today && cell.stamped ? (
                                     <Seal
                                         className="lcard-seal"
                                         motif={motifOf(n)}
                                         day={n}
-                                        color={day?.gold ? GOLD_INK : ink}
+                                        color={cell.gold ? GOLD_INK : ink}
                                         tilt={tiltOf(n)}
                                     />
                                 ) : n === today ? (
@@ -230,12 +251,12 @@ function StampPopup({ shown, onClose }: { shown: Shown; onClose: () => void }) {
                                         tilt={tiltOf(n)}
                                     />
                                 ) : (
-                                    <span className="lcard-n">{n}</span>
+                                    <span className="lcard-n">{shortDate(cell.date)}</span>
                                 )}
                             </div>
                         );
                     })}
-                    <div className="lcard-tre">
+                    <div className={`lcard-tre${rowOff ? " is-off" : ""}`}>
                         <span className="lcard-slot" />
                         {rowDoneToday ? (
                             <SquareSeal className="lcard-seal lpop-tre" text="宝" color={ink} />
@@ -258,17 +279,12 @@ function StampPopup({ shown, onClose }: { shown: Shown; onClose: () => void }) {
                             </span>
                             <span>
                                 <b>明日は「{MOTIF_NAME[motifOf(next)]}」のスタンプ</b>
-                                <small>
-                                    {rowDoneToday
-                                        ? `次の行へ。7つそろうと、また「宝」のスタンプ +${ROW_BONUS}`
-                                        : `あと ${toTreasure} つで「宝」のスタンプ +${ROW_BONUS}`}
-                                    。金のスタンプが出るかも
-                                </small>
+                                <small>{hint}。金のスタンプが出るかも</small>
                             </span>
                         </>
                     ) : (
                         <span>
-                            <b>全部うまりました</b>
+                            <b>このカードはここまで</b>
                             <small>次に来た日から {state.book + 1}枚目。スタンプの色が変わります</small>
                         </span>
                     )}

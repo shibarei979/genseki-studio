@@ -12,6 +12,10 @@ import {
     REASON,
     ROW_BONUS,
     ROW_CELLS,
+    buildCard,
+    cardDone,
+    daysBetween,
+    rowDone,
     type LoginCardState,
     type LoginGrant,
 } from "@/lib/login-card";
@@ -21,21 +25,21 @@ import {
  * 原石航路 Studio
  * /api/points/daily — 毎日ログイン（乗船印帳）
  *
- *   GET   印帳のようす（何冊目・押した日・金の印・続いた日数）
+ *   GET   印帳のようす（何枚目・28 日のマス・金の印・続いた日数）
  *   POST  今日のハンコを押す（1 日 1 回）。配ったものと印帳のようすを返す
  *
- *   毎日 5 pt ／ 1 行そろうと +30 ／ 満印 +100 ／ ときどき金の印 +10
- *   （決まりは lib/login-card.ts）
+ *   毎日 5 pt ／ 7 日連続（1 行ぜんぶ）+50 ／ 28 日連続（ぜんぶ）+200 ／ ときどき金の印 +10
+ *   来なかった日のマスは空いたまま（決まりは lib/login-card.ts）
  *
  * ★ 日の区切りは日本時間。サーバーは世界標準時なので +9 時間して数える。
  *
  * ★ 二度配らない。
  *   その日の日付を印にして、grantFreePoints の once で止める。
- *   おまけ（行・満印・金）は、その日の 5 pt を配れたとき（＝その日いちばん最初）だけ決める。
- *   同時に 2 回来ても、5 pt を配れるのは片方だけなので、おまけも 1 回だけ。
+ *   連続のおまけは「最後の日:7」「最後の日:28」を印にして、once で止める。
+ *   金の印は、その日の 5 pt を配れたとき（＝その日いちばん最初）だけ決める。
  *
  * ★ 押した日は、これまでにもらった記録（free_point_events）から数える。
- *   別に表を作らなくても、日付の印を数えれば何マス目か分かる。
+ *   別に表を作らなくても、日付の印を並べれば、どのカードの何マス目か分かる。
  * ============================================================
  */
 
@@ -55,37 +59,20 @@ type Admin = ReturnType<typeof createAdminClient>;
 /** 印帳のようす */
 async function cardState(admin: Admin, userId: string, today: string): Promise<LoginCardState> {
 
-    /* これまでに押した日の数 */
-    const { count } = await admin
-        .from("free_point_events")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("kind", "earn")
-        .eq("reason", REASON.daily);
-    const total = count ?? 0;
-
-    if (total === 0) {
-        return { book: 1, filled: 0, days: [], streak: 0, todayDone: false };
-    }
-
-    const book = Math.floor((total - 1) / CARD_CELLS) + 1;
-    const filled = ((total - 1) % CARD_CELLS) + 1;
-
-    /* この冊に押した日（新しい順に filled 個 → 古い順に並べ直す） */
+    /* これまでに押した日（全部。1 日 1 行なので多くても数百） */
     const { data: rows } = await admin
         .from("free_point_events")
         .select("reason_ref")
         .eq("user_id", userId)
         .eq("kind", "earn")
         .eq("reason", REASON.daily)
-        .order("reason_ref", { ascending: false })
-        .limit(filled);
+        .order("reason_ref", { ascending: true })
+        .limit(5000);
     const dates = ((rows ?? []) as { reason_ref: string | null }[])
         .map((r) => r.reason_ref ?? "")
-        .filter(Boolean)
-        .reverse();
+        .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
 
-    /* 金の印の日 */
+    /* 金の印の日（このカードの分だけあれば足りるが、数が少ないので 60 日分を見る） */
     let golds = new Set<string>();
     if (dates.length > 0) {
         const { data: goldRows } = await admin
@@ -94,35 +81,20 @@ async function cardState(admin: Admin, userId: string, today: string): Promise<L
             .eq("user_id", userId)
             .eq("kind", "earn")
             .eq("reason", REASON.gold)
-            .in("reason_ref", dates);
+            .gte("reason_ref", jstDate(-60));
         golds = new Set(((goldRows ?? []) as { reason_ref: string | null }[]).map((r) => r.reason_ref ?? ""));
     }
 
     /* 続いた日数。今日（まだなら昨日）から、印が途切れるまでさかのぼる */
-    const { data: recent } = await admin
-        .from("free_point_events")
-        .select("reason_ref")
-        .eq("user_id", userId)
-        .eq("kind", "earn")
-        .eq("reason", REASON.daily)
-        .gte("reason_ref", jstDate(-400))
-        .limit(500);
-    const seen = new Set(((recent ?? []) as { reason_ref: string | null }[]).map((r) => r.reason_ref));
-    const todayDone = seen.has(today);
+    const seen = new Set(dates);
     let streak = 0;
-    let offset = todayDone ? 0 : -1;
+    let offset = seen.has(today) ? 0 : -1;
     while (seen.has(jstDate(offset))) {
         streak += 1;
         offset -= 1;
     }
 
-    return {
-        book,
-        filled,
-        days: dates.map((date) => ({ date, gold: golds.has(date) })),
-        streak,
-        todayDone,
-    };
+    return buildCard(dates, golds, today, streak);
 }
 
 async function currentUserId(): Promise<string | null> {
@@ -174,46 +146,49 @@ export async function POST() {
         let state = await cardState(admin, userId, today);
 
         /*
-         * ★ 行（7 つ）・満印のおまけ。
-         *   そろったマスの日付を印にして配る（once なので、何度呼んでも 1 回だけ）。
-         *   今日のマスだけでなく、この冊のそろった行を全部たしかめる。
+         * ★ 連続のおまけ（7 日連続・28 日連続）。
+         *   そろった行の最後の日を印にして配る（once なので、何度呼んでも 1 回だけ）。
+         *   今日の行だけでなく、このカードのそろった行を全部たしかめる。
          *   前に配るのに失敗した分があっても、次に来た日に届く。
+         *   ただし、そろったのが 7 日より前の行は見ない（この決まりにする前のカードの分は配らない）。
          */
-        for (let cell = ROW_CELLS; cell <= state.filled; cell += ROW_CELLS) {
-            const date = state.days[cell - 1]?.date;
-            if (!date) continue;
-            const r = await grantFreePoints({
+        const fresh = (date: string) => daysBetween(date, today) <= ROW_CELLS;
+        let rowToday = false;
+        for (let r = 0; r < CARD_CELLS / ROW_CELLS; r += 1) {
+            if (!rowDone(state, r)) continue;
+            const last = state.cells[(r + 1) * ROW_CELLS - 1].date;
+            if (last === today) rowToday = true;
+            if (!fresh(last)) continue;
+            const got = await grantFreePoints({
                 userId,
                 amount: ROW_BONUS,
-                source: REASON.row,
-                sourceRef: date,
+                source: REASON.streak,
+                sourceRef: `${last}:${ROW_CELLS}`,
                 once: true,
             });
-            if (r.granted) grant.row += ROW_BONUS;
+            if (got.granted) grant.row += ROW_BONUS;
         }
-        if (state.filled === CARD_CELLS) {
-            const date = state.days[CARD_CELLS - 1]?.date;
-            if (date) {
-                const r = await grantFreePoints({
-                    userId,
-                    amount: FULL_BONUS,
-                    source: REASON.full,
-                    sourceRef: date,
-                    once: true,
-                });
-                if (r.granted) grant.full = FULL_BONUS;
-            }
+        const fullToday = cardDone(state) && state.end === today;
+        if (cardDone(state) && fresh(state.end)) {
+            const got = await grantFreePoints({
+                userId,
+                amount: FULL_BONUS,
+                source: REASON.streak,
+                sourceRef: `${state.end}:${CARD_CELLS}`,
+                once: true,
+            });
+            if (got.granted) grant.full = FULL_BONUS;
         }
 
         if (daily.granted) {
             grant.daily = DAILY_POINTS;
 
             /*
-             * 今日のマスで行がそろった・満印になった日は、お知らせに必ず出す。
+             * 今日で 7 日連続・28 日連続になった日は、お知らせに必ず出す。
              * （同時に開いた別の画面のほうが先に配っていても、もらえていることに変わりはない）
              */
-            if (state.filled % ROW_CELLS === 0) grant.row = Math.max(grant.row, ROW_BONUS);
-            if (state.filled === CARD_CELLS) grant.full = FULL_BONUS;
+            if (rowToday) grant.row = Math.max(grant.row, ROW_BONUS);
+            if (fullToday) grant.full = FULL_BONUS;
 
             /* ときどき金の印（その日いちばん最初に押したときだけ決める） */
             if (Math.random() < GOLD_CHANCE) {
@@ -228,7 +203,7 @@ export async function POST() {
                     grant.gold = GOLD_BONUS;
                     state = {
                         ...state,
-                        days: state.days.map((d) => (d.date === today ? { ...d, gold: true } : d)),
+                        cells: state.cells.map((c) => (c.date === today ? { ...c, gold: true } : c)),
                     };
                 }
             }

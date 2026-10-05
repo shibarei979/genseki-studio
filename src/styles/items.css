@@ -90,12 +90,18 @@
 .lcard-kin { position: absolute; right: -2px; bottom: -3px; z-index: 1; padding: 0 5px; border-radius: 6px; font: 900 10px/16px var(--font-serif, serif); color: #5a3d05; background: linear-gradient(135deg, #f6d77a, #c9971f); box-shadow: 0 1px 2px rgba(0,0,0,.2); }
 .lcard-tre-t { position: relative; font: 700 17px var(--font-serif, serif); color: #cbb88a; line-height: 1.1; }
 .lcard-tre-p { position: relative; font-size: 11px; font-weight: 700; color: #8a6212; }
+.lcard-n { font-size: 11px; letter-spacing: -.02em; }
+.lcard-cell.is-miss .lcard-slot { border: 1.5px solid transparent; background: rgba(120,100,60,.09); }
+.lcard-cell.is-miss .lcard-n { color: #c9bc9a; font-weight: 400; }
+.lcard-tre.is-off .lcard-slot { border-style: solid; border-color: #e2d7b9; }
+.lcard-tre.is-off .lcard-tre-t, .lcard-tre.is-off .lcard-tre-p { color: #d6caa9; }
+.lcard-rule { margin: 8px 0 0; font-size: 11.5px; color: #8a7a55; }
 .lcard-f { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #d8c89f; font-size: 12.5px; color: #6b5a32; }
 @media (max-width: 480px) {
     .lcard { padding: 14px 12px 12px; }
     .lcard-h b { font-size: 17px; }
     .lcard-row, .lpop-row { gap: 2px; }
-    .lcard-n { font-size: 10px; }
+    .lcard-n { font-size: 9px; }
     .lcard-tre-t { font-size: 13px; }
     .lcard-tre-p { font-size: 9px; }
     .lcard-tag { font-size: 9px; padding: 0 4px; }
@@ -123,7 +129,7 @@
 .lpop-burst i { position: absolute; left: -2.5px; top: -2.5px; width: 5px; height: 5px; border-radius: 50%; opacity: 0; animation: lpop-burst .52s ease-out .8s both; }
 .lpop-pon { position: absolute; left: calc(50% + 66px); top: 70px; z-index: 3; font: 900 22px var(--font-serif, serif); opacity: 0; animation: lpop-pon 1.1s ease-out .8s both; }
 .lpop-row { margin: 4px 6px; }
-.lpop-row .lcard-n { font-size: 10px; }
+.lpop-row .lcard-n { font-size: 9px; }
 .lpop-today { animation: lpop-small .3s ease-out 1.25s both; }
 .lpop-tre { animation: lpop-small .35s ease-out 1.5s both; }
 .lpop-pt { display: flex; align-items: center; justify-content: center; gap: 8px; height: 42px; font-size: 28px; font-weight: 900; color: #c08c2f; animation: lpop-pt .5s ease-out 1.35s both; }
