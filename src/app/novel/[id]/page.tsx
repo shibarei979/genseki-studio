@@ -676,7 +676,8 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
                   {tag}
                 </span>
               ))}
-              {(novel.tags||[]).map((t: string) => (
+              {/* 応募中のコンテストの名前のタグは、上の乗船券の札と同じなので二重に出さない */}
+              {(novel.tags||[]).filter((t: string) => !contestMarks.some((m) => m.title.trim() === t)).map((t: string) => (
                 <span key={t} style={{fontSize:10,background:'var(--color-bg)',color:'var(--color-text-muted)',border:'1px solid var(--color-brand-border)',padding:'2px 8px',borderRadius:4}}>#{t}</span>
               ))}
             </div>
