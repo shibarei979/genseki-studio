@@ -78,7 +78,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const supabase = createAdminClient();
         const { data } = await supabase
             .from("novels")
-            .select("id, created_at, short_code")
+            .select("id, created_at, short_code, age_rating")
             .eq("visibility", "public")
             .is("deleted_at", null)
             .order("created_at", { ascending: false })
@@ -89,7 +89,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
          * 作品ページ側で弾いているので、載せると
          * 検索エンジンが「見つかりません」を拾う。
          */
-        const ids = (data ?? []).map((row) => row.id);
+        /*
+         * ★ R18 は載せない。入っていない見回りには年齢の案内の頁しか出ないので、
+         *   どれも同じ中身に見え、「重複」として弾かれていた（作品の頁も noindex にしてある）。
+         */
+        const listed = (data ?? []).filter((row) => row.age_rating !== "r18");
+        const ids = listed.map((row) => row.id);
         const live = new Set<string>();
         /*
          * ★ 公開中の話も、1 話ずつ地図に載せる。
@@ -117,7 +122,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             for (const row of eps) live.add(row.novel_id);
         }
 
-        for (const novel of (data ?? []).filter((row) => live.has(row.id))) {
+        for (const novel of listed.filter((row) => live.has(row.id))) {
             entries.push({
                 /* 短い住所があれば、そちらを地図に載せる */
                 url: novel.short_code

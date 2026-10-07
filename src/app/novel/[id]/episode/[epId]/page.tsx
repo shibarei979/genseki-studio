@@ -1,4 +1,3 @@
-import { looksLikeBotRequest } from '@/lib/utils/bot'
 import { countOne } from '@/lib/count-rows'
 import ShareButtons from '@/components/common/share-buttons'
 import EpisodeNav from '@/components/novel/episode/episode-nav'
@@ -11,8 +10,8 @@ export async function generateMetadata({ params }: { params: { id: string; epId:
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
   const [{ data: episode }, { data: novel }] = await Promise.all([
-    supabase.from('episodes').select('title').eq('id', params.epId).maybeSingle(),
-    supabase.from('novels').select('title').eq('id', params.id).maybeSingle(),
+    supabase.from('episodes').select('title, is_published, deleted_at, novel_id').eq('id', params.epId).maybeSingle(),
+    supabase.from('novels').select('title, visibility, deleted_at, age_rating').eq('id', params.id).maybeSingle(),
   ])
   const title = episode?.title && novel?.title
     ? `${novel.title}「${episode.title}」| 原石航路`
@@ -24,7 +23,24 @@ export async function generateMetadata({ params }: { params: { id: string; epId:
    * ★ 正規の住所を名乗る。シェアの住所に付く ?from=x などを、
    *   検索が別の頁として数えないように（同じ本文が何枚もあるように見える）。
    */
-  return { title, description, alternates: { canonical: `/novel/${params.id}/episode/${params.epId}` } }
+  /*
+   * ★ 検索に載せない話。
+   *   ・作品が公開でない（下書き・限定公開・消した）
+   *   ・話がまだ出ていない・消した・別の作品の話（住所の組み合わせ違い）
+   *   ・R18（入っていない見回りには同じ案内の頁しか出ず、「重複」と見なされる）
+   */
+  const indexable =
+    !!episode && !!novel &&
+    novel.visibility === 'public' && !novel.deleted_at &&
+    novel.age_rating !== 'r18' &&
+    episode.is_published === true && !episode.deleted_at &&
+    episode.novel_id === params.id
+  return {
+    title,
+    description,
+    alternates: { canonical: `/novel/${params.id}/episode/${params.epId}` },
+    robots: indexable ? undefined : { index: false, follow: false },
+  }
 }
 
 import { notFound } from 'next/navigation'
@@ -44,6 +60,7 @@ import TypoReportButton from '@/components/novel/episode/typo-report-button'
 import MobileEpisodeHead from '@/components/novel/episode/mobile-episode-head'
 import ValidReadTracker from '@/components/novel/episode/valid-read-tracker'
 import ReadProgressTracker from '@/components/reader/read-progress-tracker'
+import PageViewPing from '@/components/reader/page-view-ping'
 import { QuoteProvider } from '@/components/novel/episode/quote-context'
 import { appConfig } from '@/config'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
@@ -245,81 +262,28 @@ export default async function EpisodePage({ params, searchParams }: Props) {
 
 
 
+  /*
+   * ★ 閲覧の記録は、画面が開いてから画面の側（PageViewPing → /api/page-view）で残す。
+   *
+   *   前はこの頁を組み立てた時点で記録していた。
+   *   ブラウザのふりをした機械が頁を 1 枚ずつ取っていくと、それも全部数えていた。
+   *   （2026-10-03：未ログインの閲覧 516 件のうち、画面が動いたのは 28 件だけだった）
+   *   画面を動かさない機械は、画面の側からの知らせを送れないので、数に入らない。
+   *
+   *   ここでは「どこから来たか」だけを決めて、画面の側へ渡す。
+   */
+  let viewSource = 'direct'
   try {
-    /*
-     * ★ 作者が自分の作品を開いたぶんは、印を付けて残す。
-     *
-     *   閲覧数には入れない。書いている人は確かめのために
-     *   何度も開くので、入れると読まれた実感が濁る。
-     *
-     *   ただし記録は残す。消してしまうと
-     *   「今日 読んだ人」から書き手が抜け、
-     *   動いている人の数と噛み合わなくなる。
-     */
-    const isAuthorView = !!user && novel.author_id === user.id
-
-    // デバイス判定（user-agentから）
     const head = await headers()
-    const ua = head.get('user-agent') || ''
-    const device = /mobile|android|iphone|ipad/i.test(ua) ? 'mobile' : 'desktop'
-
-    /*
-     * ★ どこから来たかも残す。
-     *
-     *   元の住所そのものは持たない。
-     *   「X」「YouTube」など、来た先の名だけにする。
-     *   住所ごと持つと、人を追える記録になってしまう。
-     */
     /*
      * ★ 送り元が自分のサイトのとき（作品の頁から 1 話目を押した など）は、
      *   サイトに入ってきたときの先（middleware が札に書いたもの）を使う。
-     *   こうしないと、X から来て作品の頁を経た人が「サイトの中」になる。
      * ★ 住所に ?from=x が付いていれば、それを先に信じる。
      *   X のアプリの中の窓は送り元を消すので、印が無いと「直接」に見える。
      */
-    let source: string = entryName(searchParams?.from) ?? nameSource(head.get('referer') || '', new URL(appConfig.siteUrl).host)
-    if (source === 'site') {
-      source = entryName((await cookies()).get(ENTRY_COOKIE)?.value) ?? 'site'
-    }
-
-    /*
-     * ★ 誰が来たかではなく、何人が来たかを数えるための札。
-     *
-     *   中身は、でたらめな並び。名前も住所も持たない。
-     *   同じ機械から来た、ということしか分からない。
-     *
-     * ★ 見回りの機械には印を付ける。消さずに残す。
-     *   混ぜて数えると、人数が実際より膨らむ。
-     */
-    const jar = await cookies()
-    const visitorId = jar.get('gk-visitor')?.value ?? null
-    const sessionId = jar.get('gk-session')?.value ?? null
-    const isBot = looksLikeBotRequest(head)
-    // 1日1人1話1PV制限：同じユーザーが同じ日に同じ話を見ていたらカウントしない
-    /* 「同じ日」は日本時間の 0 時で区切る（サーバーの時計は世界標準時で、そのままだと朝 9 時が境目になる） */
-    const todayStart = new Date(Math.floor((Date.now() + 9 * 3600000) / 86400000) * 86400000 - 9 * 3600000)
-    if (user) {
-      const { data: existingPv } = await supabase
-        .from('page_views')
-        .select('id')
-        .eq('episode_id', params.epId)
-        .eq('user_id', user.id)
-        .gte('created_at', todayStart.toISOString())
-        .limit(1)
-        .maybeSingle()
-      if (!existingPv) {
-        /*
-         * ★ どの作品かも一緒に残す。
-         *
-         *   前は話の id しか入れていなかった。
-         *   マイページの作品ごとの閲覧数は novel_id で数えているので、
-         *   いつまでも 0 のままだった。
-         */
-        await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: user.id, device, source, is_author: isAuthorView, visitor_id: visitorId, session_id: sessionId, is_bot: isBot })
-      }
-    } else {
-      // 未ログインは従来通り記録（IPやCookieでの制限は行わない）
-      await supabase.from('page_views').insert({ novel_id: params.id, episode_id: params.epId, user_id: null, device, source, visitor_id: visitorId, session_id: sessionId, is_bot: isBot })
+    viewSource = entryName(searchParams?.from) ?? nameSource(head.get('referer') || '', new URL(appConfig.siteUrl).host)
+    if (viewSource === 'site') {
+      viewSource = entryName((await cookies()).get(ENTRY_COOKIE)?.value) ?? 'site'
     }
   } catch (_) {}
 
@@ -376,6 +340,8 @@ export default async function EpisodePage({ params, searchParams }: Props) {
       *   作者かどうか、機械かどうかは受け口の側で見分ける。
       */}
     <ReadProgressTracker episodeId={params.epId}/>
+    {/* 閲覧の記録（画面が開いて、見えている状態になってから 1 回だけ送る） */}
+    <PageViewPing novelId={params.id} episodeId={params.epId} source={viewSource}/>
 
     <div style={{minHeight:'100vh'}}>
       <Header />

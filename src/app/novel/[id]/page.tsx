@@ -8,7 +8,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const supabase = await createClient()
   const { data: novel } = await supabase
     .from('novels')
-    .select('title, summary, cover_url, visibility, deleted_at, short_code')
+    .select('title, summary, cover_url, visibility, deleted_at, short_code, age_rating')
     .eq('id', params.id).maybeSingle()
 
   /*
@@ -22,12 +22,18 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   // 表紙が無い作品は、LP の一番上と同じ共有カードで代える
   const image = novel?.cover_url || '/og.jpg'
   const isOpen = novel?.visibility === 'public' && !novel?.deleted_at
+  /*
+   * ★ R18 は検索に載せない。
+   *   入っていない見回りには「R18 の作品です」の同じ案内の頁が出るだけなので、
+   *   どの R18 作品も同じ中身に見え、「重複」として扱われていた。
+   */
+  const isAdult = novel?.age_rating === 'r18'
 
   return {
     title,
     description,
-    // 下書きと限定公開は検索に載せない
-    robots: isOpen ? undefined : { index: false, follow: false },
+    // 下書き・限定公開・R18 は検索に載せない
+    robots: isOpen && !isAdult ? undefined : { index: false, follow: false },
     /*
      * 正しい住所は、短いほう（あれば）。
      * 長いほうは、そこへ送るだけの扱いにする。
