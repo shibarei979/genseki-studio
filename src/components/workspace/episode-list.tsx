@@ -21,7 +21,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type TouchEvent as ReactTouchEvent } from "react";
 
 import EpisodeStatusMark from "@/components/workspace/episode-status-mark";
 import { formatNumber } from "@/lib/utils/text";
@@ -277,8 +277,28 @@ export default function EpisodeList({
         onReorderChapters?.(result.chapterIds);
     }
 
-    function handleDrop(targetId: string) {
+    function handleDrop(targetId: string, dragId: string | null = draggingId) {
+        const draggingId = dragId;
         if (!draggingId || draggingId === targetId) {
+            setDraggingId(null);
+            setOverId(null);
+            return;
+        }
+
+        /*
+         * ★ 別の章の話の上に落としたら、その章へ入れる。
+         *   番号だけ入れ替えても、章ごとに束ねて見せるので画面の上では動かない
+         *   （落としても何も起きないように見えていた）。
+         */
+        const dragged = episodes.find((at) => at.id === draggingId);
+        const target = episodes.find((at) => at.id === targetId);
+        if (
+            onAssignChapter &&
+            dragged &&
+            target &&
+            (dragged.chapter_id ?? null) !== (target.chapter_id ?? null)
+        ) {
+            onAssignChapter(draggingId, target.chapter_id ?? null);
             setDraggingId(null);
             setOverId(null);
             return;
@@ -308,6 +328,237 @@ export default function EpisodeList({
         setDraggingId(null);
         setOverId(null);
     }
+
+    /* ------------------------------------------------------------
+     * 長押しで動かす（指で使う端末）
+     *
+     * ★ つまんで動かす操作（HTML5 のドラッグ）は、携帯の指では動かない。
+     *   指を置いて少し待つと「つかんだ」ことにして、そのまま指で運べるようにする。
+     *
+     *   ・左のつまみ（⠿）に触れた → すぐつかむ（パソコンと同じ）
+     *   ・行のほかの所に置いてすぐ動かした → いつもの画面送り（つかまない）
+     *   ・行のほかの所に置いたまま 0.4 秒 → つかむ（軽く震える）
+     *   ・つかんだ行は、同じ形のまま指についてくる。元の場所は薄くなる
+     *   ・話の上で離す → その位置へ。別の章の話の上なら、その章へ入る
+     *   ・章の見出しの上で離す → その章へ入る
+     *   ・一覧の上端・下端へ寄せると、一覧が送られる
+     * ------------------------------------------------------------ */
+    const LONG_PRESS_MS = 400;
+    const pressRef = useRef<{ x: number; y: number; timer: number } | null>(null);
+    const touchDragRef = useRef<{ id: string; scroller: HTMLElement | null } | null>(null);
+    /* 長押しのあと指を離したときに、話を開いてしまわないように */
+    const suppressClickRef = useRef(false);
+    const rootRef = useRef<HTMLDivElement | null>(null);
+    /*
+     * 指についてくる話。つかんだ行と同じ形・同じ幅で、つかんだ位置のまま動く
+     * （パソコンでつまんだときと同じ見え方）。
+     */
+    const [ghost, setGhost] = useState<{
+        x: number;
+        y: number;
+        offsetX: number;
+        offsetY: number;
+        width: number;
+        label: string;
+        chars: number;
+    } | null>(null);
+
+    /* 指を離したときに使う。描き直しのたびに新しいものへ差し替える */
+    const dropRef = useRef({ handleDrop, onAssignChapter, episodes });
+    dropRef.current = { handleDrop, onAssignChapter, episodes };
+
+    function cancelPress() {
+        if (!pressRef.current) return;
+        window.clearTimeout(pressRef.current.timer);
+        pressRef.current = null;
+    }
+
+    /** 一覧を送っている箱（画面いっぱいなら画面そのもの） */
+    function scrollerOf(el: HTMLElement | null): HTMLElement | null {
+        let at = el?.parentElement ?? null;
+        while (at) {
+            const style = window.getComputedStyle(at);
+            if (/(auto|scroll)/.test(style.overflowY) && at.scrollHeight > at.clientHeight) return at;
+            at = at.parentElement;
+        }
+        return (document.scrollingElement as HTMLElement | null) ?? null;
+    }
+
+    /** つかむ。行の形を写した影を、指の下に出す */
+    function startTouchDrag(row: HTMLElement, episode: Episode, x: number, y: number) {
+        const box = row.getBoundingClientRect();
+        pressRef.current = null;
+        touchDragRef.current = { id: episode.id, scroller: scrollerOf(row) };
+        suppressClickRef.current = true;
+        setMenuFor(null);
+        setDraggingId(episode.id);
+        setGhost({
+            x,
+            y,
+            offsetX: x - box.left,
+            offsetY: y - box.top,
+            width: box.width,
+            label: formatEpisodeLabel(episode),
+            chars: episode.char_count,
+        });
+        try {
+            navigator.vibrate?.(12);
+        } catch {
+            /* 震えない端末もある */
+        }
+    }
+
+    function handleRowTouchStart(e: ReactTouchEvent<HTMLLIElement>, episode: Episode) {
+        if (isPicking || e.touches.length !== 1) return;
+        const el = e.target as HTMLElement;
+        if (el.closest("[data-no-press]")) return;
+        const touch = e.touches[0];
+        const row = e.currentTarget;
+        cancelPress();
+
+        /* つまみに触れたら、待たずにつかむ */
+        if (el.closest("[data-grip]")) {
+            startTouchDrag(row, episode, touch.clientX, touch.clientY);
+            return;
+        }
+
+        /* 行のほかの所は、少し長押ししてからつかむ（すぐ動かせば画面送り） */
+        const timer = window.setTimeout(() => {
+            startTouchDrag(row, episode, touch.clientX, touch.clientY);
+        }, LONG_PRESS_MS);
+        pressRef.current = { x: touch.clientX, y: touch.clientY, timer };
+    }
+
+    function handleRowTouchMove(e: ReactTouchEvent) {
+        const press = pressRef.current;
+        if (!press) return;
+        const touch = e.touches[0];
+        /* 待っている間に指が動いた ＝ 画面を送りたい。つかまない */
+        if (Math.abs(touch.clientX - press.x) > 10 || Math.abs(touch.clientY - press.y) > 10) cancelPress();
+    }
+
+    /*
+     * ★ 画面送りを止める口は、はじめから付けておく。
+     *   つかんでから付けても、端末によっては止まらない（もう送り始めている扱いになる）。
+     *   つかんでいないときは何もしない。
+     */
+    useEffect(() => {
+        const root = rootRef.current;
+        if (!root) return;
+        const stop = (e: TouchEvent) => {
+            if (touchDragRef.current && e.cancelable) e.preventDefault();
+        };
+        root.addEventListener("touchmove", stop, { passive: false });
+        return () => root.removeEventListener("touchmove", stop);
+    }, []);
+
+    const isTouchDragging = Boolean(draggingId && ghost);
+
+    /*
+     * 指だけの端末では、ブラウザのつまむ操作（draggable）を切る。
+     * 長押しで、ブラウザのつまむ操作とこちらの長押しが両方動き、取り合いになる。
+     */
+    const [fingerOnly, setFingerOnly] = useState(false);
+    useEffect(() => {
+        const query = window.matchMedia("(hover: none) and (pointer: coarse)");
+        const update = () => setFingerOnly(query.matches);
+        update();
+        query.addEventListener?.("change", update);
+        return () => query.removeEventListener?.("change", update);
+    }, []);
+
+    useEffect(() => {
+        if (!isTouchDragging) return;
+
+        let lastX = 0;
+        let lastY = 0;
+        let moved = false;
+        let frame = 0;
+        let target: { kind: "ep" | "ch" | "out"; id: string } | null = null;
+
+        function hitAt(x: number, y: number) {
+            const el = document.elementFromPoint(x, y) as HTMLElement | null;
+            const ep = el?.closest<HTMLElement>("[data-ep-drop]");
+            if (ep?.dataset.epDrop) return { kind: "ep" as const, id: ep.dataset.epDrop };
+            const ch = el?.closest<HTMLElement>("[data-ch-drop]");
+            if (ch?.dataset.chDrop) return { kind: "ch" as const, id: ch.dataset.chDrop };
+            if (el?.closest("[data-unassign-drop]")) return { kind: "out" as const, id: "" };
+            return null;
+        }
+
+        function aim() {
+            target = hitAt(lastX, lastY);
+            setOverId(target?.kind === "ep" ? target.id : target?.kind === "out" ? "__unassign__" : null);
+            setOverChapterId(target?.kind === "ch" ? target.id : null);
+        }
+
+        /* 上端・下端に寄せている間、一覧を送る */
+        function tick() {
+            const scroller = touchDragRef.current?.scroller;
+            if (scroller && moved) {
+                const whole = scroller === document.scrollingElement;
+                const top = whole ? 0 : scroller.getBoundingClientRect().top;
+                const bottom = whole ? window.innerHeight : scroller.getBoundingClientRect().bottom;
+                const edge = 64;
+                let dy = 0;
+                if (lastY < top + edge) dy = -Math.ceil((top + edge - lastY) / 5);
+                else if (lastY > bottom - edge) dy = Math.ceil((lastY - (bottom - edge)) / 5);
+                if (dy !== 0) {
+                    scroller.scrollTop += dy;
+                    aim();
+                }
+            }
+            frame = window.requestAnimationFrame(tick);
+        }
+
+        function move(e: TouchEvent) {
+            if (e.cancelable) e.preventDefault();
+            const touch = e.touches[0];
+            if (!touch) return;
+            lastX = touch.clientX;
+            lastY = touch.clientY;
+            moved = true;
+            setGhost((now) => (now ? { ...now, x: lastX, y: lastY } : now));
+            aim();
+        }
+
+        function end() {
+            const id = touchDragRef.current?.id ?? null;
+            touchDragRef.current = null;
+            const { handleDrop: drop, onAssignChapter: assign, episodes: list } = dropRef.current;
+            const dragged = list.find((at) => at.id === id);
+            if (id && target) {
+                if (target.kind === "ep") {
+                    drop(target.id, id);
+                } else if (target.kind === "ch" && assign) {
+                    const chapterId = target.id === "__none__" ? null : target.id;
+                    /* 今いる章の見出しに戻しただけなら、何もしない */
+                    if ((dragged?.chapter_id ?? null) !== chapterId) assign(id, chapterId);
+                } else if (target.kind === "out" && assign && dragged?.chapter_id) {
+                    assign(id, null);
+                }
+            }
+            setDraggingId(null);
+            setOverId(null);
+            setOverChapterId(null);
+            setGhost(null);
+            /* 指を離した直後の「押した」扱いを捨ててから、元に戻す */
+            window.setTimeout(() => {
+                suppressClickRef.current = false;
+            }, 350);
+        }
+
+        document.addEventListener("touchmove", move, { passive: false });
+        document.addEventListener("touchend", end);
+        document.addEventListener("touchcancel", end);
+        frame = window.requestAnimationFrame(tick);
+        return () => {
+            document.removeEventListener("touchmove", move);
+            document.removeEventListener("touchend", end);
+            document.removeEventListener("touchcancel", end);
+            window.cancelAnimationFrame(frame);
+        };
+    }, [isTouchDragging]);
 
     /*
      * 章ごとに束ねる。
@@ -374,7 +625,17 @@ export default function EpisodeList({
                  * この印を目印に、そこまで送る。
                  */
                 data-selected={isSelected ? "1" : undefined}
-                draggable
+                /* 長押しで運んでいるとき、指の下の話を見つける目印 */
+                data-ep-drop={episode.id}
+                onTouchStart={(e) => handleRowTouchStart(e, episode)}
+                onTouchMove={handleRowTouchMove}
+                onTouchEnd={cancelPress}
+                onTouchCancel={cancelPress}
+                /* 長押しで出る端末の小窓（コピーなど）を出さない */
+                onContextMenu={(e) => {
+                    if (pressRef.current || touchDragRef.current) e.preventDefault();
+                }}
+                draggable={!fingerOnly}
                 onDragStart={() => setDraggingId(episode.id)}
                 onDragEnd={() => {
                     setDraggingId(null);
@@ -388,7 +649,7 @@ export default function EpisodeList({
                 onDrop={() => handleDrop(episode.id)}
                 className={[
                     /* ep-row：指で使う端末の決まり（mobile-write.css） */
-                    "ep-row group relative mb-1 flex items-center gap-2 rounded-md px-2 py-2",
+                    "ep-row group relative mb-1 flex select-none items-center gap-2 rounded-md px-2 py-2 [-webkit-touch-callout:none]",
                     /* 移す先を選んでいる間は、ほかを目立たせない */
                     isSelected ? "bg-forest-tint" : "hover:bg-canvas",
                     isOver
@@ -449,7 +710,13 @@ export default function EpisodeList({
                 ) : (
                     <span
                         aria-hidden="true"
-                        className="cursor-grab select-none text-xs leading-none text-faint"
+                        /*
+                         * つまみ。指で触れたら、待たずにすぐつかむ（パソコンでつまむのと同じ）。
+                         * ここだけは画面送りにしない（touch-action: none）。
+                         * 指で押しやすいよう、見た目より広く受ける。
+                         */
+                        data-grip
+                        className="-my-2 -ml-1 flex cursor-grab touch-none select-none items-center self-stretch px-1.5 text-xs leading-none text-faint"
                     >
                         ⠿
                     </span>
@@ -457,11 +724,12 @@ export default function EpisodeList({
 
                 <button
                     type="button"
-                    onClick={(e) =>
-                        isPicking
-                            ? togglePicked(episode.id, e.shiftKey)
-                            : onSelect(episode.id)
-                    }
+                    onClick={(e) => {
+                        /* 長押しで運んだあとの指離れは、開く扱いにしない */
+                        if (suppressClickRef.current) return;
+                        if (isPicking) togglePicked(episode.id, e.shiftKey);
+                        else onSelect(episode.id);
+                    }}
                     className="min-w-0 flex-1 text-left"
                 >
                     {/*
@@ -476,17 +744,19 @@ export default function EpisodeList({
                     </span>
                 </button>
 
-                <EpisodeStatusMark
-                    status={episode.status}
-                    onToggle={() => onToggleStatus(episode)}
-                />
+                <span data-no-press className="contents">
+                    <EpisodeStatusMark
+                        status={episode.status}
+                        onToggle={() => onToggleStatus(episode)}
+                    />
+                </span>
 
                 {/*
                   * ★ 「名前」「章から出す」「削除」は「⋯」にまとめる。
                   *   前は行に並べていて（見えない押し具も幅を取っていた）、
                   *   部と章で入れ子にすると題名が 2 文字しか見えなかった。
                   */}
-                <span className="relative shrink-0">
+                <span data-no-press className="relative shrink-0">
                     <button
                         type="button"
                         aria-label="この話の操作"
@@ -607,7 +877,26 @@ export default function EpisodeList({
     }
 
     return (
-        <div className="flex h-full flex-col">
+        <div ref={rootRef} className="flex h-full flex-col">
+            {/*
+              * つかんだ話。行と同じ形で、つかんだ位置のまま指についてくる。
+              * 落とす先は、一覧の線と章の枠の光りで分かる。
+              */}
+            {ghost && (
+                <div
+                    aria-hidden="true"
+                    className="pointer-events-none fixed z-[80] flex items-center gap-2 rounded-md bg-surface px-2 py-2 opacity-95 shadow-[0_6px_20px_rgba(20,40,55,.22)] ring-1 ring-forest-line"
+                    style={{ left: ghost.x - ghost.offsetX, top: ghost.y - ghost.offsetY, width: ghost.width }}
+                >
+                    <span className="px-0.5 text-xs leading-none text-faint">⠿</span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] leading-snug text-ink">{ghost.label}</span>
+                        <span className="mt-0.5 block whitespace-nowrap text-xs text-faint">
+                            {formatNumber(ghost.chars)}文字
+                        </span>
+                    </span>
+                </div>
+            )}
             <div className="flex items-center justify-between px-3.5 py-2.5">
                 <h2 className="text-[13px] font-medium text-ink">エピソード</h2>
                 <span className="flex items-center gap-1.5">
@@ -890,6 +1179,8 @@ export default function EpisodeList({
                                     setOverChapterId(chapter?.id ?? "__none__");
                                 }}
                                 onDragLeave={() => setOverChapterId(null)}
+                                /* 長押しで運んでいるとき、指の下の章を見つける目印 */
+                                data-ch-drop={onAssignChapter ? chapter?.id ?? "__none__" : undefined}
                                 onDrop={() => {
                                     /*
                                      * 章を章の上へ落としたら、並べ替え。
@@ -1180,6 +1471,7 @@ export default function EpisodeList({
                   */}
                 {draggingId && onAssignChapter && (
                     <div
+                        data-unassign-drop
                         onDragOver={(e) => {
                             e.preventDefault();
                             setOverId("__unassign__");
