@@ -15,6 +15,8 @@ import NovelPopup from '@/components/novel-popup'
 import SearchForm from '@/components/search/search-form'
 import { loadBlockedIds } from '@/lib/social/blocks'
 import WorkShelf from '@/components/common/work-shelf'
+import { ContestChip } from '@/components/contest/contest-mark'
+import { contestMarksFor, liveMarkOf } from '@/lib/contest-marks'
 
 const PAGE_SIZE = 50
 
@@ -98,6 +100,14 @@ export default async function SearchPage({ searchParams }: Props) {
     .from('contests').select('id, title')
     .eq('is_published', true).eq('is_site_contest', true)
     .order('created_at', { ascending: false })
+
+  /* 絞り込みの一覧に無いコンテスト（サイトの外の主催など）でも、題名は出す */
+  let contestTitle = ''
+  if (contestId && !(searchContests || []).some((c: any) => c.id === contestId)) {
+    const { data: one } = await supabase
+      .from('contests').select('title').eq('id', contestId).eq('is_published', true).maybeSingle()
+    contestTitle = (one as any)?.title || ''
+  }
 
   let results: any[] = []
   let count = 0
@@ -544,6 +554,15 @@ export default async function SearchPage({ searchParams }: Props) {
     novels = novels.map((n: any) => ({ ...n, last_posted: lastPosted[n.id] || null }))
   }
 
+  /*
+   * コンテストに出している作品には「応募中」の札を付ける（文字の一覧と本の表紙の両方）。
+   * まだ終わっていない（募集中・審査中の）ものだけ。
+   */
+  {
+    const marks = await contestMarksFor(supabase, novels.map((n: any) => n.id))
+    novels = novels.map((n: any) => ({ ...n, contest_mark: liveMarkOf(marks, n.id) }))
+  }
+
   function fmtNum(n: number | undefined | null): string {
     if (!n) return '0'
     if (n >= 10000) return (Math.floor(n / 1000) / 10) + '万'
@@ -631,6 +650,22 @@ export default async function SearchPage({ searchParams }: Props) {
             </div>
           )}
 
+          {/*
+            * コンテストの札（「応募中」）から来たとき。何を見ているか分かるよう、いちばん上に出す。
+            * コンテストのページへも戻れる。
+            */}
+          {contestId && (() => {
+            const title = (searchContests || []).find((c: any) => c.id === contestId)?.title || contestTitle
+            if (!title) return null
+            return (
+              <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'4px 12px',marginBottom:12,padding:'12px 16px',borderRadius:12,background:'#1f4e6b',color:'#fff'}}>
+                <span style={{fontSize:11,opacity:.85,letterSpacing:'.08em'}}>コンテストの応募作</span>
+                <b style={{fontSize:15,fontFamily:"'Noto Serif JP',serif",letterSpacing:'.04em'}}>{title}</b>
+                <Link href={`/contest/${contestId}`} style={{marginLeft:'auto',fontSize:12,color:'#fff',opacity:.9,textDecoration:'underline'}}>コンテストのページへ</Link>
+              </div>
+            )
+          })()}
+
           <SearchForm
             defaultName={nameQ}
             defaultQ={q} defaultExclude={exclude} defaultGenre={genre}
@@ -693,6 +728,8 @@ export default async function SearchPage({ searchParams }: Props) {
                 cover_url: n.cover_url,
                 /* 表紙が AI かどうか。本の右上に札を出す */
                 cover_is_ai: n.cover_is_ai,
+                /* コンテストに出していれば、表紙に「応募中」の栞 */
+                contest: n.contest_mark,
                 /* 押したときに出す札の中身 */
                 novel: { ...n, like_count: n.hideStats ? 0 : (n.likeCount || 0) },
               }))}
@@ -711,6 +748,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 <span style={{display:'flex',gap:5,marginBottom:6,flexWrap:'wrap',alignItems:'center'}}>
                   <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 6px',borderRadius:3}}>{n.genre}</span>
                   <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 6px',borderRadius:3}}>{n.novel_type}</span>
+                  {n.contest_mark && <ContestChip mark={n.contest_mark} compact asLink={false} />}
                   {n.is_newbie && <span style={{fontSize:10,background:'#f0fdf4',color:'#16a34a',border:'1px solid #86efac',padding:'1px 6px',borderRadius:3,fontWeight:700}}>新人</span>}
                   {n.is_serial
                     ? <span style={{fontSize:10,background:'#f0fdf4',color:'#15803d',border:'1px solid #86efac',padding:'1px 6px',borderRadius:3}}>連載中</span>

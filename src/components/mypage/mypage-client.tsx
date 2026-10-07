@@ -1,5 +1,7 @@
 'use client'
 
+import { ContestChip } from '@/components/contest/contest-mark'
+import { useContestMarks } from '@/hooks/use-contest-marks'
 import React, { useState, useEffect } from 'react'
 import { countChars } from '@/lib/utils/text'
 import PendingComments from '@/components/mypage/pending-comments'
@@ -274,6 +276,8 @@ export default function MypageClient({
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
   const [myNovels,       setMyNovels]       = useState(initialNovels)
+  /* 出しているコンテスト（募集中・審査中）。作品管理で「これ出したっけ？」がすぐ分かるように */
+  const contestMarks = useContestMarks((myNovels || []).map(n => n.id))
   const [expandedWork,   setExpandedWork]   = useState<string | null>(null)
   const [worksFilter,    setWorksFilter]    = useState<'all'|'published'|'serial'|'completed'|'short'|'draft'>('all')
   /*
@@ -1323,6 +1327,9 @@ export default function MypageClient({
                 <span style={{fontSize:10,fontWeight:700,color:(novel as any).is_serial?'var(--color-success)':'var(--color-text-muted)',background:(novel as any).is_serial?'#e8f5e9':'#f5f5f5',border:`1px solid ${(novel as any).is_serial?'#a5d6a7':'#e0e0e0'}`,padding:'2px 9px',borderRadius:4}}>{(novel as any).is_serial?'連載中':'完結'}</span>
                 <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'2px 9px',borderRadius:4}}>{novel.genre}</span>
                 {(novel as any).novel_type && <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'2px 9px',borderRadius:4}}>{(novel as any).novel_type}</span>}
+                {(contestMarks[novel.id] || []).map(mark => (
+                  <ContestChip key={mark.id} mark={mark} asLink={false} />
+                ))}
               </div>
               {(novel as any).summary && <div style={{fontSize:12.5,color:'var(--color-text-muted)',lineHeight:1.6,marginBottom:10,maxWidth:620,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as any,overflow:'hidden',overflowWrap:'anywhere' as any,wordBreak:'break-word'}}>{(novel as any).summary}</div>}
               <div style={{fontSize:12,color:'var(--color-text-faint)'}}>

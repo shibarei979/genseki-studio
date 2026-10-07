@@ -26,6 +26,9 @@ import { createPortal } from "react-dom";
 
 import { formatNumber } from "@/lib/utils/text";
 import type { Episode, WorkWithStats } from "@/types";
+import { ContestChip, ContestCoverMark } from "@/components/contest/contest-mark";
+import { liveMarkOf, type ContestMark } from "@/lib/contest-marks";
+import { useContestMarks } from "@/hooks/use-contest-marks";
 
 /**
  * 作品の状態。
@@ -286,6 +289,12 @@ interface Props {
 
 export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
     const [sort, setSort] = useState<SortKey>("updated");
+
+    /*
+     * コンテストに出している作品。
+     *   「これ出したっけ？」が棚で見て分かるよう、表紙と一覧に「応募中」を出す。
+     */
+    const contestMarks = useContestMarks(works.map((work) => work.id));
 
     /* 棚で見るか、一覧で見るか */
     /*
@@ -591,6 +600,14 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                                             >
                                                 {chip.label}
                                             </span>
+                                            {(() => {
+                                                const mark = liveMarkOf(contestMarks, work.id);
+                                                return mark ? (
+                                                    <span className="min-w-0 shrink">
+                                                        <ContestChip mark={mark} compact asLink={false} />
+                                                    </span>
+                                                ) : null;
+                                            })()}
                                         </span>
 
                                         {/* いま何話まで来ているか。棚では見えない情報 */}
@@ -722,6 +739,7 @@ export default function HomeWorkTable({ works, episodes, onDelete }: Props) {
                                                 episodes={episodesOf(item.id)}
                                                 onDelete={() => void onDelete(item)}
                                                 size={size}
+                                                contest={liveMarkOf(contestMarks, item.id)}
                                             />
                                         ) : (
                                             /*
@@ -792,12 +810,15 @@ function Tile({
     episodes,
     onDelete,
     size,
+    contest = null,
 }: {
     work: WorkWithStats;
     episodes: Episode[];
     onDelete: () => void;
     /** 本の大きさ。携帯では小さい */
     size: BookSize;
+    /** 出しているコンテスト（募集中・審査中）。表紙に「応募中」の栞 */
+    contest?: ContestMark | null;
 }) {
     const state = stateOf(work);
     const chip = STATE_STYLE[state];
@@ -929,6 +950,16 @@ function Tile({
                             }}
                         />
 
+                        {/*
+                          * コンテストに出している作品。
+                          * 上の端の右寄りに「応募中」の栞を垂らす。
+                          * ★ この本は小さく、下の端に状態と更新日があるので、題名を下げる余白が無い。
+                          *   栞を右に寄せ、題名の右に栞の幅だけ余白をとる。
+                          */}
+                        {contest && (
+                            <ContestCoverMark mark={contest} side="right" size={size.height < 150 ? "xs" : "sm"} />
+                        )}
+
                         {/* 表紙の丸み。上を明るく、下をわずかに落とす */}
                         <span
                             className="absolute inset-0"
@@ -980,6 +1011,8 @@ function Tile({
                                 style={{
                                     top: Math.round(size.height * 0.22),
                                     paddingLeft: BOOK.spine + 10,
+                                    /* 栞（応募中）が右上に垂れているときは、そのぶん右を空ける */
+                                    paddingRight: contest ? (size.height < 150 ? 26 : 38) : undefined,
                                 }}
                             >
                                 <span

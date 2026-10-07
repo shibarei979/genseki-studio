@@ -1,6 +1,8 @@
 import RankSheetSwipe from '@/components/ranking/rank-sheet-swipe'
 import { rowsFor } from '@/lib/count-rows'
 import { lastPostedOf } from '@/lib/last-posted'
+import { ContestChip } from '@/components/contest/contest-mark'
+import { contestMarksFor, liveMarkOf } from '@/lib/contest-marks'
 import { createClient } from '@/lib/supabase/server'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
 import { createClient as createSbClient } from '@supabase/supabase-js'
@@ -615,6 +617,12 @@ export default async function RankingPage({ searchParams }: Props) {
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   /*
+   * コンテストに出している作品に「応募中」の札。
+   * ★ 順位の計算（3 時間ためておく所）には入れない。応募はいつでも増えるので、開くたびに読む。
+   */
+  const contestMarks = await contestMarksFor(supabase, ranking.map((n: any) => n.id))
+
+  /*
    * 日付を出す。
    *
    * ★ 読めない値のときは、何も出さない。
@@ -889,6 +897,10 @@ export default async function RankingPage({ searchParams }: Props) {
                         <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 5px',borderRadius:3}}>{n.genre}</span>
                         <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 5px',borderRadius:3}}>{n.novel_type}</span>
                         {n.is_serial && <span style={{fontSize:10,background:'#f0fdf4',color:'#15803d',border:'1px solid #86efac',padding:'1px 5px',borderRadius:3}}>連載中</span>}
+                        {(() => {
+                          const mark = liveMarkOf(contestMarks, n.id)
+                          return mark ? <ContestChip mark={mark} compact asLink={false} /> : null
+                        })()}
                       </div>
                       <div style={{fontSize:14,fontWeight:700,color:'var(--color-text)',marginBottom:2,lineHeight:1.4}}>{n.title}</div>
                       <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:4}}>作者：{n.display_name}</div>

@@ -57,6 +57,8 @@ import { notFound, redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 import RecommendSection from '@/components/novel/recommend-section'
+import { ContestChip, ContestCoverMark } from '@/components/contest/contest-mark'
+import { contestMarksFor, isLiveMark } from '@/lib/contest-marks'
 import Link from 'next/link'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
@@ -108,6 +110,14 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
   const novelError = (novelRes as any).error
 
   if (!novel || novelError) notFound()
+
+  /*
+   * 出しているコンテスト。
+   *   タグの並びに「応募中」の札（押すとそのコンテストの応募作を探せる）、
+   *   表紙の上の端からも「応募中」の栞を垂らす。応援する人にも、書いた本人にも、ぱっと見で分かるように。
+   */
+  const contestMarks = (await contestMarksFor(supabase, [novel.id]))[novel.id] ?? []
+  const liveContestMark = contestMarks.find(isLiveMark) ?? null
 
   /*
    * 公開されていないものは見せない。
@@ -649,6 +659,9 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
               {novel.novel_type && (
                 <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'2px 8px',borderRadius:4}}>{novel.novel_type}</span>
               )}
+              {contestMarks.map((mark) => (
+                <ContestChip key={mark.id} mark={mark} />
+              ))}
               {novel.ai_usage === 'generated' && (
                 <span style={{fontSize:10,background:'#ede9fe',color:'#6d28d9',border:'1px solid #c4b5fd',padding:'2px 8px',borderRadius:4,fontWeight:700}}>AI作品</span>
               )}
@@ -757,6 +770,13 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
                      * 絵そのものには重ねられない。
                      */
                     <div style={{position:'relative', flexShrink:0, alignSelf:'flex-start', lineHeight:0}}>
+                    {liveContestMark && (
+                      <ContestCoverMark
+                        mark={liveContestMark}
+                        size="md"
+                        side={novel.cover_is_ai && novel.cover_stamp_corner === 'tl' ? 'right' : 'left'}
+                      />
+                    )}
                     {novel.cover_is_ai && (
                       /*
                        * AI のハンコ。
