@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import { coverFor } from '@/components/home/home-work-table'
 import NovelPopup from '@/components/novel-popup'
+import { ContestCoverMark } from '@/components/contest/contest-mark'
+import type { ContestMark } from '@/lib/contest-marks'
 
 /**
  * ============================================================
@@ -44,6 +46,8 @@ export interface ShelfWork {
     cover_is_ai?: boolean | null
     /** 印を置く角。作者が選んだもの。決めていなければ右上 */
     cover_stamp_corner?: "tl" | "tr" | "bl" | "br" | null
+    /** 出しているコンテスト（募集中・審査中）。表紙に「応募中」の栞を垂らす */
+    contest?: ContestMark | null
     /**
      * 押したときに出す札の中身。
      *
@@ -206,7 +210,8 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                     <span
                                         style={{
                                             position: 'absolute', left: 0, right: 0,
-                                            top: Math.round(BOOK_HEIGHT * 0.22),
+                                            /* 栞（応募中）が垂れているときは、題名をその下へ下げる */
+                                            top: work.contest ? 64 : Math.round(BOOK_HEIGHT * 0.22),
                                             padding: `0 10px 0 ${SPINE + 8}px`,
                                         }}
                                     >
@@ -228,6 +233,17 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                             'linear-gradient(90deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.05) 60%, rgba(255,255,255,0.10) 100%)',
                                     }}
                                 />
+
+                                {/* コンテストに出している作品。上の端から栞を垂らす（背の影のぶん内へ） */}
+                                {work.contest && (
+                                    <ContestCoverMark
+                                        mark={work.contest}
+                                        inset={SPINE}
+                                        /* 棚の本では小さめに（表紙の絵を隠しすぎない） */
+                                        size="xs"
+                                        side={work.cover_url && work.cover_is_ai && work.cover_stamp_corner === 'tl' ? 'right' : 'left'}
+                                    />
+                                )}
 
                                 {/*
                                   * AI の印。
@@ -335,7 +351,8 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                     <span
                                         style={{
                                             position: 'absolute', left: 0, right: 0,
-                                            top: Math.round(BOOK_HEIGHT * 0.22),
+                                            /* 栞（応募中）が垂れているときは、題名をその下へ下げる */
+                                            top: work.contest ? 64 : Math.round(BOOK_HEIGHT * 0.22),
                                             padding: `0 10px 0 ${SPINE + 8}px`,
                                         }}
                                     >
@@ -357,6 +374,17 @@ export default function WorkShelf({ works }: { works: ShelfWork[] }) {
                                             'linear-gradient(90deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.05) 60%, rgba(255,255,255,0.10) 100%)',
                                     }}
                                 />
+
+                                {/* コンテストに出している作品。上の端から栞を垂らす（背の影のぶん内へ） */}
+                                {work.contest && (
+                                    <ContestCoverMark
+                                        mark={work.contest}
+                                        inset={SPINE}
+                                        /* 棚の本では小さめに（表紙の絵を隠しすぎない） */
+                                        size="xs"
+                                        side={work.cover_url && work.cover_is_ai && work.cover_stamp_corner === 'tl' ? 'right' : 'left'}
+                                    />
+                                )}
 
                                 {/*
                                   * AI の印。
