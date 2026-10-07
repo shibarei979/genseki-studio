@@ -224,6 +224,24 @@ export default function EpisodeList({
      *
      * 押し具なら、どこでも同じように使える。
      */
+    /**
+     * 1 つ上（下）へ動かせるか。
+     *
+     * ★ 同じ章の中だけ。
+     *   となりが別の章の話だと、番号を入れ替えても章ごとに束ねて見せるので、
+     *   画面の上では動かない（押しても何も起きないように見える）。
+     *   章をまたぐときは「章から出す」や、つまんで章へ落とす操作を使う。
+     */
+    function canMove(episodeId: string, step: -1 | 1): boolean {
+        const order = orderedEpisodeIds(chapters, episodes);
+        const from = order.indexOf(episodeId);
+        const to = from + step;
+        if (from < 0 || to < 0 || to >= order.length) return false;
+        const self = episodes.find((at) => at.id === episodeId);
+        const other = episodes.find((at) => at.id === order[to]);
+        return (self?.chapter_id ?? null) === (other?.chapter_id ?? null);
+    }
+
     function moveBy(episodeId: string, step: -1 | 1) {
         /*
          * 画面に見えている順で数える。
@@ -236,7 +254,7 @@ export default function EpisodeList({
         if (from < 0) return;
 
         const to = from + step;
-        if (to < 0 || to >= order.length) return;
+        if (!canMove(episodeId, step)) return;
 
         const next = [...order];
         [next[from], next[to]] = [next[to], next[from]];
@@ -406,8 +424,8 @@ export default function EpisodeList({
                   *   携帯では一度も出ない。
                   */}
                 {/*
-                  * 話ごとの ▲▼ はやめた（一覧がごちゃつくため）。
-                  * 並べ替えは、つまんで動かす（パソコン）か、章の ▲▼ で。
+                  * 話ごとの ▲▼ を行に並べるのはやめた（一覧がごちゃつくため）。
+                  * 並べ替えは、つまんで動かす（パソコン）か、「⋯」の「1つ上へ・1つ下へ」で。
                   */}
 
 
@@ -489,7 +507,7 @@ export default function EpisodeList({
                             <span className="fixed inset-0 z-30" onClick={() => setMenuFor(null)} aria-hidden="true" />
                             <span
                                 role="menu"
-                                className="absolute right-0 top-full z-40 mt-1 block w-44 overflow-hidden rounded-lg border border-line bg-surface text-left shadow-lg"
+                                className="absolute right-0 top-full z-40 mt-1 block w-52 overflow-hidden rounded-lg border border-line bg-surface text-left shadow-lg"
                             >
                                 {menuFor.confirm ? (
                                     <span className="block px-3 py-2.5">
@@ -513,6 +531,33 @@ export default function EpisodeList({
                                     </span>
                                 ) : (
                                     <>
+                                        {/*
+                                          * ★ 1 つ上へ・下へ。
+                                          *   つまんで動かす操作は携帯の指ではできない（画面が送られる）。
+                                          *   話ごとの ▲▼ を行に並べるのはやめたので（一覧がごちゃつく）、ここに置く。
+                                          *   押しても小窓は閉じない。続けて押せば何段でも動かせる。
+                                          */}
+                                        <span className="flex border-b border-line">
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                disabled={!canMove(episode.id, -1)}
+                                                onClick={() => moveBy(episode.id, -1)}
+                                                className="flex-1 px-3 py-2.5 text-center text-[12.5px] text-ink hover:bg-canvas disabled:text-faint disabled:opacity-50"
+                                            >
+                                                ▲ 1つ上へ
+                                            </button>
+                                            <span className="w-px bg-line" aria-hidden="true" />
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                disabled={!canMove(episode.id, 1)}
+                                                onClick={() => moveBy(episode.id, 1)}
+                                                className="flex-1 px-3 py-2.5 text-center text-[12.5px] text-ink hover:bg-canvas disabled:text-faint disabled:opacity-50"
+                                            >
+                                                ▼ 1つ下へ
+                                            </button>
+                                        </span>
                                         {onRenameEpisode && (
                                             <button
                                                 type="button"
