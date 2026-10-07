@@ -95,15 +95,38 @@ export default async function SearchPage({ searchParams }: Props) {
     user?.email === ROOT_ADMIN_EMAIL ||
     (profile as { role?: string })?.role === 'admin'
 
-  // コンテスト絞り込み用の一覧（サイト内・公開中）
-  const { data: searchContests } = await supabase
-    .from('contests').select('id, title')
-    .eq('is_published', true).eq('is_site_contest', true)
-    .order('created_at', { ascending: false })
+  /*
+   * コンテスト絞り込み用の一覧（詳細条件に名前を並べる）。
+   *
+   * ★ 前は is_site_contest の印が付いたものだけを出していた。
+   *   いまのコンテスト（/contest）はこの印を付けないので、一覧が空になり、
+   *   「コンテスト」の欄そのものが出ていなかった。
+   *   公開していて、応募作が 1 つ以上あるコンテストを出す（準備中は出さない）。
+   *   並びは 募集中 → 審査中 → 結果発表、同じ中では新しい順。
+   */
+  let searchContests: { id: string; title: string; status: string }[] = []
+  {
+    const { data: rows } = await supabase
+      .from('contests').select('id, title, status, created_at')
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
+    const candidates = ((rows || []) as any[]).filter((c) => c.status !== 'draft')
+    if (candidates.length > 0) {
+      const { data: entryRows } = await supabase
+        .from('contest_entries').select('contest_id')
+        .in('contest_id', candidates.map((c) => c.id))
+      const withEntries = new Set(((entryRows || []) as any[]).map((r) => r.contest_id))
+      const order: Record<string, number> = { open: 0, judging: 1, closed: 2 }
+      searchContests = candidates
+        .filter((c) => withEntries.has(c.id) || c.id === contestId)
+        .sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3))
+        .map((c) => ({ id: c.id, title: c.title, status: c.status }))
+    }
+  }
 
   /* 絞り込みの一覧に無いコンテスト（サイトの外の主催など）でも、題名は出す */
   let contestTitle = ''
-  if (contestId && !(searchContests || []).some((c: any) => c.id === contestId)) {
+  if (contestId && !searchContests.some((c) => c.id === contestId)) {
     const { data: one } = await supabase
       .from('contests').select('title').eq('id', contestId).eq('is_published', true).maybeSingle()
     contestTitle = (one as any)?.title || ''
@@ -175,7 +198,23 @@ export default async function SearchPage({ searchParams }: Props) {
       query = (query as any).neq('ai_usage', 'generated')
     }
     if (q) {
-      query = (query as any).or(`title.ilike.%${q}%,summary.ilike.%${q}%,catchcopy.ilike.%${q}%`)
+      /*
+       * ★ コンテストの名前で探しても、その応募作が出るようにする。
+       *   言葉に当たるコンテスト（公開中・準備中は除く）の応募作も、結果に足す。
+       */
+      const parts = [`title.ilike.%${q}%`, `summary.ilike.%${q}%`, `catchcopy.ilike.%${q}%`]
+      const { data: hitContests } = await supabase
+        .from('contests').select('id, status')
+        .eq('is_published', true)
+        .ilike('title', `%${q}%`)
+      const hitIds = ((hitContests || []) as any[]).filter((c) => c.status !== 'draft').map((c) => c.id)
+      if (hitIds.length > 0) {
+        const { data: hitEntries } = await supabase
+          .from('contest_entries').select('novel_id').in('contest_id', hitIds).limit(500)
+        const novelIds = Array.from(new Set(((hitEntries || []) as any[]).map((e) => e.novel_id).filter(Boolean)))
+        if (novelIds.length > 0) parts.push(`id.in.(${novelIds.join(',')})`)
+      }
+      query = (query as any).or(parts.join(','))
     }
     /*
      * 題名と作者名。どちらかに当たれば出す。
@@ -655,7 +694,7 @@ export default async function SearchPage({ searchParams }: Props) {
             * コンテストのページへも戻れる。
             */}
           {contestId && (() => {
-            const title = (searchContests || []).find((c: any) => c.id === contestId)?.title || contestTitle
+            const title = searchContests.find((c) => c.id === contestId)?.title || contestTitle
             if (!title) return null
             return (
               <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'4px 12px',marginBottom:12,padding:'12px 16px',borderRadius:12,background:'#1f4e6b',color:'#fff'}}>
@@ -671,7 +710,7 @@ export default async function SearchPage({ searchParams }: Props) {
             defaultQ={q} defaultExclude={exclude} defaultGenre={genre}
             defaultType={type} defaultSerial={serial} defaultTag={tagParam} defaultMood={moodParam}
             defaultSort={sort} ageVerified={isAgeVerified}
-            defaultContest={contestId} contests={searchContests || []}
+            defaultContest={contestId} contests={searchContests}
             defaultCharMin={searchParams.charMin || ''} defaultCharMax={searchParams.charMax || ''}
             defaultPtMin={searchParams.ptMin || ''} defaultPtMax={searchParams.ptMax || ''}
           />

@@ -65,7 +65,8 @@ interface Props {
   defaultAuthor?: string; defaultLikeMin?: string; defaultLikeMax?: string
   defaultCharMin?: string; defaultCharMax?: string; defaultPtMin?: string; defaultPtMax?: string
   defaultContest?: string; defaultName?: string
-  contests?: { id: string; title: string }[]
+  /** 詳細条件に並べるコンテスト。status は open / judging / closed */
+  contests?: { id: string; title: string; status?: string }[]
 }
 
 /**
@@ -657,22 +658,34 @@ export default function SearchForm({
               </div>
             </div>
           </div>
+          {/*
+            * コンテスト。名前をそのまま並べて、押して選ぶ（前は選択の箱に隠れていた）。
+            * 選ぶと、そのコンテストの応募作だけになる。もう一度押すと外れる。
+            */}
           {contests.length > 0 && (
             <div style={{marginBottom:12}}>
               <div style={{fontSize:11,color:'var(--color-text-muted)',fontWeight:600,marginBottom:6}}>コンテスト</div>
-              <div style={{position:'relative',display:'inline-block',minWidth:240,maxWidth:'100%'}}>
-                <select value={contestId} onChange={e=>setContestId(e.target.value)}
-                  style={{width:'100%',appearance:'none',WebkitAppearance:'none',padding:'8px 36px 8px 12px',borderRadius:8,border:'1px solid var(--color-brand-border)',background:'var(--color-bg-card)',color:contestId?'var(--color-text)':'var(--color-text-muted)',fontSize:13,cursor:'pointer'}}>
-                  <option value="">指定なし</option>
-                  {contests.map(c => (
-                    <option key={c.id} value={c.id}>{c.title}</option>
-                  ))}
-                </select>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                <button onClick={()=>setContestId('')} className={pillCls(!contestId)} style={pill(!contestId)}>指定なし</button>
+                {contests.map(c => {
+                  const on = contestId === c.id
+                  const label = c.status === 'open' ? '応募中' : c.status === 'judging' ? '審査中' : c.status === 'closed' ? '結果発表' : ''
+                  return (
+                    <button key={c.id} onClick={()=>setContestId(on ? '' : c.id)} className={pillCls(on)}
+                      style={{...pill(on),display:'inline-flex',alignItems:'center',gap:6,maxWidth:'100%'}}>
+                      {label && (
+                        <span style={{fontSize:9.5,fontWeight:700,padding:'0 5px',borderRadius:3,lineHeight:'15px',flexShrink:0,
+                          background: on ? 'rgba(255,255,255,.22)' : c.status === 'judging' ? '#e6f1ec' : c.status === 'closed' ? '#f1f2f0' : 'var(--color-brand-light)',
+                          color: on ? 'inherit' : c.status === 'judging' ? '#2d5c4b' : c.status === 'closed' ? 'var(--color-text-muted)' : 'var(--color-brand)'}}>
+                          {label}
+                        </span>
+                      )}
+                      <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.title}</span>
+                    </button>
+                  )
+                })}
               </div>
-              <div style={{fontSize:10.5,color:'var(--color-text-faint)',marginTop:4}}>コンテスト参加作品だけを表示します</div>
+              <div style={{fontSize:10.5,color:'var(--color-text-faint)',marginTop:4}}>選んだコンテストの応募作だけを表示します。キーワードにコンテスト名を入れても探せます</div>
             </div>
           )}
           <div style={{marginBottom:12}}>
