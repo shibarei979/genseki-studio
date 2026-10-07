@@ -833,7 +833,8 @@ function Tile({
 
     return (
         <li
-            className="group relative"
+            /* gk-ribbon-host：乗せている間、応募中の栞を薄くする（styles/items.css） */
+            className="gk-ribbon-host group relative"
             style={{ width: size.widthOf(work), height: size.height }}
         >
             {/*
@@ -957,7 +958,12 @@ function Tile({
                           *   栞を右に寄せ、題名の右に栞の幅だけ余白をとる。
                           */}
                         {contest && (
-                            <ContestCoverMark mark={contest} side="right" size={size.height < 150 ? "xs" : "sm"} />
+                            <ContestCoverMark
+                                mark={contest}
+                                side="right"
+                                size={size.height < 150 ? "xs" : "sm"}
+                                inset={BOOK.spine}
+                            />
                         )}
 
                         {/* 表紙の丸み。上を明るく、下をわずかに落とす */}

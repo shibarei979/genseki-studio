@@ -407,3 +407,20 @@
 .inv-enter { margin-top: 14px; padding: 12px; border-radius: 12px; border: 1px dashed #e3c3b0; background: #fffaf6; text-align: left; }
 .inv-enter > p { font-size: 12px; font-weight: 700; color: #6b3a1c; margin-bottom: 8px; }
 .inv-enter-msg { margin-top: 6px; font-size: 12px; color: #2f7a4d; }
+
+/* ---------- コンテスト応募の栞（components/contest/contest-mark.tsx）---------- */
+/*
+ * 本に乗せている間は栞を薄くして、表紙の絵を見せる。
+ * 栞そのものに乗せたら濃く戻し、下にコンテストの名前を出す。
+ * 指で触る端末（乗せる操作が無い）では、いつも濃いまま。
+ */
+.gk-ribbon { transition: opacity .18s ease; cursor: default; }
+.gk-ribbon-tip { opacity: 0; visibility: hidden; transform: translateY(-3px); transition: opacity .15s ease, transform .15s ease, visibility 0s linear .15s; pointer-events: none; z-index: 3; }
+@media (hover: hover) {
+    .ws_book:hover .gk-ribbon,
+    .gk-ribbon-host:hover .gk-ribbon { opacity: .28; }
+    .ws_book:hover .gk-ribbon:hover,
+    .gk-ribbon-host:hover .gk-ribbon:hover,
+    .gk-ribbon:hover { opacity: 1; }
+    .gk-ribbon:hover + .gk-ribbon-tip { opacity: 1; visibility: visible; transform: none; transition: opacity .15s ease, transform .15s ease; }
+}

@@ -60,19 +60,32 @@ export function ContestCoverMark({
     const padTop = md ? 9 : xs ? 5 : 7;
     const padBottom = tail + (md ? 7 : xs ? 4 : 5);
     const diamond = md ? 5 : xs ? 3 : 4;
+    const top = md ? -3 : -2;
+    const label = CONTEST_MARK_LABEL[mark.status];
+    /* 栞の下の端（名前の札をその下に出す） */
+    const ribbonBottom = Math.ceil(
+        top + padTop + diamond + (md ? 5 : xs ? 3 : 4) + Array.from(label).length * fontSize * (md ? 1.22 : 1.18) + padBottom,
+    );
 
     return (
+        <>
         <span
-            title={`${mark.title}　${CONTEST_MARK_LABEL[mark.status]}`}
+            /*
+             * ★ 本に指（カーソル）を乗せている間は薄くして、表紙の絵を見せる。
+             *   栞そのものに乗せたら濃く戻し、下にコンテストの名前を出す。
+             *   動きは CSS（styles/items.css の .gk-ribbon）で付ける。
+             * ★ title は空にする。本に付いている題名の吹き出しが、栞の上で重なって出ないように。
+             */
+            className="gk-ribbon"
+            title=""
             aria-label={`${mark.title}に${CONTEST_MARK_LABEL[mark.status]}`}
             style={{
                 position: "absolute",
-                top: md ? -3 : -2,
+                top,
                 left: side === "left" ? gap + inset : undefined,
                 right: side === "right" ? gap : undefined,
                 zIndex: 2,
                 lineHeight: 1,
-                pointerEvents: "none",
                 /* 切り抜いた形にも影が落ちるよう、影は外側の箱で付ける */
                 filter: "drop-shadow(0 2px 2px rgba(0,0,0,.28)) drop-shadow(0 0 1px rgba(0,0,0,.18))",
             }}
@@ -122,7 +135,45 @@ export function ContestCoverMark({
                     </span>
                 ))}
             </span>
+
         </span>
+
+        {/*
+          * 栞に乗せたときに出す、コンテストの名前。
+          * ★ 栞の中に入れると、栞の幅に縛られて表紙の外へはみ出し、切れていた。
+          *   表紙そのものを基準に置き、表紙の幅に収める。
+          */}
+        <span
+            className="gk-ribbon-tip"
+            aria-hidden="true"
+            style={{
+                position: "absolute",
+                top: ribbonBottom + 4,
+                left: side === "left" ? inset + 4 : undefined,
+                right: side === "right" ? 4 : undefined,
+                width: "max-content",
+                maxWidth: md ? `min(240px, calc(100% - ${inset + 8}px))` : `calc(100% - ${inset + 8}px)`,
+                padding: md ? "6px 10px" : "4px 7px",
+                borderRadius: 6,
+                background: "#fff",
+                border: `1px solid ${tone.line}`,
+                boxShadow: "0 4px 12px rgba(20,40,55,.18)",
+                color: tone.base,
+                textAlign: "left",
+                whiteSpace: "normal",
+                lineHeight: 1.45,
+                fontFamily: "'Noto Sans JP', sans-serif",
+            }}
+        >
+            {/* 「応募中」「審査中」は栞に書いてあるので、ここは短く */}
+            <span style={{ display: "block", fontSize: md ? 10 : 8.5, color: "#7d867f", letterSpacing: ".08em", whiteSpace: "nowrap" }}>
+                コンテスト
+            </span>
+            <span style={{ display: "block", fontSize: md ? 12 : xs ? 9.5 : 10.5, fontWeight: 700 }}>
+                {mark.title}
+            </span>
+        </span>
+        </>
     );
 }
 

@@ -769,7 +769,7 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
                      * 絵と同じ大きさの入れ物が要る。
                      * 絵そのものには重ねられない。
                      */
-                    <div style={{position:'relative', flexShrink:0, alignSelf:'flex-start', lineHeight:0}}>
+                    <div className="gk-ribbon-host" style={{position:'relative', flexShrink:0, alignSelf:'flex-start', lineHeight:0}}>
                     {liveContestMark && (
                       <ContestCoverMark
                         mark={liveContestMark}
