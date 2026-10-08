@@ -252,6 +252,26 @@ export default function MypageClient({
     return 'mypage'
   })
 
+  /*
+   * ★ ミッションの数を読み直す。
+   *
+   *   数（シリーズ・投稿・つぶやきなど）は、マイページを開いた時に 1 回だけ読んでいた。
+   *   同じ画面のまま「シリーズ」タブでシリーズを作っても数が 0 のままで、
+   *   ミッションのタブへ移っても「シリーズを作る」が達成にならなかった。
+   *   ミッションが出る所（マイページの上・ミッションのタブ）へ移るたびに読み直す。
+   */
+  const firstTabRef = React.useRef(true)
+  useEffect(() => {
+    if (firstTabRef.current) { firstTabRef.current = false; return }
+    if (activeTab !== 'mission' && activeTab !== 'mypage') return
+    let alive = true
+    fetch('/api/mypage/extra', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (alive && data) setExtra(data) })
+      .catch(() => { /* 読めなくても、前の数のまま出す */ })
+    return () => { alive = false }
+  }, [activeTab])
+
   function handleTabChange(tab: Tab) {
     setActiveTab(tab)
     if (typeof window !== 'undefined') {

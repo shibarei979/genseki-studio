@@ -63,15 +63,21 @@ export default function RoomWritingPane({ onCharsChanged, onWritingStarted }: Pr
         }
         void (async () => {
             const episode = await getRepository().getEpisode(episodeId);
-            setBody(episode?.body ?? "");
-            setStartedAt(countChars(episode?.body ?? ""));
+            /* 公開している話に書きかけの直しがあれば、そちらを開く（書く画面と同じ） */
+            const text = episode?.draft_body ?? episode?.body ?? "";
+            setBody(text);
+            setStartedAt(countChars(text));
         })();
     }, [episodeId]);
 
     const handleSave = useCallback(
         async (value: string) => {
             if (!episodeId) return;
-            await getRepository().updateEpisode(episodeId, { body: value });
+            /*
+             * ★ 公開している話なら、直しは「書きかけ」に貯める（as_draft）。
+             *   読者の本文への反映は、書く画面の「公開中の本文に反映」で行う。
+             */
+            await getRepository().updateEpisode(episodeId, { body: value, as_draft: true });
         },
         [episodeId],
     );

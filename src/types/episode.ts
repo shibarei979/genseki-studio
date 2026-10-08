@@ -96,6 +96,28 @@ export interface Episode {
      * 読む画面で、絵の隅に印を出す。
      */
     illust_is_ai?: boolean | null;
+
+    /*
+     * ★ 公開している話の、書きかけの直し。
+     *
+     *   公開済みの話を書く画面で直すと、前は自動保存のたびに
+     *   読者の見る本文がそのまま書き換わり、目次に「改稿」と出ていた。
+     *   空白を 1 つ打っただけでも、題名の右の丸（状態）を押しただけでも。
+     *
+     *   いまは、公開済みの話の直しはここに貯める（自動保存はここへ）。
+     *   「公開中の本文に反映」を押したときだけ、読者の本文へ写す。
+     *   null なら、書きかけの直しは無い。
+     */
+    draft_title?: string | null;
+    draft_body?: string | null;
+    /** 書きかけの直しを最後に保存した日時 */
+    draft_saved_at?: string | null;
+    /**
+     * 公開したあとに、読者の見る中身（題・本文・前書き・後書き）を
+     * 本当に直した日時。目次の「改稿」はこれだけを見る。
+     * 状態の丸や章の付け替え、並べ替えでは動かない。
+     */
+    revised_at?: string | null;
 }
 
 export interface EpisodeCreateInput {
@@ -120,7 +142,17 @@ export type EpisodeUpdateInput = Partial<
         | "publish_at"
         | "scheduled_at"
     >
->;
+> & {
+    /**
+     * 公開済みの話なら、title / body を「書きかけの直し」として保存する。
+     * まだ出していない話では、ふつうに保存する。
+     */
+    as_draft?: boolean;
+    /** 書きかけの直しを、読者の本文へ写す（改稿になる） */
+    apply_draft?: boolean;
+    /** 書きかけの直しを捨てる */
+    discard_draft?: boolean;
+};
 
 export const EPISODE_STATUS_LABEL: Record<EpisodeStatus, string> = {
     todo: "未着手",

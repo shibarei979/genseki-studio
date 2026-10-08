@@ -10,8 +10,10 @@ interface Episode {
   created_at: string
   /** 読めるようになった日。無ければ作った日で代える */
   posted_at?: string | null
-  /** 最後に本文を直した日 */
+  /** 最後に何かを保存した日（状態の丸なども含む。改稿の表示には使わない） */
   updated_at?: string | null
+  /** 公開したあと、読者の見る中身を本当に直した日。目次の「改稿」はこれだけを見る */
+  revised_at?: string | null
   illust_url: string | null
   chapter_id: string | null
 }
@@ -114,10 +116,10 @@ export default function ChapterAccordion({
                 *   予約の話は、予約を入れた日（＝公開より前）に最後に触っていることが多く、
                 *   それが「改稿」と出ていた。公開より前の日付は出さない。
                 */}
-              {ep.updated_at &&
-                new Date(ep.updated_at).getTime() > new Date(ep.posted_at || ep.created_at).getTime() &&
-                fmtDate(ep.updated_at) !== fmtDate(ep.posted_at || ep.created_at) && (
-                  <span style={{marginLeft:5,color:'var(--color-text-muted)'}}>・{fmtDate(ep.updated_at)} 改稿</span>
+              {ep.revised_at &&
+                new Date(ep.revised_at).getTime() > new Date(ep.posted_at || ep.created_at).getTime() &&
+                fmtDate(ep.revised_at) !== fmtDate(ep.posted_at || ep.created_at) && (
+                  <span style={{marginLeft:5,color:'var(--color-text-muted)'}}>・{fmtDate(ep.revised_at)} 改稿</span>
                 )}
             </span>
           </div>

@@ -16,6 +16,7 @@ import ManuscriptSurface from "@/components/workspace/manuscript-surface";
 import NotePicker from "@/components/workspace/note-picker";
 import { VERSION_AUTO_INTERVAL_MS } from "@/config";
 import { useAutosave } from "@/hooks/use-autosave";
+import DraftApplyBar from "@/components/workspace/draft-apply-bar";
 import { insertEmphasis, insertRuby } from "@/lib/manuscript/notation";
 import { insertAnnotation } from "@/lib/utils/annotation";
 import { scrollToLine } from "@/lib/manuscript/scroll-to-line";
@@ -73,6 +74,11 @@ interface Props {
     onJumped?: () => void;
     onSave: (patch: { title: string; body: string }) => Promise<void>;
     /**
+     * 公開している話の直しを、読者の本文へ反映する（改稿日が付く）。
+     * いま画面にある題と本文をそのまま渡す。
+     */
+    onApplyDraft?: (patch: { title: string; body: string }) => Promise<void>;
+    /**
      * 作品の題名。書く画面の上に、小さく出す。
      *
      * ★ どの作品を書いているのか、画面の中に無かった。
@@ -103,6 +109,8 @@ interface Props {
     onOpenList?: () => void;
     /** 携帯：右上の「投稿」に出す、まだ出していない話の数 */
     unpostedCount?: number;
+    /** 今日この作品で書いた文字数。読めないあいだは null（出さない） */
+    todayChars?: number | null;
 }
 
 export default function EpisodeEditor({
@@ -114,6 +122,7 @@ export default function EpisodeEditor({
     pickEntryName = "この資料",
     settings,
     onSave,
+    onApplyDraft,
     jumpToLine,
     onJumped,
     onToggleWritingMode,
@@ -131,13 +140,18 @@ export default function EpisodeEditor({
     onToggleFocus,
     allEpisodes = [],
     onOpenList,
+    todayChars = null,
     unpostedCount = 0,
 }: Props) {
     /* ルビ・置き換えの問い。ブラウザの prompt は出ない機械がある */
     const { ask, dialog: askDialog } = useAskText();
 
-    const [title, setTitle] = useState(episode.title);
-    const [body, setBody] = useState(episode.body);
+    /*
+     * ★ 公開している話に書きかけの直しがあれば、そちらを開く。
+     *   読者の本文（episode.body）は、反映するまで変わらない。
+     */
+    const [title, setTitle] = useState(episode.draft_title ?? episode.title);
+    const [body, setBody] = useState(episode.draft_body ?? episode.body);
     /** 縦書き整形の直前の本文。取り消し用に 1 手ぶんだけ持つ */
     const [beforeNormalize, setBeforeNormalize] = useState<string | null>(null);
 
@@ -284,8 +298,8 @@ export default function EpisodeEditor({
         if (loadedIdRef.current === episode.id) return;
 
         loadedIdRef.current = episode.id;
-        setTitle(episode.title);
-        setBody(episode.body);
+        setTitle(episode.draft_title ?? episode.title);
+        setBody(episode.draft_body ?? episode.body);
         setBeforeNormalize(null);
     }, [episode.id, episode.title, episode.body]);
 
@@ -698,8 +712,24 @@ export default function EpisodeEditor({
         setSlots([slots[1], slot]);
     }
 
+    /*
+     * ★ 公開している話で、画面の題・本文が読者の見ているものと違うか。
+     *   違う間は「反映する」帯を出す（直しは自動保存で控えてある）。
+     */
+    /*
+     *   draft_saved_at を見るのは、表に直しの列がある（SQL を流した）ときだけ出すため。
+     *   列が無いと直しは前と同じく直接保存されるので、帯を出しても意味が無い。
+     */
+    const hasUnappliedEdit =
+        episode.is_published === true &&
+        Boolean(episode.draft_saved_at) &&
+        (title !== episode.title || body !== episode.body);
     const saveTone: "ok" | "draft" | "busy" =
-        state === "saving" || state === "pending" ? "busy" : episode.is_published === false ? "draft" : "ok";
+        state === "saving" || state === "pending"
+            ? "busy"
+            : episode.is_published === false || hasUnappliedEdit
+              ? "draft"
+              : "ok";
     const saveLabel =
         state === "saving"
             ? "保存中"
@@ -707,7 +737,9 @@ export default function EpisodeEditor({
               ? "未保存の変更"
               : episode.is_published === false
                 ? `下書きに保存・${formatNumber(countChars(body))}字`
-                : `保存済み・${formatNumber(countChars(body))}字`;
+                : hasUnappliedEdit
+                  ? `直しを保存・未反映`
+                  : `保存済み・${formatNumber(countChars(body))}字`;
 
     const showKeyBar = isMobile && keyboard.isOpen && !mark && !notePick && !isTitleFocused;
     const showBottomBar = isMobile && !keyboard.isOpen && !mark && !isFocusMode;
@@ -860,6 +892,7 @@ export default function EpisodeEditor({
                     title={title}
                     saveLabel={saveLabel}
                     saveTone={saveTone}
+                    todayChars={todayChars}
                     backHref="/"
                     postHref={`/workspace/${episode.work_id}/post?ep=${episode.id}`}
                     unposted={unpostedCount}
@@ -960,8 +993,15 @@ export default function EpisodeEditor({
                         state={state}
                         savedAt={savedAt}
                         isDraft={episode.is_published === false}
+                        isUnapplied={hasUnappliedEdit}
                     />
                     <span>{formatNumber(countChars(body))}文字</span>
+                    {/* ★ 今日この作品で書いた文字数。書く気の支えに */}
+                    {todayChars !== null && (
+                        <span className="shrink-0 font-semibold text-forest" title="今日この作品で書いた文字数">
+                            今日 +{formatNumber(todayChars)}字
+                        </span>
+                    )}
                     <button
                         type="button"
                         onClick={onOpenRead}
@@ -1025,6 +1065,19 @@ export default function EpisodeEditor({
                     </button>
                 </div>
             </div>
+
+            {/*
+             * ★ 公開している話の直しが、まだ読者に出ていないとき。
+             *   自動保存は「書きかけの直し」へ。読者の本文は「反映」を押すまで変わらない。
+             *   携帯でも出す（上の段の下に並ぶ）。
+             */}
+            {hasUnappliedEdit && onApplyDraft && (
+                <DraftApplyBar
+                    savedAt={episode.draft_saved_at ?? null}
+                    busy={state === "saving"}
+                    onApply={() => onApplyDraft({ title, body })}
+                />
+            )}
 
             {/*
              * 道具の並び。
@@ -1458,11 +1511,14 @@ function SaveIndicator({
     state,
     savedAt,
     isDraft,
+    isUnapplied,
 }: {
     state: string;
     savedAt: string | null;
     /** まだ出していない話か */
     isDraft?: boolean;
+    /** 公開している話で、直しがまだ読者の本文に反映されていないか */
+    isUnapplied?: boolean;
 }) {
     if (state === "saving") return <span>保存中</span>;
     if (state === "pending") return <span className="text-faint">未保存の変更</span>;
@@ -1487,6 +1543,14 @@ function SaveIndicator({
             return (
                 <span className="text-amber">
                     下書きに保存 {formatTime(savedAt)}・まだ出していません
+                </span>
+            );
+        }
+
+        if (isUnapplied) {
+            return (
+                <span className="text-amber">
+                    直しを保存 {formatTime(savedAt)}・未反映
                 </span>
             );
         }

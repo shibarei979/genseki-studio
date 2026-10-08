@@ -15,6 +15,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+/** 日本時間での "YYYY-MM-DD"（執筆の記録の日付と同じ） */
+function jstToday(): string {
+    return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 import Header from "@/components/layout/header";
 import EpisodeEditor from "@/components/workspace/episode-editor";
 import EpisodeList from "@/components/workspace/episode-list";
@@ -502,14 +507,61 @@ export default function WorkspaceClient({ workId }: Props) {
         }
     }
 
+    /*
+     * ★ 今日この作品で書いた文字数（書く画面の上に「今日 +○字」と出す）。
+     *
+     *   執筆の記録（writing_logs）と同じ数え方にする：
+     *   今日の増分 ＝ いまの作品の総文字数 − 今日のはじめの総文字数（減っても 0 より下にしない）。
+     *   はじめの総文字数は、今日の記録があれば「総文字数 − 増分」、無ければ前の日の終わりの総文字数。
+     *   保存のたびに数え直す。日付が変わったら、その時点の総文字数をはじめにする。
+     */
+    const [todayChars, setTodayChars] = useState<number | null>(null);
+    const todayBaseRef = useRef<{ day: string; base: number } | null>(null);
+    const lastTotalRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        let alive = true;
+        void (async () => {
+            try {
+                const logs = await getRepository().listWritingLogs(workId);
+                if (!alive) return;
+                const day = jstToday();
+                const row = logs.find((log) => log.date === day);
+                if (row) {
+                    todayBaseRef.current = { day, base: row.total_chars - row.delta };
+                    lastTotalRef.current = row.total_chars;
+                    setTodayChars(Math.max(0, row.delta));
+                } else {
+                    const before = logs.filter((log) => log.date < day).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+                    todayBaseRef.current = { day, base: before?.total_chars ?? 0 };
+                    lastTotalRef.current = before?.total_chars ?? null;
+                    setTodayChars(0);
+                }
+            } catch {
+                /* 読めなくても書く邪魔はしない（出さないだけ） */
+            }
+        })();
+        return () => {
+            alive = false;
+        };
+    }, [workId]);
+
     /** 保存のたびに、その日の総文字数を記録する */
     async function recordProgress() {
         const repository = getRepository();
         const rows = await repository.listEpisodes(workId);
-        await repository.recordProgress(
-            workId,
-            rows.reduce((sum, episode) => sum + episode.char_count, 0),
-        );
+        const total = rows.reduce((sum, episode) => sum + episode.char_count, 0);
+        await repository.recordProgress(workId, total);
+
+        /* 今日の文字数を数え直す */
+        const day = jstToday();
+        const held = todayBaseRef.current;
+        if (!held || held.day !== day) {
+            /* 日付が変わった：前の日の終わりの総文字数を、今日のはじめにする */
+            todayBaseRef.current = { day, base: lastTotalRef.current ?? held?.base ?? 0 };
+        }
+        lastTotalRef.current = total;
+        setTodayChars(Math.max(0, total - (todayBaseRef.current?.base ?? total)));
     }
 
     async function handleToggleStatus(episode: Episode) {
@@ -871,6 +923,7 @@ export default function WorkspaceClient({ workId }: Props) {
                     {selected ? (
                         <EpisodeEditor
                             onOpenList={() => setIsListOpen(true)}
+                            todayChars={todayChars}
                             unpostedCount={episodes.filter((ep) => ep.is_published === false).length}
                             pickEntryId={searchParams.get("pick")}
                             pickEntryName={pickEntryName}
@@ -890,9 +943,18 @@ export default function WorkspaceClient({ workId }: Props) {
                             jumpToLine={jumpLine}
                             onJumped={() => setJumpLine(null)}
                             onSave={async ({ title, body }) => {
-                                const saved = await updateEpisode(selected.id, { title, body });
-                                                        void runAutoExtract(saved);
+                                /*
+                                 * ★ 公開している話なら、直しは「書きかけ」に貯まる（as_draft）。
+                                 *   読者の本文は「公開中の本文に反映」を押すまで変わらない。
+                                 *   まだ出していない話は、これまでどおり本文に保存される。
+                                 */
+                                const saved = await updateEpisode(selected.id, { title, body, as_draft: true });
+                                /* 資料の自動の拾い上げは、いま書いている本文（書きかけ）から */
+                                void runAutoExtract({ ...saved, title, body });
                                 void recordProgress();
+                            }}
+                            onApplyDraft={async ({ title, body }) => {
+                                await updateEpisode(selected.id, { title, body, apply_draft: true });
                             }}
                             onToggleWritingMode={() => void handleToggleWritingMode()}
                             isFocusMode={isFocusMode}

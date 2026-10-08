@@ -192,9 +192,17 @@ export default function ResourceClient({ workId }: Props) {
         latest: number | null;
     }>({ full: null, latest: null });
 
-    const readScanLeft = useCallback(async () => {
+    /*
+     * ★ 回数の決まりが無い人（サブスク）か。
+     *   null は「まだ分からない」。left が null で返ったら決まりなし。
+     *   本文の長さの決まり（4 万字）も、これで分ける。
+     */
+    const [scanUnlimited, setScanUnlimited] = useState<boolean | null>(null);
+
+    const readScanLeft = useCallback(async (): Promise<boolean | null> => {
         try {
-            const response = await fetch("/api/scan/left");
+            const response = await fetch("/api/scan/left", { cache: "no-store" });
+            if (!response.ok) return null;
             const data = (await response.json()) as {
                 full?: { left: number | null };
                 latest?: { left: number | null };
@@ -204,8 +212,12 @@ export default function ResourceClient({ workId }: Props) {
                 full: data.full?.left ?? null,
                 latest: data.latest?.left ?? null,
             });
+            const unlimited = data.full !== undefined && data.full.left === null;
+            setScanUnlimited(unlimited);
+            return unlimited;
         } catch {
             /* 読めなくても、押したときにサーバーが断る */
+            return null;
         }
     }, []);
 
@@ -737,6 +749,8 @@ export default function ResourceClient({ workId }: Props) {
         const knownLeft = isFull ? scanLeft.full : scanLeft.latest;
 
         if (knownLeft !== null && knownLeft <= 0) {
+            /* ★ 押せない状態に戻す。前は「読み取り中」のまま固まっていた */
+            setIsScanning(false);
             setScanNotice(
                 isFull
                     ? "全文の読み直しは今月ぶんを使い切りました。会員になると、回数の決まりが外れます。"
@@ -765,26 +779,78 @@ export default function ResourceClient({ workId }: Props) {
         }
 
         /*
+         * ★ 本文の長さの決まり。
+         *
+         *   サブスクの人：決まりなし。長い本文は区切って何回かに分けて読ませる。
+         *   それ以外：4 万字まで。超えたら、送る前に断る。
+         *
+         *   前は全部を 1 回で送っていて、サーバーは後ろの 4 万字しか読まず、
+         *   長い作品では頭のほうが黙って抜け落ちたり、返事が間に合わず止まったりしていた。
+         */
+        const FREE_SCAN_CHARS = 40000;
+        const totalChars = pieces.reduce((sum, piece) => sum + piece.body.length, 0);
+        const unlimited = scanUnlimited ?? (await readScanLeft());
+        if (unlimited !== true && totalChars > FREE_SCAN_CHARS) {
+            setIsScanning(false);
+            setScanNotice(
+                `本文が ${totalChars.toLocaleString("ja-JP")} 字あります。サブスク以外では、4万文字以上は読み込めません。` +
+                    (isFull ? "「最新」で書き足したぶんだけ読むか、サブスクをお使いください。" : ""),
+            );
+            return;
+        }
+
+        /*
          * 話ごとに見出しを付けて送る。
          * 「どの話のどこに書いてあったか」を返させるため。
          * 目印が無いと、あとから根拠を探せない。
          */
-        const text = pieces
-            .map((piece) => {
-                const label = `第${piece.episode.ep_number}話`;
-                // 差分のときは、本文の途中から送っているので開始行をずらす
-                const offset = isFull
-                    ? 0
-                    : countLines(piece.episode.body) - countLines(piece.body);
-                return [
-                    `=== ${label} ===`,
-                    piece.body
-                        .split("\n")
-                        .map((line, index) => `${offset + index + 1}|${line}`)
-                        .join("\n"),
-                ].join("\n");
-            })
-            .join("\n\n");
+        const blocks = pieces.map((piece) => {
+            const label = `第${piece.episode.ep_number}話`;
+            // 差分のときは、本文の途中から送っているので開始行をずらす
+            const offset = isFull
+                ? 0
+                : countLines(piece.episode.body) - countLines(piece.body);
+            return {
+                label,
+                lines: piece.body
+                    .split("\n")
+                    .map((line, index) => `${offset + index + 1}|${line}`),
+            };
+        });
+
+        /*
+         * ★ 1 回に送る量を区切る。
+         *   サーバーが読むのは 1 回 4 万字まで（行番号の印も含む）。余裕を見て 3 万 5 千字で切る。
+         *   話の切れ目で分け、1 話が長すぎるときは行の切れ目で分ける（見出しに「続き」と付ける）。
+         */
+        const CHUNK_CHARS = 35000;
+        const chunks: string[] = [];
+        let current = "";
+        const push = (part: string) => {
+            if (current && current.length + part.length + 2 > CHUNK_CHARS) {
+                chunks.push(current);
+                current = "";
+            }
+            current = current ? `${current}\n\n${part}` : part;
+        };
+        for (const block of blocks) {
+            let head = `=== ${block.label} ===`;
+            let lines: string[] = [];
+            let size = head.length;
+            for (const line of block.lines) {
+                if (lines.length > 0 && size + line.length + 1 > CHUNK_CHARS) {
+                    push([head, ...lines].join("\n"));
+                    head = `=== ${block.label}（続き） ===`;
+                    lines = [];
+                    size = head.length;
+                }
+                lines.push(line);
+                size += line.length + 1;
+            }
+            push([head, ...lines].join("\n"));
+        }
+        if (current) chunks.push(current);
+
         const excluded = entries
             .flatMap((entry) => [entry.name, ...(entry.aliases ?? [])])
             .filter(Boolean);
@@ -792,18 +858,30 @@ export default function ResourceClient({ workId }: Props) {
         const extractor = getExtractor(aiStatus.connected);
         const scanKind = isFull ? ("full" as const) : ("latest" as const);
 
-        const result = extractor.extractWithMeta
-            ? await extractor.extractWithMeta(text, excluded, targets, scanKind)
-            : {
-                  candidates: await extractor.extract(
-                      text,
-                      excluded,
-                      targets,
-                      scanKind,
-                  ),
-                  usedModel: false,
-                  fallbackReason: undefined as string | undefined,
-              };
+        const result: {
+            candidates: Awaited<ReturnType<typeof extractor.extract>>;
+            usedModel: boolean;
+            fallbackReason: string | undefined;
+        } = { candidates: [], usedModel: true, fallbackReason: undefined };
+
+        for (let at = 0; at < chunks.length; at += 1) {
+            if (chunks.length > 1) {
+                setScanNotice(`長い本文なので、分けて読んでいます（${at + 1} / ${chunks.length}）`);
+            }
+            const part = extractor.extractWithMeta
+                ? await extractor.extractWithMeta(chunks[at], excluded, targets, scanKind)
+                : {
+                      candidates: await extractor.extract(chunks[at], excluded, targets, scanKind),
+                      usedModel: false,
+                      fallbackReason: undefined as string | undefined,
+                  };
+            result.candidates.push(...part.candidates);
+            if (!part.usedModel) result.usedModel = false;
+            if (!result.fallbackReason && part.fallbackReason) {
+                result.fallbackReason = part.fallbackReason;
+            }
+        }
+        if (chunks.length > 1) setScanNotice("");
         const found = result.candidates;
 
         /*

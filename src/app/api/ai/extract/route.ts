@@ -25,6 +25,13 @@ const MAX_TEXT_LENGTH = 40000;
 /** モデルの返答を待つ上限 */
 const TIMEOUT_MS = 60000;
 
+/*
+ * ★ この口が動いてよい時間（秒）。
+ *   決めていないと、置き場所（Vercel）の既定で先に打ち切られ、
+ *   上の 60 秒を待たずに止まることがある（長い本文で「動かない」に見えた）。
+ */
+export const maxDuration = 60;
+
 interface RequestBody {
     text?: string;
     knownNames?: string[];

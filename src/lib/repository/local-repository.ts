@@ -364,7 +364,13 @@ export const localRepository: Repository = {
         const index = all.findIndex((ep) => ep.id === episodeId);
         if (index === -1) throw new Error(`話が見つかりません: ${episodeId}`);
 
-        const merged: Episode = { ...all[index], ...patch, updated_at: now() };
+        /*
+         * ★ 書きかけの直しの印は、この端末だけの保存では使わない。
+         *   （読者がいないので、そのまま本文に書けばよい）
+         */
+        const { as_draft: _asDraft, apply_draft: _apply, discard_draft: _discard, ...plain } = patch;
+        void _asDraft; void _apply; void _discard;
+        const merged: Episode = { ...all[index], ...plain, updated_at: now() };
         // 本文が変わったときだけ文字数を数え直す
         if (patch.body !== undefined) merged.char_count = countChars(patch.body);
 

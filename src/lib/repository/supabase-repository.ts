@@ -242,6 +242,11 @@ function toEpisode(row: Record<string, unknown>): Episode {
         scanned_length: (row.scanned_length as number) ?? 0,
         chapter_id: (row.chapter_id as string | null) ?? null,
         is_published: row.is_published === true,
+        /* 公開済みの話の書きかけの直し・改稿の日（列が無い表では null） */
+        draft_title: (row.draft_title as string | null | undefined) ?? null,
+        draft_body: (row.draft_body as string | null | undefined) ?? null,
+        draft_saved_at: (row.draft_saved_at as string | null | undefined) ?? null,
+        revised_at: (row.revised_at as string | null | undefined) ?? null,
         publish_at: (row.publish_at as string | null) ?? null,
         /* 読めるようになった日時。作った日とは別に持つ */
         posted_at: (row.posted_at as string | null) ?? null,
@@ -874,9 +879,88 @@ export const supabaseRepository: Repository = {
 
     async updateEpisode(
         episodeId: string,
-        patch: Partial<Episode>,
+        input: Partial<Episode> & {
+            as_draft?: boolean;
+            apply_draft?: boolean;
+            discard_draft?: boolean;
+        },
     ): Promise<Episode> {
+        const { as_draft: asDraft, apply_draft: applyDraft, discard_draft: discardDraft, ...given } = input;
+        const patch: Partial<Episode> = { ...given };
         const next: Record<string, unknown> = {};
+
+        /*
+         * ★ 公開している話の直しは、まず「書きかけ」に貯める。
+         *
+         *   前は自動保存のたびに読者の本文が書き換わり、
+         *   空白 1 つでも目次に「改稿」と出ていた（取り消せない）。
+         *   書く画面からの保存（as_draft）は、公開済みなら draft_* にだけ書く。
+         *   読者の本文に写すのは「公開中の本文に反映」（apply_draft）のときだけ。
+         *
+         * ★ 表に draft_* の列がまだ無い（SQL を流す前）ときは、前と同じく直接書く。
+         *   書いた物が消えるより、前の動きのほうがよい。
+         */
+        const touchesContent =
+            patch.title !== undefined ||
+            patch.body !== undefined ||
+            patch.preface !== undefined ||
+            patch.afterword !== undefined;
+        let current: Record<string, unknown> | null = null;
+        if (asDraft || applyDraft || discardDraft || touchesContent) {
+            const { data: row } = await db()
+                .from("episodes")
+                .select("*")
+                .eq("id", episodeId)
+                .maybeSingle();
+            current = (row as Record<string, unknown> | null) ?? null;
+        }
+        const hasDraftColumns = Boolean(current && "draft_body" in current);
+        const isLive = current?.is_published === true;
+
+        if (asDraft && isLive && hasDraftColumns && current) {
+            const { data: saved, error: draftError } = await db()
+                .from("episodes")
+                .update({
+                    draft_title: patch.title ?? (current.draft_title as string | null) ?? (current.title as string),
+                    draft_body: patch.body ?? (current.draft_body as string | null) ?? (current.body as string),
+                    draft_saved_at: new Date().toISOString(),
+                })
+                .eq("id", episodeId)
+                .select()
+                .maybeSingle();
+            if (draftError) throw new Error(describeError(draftError.message));
+            if (!saved) throw new Error("話が見つかりません");
+            return toEpisode(saved);
+        }
+
+        if (applyDraft && hasDraftColumns && current) {
+            /* 書きかけの直しを、読者の本文へ写す。写したら書きかけは空に */
+            if (patch.title === undefined && current.draft_title != null) {
+                patch.title = current.draft_title as string;
+            }
+            if (patch.body === undefined && current.draft_body != null) {
+                patch.body = current.draft_body as string;
+            }
+        }
+        if ((applyDraft || discardDraft) && hasDraftColumns) {
+            next.draft_title = null;
+            next.draft_body = null;
+            next.draft_saved_at = null;
+        }
+
+        /*
+         * ★ 「改稿」の日時は、公開している話の中身が本当に変わったときだけ。
+         *   同じ中身を保存し直しただけ・状態の丸を押しただけでは付けない。
+         */
+        if (current && isLive && current.posted_at && "revised_at" in current) {
+            const changed =
+                (patch.title !== undefined && patch.title !== (current.title ?? "")) ||
+                (patch.body !== undefined && patch.body !== (current.body ?? "")) ||
+                (patch.preface !== undefined && (patch.preface ?? "") !== (current.preface ?? "")) ||
+                (patch.afterword !== undefined && (patch.afterword ?? "") !== (current.afterword ?? ""));
+            if (changed) next.revised_at = new Date().toISOString();
+        }
+
         if (patch.title !== undefined) next.title = patch.title;
         if (patch.body !== undefined) {
             next.body = patch.body;
