@@ -16,6 +16,7 @@
 
 import type { BackupFile, BackupSummary } from "@/lib/backup/format";
 import { countChars } from "@/lib/utils/text";
+import { readAll } from "@/lib/utils/read-all";
 import { jstDay } from "@/lib/utils/jst";
 import type { Repository, StudioCounts } from "@/lib/repository/types";
 import { createClient } from "@/lib/supabase/client";
@@ -534,7 +535,15 @@ export const supabaseRepository: Repository = {
         if (novelIds.length === 0) return emptyCounts();
 
         const [episodes, entries, relations, stages, logs] = await Promise.all([
-            db().from("episodes").select("draft_status, char_count").in("novel_id", novelIds),
+            /* ★ 1000 行で切れないよう、分けて全部読む（listWorks と同じ理由） */
+            readAll<{ draft_status: string; char_count: number }>((from, to) =>
+                db()
+                    .from("episodes")
+                    .select("id, draft_status, char_count")
+                    .in("novel_id", novelIds)
+                    .order("id", { ascending: true })
+                    .range(from, to),
+            ).then((data) => ({ data })),
             db().from("resource_entries").select("candidate_status, candidate_source").in("novel_id", novelIds),
             db().from("resource_relations").select("id").in("novel_id", novelIds),
             db().from("plot_stages").select("id").in("novel_id", novelIds),
@@ -624,14 +633,28 @@ export const supabaseRepository: Repository = {
          * 一緒に引くと、繋がりが 2 本あるときに
          * どちらを辿ればよいか決められず落ちる。
          */
-        const { data: episodeRows } = await db()
-            .from("episodes")
-            .select("novel_id, char_count, draft_status, is_published")
-            .in(
-                "novel_id",
-                works.map((row) => row.id as string),
-            )
-            .is("deleted_at", null);
+        /*
+         * ★ 分けて全部読む（readAll）。
+         *
+         *   1 回で読むと、表は 1000 行までしか返さない。
+         *   話の多い作品（試しに大量に作った作品など）があると、
+         *   その作品の話だけで 1000 行が埋まり、
+         *   ほかの作品の字数が 0 字になっていた
+         *   （コンテストの応募画面で「0字・応募できない」と出た件）。
+         *
+         * ★ 並びを決めておかないと、区切りごとに行がずれて
+         *   数え落としや二重数えが起きる。id で並べる。
+         */
+        const workIds = works.map((row) => row.id as string);
+        const episodeRows = await readAll<Record<string, unknown>>((from, to) =>
+            db()
+                .from("episodes")
+                .select("id, novel_id, char_count, draft_status, is_published")
+                .in("novel_id", workIds)
+                .is("deleted_at", null)
+                .order("id", { ascending: true })
+                .range(from, to),
+        );
 
         const byWork = new Map<
             string,
