@@ -218,7 +218,7 @@ export default function AdminNoticesClient() {
                                                                     : "transparent",
                                                                 color: isCurrent
                                                                     ? color.text
-                                                                    : "#7d867f",
+                                                                    : "#677069",
                                                                 borderColor: isCurrent
                                                                     ? color.text
                                                                     : "var(--color-line)",

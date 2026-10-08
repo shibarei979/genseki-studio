@@ -31,6 +31,7 @@ export {
     GENRE_LEGACY_MATCH,
     GENRE_COLOR,
     genreColor,
+    genreInk,
     GENRE_SHORT,
     genreShort,
     SUGGESTED_TAGS,

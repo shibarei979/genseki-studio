@@ -233,7 +233,7 @@ export default function NoticesClient() {
                                             : "transparent",
                                         color: isCurrent
                                             ? (tone?.text ?? "var(--color-forest)")
-                                            : "#7d867f",
+                                            : "#677069",
                                         borderColor: isCurrent
                                             ? (tone?.text ?? "var(--color-forest)")
                                             : "var(--color-line)",

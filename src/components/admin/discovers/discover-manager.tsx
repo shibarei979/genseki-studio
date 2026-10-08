@@ -68,7 +68,6 @@ export default function DiscoverManager({ initialItems }: { initialItems: Item[]
               {/* 審査理由 */}
               {item.pending_reason && (
                 <div style={{fontSize:11,color:'#ef4444',display:'flex',alignItems:'center',gap:4}}>
-                  <span>⚠️</span>
                   <span>AIによる判定理由：{item.pending_reason}</span>
                 </div>
               )}

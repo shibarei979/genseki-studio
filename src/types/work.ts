@@ -446,6 +446,32 @@ export function genreColor(genre: string): string {
     return GENRE_COLOR[genre] ?? "#8a8f93";
 }
 
+/** 色の明るさ（0 = 黒、1 = 白）。読みやすさの計算に使う */
+function luminance(hex: string): number {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return 0;
+    const n = parseInt(m[1], 16);
+    const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+        const c = v / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+}
+
+/**
+ * ジャンルの付箋に乗せる字の色。
+ *
+ * ★ 白い字だと、黄色（日常・コメディ）や橙（学園）の付箋では
+ *   ほとんど読めなかった（1.5〜2.2 : 1）。
+ *   白と濃い墨のうち、その色の上で読みやすい方を選ぶ。
+ */
+export function genreInk(genre: string): string {
+    const L = luminance(genreColor(genre));
+    const onWhite = 1.05 / (L + 0.05);
+    const onInk = (L + 0.05) / (luminance("#1a211d") + 0.05);
+    return onWhite >= onInk ? "#ffffff" : "#1a211d";
+}
+
 /**
  * 付箋に出す、短いジャンル名。
  *

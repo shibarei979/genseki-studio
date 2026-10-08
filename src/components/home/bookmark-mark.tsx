@@ -134,7 +134,7 @@ export default function BookmarkMark({ novelId }: { novelId: string }) {
                     toggle()
                 }}
                 aria-label={saved ? '保存をやめる' : '保存する'}
-                title={saved ? '保存をやめる' : 'あとで読む'}
+                title={saved ? '保存をやめる' : '保存する'}
                 className="rwl_mark"
                 data-popping={popping ? "1" : undefined}
                 style={{

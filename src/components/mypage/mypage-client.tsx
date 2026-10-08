@@ -151,7 +151,7 @@ const TABS: { id: Tab; label: string; hideInFocus?: boolean; writerOnly?: boolea
   { id:'typos',     label:'誤字報告', writerOnly: true },
   /* シリーズは作品をまとめるもの。書く人だけに出す（読む向きには要らない） */
   { id:'series',    label:'シリーズ', writerOnly: true },
-  { id:'bookmarks', label:'保存済み' },
+  { id:'bookmarks', label:'本棚' },
   { id:'history',   label:'閲覧履歴' },
   /* ミッションは数を競うもの。集中したい人には出さない */
   { id:'mission',   label:'ミッション', hideInFocus: true },
@@ -1047,7 +1047,12 @@ export default function MypageClient({
           }
           {/* つけているアイコン衣装 */}
           <CostumeOverlay url={(profile as any).costume_url} size={88}/>
-          <div style={{position:'absolute',bottom:2,right:2,zIndex:2,width:22,height:22,background:'var(--color-bg-card)',borderRadius:'50%',border:'2px solid var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11}}>{iconUploading?'⟳':'📷'}</div>
+          <div style={{position:'absolute',bottom:2,right:2,zIndex:2,width:22,height:22,background:'var(--color-bg-card)',borderRadius:'50%',border:'2px solid var(--color-brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11}}>{iconUploading?'⟳':(
+            /* 絵文字ではなく線の絵（サイトの他のアイコンとそろえる） */
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+            </svg>
+          )}</div>
         </div>
         <div style={{flex:'1 1 200px',minWidth:'min(180px, 100%)'}}>
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
@@ -1469,7 +1474,7 @@ export default function MypageClient({
     setMovingBookmark(null)
   }
 
-  // ===== 保存済みタブ =====
+  // ===== 本棚タブ（保存した作品） =====
   const [selectedFolder, setSelectedFolder] = useState<string>('all')
 
   const BookmarksTab = () => {
@@ -1478,7 +1483,7 @@ export default function MypageClient({
       : selectedFolder === 'unclassified'
         ? myBookmarks.filter((bm:any) => !bm.folder_id)
         : myBookmarks.filter((bm:any) => bm.folder_id === selectedFolder)
-    const currentName = selectedFolder === 'all' ? 'すべての保存済み'
+    const currentName = selectedFolder === 'all' ? 'すべて'
       : selectedFolder === 'unclassified' ? '未分類'
       : (folders.find((f:any)=>f.id===selectedFolder)?.name || 'リスト')
 
@@ -1488,9 +1493,9 @@ export default function MypageClient({
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:32,flexWrap:'wrap',gap:12}}>
         <div>
           <h1 style={{fontSize:22,fontWeight:700,color:'var(--color-text)',letterSpacing:'-0.01em',lineHeight:1.3}}>
-            保存済み作品 <span style={{fontSize:15,fontWeight:600,color:'var(--color-text-muted)'}}>（{myBookmarks.length}）</span>
+            本棚 <span style={{fontSize:15,fontWeight:600,color:'var(--color-text-muted)'}}>（{myBookmarks.length}）</span>
           </h1>
-          <p style={{fontSize:14,color:'var(--color-text-muted)',marginTop:10,lineHeight:1.7}}>気になる作品をリストに保存して、あとでゆっくり読むことができます。</p>
+          <p style={{fontSize:14,color:'var(--color-text-muted)',marginTop:10,lineHeight:1.7}}>「保存」した作品がここに並びます。リストに分けて、あとでゆっくり読めます。</p>
         </div>
         <button onClick={()=>setShowFolderModal(true)}
           style={{height:44,display:'inline-flex',alignItems:'center',gap:6,padding:'0 20px',border:'1px solid var(--color-brand)',borderRadius:10,
@@ -1504,7 +1509,7 @@ export default function MypageClient({
         <div style={{flex:'0 1 260px',minWidth:'min(220px, 100%)',background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:16,padding:'20px 8px',boxShadow:'0 1px 3px rgba(0,0,0,0.02)'}}>
           <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',padding:'0 14px',marginBottom:12}}>リスト</div>
           {[
-            {id:'all', name:'すべての保存済み', count:myBookmarks.length, deletable:false},
+            {id:'all', name:'すべて', count:myBookmarks.length, deletable:false},
             ...folders.map((f:any)=>({id:f.id, name:f.name, count:myBookmarks.filter((bm:any)=>bm.folder_id===f.id).length, deletable:true})),
             {id:'unclassified', name:'未分類', count:myBookmarks.filter((bm:any)=>!bm.folder_id).length, deletable:false},
           ].map(item => (
@@ -1957,8 +1962,8 @@ export default function MypageClient({
         <div style={{marginBottom:20}}>
           <div style={{fontSize:15,fontWeight:700,color:'var(--color-text)',marginBottom:6}}>ブロック・ミュート管理</div>
           <div style={{fontSize:12,color:'var(--color-text-muted)',lineHeight:1.7,padding:'10px 12px',background:'var(--color-bg)',borderRadius:8,border:'1px solid var(--color-brand-border)'}}>
-            <div style={{marginBottom:4}}>🚫 <strong>ブロック</strong>：相手はあなたの作品にコメントできなくなります。</div>
-            <div>🔇 <strong>ミュート</strong>：相手のコメントがあなたには表示されなくなります。相手には通知されません。</div>
+            <div style={{marginBottom:4}}><strong>ブロック</strong>：相手はあなたの作品にコメントできなくなります。</div>
+            <div><strong>ミュート</strong>：相手のコメントがあなたには表示されなくなります。相手には通知されません。</div>
           </div>
         </div>
         <div style={{marginBottom:24}}>

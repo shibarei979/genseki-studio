@@ -69,7 +69,7 @@
         color: #fff;
     }
     .mrb-nb.is-off {
-        color: var(--color-faint, #7d867f);
+        color: var(--color-faint, #677069);
         opacity: .5;
     }
 
@@ -396,7 +396,7 @@
     --color-bg-card: #ffffff;
     --color-text: #1a211d;
     --color-text-muted: #55605a;
-    --color-text-faint: #7d867f;
+    --color-text-faint: #677069;
     box-shadow: 0 -10px 30px rgba(0, 0, 0, .18);
     animation: rs-up .22s ease-out both;
 }

@@ -285,7 +285,7 @@ export default function ReaderInvites({ novelId, cornerDelayMs = 15000 }: Props)
                 cursor: 'pointer',
               }}
             >
-              本棚に入れる
+              保存する
             </button>
           )}
         </aside>

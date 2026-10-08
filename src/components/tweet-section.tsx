@@ -1489,9 +1489,9 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
             <div className="tw-actions" style={{display:'flex',alignItems:'center',gap:10,paddingTop:12,borderTop:'1px solid #f4f5f3'}}>
               <button onClick={()=>handleLike(tweet.id, tweet.liked)}
                 style={{display:'inline-flex',alignItems:'center',gap:6,height:34,padding:'0 14px',borderRadius:10,border:'1px solid',fontSize:13,cursor:currentUserId?'pointer':'default',
-                  background:tweet.liked?'#FEF2F2':'var(--color-bg-card)',
-                  borderColor:tweet.liked?'#FCA5A5':'#dcdfda',
-                  color:tweet.liked?'var(--color-danger)':'var(--color-text-muted)'}}>
+                  background:tweet.liked?'var(--color-like-tint)':'var(--color-bg-card)',
+                  borderColor:tweet.liked?'var(--color-like-line)':'#dcdfda',
+                  color:tweet.liked?'var(--color-like)':'var(--color-text-muted)'}}>
                 <IconHeart filled={tweet.liked}/>
                 {tweet.like_count}
               </button>
@@ -1514,7 +1514,7 @@ export default function TweetSection({ authorId, scope = 'all', topic = null, cu
                 <button
                   onClick={()=>void toggleBookmark(tweet.id)}
                   aria-pressed={tweet.bookmarked}
-                  title={tweet.bookmarked ? 'ブックマークを外す' : 'ブックマークする'}
+                  title={tweet.bookmarked ? '保存をやめる' : '保存する'}
                   style={{display:'inline-flex',alignItems:'center',gap:6,height:34,padding:'0 14px',borderRadius:10,border:'1px solid',fontSize:13,cursor:'pointer',
                     background:tweet.bookmarked?'#eef2f5':'var(--color-bg-card)',
                     borderColor:tweet.bookmarked?'var(--color-brand)':'#dcdfda',

@@ -80,7 +80,7 @@ async function computeRecommendScores(): Promise<ScoredNovel[]> {
   if (allEpIds.length > 0) {
     for (let i = 0; i < allEpIds.length; i += 500) {
       const chunk = allEpIds.slice(i, i + 500)
-      const { data } = await supabase.from('page_views').select('episode_id').in('episode_id', chunk).gt('created_at', pvSince)
+      const { data } = await supabase.from('page_views').select('episode_id').in('episode_id', chunk).gt('viewed_at', pvSince).or('is_bot.is.null,is_bot.eq.false')
       data?.forEach((r: any) => { const nid = epToNovel[r.episode_id]; if (nid) recentPvMap[nid] = (recentPvMap[nid] || 0) + 1 })
     }
   }

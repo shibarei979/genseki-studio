@@ -54,7 +54,7 @@
 
     --color-text: #1a211d;
     --color-text-muted: #55605a;
-    --color-text-faint: #7d867f;
+    --color-text-faint: #677069;
     --color-text-inverse: #ffffff;
 
     --color-tag-border: #dcdfda;
@@ -86,7 +86,12 @@
     /* 文字は一段濃くする。薄い灰は画面によっては読み取りにくい */
     --color-ink: #1a211d;
     --color-muted: #55605a;
-    --color-faint: #7d867f;
+    /*
+     * いちばん薄い字。日付・件数・補足など、約 1,000 か所。
+     * ★ 前の #7d867f は白地で 3.76 : 1 で、小さな字には薄すぎた。
+     *   #677069 で 5.1 : 1（読みやすさの目安 4.5 : 1 を超える）。
+     */
+    --color-faint: #677069;
 
     --color-amber: #99610a;
     --color-amber-tint: #fbf0dd;
@@ -105,6 +110,33 @@
     --color-success: #4d7a52;
     --color-warning: #99610a;
     --color-danger-tint: #fbeceb;
+
+    /*
+     * 「いいね」の色。夜明けの琥珀。
+     * ★ 前は消す操作の赤（danger）を使っていて、押すと何かが消えそうに見えた。
+     *   赤は消す操作だけに戻す。「保存」は紺なので、並んでも見分けられる。
+     */
+    --color-like: #99610a;
+    --color-like-tint: #fbf0dd;
+    --color-like-line: #e6c48a;
+
+    /*
+     * 名前だけ使われていて、中身が無かった色。
+     * 中身が無いと何も塗られず、札の背景が抜けたり、色が黒のままだったりした。
+     *   info-bg / info-border … 「長編」「短編」などの札
+     *   leaf / leaf-tint      … 「開放中」「公開中」などの、動いている・出ている印（森の緑）
+     *   rank-*                … 順位の 1〜3 位の数字
+     *   border / bg-page      … 管理の画面の線と下地
+     */
+    --color-info-bg: #eef4f8;
+    --color-info-border: #c5d9e6;
+    --color-leaf: #3f6f4a;
+    --color-leaf-tint: #e8f1e9;
+    --color-rank-gold: #a3741a;
+    --color-rank-silver: #66717b;
+    --color-rank-bronze: #94562b;
+    --color-border: #dcdfda;
+    --color-bg-page: #f4f5f3;
 
     /* ============================================================
      * 航路の色
@@ -1473,7 +1505,8 @@ body:has(.mh:not(.is-static)) {
 }
 
 .mode-toggle[data-on="read"] {
-    background: #3d9fd4;
+    /* 白い絵が乗るので、少し深い水色（ようこそと同じ） */
+    background: #2a7aa8;
     /* つまみが右にあるので、絵は左に寄せる */
     justify-content: flex-start;
 }

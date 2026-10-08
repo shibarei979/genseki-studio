@@ -24,9 +24,12 @@ import { createClient } from '@/lib/supabase/client'
  *
  *   WRITE  書く人。濃い青
  *   READ   読む人。水色
+ *
+ * ★ 水色は #3d9fd4 だと、白い字のボタンで 2.95 : 1 しかなく読みにくかった。
+ *   少し深い水色にして 4.7 : 1。
  */
 const WRITE = '#1f4e6b'
-const READ = '#3d9fd4'
+const READ = '#2a7aa8'
 
 export default function HomeSelectPage() {
   const supabase = createClient()

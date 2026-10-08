@@ -68,7 +68,7 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
             <span style={{ fontSize: 10, color: 'var(--color-brand)', border: '1px solid var(--color-brand-border)', borderRadius: 4, padding: '1px 7px' }}>{n.genre}</span>
             <span style={{ fontSize: 10, color: 'var(--color-info)', border: '1px solid var(--color-info)', borderRadius: 4, padding: '1px 7px' }}>{n.is_serial ? '連載中' : '完結'}</span>
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{(charCountMap[n.id] || 0).toLocaleString()}文字　{fmtDate(n.updated_at)}更新　♡ {novelLikeMap[n.id] || 0}　👁 {(novelViewMap[n.id] || 0).toLocaleString()}</div>
+          <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{(charCountMap[n.id] || 0).toLocaleString()}文字　{fmtDate(n.updated_at)}更新　♡ {novelLikeMap[n.id] || 0}　閲覧 {(novelViewMap[n.id] || 0).toLocaleString()}</div>
         </Link>
       ))}
     </div>
@@ -100,8 +100,8 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
 
   const Bookmarks = (
     <div style={card}>
-      <div style={cardHead}><span style={cardTitle}>保存済み作品</span><button onClick={()=>onTabChange?.('bookmarks')} style={{...seeAll, background:'none', border:'none', cursor:'pointer', padding:0}}>すべて見る →</button></div>
-      {bookmarkedNovels.length === 0 ? <div style={emptyText}>保存済み作品はありません</div> : bookmarkedNovels.slice(0, 2).map((b: any, i: number) => (
+      <div style={cardHead}><span style={cardTitle}>本棚</span><button onClick={()=>onTabChange?.('bookmarks')} style={{...seeAll, background:'none', border:'none', cursor:'pointer', padding:0}}>すべて見る →</button></div>
+      {bookmarkedNovels.length === 0 ? <div style={emptyText}>本棚にはまだ作品がありません</div> : bookmarkedNovels.slice(0, 2).map((b: any, i: number) => (
         <Link key={i} href={`/novel/${b.novels?.id}`} className="dash-link" style={{ display: 'block', marginBottom: 10, textDecoration: 'none', borderRadius: 6 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.novels?.title}</div>
           <div style={{ fontSize: 10.5, color: 'var(--color-text-faint)' }}>{bmAuthorMap[b.novels?.author_id] || ''}</div>
@@ -118,7 +118,7 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
           <div style={{ fontSize: 12.5, color: 'var(--color-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginBottom: 6 }}>
             {recentTweet.body.length > 80 ? recentTweet.body.slice(0, 80) + '…' : recentTweet.body}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>♡ {recentTweet.like_count || 0}　💬 {recentTweet.reply_count || 0}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>♡ {recentTweet.like_count || 0}　返信 {recentTweet.reply_count || 0}</div>
         </div>
       ) : <div style={emptyText}>まだ書き込みがありません</div>}
     </div>

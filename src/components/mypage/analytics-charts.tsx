@@ -325,7 +325,7 @@ export default function AnalyticsCharts({
               )}
             </div>
             <div style={{borderTop:'1px solid var(--color-brand-light)',paddingTop:12,display:'flex',flexDirection:'column',gap:10}}>
-              {[['いいね',selected.likes,'var(--color-danger)'],['保存',selected.bookmarks,'var(--color-brand)'],['コメント',selected.comments,'var(--color-info)']].map(([l,v,c])=>(
+              {[['いいね',selected.likes,'var(--color-like)'],['保存',selected.bookmarks,'var(--color-brand)'],['コメント',selected.comments,'var(--color-info)']].map(([l,v,c])=>(
                 <div key={l as string} style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                   <span style={{fontSize:12,color:'var(--color-text-muted)'}}>{l as string}</span>
                   <span style={{fontSize:18,fontWeight:700,color:c as string}}>{(v as number).toLocaleString()}</span>

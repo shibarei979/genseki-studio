@@ -177,7 +177,7 @@ export const FEATURE_STATUS_COLOR: Record<
     FeatureStatus,
     { text: string; bg: string }
 > = {
-    off: { text: "#7d867f", bg: "#eeeeec" },
+    off: { text: "#677069", bg: "#eeeeec" },
     preview: { text: "#8a6410", bg: "#fbf2dc" },
     on: { text: "#1f4e6b", bg: "#e6eef4" },
 };

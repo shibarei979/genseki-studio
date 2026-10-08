@@ -1,5 +1,5 @@
 import type { HomeBook } from "@/types/home";
-import { genreColor, genreShort } from "@/types";
+import { genreColor, genreInk, genreShort } from "@/types";
 
 /**
  * 本の統一フォーマット（デザイン home_10 の book_template.js と同一構造）
@@ -48,7 +48,7 @@ export default function BookCard({
                      */}
                     <ul className="b_tags b_tags-front">
                         {book.tags.map((tag, i) => (
-                            <li key={i} style={{ backgroundColor: genreColor(tag) }} title={tag}>
+                            <li key={i} style={{ backgroundColor: genreColor(tag), color: genreInk(tag) }} title={tag}>
                                 {tag}
                             </li>
                         ))}
@@ -60,7 +60,7 @@ export default function BookCard({
                     {/* 付箋（背表紙から見たとき）。細いので短い名前 */}
                     <ul className="b_tags b_tags-spine">
                         {book.tags.map((tag, i) => (
-                            <li key={i} style={{ backgroundColor: genreColor(tag) }} title={tag}>
+                            <li key={i} style={{ backgroundColor: genreColor(tag), color: genreInk(tag) }} title={tag}>
                                 {genreShort(tag)}
                             </li>
                         ))}

@@ -550,7 +550,7 @@ export default function AnalyticsCharts({
                 *   前は作品へのいいねだけを「いいね」と出していて、下の話別の数と合わず、少なく見えていた。
                 *   両方を分けて出す。
                 */}
-              {[['作品へのいいね',selected.likes,'var(--color-danger)'],['話へのいいね（合計）',selected.epLikes ?? 0,'var(--color-danger)'],['保存',selected.bookmarks,'var(--color-brand)'],['コメント',selected.comments,'var(--color-info)']].map(([l,v,c])=>(
+              {[['作品へのいいね',selected.likes,'var(--color-like)'],['話へのいいね（合計）',selected.epLikes ?? 0,'var(--color-like)'],['保存',selected.bookmarks,'var(--color-brand)'],['コメント',selected.comments,'var(--color-info)']].map(([l,v,c])=>(
                 <div key={l as string} style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                   <span style={{fontSize:12,color:'var(--color-text-muted)'}}>{l as string}</span>
                   <span style={{fontSize:18,fontWeight:700,color:c as string}}>{(v as number).toLocaleString()}</span>

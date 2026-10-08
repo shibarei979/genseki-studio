@@ -53,7 +53,7 @@ const VIEWS = [
     { key: "mine", label: "自分の書き込み", icon: <PenIcon /> },
     { key: "following", label: "フォロー中", icon: <PeopleIcon /> },
     { key: "notices", label: "お知らせ", icon: <BellIcon /> },
-    { key: "bookmarks", label: "ブックマーク", icon: <BookmarkIcon /> },
+    { key: "bookmarks", label: "保存", icon: <BookmarkIcon /> },
 ] as const;
 
 type ViewKey = (typeof VIEWS)[number]["key"];

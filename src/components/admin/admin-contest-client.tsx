@@ -276,7 +276,7 @@ function ContestEditor({
                                                 background: isCurrent
                                                     ? tone.bg
                                                     : "transparent",
-                                                color: isCurrent ? tone.text : "#7d867f",
+                                                color: isCurrent ? tone.text : "#677069",
                                                 borderColor: isCurrent
                                                     ? tone.border
                                                     : "var(--color-line)",

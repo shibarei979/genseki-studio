@@ -47,7 +47,7 @@ const SORT_OPTIONS = [
   { v: 'like_daily',   l: 'いいね（日間）' },
   { v: 'like_weekly',  l: 'いいね（週間）' },
   { v: 'like_monthly', l: 'いいね（月間）' },
-  { v: 'bookmark',     l: 'ブックマーク' },
+  { v: 'bookmark',     l: '保存数' },
   { v: 'view',         l: '閲覧数' },
   { v: 'comment',      l: 'コメント' },
   { v: 'rising',       l: '急上昇' },

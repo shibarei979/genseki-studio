@@ -250,8 +250,8 @@ export default function NovelActions({ novelId, userId, authorId, novelTitle, is
       <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
         {/* 作者が切っていれば出さない。数は上に残る */}
         {allowLikes && (
-        <button onClick={toggleLike} style={btn(liked,'var(--color-danger)','#fef2f2')}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill={liked?'var(--color-danger)':'none'} stroke={liked?'var(--color-danger)':'var(--color-text-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+        <button onClick={toggleLike} style={btn(liked,'var(--color-like)','var(--color-like-tint)')}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill={liked?'var(--color-like)':'none'} stroke={liked?'var(--color-like)':'var(--color-text-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
           {!hideStats && fmtNum(likes)}

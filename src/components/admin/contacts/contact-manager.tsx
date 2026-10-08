@@ -145,7 +145,7 @@ export default function ContactManager({ initialContacts }: { initialContacts: C
               <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #f1f5f9'}}>
                 <a href={`mailto:${selected.email}?subject=【原石航路】お問い合わせへの回答&body=この度はお問い合わせいただきありがとうございます。%0A%0A`}
                   style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,color:'#3b82f6',textDecoration:'none',border:'1px solid #bfdbfe',padding:'6px 14px',borderRadius:8,background:'#eff6ff'}}>
-                  ✉️ メールで返信する
+                  メールで返信する
                 </a>
               </div>
             </div>

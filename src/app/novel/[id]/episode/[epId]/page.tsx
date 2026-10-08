@@ -358,7 +358,7 @@ export default async function EpisodePage({ params, searchParams }: Props) {
           </div>
           {isOwner && episode.published === false && episode.scheduled_at && (
             <div style={{background:'#eff6ff',border:'1.5px solid #93c5fd',borderRadius:10,padding:'10px 16px',marginBottom:14,fontSize:12,color:'#1d4ed8',fontWeight:600}}>
-              📅 この話は予約投稿中です。{new Date(episode.scheduled_at).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} に公開されます（このプレビューは作者にのみ表示されています）
+              この話は予約投稿中です。{new Date(episode.scheduled_at).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} に公開されます（このプレビューは作者にのみ表示されています）
             </div>
           )}
           <EpisodeNav

@@ -166,7 +166,7 @@ export function ContestCoverMark({
             }}
         >
             {/* 「応募中」「審査中」は栞に書いてあるので、ここは短く */}
-            <span style={{ display: "block", fontSize: md ? 10 : 8.5, color: "#7d867f", letterSpacing: ".08em", whiteSpace: "nowrap" }}>
+            <span style={{ display: "block", fontSize: md ? 10 : 8.5, color: "#677069", letterSpacing: ".08em", whiteSpace: "nowrap" }}>
                 コンテスト
             </span>
             <span style={{ display: "block", fontSize: md ? 12 : xs ? 9.5 : 10.5, fontWeight: 700 }}>

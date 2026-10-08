@@ -11,7 +11,7 @@
  *   断られた印象だけが残り、登録すると何が得られるかが伝わらなかった。
  *
  *   押した操作に合わせて、言葉と絵を変える。
- *     しおりを保存しました   … 先に挟んだあと（D）。どの端末でも続きから
+ *     本棚に保存しました     … 先に挟んだあと（D）。どの端末でも続きから
  *     保存・ブックマーク     … 本棚に残す
  *     感想・いいね・フォロー … 作者を応援する（F）
  *     そのほか               … 登録すると使えること
@@ -47,8 +47,8 @@ interface Props {
   message?: string
 }
 
-/** しおりを先に挟んだあとに出すときの言葉。呼ぶ側もこれを渡す */
-export const SAVED_MESSAGE = 'しおりを保存しました'
+/** 作品を先に保存したあとに出すときの言葉。呼ぶ側もこれを渡す */
+export const SAVED_MESSAGE = '本棚に保存しました'
 
 type Kind = 'saved' | 'save' | 'support' | 'general'
 
@@ -63,7 +63,7 @@ function kindOf(message: string): Kind {
 /** 見出しと、その下のひと言 */
 function wordsOf(message: string, kind: Kind): { title: string; lead: string } {
   if (kind === 'saved') {
-    return { title: 'しおりを保存しました', lead: 'この端末だけに保存されています' }
+    return { title: '本棚に保存しました', lead: 'この端末だけに保存されています' }
   }
   if (kind === 'save') {
     return {
@@ -190,7 +190,7 @@ export default function LoginPromptModal({
         </button>
 
         {kind === 'saved' ? (
-          /* ============ D しおりを保存しました ============ */
+          /* ============ D 本棚に保存しました ============ */
           <>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
               <svg width="44" height="36" viewBox="0 0 44 36" aria-hidden="true">

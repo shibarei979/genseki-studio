@@ -45,9 +45,9 @@ export default function EpisodeLikeButton({ episodeId, userId, initialLiked, ini
         padding:'10px 24px',borderRadius:20,border:'1.5px solid',
         fontSize:13,fontWeight:600,
         cursor:userId?'pointer':'default',transition:'all .2s',
-        background:liked?'#fef2f2':'var(--base-color-1)',
-        borderColor:liked?'#dc2626':'var(--color-brand-border)',
-        color:liked?'#dc2626':'var(--color-text-muted)',
+        background:liked?'var(--color-like-tint)':'var(--base-color-1)',
+        borderColor:liked?'var(--color-like)':'var(--color-brand-border)',
+        color:liked?'var(--color-like)':'var(--color-text-muted)',
       }}>
       {liked?'♥':'♡'}{count > 0 && <span style={{fontSize:12}}>{fmtNum(count)}</span>}
     </button>

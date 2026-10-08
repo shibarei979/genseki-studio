@@ -346,7 +346,7 @@
 .sub-h button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #dfe3e0; background: #fff; font-size: 16px; color: #6b7570; }
 .sub-note { font-size: 12.5px; line-height: 1.8; color: #55605a; text-align: left; padding: 10px 12px; border-radius: 10px; background: #f4f7fa; }
 .sub-note strong { color: #1f4e6b; }
-.sub-have { margin: 8px 0 12px; font-size: 12px; color: #7d867f; text-align: right; }
+.sub-have { margin: 8px 0 12px; font-size: 12px; color: #677069; text-align: right; }
 .sub-have strong { font-size: 16px; color: #1b3a52; }
 .sub-plans { display: flex; flex-direction: column; gap: 10px; list-style: none; padding: 0; margin: 0; text-align: left; }
 .sub-plan { padding: 14px; border-radius: 14px; border: 1px solid #cbd9e6; background: #fbfdff; }
@@ -358,7 +358,7 @@
 .sub-perks li { position: relative; padding-left: 18px; font-size: 12.5px; color: #33403a; }
 .sub-perks li::before { content: ""; position: absolute; left: 3px; top: 5px; width: 9px; height: 5px; border-left: 2px solid #35a45d; border-bottom: 2px solid #35a45d; transform: rotate(-45deg); }
 .sub-go { display: block; width: 100%; margin-top: 12px; padding: 11px; border: none; border-radius: 11px; font-size: 14px; font-weight: 800; color: #fff; background: linear-gradient(180deg, #d9a441, #c08c2f); cursor: pointer; }
-.sub-go:disabled { background: #e6e9ec; color: #7d867f; cursor: not-allowed; }
+.sub-go:disabled { background: #e6e9ec; color: #677069; cursor: not-allowed; }
 .sub-now { padding: 14px; border-radius: 14px; border: 1px solid #cbd9e6; background: #fbfdff; text-align: left; }
 .sub-now-t { display: flex; align-items: center; gap: 8px; }
 .sub-now-t b { font-size: 15.5px; color: #1b3a52; }

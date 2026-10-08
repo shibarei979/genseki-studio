@@ -557,9 +557,12 @@ export default function ContestEntryClient({
                     <Confetti />
 
                     <div className="relative w-full max-w-sm rounded-2xl bg-white px-7 py-8 text-center shadow-2xl">
-                        <p className="text-[32px]" aria-hidden="true">
-                            🎉
-                        </p>
+                        {/* 出し終えた印。紺の丸に夜明けの金のチェック（絵文字は使わない） */}
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#1f4e6b]" aria-hidden="true">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e8b769" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M20 6 9 17l-5-5" />
+                            </svg>
+                        </div>
 
                         <p
                             className="mt-2 text-[17px] font-semibold"

@@ -508,7 +508,12 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
       */}
     {loaded && comments.length === 0 && (
       <div style={{ background: 'var(--color-brand-light)', border: '1.5px solid var(--color-brand-border)', borderRadius: 12, padding: '18px 20px', marginBottom: 16, textAlign: 'center' }}>
-        <div style={{ fontSize: 24, marginBottom: 6 }}>✍️</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+          {/* 筆の絵。絵文字ではなく線の絵 */}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+        </div>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-brand)', marginBottom: 4 }}>まだ感想がありません</div>
         <div style={{ fontSize: 12, color: 'var(--color-text)', lineHeight: 1.7 }}>
           あなたの一言が、作者の次の一話につながります。<br/>
@@ -666,7 +671,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                 <div style={{ fontSize: 14, color: 'var(--color-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.body}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 }}>
                   <button onClick={() => toggleLike(c.id)} disabled={!userId}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: userId ? 'pointer' : 'default', fontSize: 12, color: likedComments.has(c.id) ? 'var(--color-danger)' : 'var(--color-text-muted)', padding: 0 }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: userId ? 'pointer' : 'default', fontSize: 12, color: likedComments.has(c.id) ? 'var(--color-like)' : 'var(--color-text-muted)', padding: 0 }}>
                     {likedComments.has(c.id) ? '♥' : '♡'} {c.like_count > 0 && c.like_count}
                   </button>
                   {userId && (
@@ -747,7 +752,7 @@ export default function CommentSection({ novelId, episodeId, userId, userName, u
                             */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
                             <button onClick={() => toggleLike(r.id)} disabled={!userId}
-                              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: userId ? 'pointer' : 'default', fontSize: 11, color: likedComments.has(r.id) ? 'var(--color-danger)' : 'var(--color-text-muted)', padding: 0 }}>
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: userId ? 'pointer' : 'default', fontSize: 11, color: likedComments.has(r.id) ? 'var(--color-like)' : 'var(--color-text-muted)', padding: 0 }}>
                               {likedComments.has(r.id) ? '♥' : '♡'} {r.like_count > 0 && r.like_count}
                             </button>
                             {(userId === r.user_id || userId === authorId || isAdmin) && (
