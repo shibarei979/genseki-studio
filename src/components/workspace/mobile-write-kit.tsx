@@ -241,10 +241,13 @@ export function MobileEditorHeader({
     postHref,
     unposted,
     onOpenList,
+    todayChars = null,
 }: {
     title: string;
     saveLabel: string;
     saveTone: "ok" | "draft" | "busy";
+    /** 今日この作品で書いた文字数。null なら出さない */
+    todayChars?: number | null;
     backHref: string;
     postHref: string;
     unposted: number;
@@ -261,7 +264,11 @@ export function MobileEditorHeader({
                     <span className="mw-head-ep-text">{title || "（題なし）"}</span>
                     <MwIcon name="down" size={15} />
                 </span>
-                <span className={`mw-head-save is-${saveTone}`}>{saveLabel}</span>
+                <span className="mw-head-sub">
+                    <span className={`mw-head-save is-${saveTone}`}>{saveLabel}</span>
+                    {/* ★ 今日この作品で書いた文字数 */}
+                    {todayChars !== null && <span className="mw-head-today">今日 +{todayChars.toLocaleString()}</span>}
+                </span>
             </button>
 
             <Link href={postHref} className="mw-post">

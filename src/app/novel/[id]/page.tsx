@@ -211,13 +211,22 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
   const [authorRes, seriesNovelRes, episodesRes] = await Promise.all([
     supabase.from('public_profiles').select('display_name, user_id').eq('user_id', novel.author_id).maybeSingle(),
     supabase.from('series_novels').select('series_id').eq('novel_id', params.id).maybeSingle(),
-    supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, posted_at, illust_url, chapter_id, published, is_published, scheduled_at')
+    supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, revised_at, posted_at, illust_url, chapter_id, published, is_published, scheduled_at')
       /* 上限を上げる。既定 1,000 件だと目次の後ろが消える */
       .eq('novel_id', params.id).order('ep_number', { ascending: true }).limit(1000),
   ])
   const authorProfile = authorRes.data
   const seriesNovelData = seriesNovelRes.data
-  const rawEpisodes = episodesRes.data
+  /*
+   * ★ 改稿の日（revised_at）の列がまだ無い表（SQL を流す前）では、その列を外して読み直す。
+   *   読めないと目次が空になる。
+   */
+  let rawEpisodes = episodesRes.data
+  if (episodesRes.error) {
+    const { data: again } = await supabase.from('episodes').select('id, title, ep_number, created_at, updated_at, posted_at, illust_url, chapter_id, published, is_published, scheduled_at')
+      .eq('novel_id', params.id).order('ep_number', { ascending: true }).limit(1000)
+    rawEpisodes = again as typeof rawEpisodes
+  }
 
   // シリーズ情報の詳細（series_idがある場合のみ）
   let seriesNovels: any[] = []
@@ -595,11 +604,16 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
                 *   予約の話は、予約を入れた日（＝公開より前）に最後に触っていることが多く、
                 *   それが「改稿」と出ていた。公開より前の日付は出さない。
                 */}
-              {ep.updated_at &&
-                new Date(ep.updated_at).getTime() > new Date(ep.posted_at || ep.created_at).getTime() &&
-                fmtDate(ep.updated_at) !== fmtDate(ep.posted_at || ep.created_at) && (
+              {/*
+                * ★ 改稿は revised_at（公開したあと、読者の見る中身を本当に直した日）だけを見る。
+                *   前は updated_at を見ていて、状態の丸を押しただけ・空白を 1 つ打っただけでも
+                *   「改稿」と出ていた。
+                */}
+              {(ep as { revised_at?: string | null }).revised_at &&
+                new Date((ep as { revised_at: string }).revised_at).getTime() > new Date(ep.posted_at || ep.created_at).getTime() &&
+                fmtDate((ep as { revised_at: string }).revised_at) !== fmtDate(ep.posted_at || ep.created_at) && (
                   <span style={{marginLeft:5,color:'var(--color-text-muted)'}}>
-                    ・{fmtDate(ep.updated_at)} 改稿
+                    ・{fmtDate((ep as { revised_at: string }).revised_at)} 改稿
                   </span>
                 )}
             </span>
