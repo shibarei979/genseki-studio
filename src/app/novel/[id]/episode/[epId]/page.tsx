@@ -60,7 +60,7 @@ import TypoReportButton from '@/components/novel/episode/typo-report-button'
 import MobileEpisodeHead from '@/components/novel/episode/mobile-episode-head'
 import ValidReadTracker from '@/components/novel/episode/valid-read-tracker'
 import ReadProgressTracker from '@/components/reader/read-progress-tracker'
-import PageViewPing from '@/components/reader/page-view-ping'
+import { recordPageView } from '@/lib/page-view-record'
 import { QuoteProvider } from '@/components/novel/episode/quote-context'
 import { appConfig } from '@/config'
 import { ageFromBirthdate, allowedRatings } from '@/lib/age'
@@ -263,14 +263,11 @@ export default async function EpisodePage({ params, searchParams }: Props) {
 
 
   /*
-   * ★ 閲覧の記録は、画面が開いてから画面の側（PageViewPing → /api/page-view）で残す。
+   * ★ 閲覧の記録は、この頁を組み立てたときに残す（lib/page-view-record.ts）。
    *
-   *   前はこの頁を組み立てた時点で記録していた。
-   *   ブラウザのふりをした機械が頁を 1 枚ずつ取っていくと、それも全部数えていた。
-   *   （2026-10-03：未ログインの閲覧 516 件のうち、画面が動いたのは 28 件だけだった）
-   *   画面を動かさない機械は、画面の側からの知らせを送れないので、数に入らない。
-   *
-   *   ここでは「どこから来たか」だけを決めて、画面の側へ渡す。
+   *   10/08〜09 は「画面が開いてから」数えていたが、名乗らない機械が数に入らず、
+   *   作品の閲覧数がほとんど増えなくなった。運営の判断で、頁を組み立てた時点で数える形に戻した。
+   *   名乗る見回りの機械（is_bot）と作者自身（is_author）は、これまでどおり閲覧数に入れない。
    */
   let viewSource = 'direct'
   try {
@@ -286,6 +283,8 @@ export default async function EpisodePage({ params, searchParams }: Props) {
       viewSource = entryName((await cookies()).get(ENTRY_COOKIE)?.value) ?? 'site'
     }
   } catch (_) {}
+
+  await recordPageView({ novelId: params.id, episodeId: params.epId, source: viewSource, authorId: novel?.author_id ?? null })
 
   const author = authorData as any
 
@@ -341,7 +340,6 @@ export default async function EpisodePage({ params, searchParams }: Props) {
       */}
     <ReadProgressTracker episodeId={params.epId}/>
     {/* 閲覧の記録（画面が開いて、見えている状態になってから 1 回だけ送る） */}
-    <PageViewPing novelId={params.id} episodeId={params.epId} source={viewSource}/>
 
     <div style={{minHeight:'100vh'}}>
       <Header />

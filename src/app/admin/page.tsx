@@ -515,6 +515,64 @@ export default async function AdminPage({
    * ★ 話を「作った日」で数える。直した日では数えない。
    *   一括の書き換えを流すと、全作者が動いたことになってしまう。
    */
+  /*
+   * ★ 閲覧の内訳（直近 7 日・日本時間の日ごと）。
+   *
+   *   作品の閲覧数には、名乗らない機械のぶんも入れている（運営の判断）。
+   *   ただ、運営としては「人がどれだけ来たか」も知りたいので、ここで分けて見せる。
+   *
+   *     ログイン              入っている人（同じ日・同じ話は 1 回）
+   *     未ログイン・人        画面を動かした（どこまで読んだかが届いた）
+   *     未ログイン・機械らしい 画面を一度も動かさなかった。ほとんどが名乗らない機械
+   *                           （開いてすぐ閉じた人も、ここに入る）
+   *     名乗る機械            見回りの機械。閲覧数には入れていない
+   *
+   *   閲覧数（作品に入る数）＝ ログイン ＋ 未ログイン・人 ＋ 未ログイン・機械らしい
+   */
+  const pvSplitStart = jstDayStart(new Date(), -6)
+  const [pvSplitRows, rpSplitRows] = await Promise.all([
+    readAll((from, to) =>
+      adminSupabase.from('page_views')
+        .select('id, user_id, visitor_id, episode_id, viewed_at, is_bot, is_author')
+        .gte('viewed_at', pvSplitStart.toISOString())
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+    readAll((from, to) =>
+      adminSupabase.from('read_progress')
+        .select('visitor_key, episode_id')
+        .gte('started_at', jstDayStart(new Date(), -7).toISOString())
+        .order('visitor_key', { ascending: true })
+        .order('episode_id', { ascending: true })
+        .range(from, to),
+    ),
+  ])
+  const movedKeys = new Set(
+    (rpSplitRows as { visitor_key: string | null; episode_id: string | null }[])
+      .filter((row) => row.visitor_key && row.episode_id)
+      .map((row) => `${row.visitor_key}|${row.episode_id}`),
+  )
+  const pvSplit = Array.from({ length: 7 }, (_, i) => {
+    const start = jstDayStart(new Date(), i - 6)
+    const end = jstDayStart(new Date(), i - 5)
+    let login = 0, human = 0, machine = 0, namedBot = 0
+    const humanVisitors = new Set<string>()
+    for (const row of pvSplitRows as { user_id: string | null; visitor_id: string | null; episode_id: string; viewed_at: string; is_bot: boolean | null; is_author: boolean | null }[]) {
+      const t = new Date(row.viewed_at)
+      if (t < start || t >= end) continue
+      if (row.is_author) continue
+      if (row.is_bot) { namedBot += 1; continue }
+      if (row.user_id) { login += 1; continue }
+      if (row.visitor_id && movedKeys.has(`${row.visitor_id}|${row.episode_id}`)) {
+        human += 1
+        humanVisitors.add(row.visitor_id)
+      } else {
+        machine += 1
+      }
+    }
+    return { label: jstLabel(start), total: login + human + machine, login, human, humanVisitors: humanVisitors.size, machine, namedBot }
+  }).reverse()
+
   const since = todayStart.toISOString()
 
   const [
@@ -885,6 +943,53 @@ export default async function AdminPage({
                 <div style={{fontSize:11,color:'var(--admin-text-faint)',marginTop:6}}>{item.note}</div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* 閲覧の内訳（直近 7 日）。作品の閲覧数に入る数を、人と機械らしいものに分けて見る */}
+        <div style={{
+          background:'var(--admin-bg-card)',
+          border:'1px solid var(--admin-border)',
+          borderRadius:16,
+          padding:'20px 22px',
+          marginBottom:24,
+        }}>
+          <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',flexWrap:'wrap',gap:8,marginBottom:12}}>
+            <span style={{fontSize:15,fontWeight:700,color:'var(--admin-text)'}}>閲覧の内訳（直近7日）</span>
+            <span style={{fontSize:11.5,color:'var(--admin-text-faint)'}}>
+              閲覧数 ＝ ログイン ＋ 未ログイン（人）＋ 未ログイン（機械らしい）。名乗る機械と作者自身は入れていません
+            </span>
+          </div>
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,fontVariantNumeric:'tabular-nums'}}>
+              <thead>
+                <tr style={{color:'var(--admin-text-muted)',fontSize:11.5,textAlign:'right'}}>
+                  <th style={{textAlign:'left',padding:'6px 8px',fontWeight:600}}>日</th>
+                  <th style={{padding:'6px 8px',fontWeight:600}}>閲覧数</th>
+                  <th style={{padding:'6px 8px',fontWeight:600}}>ログイン</th>
+                  <th style={{padding:'6px 8px',fontWeight:600}}>未ログイン（人）</th>
+                  <th style={{padding:'6px 8px',fontWeight:600}}>うち実数</th>
+                  <th style={{padding:'6px 8px',fontWeight:600}}>未ログイン（機械らしい）</th>
+                  <th style={{padding:'6px 8px',fontWeight:600,color:'var(--admin-text-faint)'}}>名乗る機械（数えない）</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pvSplit.map((day) => (
+                  <tr key={day.label} style={{borderTop:'1px solid var(--admin-border)',textAlign:'right',color:'var(--admin-text)'}}>
+                    <td style={{textAlign:'left',padding:'7px 8px'}}>{day.label}</td>
+                    <td style={{padding:'7px 8px',fontWeight:700}}>{day.total.toLocaleString()}</td>
+                    <td style={{padding:'7px 8px'}}>{day.login.toLocaleString()}</td>
+                    <td style={{padding:'7px 8px'}}>{day.human.toLocaleString()}</td>
+                    <td style={{padding:'7px 8px',color:'var(--admin-text-muted)'}}>{day.humanVisitors.toLocaleString()} 人</td>
+                    <td style={{padding:'7px 8px'}}>{day.machine.toLocaleString()}</td>
+                    <td style={{padding:'7px 8px',color:'var(--admin-text-faint)'}}>{day.namedBot.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{fontSize:11,color:'var(--admin-text-faint)',marginTop:8,lineHeight:1.7}}>
+            「機械らしい」は、画面を一度も動かさなかった閲覧です。ほとんどは名乗らない機械ですが、開いてすぐ閉じた人も入ります。
           </div>
         </div>
 
