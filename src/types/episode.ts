@@ -32,7 +32,7 @@ export interface Episode {
      * 「作品は公開だが、第5話はまだ下書き」ということがある。
      */
     is_published?: boolean;
-    /** 冒頭のプレビュー文。一覧に出る導入 */
+    /** 前書き。読む画面で本文の前に出る（投稿画面の「前書き」） */
     preface?: string | null;
     /** この話のあらすじ */
     episode_summary?: string | null;

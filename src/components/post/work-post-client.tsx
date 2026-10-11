@@ -2046,17 +2046,6 @@ function PostForm({
                             </div>
                         </Field>
 
-                        <Field label="冒頭プレビュー文（任意）">
-                            <input
-                                type="text"
-                                value={preface}
-                                maxLength={120}
-                                onChange={(e) => setPreface(e.target.value)}
-                                placeholder="一覧に出る、最初のひとこと"
-                                className={inputClass}
-                            />
-                        </Field>
-
                         <Field
                             label="この話のあらすじ（任意）"
                             count={`${summary.length} / 400`}
@@ -2066,6 +2055,24 @@ function PostForm({
                                 rows={3}
                                 maxLength={400}
                                 onChange={(e) => setSummary(e.target.value)}
+                                className={inputClass}
+                            />
+                        </Field>
+
+                        {/*
+                          * 前書き。
+                          *
+                          * ★ 前は「冒頭プレビュー文」という名前で、1 行・120 字までだった。
+                          *   読む画面では本文の前に「前書き」として出ているので、名前を合わせる。
+                          *   長く書く人もいるので、後書きと同じ広い欄にする（目安は 20,000 字まで）。
+                          * ★ 本文の前に出るものなので、本文のすぐ上に置く（前書き → 本文 → 後書き）。
+                          */}
+                        <Field label="前書き（任意）">
+                            <textarea
+                                value={preface}
+                                rows={4}
+                                onChange={(e) => setPreface(e.target.value)}
+                                placeholder="本文の前に出る言葉"
                                 className={inputClass}
                             />
                         </Field>
