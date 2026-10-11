@@ -547,6 +547,61 @@ export default async function AdminPage({
         .range(from, to),
     ),
   ])
+  /*
+   * ★ 登録人数と、ログインしていて動いた人の数（同じ 7 日）。
+   *   動いた＝読む・いいね・保存・感想・発掘・フォロー・書き込み・話を作る、のどれかをした人
+   *   （上の札の「今日 動いた人」と同じ数え方を、日ごとにしたもの）。
+   */
+  const splitSince = pvSplitStart.toISOString()
+  const readSince = <T,>(table: string, cols: string) =>
+    readAll((from, to) =>
+      adminSupabase.from(table).select(cols).gte('created_at', splitSince).order('created_at', { ascending: true }).range(from, to),
+    ) as Promise<T[]>
+  const [
+    signupRows7, likeRows7, bookmarkRows7, commentRows7, discoverRows7, followRows7, tweetRows7, episodeRows7,
+  ] = await Promise.all([
+    readSince<{ created_at: string }>('profiles', 'created_at'),
+    readSince<{ user_id: string | null; created_at: string }>('likes', 'user_id, created_at'),
+    readSince<{ user_id: string | null; created_at: string }>('bookmarks', 'user_id, created_at'),
+    readSince<{ user_id: string | null; created_at: string }>('comments', 'user_id, created_at'),
+    readSince<{ user_id: string | null; created_at: string }>('discovers', 'user_id, created_at'),
+    readSince<{ follower_id: string | null; created_at: string }>('follows', 'follower_id, created_at'),
+    readSince<{ user_id: string | null; created_at: string }>('tweets', 'user_id, created_at'),
+    readSince<{ novel_id: string | null; created_at: string }>('episodes', 'novel_id, created_at'),
+  ])
+  const episodeNovelIds7 = Array.from(new Set(episodeRows7.map((row) => row.novel_id).filter((id): id is string => Boolean(id))))
+  const authorOf7 = new Map<string, string>()
+  if (episodeNovelIds7.length > 0) {
+    const { data: writers7 } = await adminSupabase.from('novels').select('id, author_id').in('id', episodeNovelIds7)
+    ;(writers7 ?? []).forEach((row: { id: string; author_id: string | null }) => {
+      if (row.author_id) authorOf7.set(row.id, row.author_id)
+    })
+  }
+  /** その日の印（日本時間）。7 日の中の何日目か */
+  const dayIndex = (iso: string) => {
+    const t = new Date(iso).getTime()
+    for (let i = 0; i < 7; i += 1) {
+      if (t >= jstDayStart(new Date(), i - 6).getTime() && t < jstDayStart(new Date(), i - 5).getTime()) return i
+    }
+    return -1
+  }
+  const signups7 = Array.from({ length: 7 }, () => 0)
+  const active7 = Array.from({ length: 7 }, () => new Set<string>())
+  signupRows7.forEach((row) => { const i = dayIndex(row.created_at); if (i >= 0) signups7[i] += 1 })
+  for (const rows of [likeRows7, bookmarkRows7, commentRows7, discoverRows7, tweetRows7]) {
+    rows.forEach((row) => { const i = dayIndex(row.created_at); if (i >= 0 && row.user_id) active7[i].add(row.user_id) })
+  }
+  followRows7.forEach((row) => { const i = dayIndex(row.created_at); if (i >= 0 && row.follower_id) active7[i].add(row.follower_id) })
+  episodeRows7.forEach((row) => {
+    const i = dayIndex(row.created_at)
+    const author = row.novel_id ? authorOf7.get(row.novel_id) : undefined
+    if (i >= 0 && author) active7[i].add(author)
+  })
+  ;(pvSplitRows as { user_id: string | null; viewed_at: string; is_bot: boolean | null }[]).forEach((row) => {
+    const i = dayIndex(row.viewed_at)
+    if (i >= 0 && row.user_id && !row.is_bot) active7[i].add(row.user_id)
+  })
+
   const movedKeys = new Set(
     (rpSplitRows as { visitor_key: string | null; episode_id: string | null }[])
       .filter((row) => row.visitor_key && row.episode_id)
@@ -570,7 +625,7 @@ export default async function AdminPage({
         machine += 1
       }
     }
-    return { label: jstLabel(start), total: login + human + machine, login, human, humanVisitors: humanVisitors.size, machine, namedBot }
+    return { label: jstLabel(start), total: login + human + machine, login, human, humanVisitors: humanVisitors.size, machine, namedBot, signups: signups7[i], activeUsers: active7[i].size }
   }).reverse()
 
   const since = todayStart.toISOString()
@@ -971,6 +1026,8 @@ export default async function AdminPage({
                   <th style={{padding:'6px 8px',fontWeight:600}}>うち実数</th>
                   <th style={{padding:'6px 8px',fontWeight:600}}>未ログイン（機械らしい）</th>
                   <th style={{padding:'6px 8px',fontWeight:600,color:'var(--admin-text-faint)'}}>名乗る機械（数えない）</th>
+                  <th style={{padding:'6px 8px',fontWeight:600,borderLeft:'1px solid var(--admin-border)'}}>登録人数</th>
+                  <th style={{padding:'6px 8px',fontWeight:600}}>動いた人（ログイン）</th>
                 </tr>
               </thead>
               <tbody>
@@ -983,6 +1040,8 @@ export default async function AdminPage({
                     <td style={{padding:'7px 8px',color:'var(--admin-text-muted)'}}>{day.humanVisitors.toLocaleString()} 人</td>
                     <td style={{padding:'7px 8px'}}>{day.machine.toLocaleString()}</td>
                     <td style={{padding:'7px 8px',color:'var(--admin-text-faint)'}}>{day.namedBot.toLocaleString()}</td>
+                    <td style={{padding:'7px 8px',borderLeft:'1px solid var(--admin-border)'}}>{day.signups.toLocaleString()} 人</td>
+                    <td style={{padding:'7px 8px'}}>{day.activeUsers.toLocaleString()} 人</td>
                   </tr>
                 ))}
               </tbody>
@@ -990,6 +1049,7 @@ export default async function AdminPage({
           </div>
           <div style={{fontSize:11,color:'var(--admin-text-faint)',marginTop:8,lineHeight:1.7}}>
             「機械らしい」は、画面を一度も動かさなかった閲覧です。ほとんどは名乗らない機械ですが、開いてすぐ閉じた人も入ります。
+            「動いた人」は、ログインしていて、読む・いいね・保存・感想・発掘・フォロー・書き込み・話を作る のどれかをした人の実数です。
           </div>
         </div>
 
