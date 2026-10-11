@@ -119,12 +119,14 @@ export async function GET() {
      *   （数だけ。中身は見ない）。ポイントを配る側（/api/points/missions）と同じ数え方。
      */
     const admin = createAdminClient();
-    const [gotLikeM, gotCommentM] = novelIds.length > 0
+    const [gotLikeM, gotCommentM, resourceM] = novelIds.length > 0
         ? await Promise.all([
             admin.from("likes").select("*", { count: "exact", head: true }).in("novel_id", novelIds),
             admin.from("comments").select("*", { count: "exact", head: true }).in("novel_id", novelIds),
+            /* 資料の項目。AI の候補のまま（承認前）は数えない（ポイントを配る側と同じ） */
+            admin.from("resource_entries").select("*", { count: "exact", head: true }).in("novel_id", novelIds).eq("candidate_status", "none"),
         ])
-        : [{ count: 0 }, { count: 0 }];
+        : [{ count: 0 }, { count: 0 }, { count: 0 }];
 
     /* いいねは作品＋話、保存はブックマーク・栞。ポイントを配る側と同じ数え方（lib/mission-counts.ts） */
     const [likeSentAll, savedAll, gotLikeAll] = await Promise.all([
@@ -148,6 +150,7 @@ export async function GET() {
         hasBio: Boolean(profile?.bio),
         tweetCount: tweetsM.count ?? 0,
         seriesCount: seriesM.count ?? 0,
+        resourceCount: resourceM.count ?? 0,
     };
 
     /*

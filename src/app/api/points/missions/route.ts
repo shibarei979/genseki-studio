@@ -22,7 +22,7 @@ import { grantFreePoints } from "@/lib/points";
  *
  *     1 つ達成        10 pt
  *     片方 15 個全部  アイテム（まだ決まっていないので保留）
- *     23 個ぜんぶ     300 pt ＋ アイテム
+ *     必須 23 個ぜんぶ 300 pt ＋ アイテム（任意の 3 個は入れない）
  *
  * ★ 共通の 7 個は、両方で数える。
  *
@@ -40,7 +40,7 @@ export const dynamic = "force-dynamic";
 /** 1 つ達成でもらえる数 */
 const PER_MISSION = 10;
 
-/** 23 個ぜんぶで、さらにもらえる数 */
+/** 必須 23 個ぜんぶで、さらにもらえる数（任意の 3 個は入れない） */
 const FULL_CLEAR = 300;
 
 /** 共通 7 個。読む向き・書く向きの両方で数える */
@@ -66,17 +66,24 @@ const READER_ONLY: [string, (s: Stats) => boolean][] = [
     ["first-tweet", (s) => s.tweet >= 1],
 ];
 
-/** 書く向きだけ 8 個 */
+/** 書く向きだけ。必須 8 個 ＋ 任意 3 個 */
 const WRITER_ONLY: [string, (s: Stats) => boolean][] = [
     ["first-work", (s) => s.novel >= 1],
     ["first-episode", (s) => s.episode >= 1],
     ["episode-5", (s) => s.episode >= 5],
+    ["episode-10", (s) => s.episode >= 10],
     ["episode-20", (s) => s.episode >= 20],
     ["first-series", (s) => s.series >= 1],
+    ["first-resource", (s) => s.resource >= 1],
+    ["writer-tweet", (s) => s.tweet >= 1],
+    /* ★ ここから下の 3 つは任意。1 つ 10pt は配るが、「全部そろう」には入れない */
     ["first-cover", (s) => s.cover >= 1],
     ["got-like", (s) => s.gotLike >= 1],
     ["got-comment", (s) => s.gotComment >= 1],
 ];
+
+/** 任意ミッション（全部そろう、の数に入れない） */
+const OPTIONAL = new Set(["first-cover", "got-like", "got-comment"]);
 
 interface Stats {
     read: number;
@@ -89,6 +96,7 @@ interface Stats {
     novel: number;
     episode: number;
     series: number;
+    resource: number;
     cover: number;
     gotLike: number;
     gotComment: number;
@@ -162,7 +170,7 @@ export async function POST(request: Request) {
         const [
             read, like, bookmark, comment, follow,
             discover, tweet, episode, series,
-            gotLike, gotComment,
+            gotLike, gotComment, resource,
         ] = await Promise.all([
             count("read_episodes", (q) => q.eq("user_id", user.id)),
             /* いいねは作品＋話、保存はブックマーク・栞（lib/mission-counts.ts） */
@@ -180,6 +188,10 @@ export async function POST(request: Request) {
             novelIds.length > 0
                 ? count("comments", (q) => q.in("novel_id", novelIds))
                 : Promise.resolve(0),
+            /* 資料の項目。AI の候補のまま（承認前）は数えない */
+            novelIds.length > 0
+                ? count("resource_entries", (q) => q.in("novel_id", novelIds).eq("candidate_status", "none"))
+                : Promise.resolve(0),
         ]);
 
         const { data: profile } = await admin
@@ -192,7 +204,7 @@ export async function POST(request: Request) {
             read, like, bookmark, comment, follow,
             discover, tweet,
             novel: novelIds.length,
-            episode, series,
+            episode, series, resource,
             cover: (myNovels ?? []).filter((n: any) => n.cover_url).length,
             gotLike, gotComment,
             hasBio: Boolean((profile?.bio ?? "").trim()),
@@ -247,11 +259,12 @@ export async function POST(request: Request) {
          */
         const readerDone =
             COMMON.every(([, c]) => c(stats)) &&
-            READER_ONLY.every(([, c]) => c(stats));
+            READER_ONLY.every(([id, c]) => OPTIONAL.has(id) || c(stats));
 
+        /* ★ 書く向きは、任意の 3 つを除いて見る */
         const writerDone =
             COMMON.every(([, c]) => c(stats)) &&
-            WRITER_ONLY.every(([, c]) => c(stats));
+            WRITER_ONLY.every(([id, c]) => OPTIONAL.has(id) || c(stats));
 
         if (readerDone && writerDone) {
             const result = await grantFreePoints({

@@ -49,7 +49,11 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
   const drafts = novels.filter(n => !n.published)
   const missions = isWriter ? [...READER_MISSIONS, ...WRITER_MISSIONS] : READER_MISSIONS
   const claimedSet = new Set(claimedMissionIds)
-  const missionPreview = missions.filter(m => !claimedSet.has(m.id)).slice(0, 4)
+  /* 必須を先に、任意はあとに */
+  const missionPreview = missions
+    .filter(m => !claimedSet.has(m.id))
+    .sort((a, b) => Number(Boolean(a.optional)) - Number(Boolean(b.optional)))
+    .slice(0, 4)
 
   const summaryCards = [
     { label: '投稿作品', value: monthlySummary.novels, prev: monthlySummary.novelsPrev },

@@ -21,6 +21,8 @@ export interface MissionStats {
   receivedLikeCount?: number
   /** 自分の作品にもらったコメントの数 */
   receivedCommentCount?: number
+  /** 自分の作品の資料（設定資料の項目）の数。候補のままのものは数えない */
+  resourceCount?: number
 }
 
 interface Props {
@@ -38,6 +40,20 @@ interface Mission {
   target: number
   cat: MissionCat
   cur: (s: MissionStats) => number
+  /**
+   * 任意ミッション。
+   *
+   * ★ 自分の力だけでは達成できないもの（人からいいね・感想をもらう）や、
+   *   絵を用意できる人しかできないもの（表紙）は、必須にしない。
+   *   クリアすればポイントはもらえるが、「全部そろう」の数には入れない。
+   *   （作家さんの声：限られた人しか達成できないものが必須なのはつらい）
+   */
+  optional?: boolean
+}
+
+/** 必須（全部そろう、の数に入るもの）だけ */
+export function requiredOnly<T extends { optional?: boolean }>(list: T[]): T[] {
+  return list.filter((m) => !m.optional)
 }
 
 const CAT_INFO: Record<MissionCat, { label: string; color: string; bg: string }> = {
@@ -60,7 +76,7 @@ const CatIcon = ({ cat }: { cat: MissionCat }) => {
  * ============================================================
  * ミッション
  *
- * ★ 共通 7 ＋ 読む側だけ 8 ＋ 書く側だけ 8 ＝ 23 個。
+ * ★ 共通 7 ＋ 読む側だけ 8 ＋ 書く側だけ 8 ＝ 必須 23 個（ほかに、書く側に任意が 3 個）。
  *
  *   読む向きで見ると 15 個、書く向きで見ると 15 個。
  *   共通の 7 個は、どちらの一覧にも出る。
@@ -107,11 +123,20 @@ export const WRITER_ONLY_MISSIONS: Mission[] = [
   { id: 'first-work',     label: '作品を作る',         desc: '作品をひとつ作る',             target: 1,  cat: 'creator',  cur: s => s.novelCount },
   { id: 'first-episode',  label: '投稿する',           desc: '最初の話を投稿する',           target: 1,  cat: 'creator',  cur: s => s.episodeCount },
   { id: 'episode-5',      label: '5回投稿する',        desc: '話を5回投稿する',              target: 5,  cat: 'creator',  cur: s => s.episodeCount },
+  /*
+   * ★ 必須は、読む向き・書く向きとも 15 個（共通 7 ＋ それぞれ 8）にそろえる。
+   *   書く向きは 3 つを任意に移したので、自分だけで達成できるものを 3 つ足した
+   *   （10回投稿する・資料をつくる・活動を知らせる）。
+   */
+  { id: 'episode-10',     label: '10回投稿する',       desc: '話を10回投稿する',             target: 10, cat: 'creator',  cur: s => s.episodeCount },
   { id: 'episode-20',     label: '書き続ける人',       desc: '話を20回投稿する',             target: 20, cat: 'creator',  cur: s => s.episodeCount },
   { id: 'first-series',   label: 'シリーズを作る',     desc: '作品をまとめるシリーズを作成', target: 1,  cat: 'creator',  cur: s => s.seriesCount || 0 },
-  { id: 'first-cover',    label: '表紙をつける',       desc: '作品に表紙を設定する',         target: 1,  cat: 'creator',  cur: s => s.coverCount || 0 },
-  { id: 'got-like',       label: 'はじめての応援',     desc: '自分の作品にいいねをもらう',   target: 1,  cat: 'creator',  cur: s => s.receivedLikeCount || 0 },
-  { id: 'got-comment',    label: 'はじめての感想',     desc: '自分の作品にコメントをもらう', target: 1,  cat: 'creator',  cur: s => s.receivedCommentCount || 0 },
+  { id: 'first-resource', label: '資料をつくる',       desc: '登場人物や用語などの資料を1つ作る', target: 1, cat: 'creator', cur: s => s.resourceCount || 0 },
+  { id: 'writer-tweet',   label: '活動を知らせる',     desc: 'コミュニティーに書き込む',     target: 1,  cat: 'creator',  cur: s => s.tweetCount || 0 },
+  /* ★ ここから下の 3 つは任意（全部そろう、の数に入れない） */
+  { id: 'first-cover',    label: '表紙をつける',       desc: '作品に表紙を設定する',         target: 1,  cat: 'creator',  cur: s => s.coverCount || 0, optional: true },
+  { id: 'got-like',       label: 'はじめての応援',     desc: '自分の作品にいいねをもらう',   target: 1,  cat: 'creator',  cur: s => s.receivedLikeCount || 0, optional: true },
+  { id: 'got-comment',    label: 'はじめての感想',     desc: '自分の作品にコメントをもらう', target: 1,  cat: 'creator',  cur: s => s.receivedCommentCount || 0, optional: true },
 ]
 
 /* 古い呼び名。ほかの場所から読まれているので残す */
@@ -136,9 +161,11 @@ export function missionProgress(stats: MissionStats, claimedIds: string[], isWri
     ? [...COMMON_MISSIONS, ...WRITER_ONLY_MISSIONS]
     : [...COMMON_MISSIONS, ...READER_ONLY_MISSIONS]
   const claimed = new Set([...claimedIds, ...Array.from(claimedThisVisit)])
-  const done = list.filter(m => claimed.has(m.id)).length
+  /* ★ 何個中いくつ、は必須だけで数える。押せるものの数には任意も入れる */
+  const required = requiredOnly(list)
+  const done = required.filter(m => claimed.has(m.id)).length
   const claimable = list.filter(m => !claimed.has(m.id) && Math.min(m.target, m.cur(stats)) >= m.target).length
-  return { total: list.length, done, claimable }
+  return { total: required.length, done, claimable }
 }
 
 export default function MissionClient({ user, stats, initialClaimedIds, isWriter }: Props) {
@@ -233,13 +260,16 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
 
   // クリア済みも表示（達成済みタブで見られる）。押した瞬間だけ消えるアニメ
   const [tab, setTab] = useState('all' as 'all' | 'progress' | 'done')
-  const doneCount = MISSIONS.filter(m => claimed.has(m.id)).length
-  const pct = Math.round((doneCount / MISSIONS.length) * 100)
-  const REWARD_STEPS = [5, 10, 15]
+  /* ★ 達成状況・タブの数は、必須だけで数える。任意は下に別にまとめる */
+  const REQUIRED = requiredOnly(MISSIONS)
+  const OPTIONAL = MISSIONS.filter(m => m.optional)
+  const doneCount = REQUIRED.filter(m => claimed.has(m.id)).length
+  const pct = Math.round((doneCount / REQUIRED.length) * 100)
+  const REWARD_STEPS = [5, 10, 15].filter(r => r <= REQUIRED.length)
   const nextReward = REWARD_STEPS.find(r => r > doneCount)
   const toNext = nextReward ? nextReward - doneCount : 0
 
-  const filtered = MISSIONS.filter(m => {
+  const pick = (list: Mission[]) => list.filter(m => {
     const isDone = claimed.has(m.id)
     if (tab === 'done') return isDone
     if (tab === 'progress') return !isDone
@@ -253,6 +283,8 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
     }
     return rank(a) - rank(b)
   })
+  const filtered = pick(REQUIRED)
+  const filteredOptional = pick(OPTIONAL)
 
   return (
     <div>
@@ -260,7 +292,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
       {cleared && <MissionClearPopup key={cleared.key} label={cleared.label} earned={cleared.earned} onClose={closeCleared} />}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '-0.01em', lineHeight: 1.3 }}>ミッション</h1>
-        <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 10, lineHeight: 1.7 }}>読んで、応援して、書いて。1つクリアするごとに無料ポイントを10pt、全部そろうとさらに300ptもらえます。ポイントはアイテムツリーで交換できます。</p>
+        <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 10, lineHeight: 1.7 }}>読んで、応援して、書いて。1つクリアするごとに無料ポイントを10pt、必須のミッションが全部そろうとさらに300ptもらえます。下の「任意ミッション」は、できたらうれしいおまけです。ポイントはアイテムツリーで交換できます。</p>
       </div>
 
       {earnedNote && (
@@ -276,7 +308,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
         </div>
         <div style={{ flex: 1, minWidth:'min(200px, 100%)' }}>
           <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 2 }}>達成状況</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-text)', marginBottom: 6 }}>{doneCount} <span style={{ fontSize: 15, fontWeight: 600 }}>/ {MISSIONS.length} クリア</span></div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-text)', marginBottom: 6 }}>{doneCount} <span style={{ fontSize: 15, fontWeight: 600 }}>/ {REQUIRED.length} クリア</span></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ flex: 1, height: 8, background: 'var(--color-bg)', borderRadius: 4, overflow: 'hidden' }}>
               <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-brand), #4a7fa5)', transition: 'width .4s' }} />
@@ -289,7 +321,7 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
 
       {/* タブ */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-        {([{v:'all',l:'すべて',c:MISSIONS.length},{v:'progress',l:'進行中',c:MISSIONS.length-doneCount},{v:'done',l:'達成済み',c:doneCount}] as const).map(({v,l,c})=>(
+        {([{v:'all',l:'すべて',c:REQUIRED.length},{v:'progress',l:'進行中',c:REQUIRED.length-doneCount},{v:'done',l:'達成済み',c:doneCount}] as const).map(({v,l,c})=>(
           <button key={v} onClick={()=>setTab(v as any)}
             style={{ fontSize: 12, fontWeight: tab===v?700:500, padding: '6px 16px', borderRadius: 16, cursor: 'pointer',
               border: `1px solid ${tab===v?'var(--color-brand)':'var(--color-brand-border)'}`,
@@ -305,7 +337,32 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
           {tab==='done' ? 'まだ達成したミッションはありません' : tab==='progress' ? '進行中のミッションはありません' : 'ミッションがありません'}
         </div>
       ) : (
-        filtered.map(m => {
+        filtered.map(m => renderCard(m))
+      )}
+
+      {/*
+        * 任意ミッション。
+        * ★ 人にいいね・感想をもらう、表紙を用意する、のように
+        *   自分だけでは決められないものは、ここに分ける。全部そろう、の数には入れない。
+        */}
+      {filteredOptional.length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>任意ミッション</span>
+            <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+              {OPTIONAL.filter(m => claimed.has(m.id)).length} / {OPTIONAL.length} クリア
+            </span>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '0 0 12px', lineHeight: 1.7 }}>
+            できたらうれしい、おまけのミッションです。クリアすると10ptもらえますが、「全部そろう」の数には入りません。
+          </p>
+          {filteredOptional.map(m => renderCard(m))}
+        </div>
+      )}
+    </div>
+  )
+
+  function renderCard(m: Mission) {
           const cur = Math.min(m.target, m.cur(stats))
           const isDone = claimed.has(m.id)
           const achieved = cur >= m.target
@@ -329,6 +386,9 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: ci.color, background: ci.bg, padding: '1px 8px', borderRadius: 10 }}>{ci.label}</span>
+                  {m.optional && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-muted)', border: '1px solid var(--color-brand-border)', padding: '0 7px', borderRadius: 10 }}>任意</span>
+                  )}
                   <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text)' }}>{m.label}</span>
                   {/* もらえるポイント。もうもらったものは「受け取り済み」 */}
                   <span className={`mc-pt${paidIds.has(m.id) ? ' is-paid' : ''}`}>
@@ -364,8 +424,5 @@ export default function MissionClient({ user, stats, initialClaimedIds, isWriter
               )}
             </div>
           )
-        })
-      )}
-    </div>
-  )
+  }
 }

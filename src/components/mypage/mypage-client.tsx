@@ -8,7 +8,7 @@ import PendingComments from '@/components/mypage/pending-comments'
 import WritingSummaryPanel from '@/components/mypage/writing-summary-panel'
 import ReadingSummary from '@/components/mypage/reading-summary'
 import ReadingSummaryBoundary from '@/components/mypage/reading-summary-boundary'
-import { READER_MISSIONS, WRITER_MISSIONS } from '@/components/mypage/mission-client'
+import { READER_MISSIONS, WRITER_MISSIONS, requiredOnly } from '@/components/mypage/mission-client'
 import IconCropper from '@/components/mypage/icon-cropper'
 import { useRouter } from 'next/navigation'
 import TypoReportsTab from '@/components/mypage/typo-reports-tab'
@@ -618,13 +618,20 @@ export default function MypageClient({
    *   いま並べているものが全部済んでいるか、で見る。
    *   向きを切り替えても、数え方が食い違わない。
    */
-  const shownMissionIds = (
-    isWriterRole ? [...READER_MISSIONS, ...WRITER_MISSIONS] : READER_MISSIONS
-  ).map(m => m.id)
+  /*
+   * ★ 任意ミッション（人にいいね・感想をもらう、表紙）は「全部」に入れない。
+   *   ただし、任意のものが達成できていてまだ押していないときは、タブを残す（押せるように）。
+   */
+  const shownMissions = isWriterRole ? [...READER_MISSIONS, ...WRITER_MISSIONS] : READER_MISSIONS
 
-  const allMissionsDone = shownMissionIds.every(id =>
-    claimedMissionIds.includes(id),
-  )
+  const allMissionsDone =
+    requiredOnly(shownMissions).every(m => claimedMissionIds.includes(m.id)) &&
+    !shownMissions.some(m =>
+      m.optional &&
+      !claimedMissionIds.includes(m.id) &&
+      Boolean(missionStatsNow) &&
+      m.cur(missionStatsNow) >= m.target,
+    )
   /*
    * 出すタブ。
    *   ミッションは、全部やり終えたら出さない（今までどおり）
