@@ -666,8 +666,19 @@ export default function MypageClient({
    *   タブは消えるのに中身だけ残る。
    *   帰る場所が無くなるので、先頭へ戻す。
    */
+  /*
+   * ★ ミッションだけは、メニューに出ていなくても開けるようにする。
+   *
+   *   メニューから外れるのは「必須を全部やり終えた」「執筆に集中」のとき。
+   *   それでもマイページの「ミッション進捗 → すべて見る」や
+   *   「クリアできるミッションがあります」は出ていて、押すと
+   *   ここでマイページへ戻され、頁を読み直しただけに見えていた（作家さんからの報告）。
+   *   押して開いたものは、そのまま見せる。
+   */
+  const openableTab = (id: Tab) => id === 'mission' || visibleTabs.some(t => t.id === id)
   useEffect(() => {
-    if (!visibleTabs.some(t => t.id === activeTab)) setActiveTab('mypage')
+    if (!openableTab(activeTab)) setActiveTab('mypage')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTabs, activeTab])
 
   const published  = myNovels.filter(n => n.published)
@@ -2355,7 +2366,7 @@ export default function MypageClient({
               )}
               {activeTab!=='mypage' && (
                 <MobileMypageBack
-                  label={visibleTabs.find(t => t.id === activeTab)?.label ?? ''}
+                  label={(visibleTabs.find(t => t.id === activeTab) ?? TABS.find(t => t.id === activeTab))?.label ?? ''}
                   onBack={() => { handleTabChange('mypage'); window.scrollTo(0, 0) }}
                 />
               )}
