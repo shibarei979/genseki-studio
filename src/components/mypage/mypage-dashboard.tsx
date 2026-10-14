@@ -1,4 +1,5 @@
 'use client'
+import { WorkBadges } from '@/components/common/work-badges'
 import Link from 'next/link'
 import PointCard from '@/components/mypage/point-card'
 import { READER_MISSIONS, WRITER_MISSIONS, type MissionStats } from '@/components/mypage/mission-client'
@@ -69,8 +70,7 @@ export default function MypageDashboard({ novels, historyItems, bookmarkedNovels
         <Link key={n.id} href={`/mypage/novel/${n.id}`} className="dash-link" style={{ display: 'block', marginBottom: 12, textDecoration: 'none', borderRadius: 6 }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.title}</div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 10, color: 'var(--color-brand)', border: '1px solid var(--color-brand-border)', borderRadius: 4, padding: '1px 7px' }}>{n.genre}</span>
-            <span style={{ fontSize: 10, color: 'var(--color-info)', border: '1px solid var(--color-info)', borderRadius: 4, padding: '1px 7px' }}>{n.is_serial ? '連載中' : '完結'}</span>
+            <WorkBadges size="sm" genre={n.genre} isSerial={!!n.is_serial} />
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{(charCountMap[n.id] || 0).toLocaleString()}文字　{fmtDate(n.updated_at)}更新　♡ {novelLikeMap[n.id] || 0}　閲覧 {(novelViewMap[n.id] || 0).toLocaleString()}</div>
         </Link>

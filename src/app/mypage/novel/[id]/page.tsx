@@ -1,3 +1,4 @@
+import { WorkBadge } from '@/components/common/work-badges'
 import { createClient } from '@/lib/supabase/server'
 import { countOne, rowsFor } from '@/lib/count-rows'
 import { redirect, notFound } from 'next/navigation'
@@ -103,7 +104,7 @@ export default async function NovelManagePage({ params }: { params: { id: string
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-inverse)', background: novel.is_serial ? 'var(--color-info)' : 'var(--color-text-faint)', padding: '3px 10px', borderRadius: 4 }}>{novel.is_serial ? '連載中' : '完結'}</span>
+            <WorkBadge kind={novel.is_serial ? 'serial' : 'complete'} />
             <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text)' }}>{novel.title}</h1>
           </div>
           <Link href={`/novel/${novel.id}`} style={{ fontSize: 12, color: 'var(--color-brand)', textDecoration: 'none', border: '1px solid var(--color-brand-border)', borderRadius: 14, padding: '6px 14px' }}>作品ページを見る →</Link>

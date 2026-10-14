@@ -1,3 +1,4 @@
+import { WorkBadges } from '@/components/common/work-badges'
 import { createClient } from '@/lib/supabase/server'
 import CostumeOverlay from '@/components/common/costume-overlay'
 import GuestFollowButton from '@/components/guest-follow-button'
@@ -76,7 +77,7 @@ export default async function AuthorPage({ params }: Props) {
 
   const { data: novels } = await supabase
     .from('novels')
-    .select('id, title, genre, summary, tags, novel_type, is_serial, created_at, is_r18')
+    .select('id, title, genre, summary, tags, novel_type, is_serial, created_at, is_r18, age_rating, ai_usage')
     .eq('author_id', params.id)
     /*
      * 公開されているものだけ。
@@ -120,7 +121,7 @@ export default async function AuthorPage({ params }: Props) {
   if (seriesIds.length > 0) {
     const { data: sn } = await supabase
       .from('series_novels')
-      .select('series_id, order_num, novels(id, title, genre, novel_type, is_serial, is_r18, summary)')
+      .select('series_id, order_num, novels(id, title, genre, novel_type, is_serial, is_r18, age_rating, ai_usage, summary)')
       .in('series_id', seriesIds).order('order_num')
     ;(sn || []).forEach((s: any) => {
       if (!seriesNovelsMap[s.series_id]) seriesNovelsMap[s.series_id] = []
@@ -169,12 +170,7 @@ export default async function AuthorPage({ params }: Props) {
         <Link key={n.id} href={`/novel/${n.id}`} style={{textDecoration:'none',display:'block'}}>
           <div style={{padding:'14px 16px',borderBottom:i<filteredNovels.length-1?'1px solid var(--color-brand-light)':'none',background:i%2===0?'var(--color-bg-card)':'#fbfcfc',cursor:'pointer'}}>
             <div style={{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap',alignItems:'center'}}>
-              <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 6px',borderRadius:3}}>{n.genre}</span>
-              <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 6px',borderRadius:3}}>{n.novel_type}</span>
-              {n.is_serial
-                ? <span style={{fontSize:10,background:'#f0fdf4',color:'#15803d',border:'1px solid #86efac',padding:'1px 6px',borderRadius:3}}>連載中</span>
-                : <span style={{fontSize:10,background:'#f5f5f5',color:'#757575',border:'1px solid #e0e0e0',padding:'1px 6px',borderRadius:3}}>完結</span>}
-              {n.is_r18 && <span style={{fontSize:10,background:'#fef2f2',color:'var(--color-danger)',border:'1px solid #fca5a5',padding:'1px 6px',borderRadius:3}}>R18</span>}
+              <WorkBadges genre={n.genre} novelType={n.novel_type} isSerial={!!n.is_serial} ageRating={n.age_rating} isR18={n.is_r18} aiUsage={n.ai_usage} />
             </div>
             <div style={{fontSize:15,fontWeight:700,color:'var(--color-text)',marginBottom:3}}>{n.title}</div>
             <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:n.summary?5:0}}>♡ {likeMap[n.id]||0}</div>
@@ -219,12 +215,7 @@ export default async function AuthorPage({ params }: Props) {
                   <Link key={n.id} href={`/novel/${n.id}`} style={{textDecoration:'none',display:'block'}}>
                     <div style={{padding:'14px 16px',borderTop:'1px solid var(--color-brand-light)',background:i%2===0?'var(--color-bg-card)':'#fbfcfc',cursor:'pointer'}}>
                       <div style={{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap',alignItems:'center'}}>
-                        <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 6px',borderRadius:3}}>{n.genre}</span>
-                        <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 6px',borderRadius:3}}>{n.novel_type}</span>
-                        {n.is_serial
-                          ? <span style={{fontSize:10,background:'#f0fdf4',color:'#15803d',border:'1px solid #86efac',padding:'1px 6px',borderRadius:3}}>連載中</span>
-                          : <span style={{fontSize:10,background:'#f5f5f5',color:'#757575',border:'1px solid #e0e0e0',padding:'1px 6px',borderRadius:3}}>完結</span>}
-                        {n.is_r18 && <span style={{fontSize:10,background:'#fef2f2',color:'var(--color-danger)',border:'1px solid #fca5a5',padding:'1px 6px',borderRadius:3}}>R18</span>}
+                        <WorkBadges genre={n.genre} novelType={n.novel_type} isSerial={!!n.is_serial} ageRating={n.age_rating} isR18={n.is_r18} aiUsage={n.ai_usage} />
                       </div>
                       <div style={{fontSize:15,fontWeight:700,color:'var(--color-text)',marginBottom:3}}>{n.title}</div>
                       <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:n.summary?5:0}}>♡ {likeMap[n.id]||0}</div>
@@ -244,12 +235,7 @@ export default async function AuthorPage({ params }: Props) {
             <Link key={n.id} href={`/novel/${n.id}`} style={{textDecoration:'none',display:'block'}}>
               <div style={{padding:'14px 16px',borderBottom:i<nonSeriesNovels.length-1?'1px solid var(--color-brand-light)':'none',background:i%2===0?'var(--color-bg-card)':'#fbfcfc',cursor:'pointer'}}>
                 <div style={{display:'flex',gap:6,marginBottom:5,flexWrap:'wrap',alignItems:'center'}}>
-                  <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 6px',borderRadius:3}}>{n.genre}</span>
-                  <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 6px',borderRadius:3}}>{n.novel_type}</span>
-                  {n.is_serial
-                    ? <span style={{fontSize:10,background:'#f0fdf4',color:'#15803d',border:'1px solid #86efac',padding:'1px 6px',borderRadius:3}}>連載中</span>
-                    : <span style={{fontSize:10,background:'#f5f5f5',color:'#757575',border:'1px solid #e0e0e0',padding:'1px 6px',borderRadius:3}}>完結</span>}
-                  {n.is_r18 && <span style={{fontSize:10,background:'#fef2f2',color:'var(--color-danger)',border:'1px solid #fca5a5',padding:'1px 6px',borderRadius:3}}>R18</span>}
+                  <WorkBadges genre={n.genre} novelType={n.novel_type} isSerial={!!n.is_serial} ageRating={n.age_rating} isR18={n.is_r18} aiUsage={n.ai_usage} />
                 </div>
                 <div style={{fontSize:15,fontWeight:700,color:'var(--color-text)',marginBottom:3}}>{n.title}</div>
                 <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:n.summary?5:0}}>♡ {likeMap[n.id]||0}</div>

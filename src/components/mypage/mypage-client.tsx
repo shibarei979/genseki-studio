@@ -1,5 +1,6 @@
 'use client'
 
+import { WorkBadges } from '@/components/common/work-badges'
 import { ContestChip } from '@/components/contest/contest-mark'
 import { useContestMarks } from '@/hooks/use-contest-marks'
 import React, { useState, useEffect } from 'react'
@@ -1367,9 +1368,8 @@ export default function MypageClient({
               <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap',alignItems:'center'}}>
                 {/* 見え方は visibility で見る。限定公開は published が false なので、前は「下書き」と出ていた */}
                 <span style={{fontSize:10,fontWeight:700,color:'var(--color-text-inverse)',background:((novel as any).visibility==='limited'||novel.published)?'var(--color-info)':'var(--color-text-faint)',padding:'2px 9px',borderRadius:4}}>{(novel as any).visibility==='limited'?'限定公開':novel.published?'公開中':'非公開'}</span>
-                <span style={{fontSize:10,fontWeight:700,color:(novel as any).is_serial?'var(--color-success)':'var(--color-text-muted)',background:(novel as any).is_serial?'#e8f5e9':'#f5f5f5',border:`1px solid ${(novel as any).is_serial?'#a5d6a7':'#e0e0e0'}`,padding:'2px 9px',borderRadius:4}}>{(novel as any).is_serial?'連載中':'完結'}</span>
-                <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'2px 9px',borderRadius:4}}>{novel.genre}</span>
-                {(novel as any).novel_type && <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'2px 9px',borderRadius:4}}>{(novel as any).novel_type}</span>}
+                {/* 作品の札はどの画面でも同じ部品（公開の状態の札は、作者だけが見るのでそのまま） */}
+                <WorkBadges genre={novel.genre} novelType={(novel as any).novel_type} isSerial={!!(novel as any).is_serial} ageRating={(novel as any).age_rating} isR18={(novel as any).is_r18} aiUsage={(novel as any).ai_usage} />
                 {(contestMarks[novel.id] || []).map(mark => (
                   <ContestChip key={mark.id} mark={mark} asLink={false} />
                 ))}
@@ -1604,11 +1604,7 @@ export default function MypageClient({
                           display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as any,overflow:'hidden',overflowWrap:'anywhere' as any}}>{n.summary}</p>
                       )}
                       <div style={{display:'flex',gap:7,flexWrap:'wrap',alignItems:'center'}}>
-                        <span style={{fontSize:11.5,height:22,display:'inline-flex',alignItems:'center',background:'#eef5f9',color:'var(--color-brand)',padding:'0 10px',borderRadius:6,fontWeight:600}}>{n.genre}</span>
-                        {n.novel_type && <span style={{fontSize:11.5,height:22,display:'inline-flex',alignItems:'center',background:'#EEF4FF',color:'#2563eb',padding:'0 10px',borderRadius:6,fontWeight:600}}>{n.novel_type}</span>}
-                        {n.is_serial
-                          ? <span style={{fontSize:11.5,height:22,display:'inline-flex',alignItems:'center',background:'#EAF8EF',color:'#35a45d',padding:'0 10px',borderRadius:6,fontWeight:600}}>連載中</span>
-                          : <span style={{fontSize:11.5,height:22,display:'inline-flex',alignItems:'center',background:'#F4F4F5',color:'#71717a',padding:'0 10px',borderRadius:6,fontWeight:600}}>完結</span>}
+                        <WorkBadges genre={n.genre} novelType={n.novel_type} isSerial={!!n.is_serial} ageRating={n.age_rating} isR18={n.is_r18} aiUsage={n.ai_usage} />
                       </div>
                     </div>
                     <div style={{display:'flex',flexDirection:'column',gap:10,alignItems:'stretch'}}>
@@ -1869,11 +1865,7 @@ export default function MypageClient({
                   display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as any,overflow:'hidden',overflowWrap:'anywhere' as any}}>{item.summary}</p>
               )}
               <div style={{display:'flex',gap:7,flexWrap:'wrap',alignItems:'center'}}>
-                <span style={{fontSize:11.5,lineHeight:'22px',height:22,display:'inline-flex',alignItems:'center',background:'#eef5f9',color:'var(--color-brand)',padding:'0 10px',borderRadius:6,fontWeight:600}}>{item.genre}</span>
-                {item.novelType && <span style={{fontSize:11.5,lineHeight:'22px',height:22,display:'inline-flex',alignItems:'center',background:'#EEF4FF',color:'#2563eb',padding:'0 10px',borderRadius:6,fontWeight:600}}>{item.novelType}</span>}
-                {item.isSerial
-                  ? <span style={{fontSize:11.5,lineHeight:'22px',height:22,display:'inline-flex',alignItems:'center',background:'#EAF8EF',color:'#35a45d',padding:'0 10px',borderRadius:6,fontWeight:600}}>連載中</span>
-                  : <span style={{fontSize:11.5,lineHeight:'22px',height:22,display:'inline-flex',alignItems:'center',background:'#F4F4F5',color:'#71717a',padding:'0 10px',borderRadius:6,fontWeight:600}}>完結</span>}
+                <WorkBadges genre={item.genre} novelType={item.novelType} isSerial={!!item.isSerial} />
                 {item.tags.slice(0,3).map((t:string) => (
                   <span key={t} style={{fontSize:11.5,lineHeight:'22px',height:22,display:'inline-flex',alignItems:'center',color:'var(--color-text-faint)',padding:'0 8px',borderRadius:6}}>#{t}</span>
                 ))}

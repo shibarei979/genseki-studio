@@ -1,3 +1,4 @@
+import { WorkBadges } from '@/components/common/work-badges'
 import { createClient } from '@/lib/supabase/server'
 import { rowsFor } from '@/lib/count-rows'
 import EpisodeChunks, { CHUNK_THRESHOLD } from '@/components/novel/episode-chunks'
@@ -672,19 +673,12 @@ export default async function NovelPage({ params }: { params: { id: string; viaC
 
           <div style={{background:'var(--color-bg-card)',border:'1px solid var(--color-brand-border)',borderRadius:12,padding:'16px',marginBottom:14}}>
             <div style={{display:'flex',gap:6,marginBottom:8,flexWrap:'wrap'}}>
-              <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'2px 8px',borderRadius:4}}>{novel.genre}</span>
-              <span style={{fontSize:10,background:novel.is_serial?'#e8f5e9':'#f5f5f5',color:novel.is_serial?'#2e7d32':'#757575',border:`1px solid ${novel.is_serial?'#a5d6a7':'#e0e0e0'}`,padding:'2px 8px',borderRadius:4}}>
-                {novel.is_serial?'連載中':'完結'}
-              </span>
-              {novel.novel_type && (
-                <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'2px 8px',borderRadius:4}}>{novel.novel_type}</span>
-              )}
-              {contestMarks.map((mark) => (
-                <ContestChip key={mark.id} mark={mark} />
-              ))}
-              {novel.ai_usage === 'generated' && (
-                <span style={{fontSize:10,background:'#ede9fe',color:'#6d28d9',border:'1px solid #c4b5fd',padding:'2px 8px',borderRadius:4,fontWeight:700}}>AI作品</span>
-              )}
+              {/* 作品の札はどの画面でも同じ部品。前はここだけ R18 が出なかった */}
+              <WorkBadges genre={novel.genre} novelType={novel.novel_type} isSerial={!!novel.is_serial} ageRating={novel.age_rating} isR18={(novel as { is_r18?: boolean | null }).is_r18} aiUsage={novel.ai_usage}>
+                {contestMarks.map((mark) => (
+                  <ContestChip key={mark.id} mark={mark} />
+                ))}
+              </WorkBadges>
               {(novel.official_tags||[]).map((tag:string) => (
                 <span key={tag} style={{fontSize:10,background:'#fef9c3',color:'#854d0e',border:'1px solid #fde047',padding:'2px 8px',borderRadius:4,fontWeight:700}}>
                   {tag}

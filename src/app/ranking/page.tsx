@@ -1,3 +1,4 @@
+import { WorkBadges } from '@/components/common/work-badges'
 import RankSheetSwipe from '@/components/ranking/rank-sheet-swipe'
 import { rowsFor } from '@/lib/count-rows'
 import { lastPostedOf } from '@/lib/last-posted'
@@ -104,7 +105,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
     /* 候補プール取得（公開済み・直近300件）。大人向けは選んだときだけ */
     let poolQuery = supabase
       .from('novels')
-      .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at')
+      .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at, age_rating, is_r18, ai_usage')
       .eq('published', true).in('age_rating', ratings)
     poolQuery = keepR18Out(poolQuery, genre, ratings) as typeof poolQuery
     /* AI が本文を書いた作品の印は 'generated'（前は 'full' で比べていて、どれにも当たらなかった） */
@@ -230,7 +231,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
        *   取っていなかったので、この並びだけ更新日が空になり、
        *   NaN/NaN/NaN と出ていた。
        */
-      .from('novels').select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at')
+      .from('novels').select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, catchcopy, tags, created_at, age_rating, is_r18, ai_usage')
       .in('id', risingIds).eq('published', true)
     const risingItems = (risingNovelData || [])
       .sort((a:any, b:any) => (scoreMap[b.id]||0) - (scoreMap[a.id]||0))
@@ -285,7 +286,7 @@ async function computeRanking(period: string, novelType: string, serial: string,
    */
   async function buildNovels(from: number, to: number) {
   let q = supabase.from('novels')
-      .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at')
+      .select('id, title, cover_url, genre, novel_type, is_serial, author_id, summary, tags, created_at, age_rating, is_r18, ai_usage')
       .eq('published', true).is('deleted_at', null).in('age_rating', ratings)
     // AI作品ランキングと人間作品ランキングを分離
     /* AI が本文を書いた作品の印は 'generated'（前は 'full' で比べていて、どれにも当たらなかった） */
@@ -894,13 +895,13 @@ export default async function RankingPage({ searchParams }: Props) {
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:'flex',gap:4,marginBottom:3,flexWrap:'wrap',alignItems:'center'}}>
-                        <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 5px',borderRadius:3}}>{n.genre}</span>
-                        <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 5px',borderRadius:3}}>{n.novel_type}</span>
-                        {n.is_serial && <span style={{fontSize:10,background:'#f0fdf4',color:'#15803d',border:'1px solid #86efac',padding:'1px 5px',borderRadius:3}}>連載中</span>}
-                        {(() => {
-                          const mark = liveMarkOf(contestMarks, n.id)
-                          return mark ? <ContestChip mark={mark} compact asLink={false} /> : null
-                        })()}
+                        {/* 作品の札はどの画面でも同じ部品。前はここだけ「完結」が出なかった */}
+                        <WorkBadges size="sm" genre={n.genre} novelType={n.novel_type} isSerial={!!n.is_serial} ageRating={n.age_rating} isR18={n.is_r18} aiUsage={n.ai_usage}>
+                          {(() => {
+                            const mark = liveMarkOf(contestMarks, n.id)
+                            return mark ? <ContestChip mark={mark} compact asLink={false} /> : null
+                          })()}
+                        </WorkBadges>
                       </div>
                       <div style={{fontSize:14,fontWeight:700,color:'var(--color-text)',marginBottom:2,lineHeight:1.4}}>{n.title}</div>
                       <div style={{fontSize:11,color:'var(--color-text-muted)',marginBottom:4}}>作者：{n.display_name}</div>

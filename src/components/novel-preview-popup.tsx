@@ -1,4 +1,5 @@
 'use client'
+import { WorkBadges } from '@/components/common/work-badges'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -206,8 +207,16 @@ export default function NovelPreviewPopup({ novel, children, openAtOnce = false,
             ×
           </button>
           <div style={{display:'flex',gap:5,marginBottom:3,flexWrap:'wrap'}}>
-            <span style={{fontSize:sz(10),background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 6px',borderRadius:3}}>{novel.genre}</span>
-            {novel.novel_type && <span style={{fontSize:sz(10),background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 6px',borderRadius:3}}>{novel.novel_type}</span>}
+            {/* 作品の札はどの画面でも同じ部品 */}
+            <WorkBadges
+              size="sm"
+              genre={novel.genre}
+              novelType={novel.novel_type}
+              isSerial={typeof (novel as unknown as { is_serial?: unknown }).is_serial === 'boolean' ? (novel as unknown as { is_serial: boolean }).is_serial : undefined}
+              ageRating={(novel as unknown as { age_rating?: string | null }).age_rating}
+              isR18={(novel as unknown as { is_r18?: boolean | null }).is_r18}
+              aiUsage={(novel as unknown as { ai_usage?: string | null }).ai_usage}
+            />
           </div>
           <div style={{fontSize: sz(isMobile ? 13 : 15, 11),fontWeight:700,color:'var(--color-text)',lineHeight:1.4,fontFamily:"'Noto Serif JP',serif",paddingRight:20}}>{novel.title}</div>
           {novel.display_name && (

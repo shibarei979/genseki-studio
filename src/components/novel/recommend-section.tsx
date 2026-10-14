@@ -13,6 +13,7 @@
 
 'use client'
 
+import { WorkBadges } from '@/components/common/work-badges'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -57,10 +58,8 @@ export default function RecommendSection({ novelId, genre, excludeIds }: Props) 
                   <div style={{padding:'12px 14px',display:'flex',gap:10,alignItems:'flex-start'}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:'flex',gap:4,marginBottom:4,flexWrap:'wrap'}}>
-                        {n.isNew && <span style={{fontSize:10,background:'var(--color-brand)',color:'var(--color-text-inverse)',padding:'1px 6px',borderRadius:3,fontWeight:700}}>NEW</span>}
-                        <span style={{fontSize:10,background:'var(--color-brand-light)',color:'var(--color-brand)',border:'1px solid var(--color-tag-border)',padding:'1px 6px',borderRadius:3}}>{n.genre}</span>
-                        {n.novel_type && <span style={{fontSize:10,background:'var(--color-info-bg)',color:'var(--color-info)',border:'1px solid var(--color-info-border)',padding:'1px 6px',borderRadius:3}}>{n.novel_type}</span>}
-                        {n.is_serial && <span style={{fontSize:10,background:'#f0fdf4',color:'#15803d',border:'1px solid #86efac',padding:'1px 6px',borderRadius:3}}>連載中</span>}
+                        {/* 作品の札はどの画面でも同じ部品。前はここだけ「完結」が出なかった */}
+                        <WorkBadges size="sm" isNew={!!n.isNew} genre={n.genre} novelType={n.novel_type} isSerial={!!n.is_serial} ageRating={n.age_rating} isR18={n.is_r18} aiUsage={n.ai_usage} />
                       </div>
                       <div style={{fontSize:13,fontWeight:700,color:'var(--color-text)',marginBottom:2,lineHeight:1.4}}>{n.title}</div>
                       <div style={{fontSize:11,color:'var(--color-text-muted)'}}>作者：{recAuthorMap[n.author_id]||''}</div>
